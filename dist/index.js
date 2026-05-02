@@ -4912,7 +4912,7 @@ var DbStorage = class {
   }
   // Production Bales
   async getAllProductionBales(companyId, filters) {
-    let conditions = [eq(productionBales.companyId, companyId)];
+    const conditions = [eq(productionBales.companyId, companyId)];
     if (filters?.mixBatchId) {
       conditions.push(eq(productionBales.mixBatchId, filters.mixBatchId));
     }
@@ -5154,24 +5154,13 @@ function asyncHandler(fn) {
 }
 
 // server/lib/validate.ts
-import { ZodError } from "zod";
 function validate(schema, source = "body") {
-  return (req, res, next) => {
+  return (req, _res, next) => {
     try {
       const parsed = schema.parse(req[source]);
       req[source] = parsed;
       next();
     } catch (err) {
-      if (err instanceof ZodError) {
-        return res.status(400).json({
-          message: "Invalid request",
-          errors: err.errors.map((e) => ({
-            path: e.path.join("."),
-            message: e.message,
-            code: e.code
-          }))
-        });
-      }
       next(err);
     }
   };
@@ -5757,7 +5746,7 @@ function requireNonPOS(req, res, next) {
 
 // server/routes.ts
 init_schema();
-import { eq as eq3, and as and3, inArray as inArray2, sql as sql4, like, ne as ne2, desc as desc3, asc as asc2, or as or2, isNotNull, lt as lt2, gte, lte, isNull as isNull3 } from "drizzle-orm";
+import { eq as eq3, and as and3, inArray as inArray2, sql as sql4, like, ne as ne2, desc as desc3, asc, or as or2, isNotNull, lt, gte, lte, isNull as isNull3 } from "drizzle-orm";
 import { format } from "date-fns";
 var upload = multer({
   storage: multer.memoryStorage(),
@@ -7092,7 +7081,7 @@ async function registerRoutes(app2) {
             });
             continue;
           }
-          let nextCodeNum = 1;
+          const nextCodeNum = 1;
           const accountCode = `CAP-${String(nextCodeNum).padStart(3, "0")}`;
           const accountName = "Owner's Capital";
           const openingBalanceSide = netImportCycleBalance > 0 ? "Cr" : "Dr";
@@ -7171,9 +7160,13 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.post("/api/employees", requireAuth, requireNonPOS, async (req, res) => {
-    try {
-      const parsed = insertEmployeeSchema.parse(req.body);
+  app2.post(
+    "/api/employees",
+    requireAuth,
+    requireNonPOS,
+    validate(insertEmployeeSchema),
+    asyncHandler(async (req, res) => {
+      const parsed = req.body;
       if (!parsed.code) {
         const firstPart = parsed.firstName.trim().substring(0, 3).toUpperCase();
         const lastPart = parsed.lastName.trim().substring(0, 3).toUpperCase();
@@ -7191,7 +7184,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       } else {
         const existing = await storage.getEmployeeByCode(parsed.code);
         if (existing) {
-          return res.status(400).json({ message: "Employee code already exists" });
+          return res.status(400).json({ message: "Employee code already exists", code: "DUPLICATE_CODE" });
         }
       }
       let employee = await storage.createEmployee(parsed);
@@ -7205,10 +7198,8 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         };
       }
       res.status(201).json(employee);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+    })
+  );
   app2.delete("/api/employees/:id", requireAuth, async (req, res) => {
     try {
       const userRole = req.session.currentRole;
@@ -8355,9 +8346,13 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.post("/api/suppliers", requireAuth, requireNonPOS, async (req, res) => {
-    try {
-      const parsed = insertSupplierSchema.parse(req.body);
+  app2.post(
+    "/api/suppliers",
+    requireAuth,
+    requireNonPOS,
+    validate(insertSupplierSchema),
+    asyncHandler(async (req, res) => {
+      const parsed = req.body;
       if (!parsed.code) {
         const sanitized = parsed.legalName.trim().replace(/[^a-zA-Z0-9]/g, "");
         let baseCode = sanitized.substring(0, 6).toUpperCase();
@@ -8374,7 +8369,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       } else {
         const existing = await storage.getSupplierByCode(parsed.code);
         if (existing) {
-          return res.status(400).json({ message: "Supplier code already exists" });
+          return res.status(400).json({ message: "Supplier code already exists", code: "DUPLICATE_CODE" });
         }
       }
       const supplierData = {
@@ -8387,40 +8382,35 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       };
       const supplier = await storage.createSupplier(supplierData);
       res.status(201).json(supplier);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+    })
+  );
   app2.patch(
     "/api/suppliers/:id",
     requireAuth,
     requireNonPOS,
-    async (req, res) => {
-      try {
-        const supplierId = parseInt(req.params.id);
-        if (isNaN(supplierId)) {
-          return res.status(400).json({ message: "Invalid supplier ID" });
-        }
-        const existingSupplier = await storage.getSupplierById(supplierId);
-        if (!existingSupplier) {
-          return res.status(404).json({ message: "Supplier not found" });
-        }
-        if (req.body.code && req.body.code !== existingSupplier.code) {
-          const duplicate = await storage.getSupplierByCode(req.body.code);
-          if (duplicate) {
-            return res.status(400).json({ message: "Supplier code already exists" });
-          }
-        }
-        const parsed = insertSupplierSchema.partial().parse(req.body);
-        const updatedSupplier = await storage.updateSupplier(
-          supplierId,
-          parsed
-        );
-        res.json(updatedSupplier);
-      } catch (error) {
-        res.status(400).json({ message: error.message });
+    validate(insertSupplierSchema.partial()),
+    asyncHandler(async (req, res) => {
+      const supplierId = parseInt(req.params.id);
+      if (isNaN(supplierId)) {
+        return res.status(400).json({ message: "Invalid supplier ID" });
       }
-    }
+      const existingSupplier = await storage.getSupplierById(supplierId);
+      if (!existingSupplier) {
+        return res.status(404).json({ message: "Supplier not found" });
+      }
+      const parsed = req.body;
+      if (parsed.code && parsed.code !== existingSupplier.code) {
+        const duplicate = await storage.getSupplierByCode(parsed.code);
+        if (duplicate) {
+          return res.status(400).json({ message: "Supplier code already exists", code: "DUPLICATE_CODE" });
+        }
+      }
+      const updatedSupplier = await storage.updateSupplier(
+        supplierId,
+        parsed
+      );
+      res.json(updatedSupplier);
+    })
   );
   app2.get("/api/customers", requireAuth, requireNonPOS, async (req, res) => {
     try {
@@ -8500,16 +8490,22 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       }
     }
   );
-  app2.post("/api/customers", requireAuth, requireNonPOS, async (req, res) => {
-    try {
+  app2.post(
+    "/api/customers",
+    requireAuth,
+    requireNonPOS,
+    validate(insertCustomerSchema.omit({ companyId: true })),
+    asyncHandler(async (req, res) => {
       if (!req.session.currentCompanyId) {
-        return res.status(400).json({ message: "No company selected" });
+        return res.status(400).json({
+          message: "No company selected",
+          code: "NO_COMPANY_SELECTED"
+        });
       }
-      const dataWithCompany = {
+      const parsed = {
         ...req.body,
         companyId: req.session.currentCompanyId
       };
-      const parsed = insertCustomerSchema.parse(dataWithCompany);
       let code = "CUST001";
       let suffix = 1;
       const allCustomers = await storage.getAllCustomers(
@@ -8544,53 +8540,53 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         });
       }
       res.status(201).json(customer);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+    })
+  );
   app2.put(
     "/api/customers/:id",
     requireAuth,
     requireNonPOS,
-    async (req, res) => {
-      try {
-        const customerId = parseInt(req.params.id);
-        if (isNaN(customerId)) {
-          return res.status(400).json({ message: "Invalid customer ID" });
-        }
-        if (!req.session.currentCompanyId) {
-          return res.status(400).json({ message: "No company selected" });
-        }
-        const existingCustomer = await storage.getCustomerById(customerId);
-        if (!existingCustomer) {
-          return res.status(404).json({ message: "Customer not found" });
-        }
-        if (existingCustomer.companyId !== req.session.currentCompanyId) {
-          return res.status(403).json({
-            message: "Access denied: Customer belongs to a different company"
+    validate(insertCustomerSchema.partial()),
+    asyncHandler(async (req, res) => {
+      const customerId = parseInt(req.params.id);
+      if (isNaN(customerId)) {
+        return res.status(400).json({ message: "Invalid customer ID" });
+      }
+      if (!req.session.currentCompanyId) {
+        return res.status(400).json({
+          message: "No company selected",
+          code: "NO_COMPANY_SELECTED"
+        });
+      }
+      const existingCustomer = await storage.getCustomerById(customerId);
+      if (!existingCustomer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+      if (existingCustomer.companyId !== req.session.currentCompanyId) {
+        return res.status(403).json({
+          message: "Access denied: Customer belongs to a different company",
+          code: "WRONG_COMPANY"
+        });
+      }
+      const parsed = req.body;
+      if (parsed.code && parsed.code !== existingCustomer.code) {
+        const duplicate = await storage.getCustomerByCode(
+          parsed.code,
+          req.session.currentCompanyId
+        );
+        if (duplicate) {
+          return res.status(400).json({
+            message: "Customer code already exists in this company",
+            code: "DUPLICATE_CODE"
           });
         }
-        if (req.body.code && req.body.code !== existingCustomer.code) {
-          const duplicate = await storage.getCustomerByCode(
-            req.body.code,
-            req.session.currentCompanyId
-          );
-          if (duplicate) {
-            return res.status(400).json({
-              message: "Customer code already exists in this company"
-            });
-          }
-        }
-        const parsed = insertCustomerSchema.partial().parse(req.body);
-        const updatedCustomer = await storage.updateCustomer(
-          customerId,
-          parsed
-        );
-        res.json(updatedCustomer);
-      } catch (error) {
-        res.status(400).json({ message: error.message });
       }
-    }
+      const updatedCustomer = await storage.updateCustomer(
+        customerId,
+        parsed
+      );
+      res.json(updatedCustomer);
+    })
   );
   app2.delete(
     "/api/customers/:id",
@@ -9667,22 +9663,31 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.post("/api/stock-items", requireAuth, requireNonPOS, async (req, res) => {
-    try {
+  app2.post(
+    "/api/stock-items",
+    requireAuth,
+    requireNonPOS,
+    validate(insertStockItemSchema.omit({ companyId: true })),
+    asyncHandler(async (req, res) => {
       if (!req.session.currentCompanyId) {
-        return res.status(400).json({ message: "No company selected" });
+        return res.status(400).json({
+          message: "No company selected",
+          code: "NO_COMPANY_SELECTED"
+        });
       }
-      const dataWithCompany = {
+      const parsed = {
         ...req.body,
         companyId: req.session.currentCompanyId
       };
-      const parsed = insertStockItemSchema.parse(dataWithCompany);
       const existing = await storage.getStockItemByCode(
         parsed.code,
         req.session.currentCompanyId
       );
       if (existing) {
-        return res.status(400).json({ message: "Stock item code already exists in this company" });
+        return res.status(400).json({
+          message: "Stock item code already exists in this company",
+          code: "DUPLICATE_CODE"
+        });
       }
       if (parsed.openingQty && parsed.openingRate) {
         const qty = parseFloat(parsed.openingQty);
@@ -9691,10 +9696,8 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       }
       const item = await storage.createStockItem(parsed);
       res.status(201).json(item);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+    })
+  );
   app2.post("/api/stock-items/bulk-delete", requireAuth, requireNonPOS, async (req, res) => {
     try {
       if (!req.session.currentCompanyId) {
@@ -11227,7 +11230,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       );
       for (const item of items) {
         const validatedItem = { ...item };
-        let stockItem = await storage.getStockItemByCodeOrAlias(
+        const stockItem = await storage.getStockItemByCodeOrAlias(
           item.barcode,
           req.session.currentCompanyId
         );
@@ -11544,7 +11547,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       }
       for (const item of items) {
         const validatedItem = { ...item };
-        let stockItem = await storage.getStockItemByCodeOrAlias(
+        const stockItem = await storage.getStockItemByCodeOrAlias(
           item.barcode,
           req.session.currentCompanyId
         );
@@ -11908,7 +11911,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           continue;
         }
         validatedItem.sourceLocationId = sourceLocationId;
-        let stockItem = await storage.getStockItemByCodeOrAlias(
+        const stockItem = await storage.getStockItemByCodeOrAlias(
           item.barcode,
           req.session.currentCompanyId
         );
@@ -12848,7 +12851,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       const poDocCharges = parseFloat(po.documentCharges?.toString() || "0");
       const poDiscount = parseFloat(po.discount?.toString() || "0");
       const poOtherCharges = parseFloat(po.otherCharges?.toString() || "0");
-      let finalCharges = {
+      const finalCharges = {
         freight: poFreight.toString(),
         surcharge: poSurcharge.toString(),
         fumigation: poFumigation.toString(),
@@ -14193,7 +14196,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           });
         }
         let createdVoucher;
-        let createdEntries = [];
+        const createdEntries = [];
         try {
           [createdVoucher] = await db.insert(vouchers).values({
             companyId: req.session.currentCompanyId,
@@ -16136,7 +16139,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         });
       }
       let updatedVoucher;
-      let createdEntries = [];
+      const createdEntries = [];
       let oldEntries = [];
       try {
         oldEntries = await db.select().from(voucherEntries).where(eq3(voucherEntries.voucherId, id));
@@ -17166,7 +17169,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         });
       }
       let voucher;
-      let saleItems = [];
+      const saleItems = [];
       const updatedInventoryIds = [];
       try {
         [voucher] = await db.insert(vouchers).values({
@@ -19372,7 +19375,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         );
         const incomeAccountIds = incomeAccounts.map((acc) => acc.id);
         const expenseAccountIds = expenseAccounts.map((acc) => acc.id);
-        let companyVouchersQuery = db.select({ id: vouchers.id, voucherDate: vouchers.voucherDate }).from(vouchers).where(eq3(vouchers.companyId, companyId));
+        const companyVouchersQuery = db.select({ id: vouchers.id, voucherDate: vouchers.voucherDate }).from(vouchers).where(eq3(vouchers.companyId, companyId));
         const conditions = [eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false)];
         if (startDate) {
           conditions.push(sql4`${vouchers.voucherDate} >= ${startDate}`);
@@ -19626,7 +19629,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           eq3(vouchers.locationId, parseInt(locationId))
         );
       }
-      let salesQuery = db.select({
+      const salesQuery = db.select({
         id: salesItems.id,
         voucherNumber: vouchers.voucherNumber,
         voucherDate: vouchers.voucherDate,
@@ -20839,7 +20842,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           eq3(voucherEntries.ledgerAccountId, accountId),
           eq3(vouchers.companyId, companyId),
           eq3(vouchers.optional, false),
-          lt2(vouchers.voucherDate, start.toISOString().split("T")[0])
+          lt(vouchers.voucherDate, start.toISOString().split("T")[0])
         )
       ).execute();
       let openingBalance = parseFloat(account.openingBalance || "0");
@@ -20957,7 +20960,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           eq3(voucherEntries.ledgerAccountId, accountId),
           eq3(vouchers.companyId, companyId),
           eq3(vouchers.optional, false),
-          lt2(vouchers.voucherDate, startOfMonth.toISOString().split("T")[0])
+          lt(vouchers.voucherDate, startOfMonth.toISOString().split("T")[0])
         )
       ).execute();
       let openingBalance = parseFloat(account.openingBalance || "0");
@@ -22169,7 +22172,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       if (!companyId) return res.status(400).json({ message: "No company selected" });
       const isPOS = req.session.currentRole?.startsWith("POS");
       const voucherIdParam = req.query.voucherId ? parseInt(req.query.voucherId) : null;
-      let query = db.select({
+      const query = db.select({
         id: stockTransferVouchers.id,
         voucherId: stockTransferVouchers.voucherId,
         sourceLocationId: stockTransferVouchers.sourceLocationId,
@@ -23329,8 +23332,8 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       const currentQty = currentInventory ? parseFloat(currentInventory.quantity) : 0;
       const currentValue = currentInventory ? parseFloat(currentInventory.totalValue) : 0;
       const currentRate = currentInventory ? parseFloat(currentInventory.averageRate) : 0;
-      let voucherOpeningQty = priorInwardQty - priorOutwardQty;
-      let voucherOpeningValue = priorInwardValue - priorOutwardValue;
+      const voucherOpeningQty = priorInwardQty - priorOutwardQty;
+      const voucherOpeningValue = priorInwardValue - priorOutwardValue;
       const voucherOpeningRate = voucherOpeningQty > 0 ? voucherOpeningValue / voucherOpeningQty : 0;
       let afterMonthNetQty = 0;
       let afterMonthNetValue = 0;
@@ -24696,7 +24699,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       }).from(assemblyInventory).leftJoin(stockItems, eq3(assemblyInventory.stockItemId, stockItems.id)).where(and3(
         eq3(assemblyInventory.locationId, locationId),
         eq3(assemblyInventory.companyId, companyId)
-      )).orderBy(asc2(stockItems.name));
+      )).orderBy(asc(stockItems.name));
       res.json(inventory2.map((i) => ({
         ...i.inventory,
         stockItemName: i.stockItem?.name,
