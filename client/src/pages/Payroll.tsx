@@ -200,7 +200,7 @@ export default function Payroll() {
   const [selectedTab, setSelectedTab] = useState("employees");
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
-  const [bonusTab, setBonusTab] = useState<"sales" | "bales">("sales");
+  const [bonusTab, setBonusTab] = useState<"sales" | "motos">("sales");
   const [bonusSalesPeriod, setBonusSalesPeriod] = useState<"thisMonth" | "custom">("thisMonth");
   const [bonusSalesLocationId, setBonusSalesLocationId] = useState<string>("");
   const [bonusSalesStart, setBonusSalesStart] = useState<string>("");
@@ -2805,13 +2805,13 @@ export default function Payroll() {
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={bonusTab} onValueChange={(v) => { setBonusTab(v as "sales" | "bales"); setBonusSalesPreview(null); }}>
+          <Tabs value={bonusTab} onValueChange={(v) => { setBonusTab(v as "sales" | "motos"); setBonusSalesPreview(null); }}>
             <TabsList className="w-full">
               <TabsTrigger value="sales" className="flex-1" data-testid="tab-sales-bonus">
                 <Percent className="h-4 w-4 mr-1" />
                 Sales %
               </TabsTrigger>
-              <TabsTrigger value="bales" className="flex-1" data-testid="tab-bales-bonus">
+              <TabsTrigger value="motos" className="flex-1" data-testid="tab-motos-bonus">
                 <Package className="h-4 w-4 mr-1" />
                 Motos / Units
               </TabsTrigger>
@@ -2923,7 +2923,7 @@ export default function Payroll() {
             </TabsContent>
 
             {/* ── Bales / Units Tab ── */}
-            <TabsContent value="bales" className="space-y-4 mt-4">
+            <TabsContent value="motos" className="space-y-4 mt-4">
               <div className="space-y-1">
                 <Label>Period</Label>
                 <div className="flex gap-2">
@@ -3099,7 +3099,7 @@ export default function Payroll() {
             >
               {bonusTab === "sales" && bonusSalesPreview
                 ? `Give Now ${formatAmount((parseFloat(bonusSalesPreview.totalSalesAmount || "0") * parseFloat(bonusSalesCustomPct || "0")) / 100)}`
-                : bonusTab === "bales"
+                : bonusTab === "motos"
                 ? `Give Now ${formatAmount(balesRows.reduce((s, r) => s + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0))}`
                 : "Give Now"}
             </Button>

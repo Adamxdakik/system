@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "db:push": "drizzle-kit push",
     "db:migrate": "tsx scripts/migrate.ts",
-    "db:verify-moto-schema": "tsx scripts/verify-moto-schema.ts"
+    "db:verify-moto-schema": "tsx scripts/verify-moto-schema.ts",
+    "seed:dev": "tsx scripts/seed-dev.ts"
   },
   "dependencies": {
     "@google/genai": "^1.31.0",

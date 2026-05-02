@@ -2091,6 +2091,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return { ok: true, employeeId };
   }
 
+  // Helper: build the set of companyIds the current session user is allowed to read from.
+  // Used to validate optional `sourceCompanyId` on moto-rate PUT bodies (cross-company rates).
+  async function getAccessibleCompanyIds(userId: string | undefined): Promise<Set<number>> {
+    if (!userId) return new Set();
+    const roles = await storage.getUserCompaniesWithRoles(userId);
+    return new Set(roles.map((r: any) => r.companyId).filter((id: any): id is number => typeof id === "number"));
+  }
+
   app.get("/api/employees/:id/moto-rates", requireAuth, async (req, res) => {
     try {
       const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
@@ -2109,6 +2117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!check.ok) return res.status(check.status).json({ message: check.message });
       const body = req.body as { rates?: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }> };
       const rates = Array.isArray(body?.rates) ? body.rates : [];
+      const accessible = await getAccessibleCompanyIds(req.session.userId);
       // Sanitize: only valid rows with locationId + rate > 0
       const clean = rates
         .filter((r) => r && Number.isFinite(Number(r.locationId)) && parseFloat(r.rate) > 0)
@@ -2117,6 +2126,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rate: String(r.rate),
           sourceCompanyId: r.sourceCompanyId != null ? Number(r.sourceCompanyId) : null,
         }));
+      // Validate sourceCompanyId is one the user has access to (when provided).
+      for (const row of clean) {
+        if (row.sourceCompanyId != null && !accessible.has(row.sourceCompanyId)) {
+          return res.status(403).json({
+            message: `Access denied: sourceCompanyId ${row.sourceCompanyId} is not in your accessible companies`,
+          });
+        }
+      }
       const saved = await storage.replaceEmployeeMotoRates(check.employeeId, clean);
       res.json(saved);
     } catch (err: any) {
@@ -2143,6 +2160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!check.ok) return res.status(check.status).json({ message: check.message });
       const body = req.body as { rates?: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }> };
       const rates = Array.isArray(body?.rates) ? body.rates : [];
+      const accessible = await getAccessibleCompanyIds(req.session.userId);
       const clean = rates
         .filter((r) => r && Number.isFinite(Number(r.locationId)) && parseFloat(r.pct) > 0)
         .map((r) => ({
@@ -2150,6 +2168,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pct: String(r.pct),
           sourceCompanyId: r.sourceCompanyId != null ? Number(r.sourceCompanyId) : null,
         }));
+      for (const row of clean) {
+        if (row.sourceCompanyId != null && !accessible.has(row.sourceCompanyId)) {
+          return res.status(403).json({
+            message: `Access denied: sourceCompanyId ${row.sourceCompanyId} is not in your accessible companies`,
+          });
+        }
+      }
       const saved = await storage.replaceEmployeeMotoPctRates(check.employeeId, clean);
       res.json(saved);
     } catch (err: any) {
