@@ -1939,7 +1939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // No existing Profit account - generate unique code for new capital account
-          let nextCodeNum = 1;
+          const nextCodeNum = 1;
           const accountCode = `CAP-${String(nextCodeNum).padStart(3, '0')}`;
           const accountName = "Owner's Capital";
           
@@ -7340,7 +7340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validatedItem: any = { ...item };
 
         // Find stock item by barcode (code or alias)
-        let stockItem = await storage.getStockItemByCodeOrAlias(
+        const stockItem = await storage.getStockItemByCodeOrAlias(
           item.barcode,
           req.session.currentCompanyId!,
         );
@@ -7765,7 +7765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validatedItem: any = { ...item };
 
         // Find stock item by barcode (code or alias)
-        let stockItem = await storage.getStockItemByCodeOrAlias(
+        const stockItem = await storage.getStockItemByCodeOrAlias(
           item.barcode,
           req.session.currentCompanyId!,
         );
@@ -8249,7 +8249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         validatedItem.sourceLocationId = sourceLocationId;
 
         // Find stock item by barcode (code or alias)
-        let stockItem = await storage.getStockItemByCodeOrAlias(
+        const stockItem = await storage.getStockItemByCodeOrAlias(
           item.barcode,
           req.session.currentCompanyId!,
         );
@@ -9583,7 +9583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const poDiscount = parseFloat(po.discount?.toString() || '0');
       const poOtherCharges = parseFloat(po.otherCharges?.toString() || '0');
       
-      let finalCharges = {
+      const finalCharges = {
         freight: poFreight.toString(),
         surcharge: poSurcharge.toString(),
         fumigation: poFumigation.toString(),
@@ -11459,7 +11459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Create voucher with error handling
         let createdVoucher;
-        let createdEntries = [];
+        const createdEntries = [];
 
         try {
           [createdVoucher] = await db
@@ -14383,7 +14383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update voucher with error handling
       let updatedVoucher;
-      let createdEntries = [];
+      const createdEntries = [];
       let oldEntries: any[] = [];
 
       try {
@@ -15904,7 +15904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // STEP 1b: Create accounting records (voucher and entries)
       // Create Sales voucher
       let voucher;
-      let saleItems = [];
+      const saleItems = [];
       const updatedInventoryIds: number[] = [];
 
       try {
@@ -19184,7 +19184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const expenseAccountIds = expenseAccounts.map((acc) => acc.id);
 
         // Get voucher IDs for this company with date filter
-        let companyVouchersQuery = db
+        const companyVouchersQuery = db
           .select({ id: vouchers.id, voucherDate: vouchers.voucherDate })
           .from(vouchers)
           .where(eq(vouchers.companyId, companyId));
@@ -19537,7 +19537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      let salesQuery = db
+      const salesQuery = db
         .select({
           id: salesItems.id,
           voucherNumber: vouchers.voucherNumber,
@@ -22847,7 +22847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Barcode text is required" });
       }
 
-      // @ts-ignore - bwip-js types are incomplete
+      // @ts-expect-error - bwip-js types are incomplete
       const bwipjs = await import("bwip-js");
       
       // Render to PNG buffer
@@ -22985,7 +22985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const voucherIdParam = req.query.voucherId ? parseInt(req.query.voucherId as string) : null;
       
-      let query = db
+      const query = db
         .select({
           id: stockTransferVouchers.id,
           voucherId: stockTransferVouchers.voucherId,
@@ -24622,8 +24622,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentRate = currentInventory ? parseFloat(currentInventory.averageRate) : 0;
       
       // Calculate voucher-derived opening balance
-      let voucherOpeningQty = priorInwardQty - priorOutwardQty;
-      let voucherOpeningValue = priorInwardValue - priorOutwardValue;
+      const voucherOpeningQty = priorInwardQty - priorOutwardQty;
+      const voucherOpeningValue = priorInwardValue - priorOutwardValue;
       const voucherOpeningRate = voucherOpeningQty > 0 ? voucherOpeningValue / voucherOpeningQty : 0;
       
       // ============ CALCULATE MOVEMENTS AFTER THE SELECTED MONTH ============

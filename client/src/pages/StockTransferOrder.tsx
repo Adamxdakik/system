@@ -452,7 +452,7 @@ export default function StockTransferOrder() {
         case 'ArrowRight':
           col = Math.min(maxCol, col + 1);
           break;
-        case ' ':
+        case ' ': {
           const item = flatItems[row];
           const loc = selectedLocations[col];
           if (item && loc) {
@@ -463,6 +463,7 @@ export default function StockTransferOrder() {
             }
           }
           return current;
+        }
       }
 
       return { row, col };

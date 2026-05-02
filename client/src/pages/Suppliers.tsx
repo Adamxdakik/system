@@ -417,9 +417,9 @@ export default function Suppliers() {
                   <div className="text-sm">
                     <span className="text-muted-foreground">Total Balance: </span>
                     <span className="font-mono font-semibold text-lg">
-                      ${(unifiedLedger.length > 0 
+                      ${((unifiedLedger.length > 0 
                         ? [...unifiedLedger].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.balance 
-                        : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        : 0) ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>

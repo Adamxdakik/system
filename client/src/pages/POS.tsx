@@ -782,7 +782,7 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
           }
         }
         break;
-      case "Enter":
+      case "Enter": {
         e.preventDefault();
         
         // If on item name field with filtered items, select the highlighted item
@@ -829,6 +829,7 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
           }
         }
         break;
+      }
       case "ArrowLeft":
         e.preventDefault();
         if (colIndex > 0) {

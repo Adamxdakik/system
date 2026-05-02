@@ -221,12 +221,22 @@ export default function ERPRunPayroll() {
   // ── Helpers ───────────────────────────────────────────────────────────────
   function toggleGroup(key: number | string) { setExpandedGroups((p) => ({ ...p, [key]: !(p[key] ?? true) })); }
   function toggleWorker(id: number) {
-    setSelectedWorkers((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelectedWorkers((p) => {
+      const n = new Set(p);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   }
   function toggleGroupSelection(memberIds: number[]) {
     const visible = memberIds.filter((id) => filtered.has(id));
     const allSel = visible.every((id) => selectedWorkers.has(id));
-    setSelectedWorkers((p) => { const n = new Set(p); allSel ? visible.forEach((id) => n.delete(id)) : visible.forEach((id) => n.add(id)); return n; });
+    setSelectedWorkers((p) => {
+      const n = new Set(p);
+      if (allSel) visible.forEach((id) => n.delete(id));
+      else visible.forEach((id) => n.add(id));
+      return n;
+    });
   }
 
   function enterPreview() {

@@ -380,7 +380,7 @@ export default function Analytics() {
   const getDateRange = () => {
     const today = new Date();
     let startDate = "";
-    let endDate = today.toISOString().split("T")[0];
+    const endDate = today.toISOString().split("T")[0];
     if (selectedPeriod === "today") {
       startDate = endDate;
     } else if (selectedPeriod === "month") {
@@ -411,7 +411,7 @@ export default function Analytics() {
   const getDetailsDateRange = () => {
     const today = new Date();
     let startDate = "";
-    let endDate = today.toISOString().split("T")[0];
+    const endDate = today.toISOString().split("T")[0];
     if (detailsPeriod === "today") {
       startDate = endDate;
     } else if (detailsPeriod === "month") {

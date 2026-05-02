@@ -68,18 +68,20 @@ export default function Dashboard() {
           from: format(startOfDay(selectedDate), "yyyy-MM-dd"),
           to: format(endOfDay(selectedDate), "yyyy-MM-dd"),
         };
-      case "month":
+      case "month": {
         const monthDate = new Date(selectedYear, selectedMonth, 1);
         return {
           from: format(startOfMonth(monthDate), "yyyy-MM-dd"),
           to: format(endOfMonth(monthDate), "yyyy-MM-dd"),
         };
-      case "year":
+      }
+      case "year": {
         const yearDate = new Date(selectedYear, 0, 1);
         return {
           from: format(startOfYear(yearDate), "yyyy-MM-dd"),
           to: format(endOfYear(yearDate), "yyyy-MM-dd"),
         };
+      }
     }
   };
 

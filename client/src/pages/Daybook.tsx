@@ -1450,7 +1450,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
     requestAnimationFrame(() => {
       window.scrollTo({ top: scrollY, behavior: "instant" as ScrollBehavior });
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   // ── ERP Daybook persistence: save to sessionStorage on every state change ────
@@ -1479,7 +1479,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
       // When staying in the voucher flow, state is already up-to-date in
       // sessionStorage via the save-on-change effect and the scroll handler.
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   // ── Track window scroll into ref + patch sessionStorage directly ─────────────
