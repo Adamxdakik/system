@@ -2033,9 +2033,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/employees", requireAuth, requireNonPOS, async (req, res) => {
-    try {
-      const parsed = insertEmployeeSchema.parse(req.body);
+  app.post(
+    "/api/employees",
+    requireAuth,
+    requireNonPOS,
+    validate(insertEmployeeSchema),
+    asyncHandler(async (req, res) => {
+      const parsed = req.body as z.infer<typeof insertEmployeeSchema>;
 
       // Auto-generate code from name if not provided
       if (!parsed.code) {
@@ -2063,29 +2067,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existing) {
           return res
             .status(400)
-            .json({ message: "Employee code already exists" });
+            .json({ message: "Employee code already exists", code: "DUPLICATE_CODE" });
         }
       }
 
       let employee = await storage.createEmployee(parsed);
-      
+
       // Initialize currentBalance to opening balance if provided
       if (parsed.openingBalance && parseFloat(parsed.openingBalance) > 0) {
         await db.update(employees).set({
           currentBalance: parsed.openingBalance,
         }).where(eq(employees.id, employee.id));
-        
+
         employee = {
           ...employee,
           currentBalance: parsed.openingBalance,
         };
       }
-      
+
       res.status(201).json(employee);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+    }),
+  );
 
   app.delete("/api/employees/:id", requireAuth, async (req, res) => {
     try {
@@ -3643,21 +3645,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/suppliers", requireAuth, requireNonPOS, async (req, res) => {
-    try {
-      const parsed = insertSupplierSchema.parse(req.body);
+  app.post(
+    "/api/suppliers",
+    requireAuth,
+    requireNonPOS,
+    validate(insertSupplierSchema),
+    asyncHandler(async (req, res) => {
+      const parsed = req.body as z.infer<typeof insertSupplierSchema>;
 
       // Auto-generate code from legalName if not provided
       if (!parsed.code) {
         // Generate code from name: remove non-alphanumeric, take first 6 letters, uppercase
         const sanitized = parsed.legalName.trim().replace(/[^a-zA-Z0-9]/g, '');
         let baseCode = sanitized.substring(0, 6).toUpperCase();
-        
+
         // Fallback if baseCode is empty after sanitization
         if (!baseCode || baseCode.length === 0) {
           baseCode = "SUP";
         }
-        
+
         // Ensure uniqueness by adding suffix if needed
         let code = baseCode;
         let suffix = 1;
@@ -3672,7 +3678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existing) {
           return res
             .status(400)
-            .json({ message: "Supplier code already exists" });
+            .json({ message: "Supplier code already exists", code: "DUPLICATE_CODE" });
         }
       }
 
@@ -3688,48 +3694,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const supplier = await storage.createSupplier(supplierData);
       res.status(201).json(supplier);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+    }),
+  );
 
   app.patch(
     "/api/suppliers/:id",
     requireAuth,
     requireNonPOS,
-    async (req, res) => {
-      try {
-        const supplierId = parseInt(req.params.id);
-        if (isNaN(supplierId)) {
-          return res.status(400).json({ message: "Invalid supplier ID" });
-        }
-
-        const existingSupplier = await storage.getSupplierById(supplierId);
-        if (!existingSupplier) {
-          return res.status(404).json({ message: "Supplier not found" });
-        }
-
-        // If code is being changed, check for duplicates
-        if (req.body.code && req.body.code !== existingSupplier.code) {
-          const duplicate = await storage.getSupplierByCode(req.body.code);
-          if (duplicate) {
-            return res
-              .status(400)
-              .json({ message: "Supplier code already exists" });
-          }
-        }
-
-        const parsed = insertSupplierSchema.partial().parse(req.body);
-        const updatedSupplier = await storage.updateSupplier(
-          supplierId,
-          parsed,
-        );
-
-        res.json(updatedSupplier);
-      } catch (error: any) {
-        res.status(400).json({ message: error.message });
+    validate(insertSupplierSchema.partial()),
+    asyncHandler(async (req, res) => {
+      const supplierId = parseInt(req.params.id);
+      if (isNaN(supplierId)) {
+        return res.status(400).json({ message: "Invalid supplier ID" });
       }
-    },
+
+      const existingSupplier = await storage.getSupplierById(supplierId);
+      if (!existingSupplier) {
+        return res.status(404).json({ message: "Supplier not found" });
+      }
+
+      const parsed = req.body as Partial<z.infer<typeof insertSupplierSchema>>;
+
+      // If code is being changed, check for duplicates
+      if (parsed.code && parsed.code !== existingSupplier.code) {
+        const duplicate = await storage.getSupplierByCode(parsed.code);
+        if (duplicate) {
+          return res
+            .status(400)
+            .json({ message: "Supplier code already exists", code: "DUPLICATE_CODE" });
+        }
+      }
+
+      const updatedSupplier = await storage.updateSupplier(
+        supplierId,
+        parsed,
+      );
+
+      res.json(updatedSupplier);
+    }),
   );
 
   // Customers
