@@ -1261,12 +1261,37 @@ export default function Payroll() {
       payload.employeeGroupId = (employeeGroupId && employeeGroupId !== "" && employeeGroupId !== "none")
         ? parseInt(employeeGroupId, 10)
         : null;
-      await modeApiRequest("PATCH", `/api/employees/${editingEmployee.id}`, payload);
-      // Save per-location bale rates
+      // T08: change-preview — diff local edits vs the server snapshot and ask the
+      // user to confirm before the destructive replace-all PUT.
       const validRates = editBaleRates.filter(r => r.locationId && parseFloat(r.rate) > 0);
-      await modeApiRequest("PUT", `/api/employees/${editingEmployee.id}/moto-rates`, { rates: validRates });
-      // Save per-location bale pct rates
       const validPctRates = editBalePctRates.filter(r => r.locationId && parseFloat(r.pct) > 0);
+      const serverRates = editingBaleRates ?? [];
+      const serverPctRates = editingBalePctRates ?? [];
+      const diff = (server: any[], local: any[], key: "rate" | "pct") => {
+        const sMap = new Map(server.map((s: any) => [Number(s.locationId), String(s[key])]));
+        const lMap = new Map(local.map((l: any) => [Number(l.locationId), String(l[key])]));
+        let added = 0, changed = 0, removed = 0;
+        for (const [k, v] of lMap) {
+          if (!sMap.has(k)) added++;
+          else if (sMap.get(k) !== v) changed++;
+        }
+        for (const [k] of sMap) if (!lMap.has(k)) removed++;
+        return { added, changed, removed };
+      };
+      const r = diff(serverRates, validRates, "rate");
+      const p = diff(serverPctRates, validPctRates, "pct");
+      const totalChanges = r.added + r.changed + r.removed + p.added + p.changed + p.removed;
+      if (totalChanges > 0) {
+        const summary =
+          `Save changes to ${editingEmployee.firstName}'s rates?\n\n` +
+          `Per-unit rates: +${r.added} new, ~${r.changed} changed, -${r.removed} removed\n` +
+          `Percentage rates: +${p.added} new, ~${p.changed} changed, -${p.removed} removed`;
+        if (!window.confirm(summary)) {
+          throw new Error("Cancelled by user");
+        }
+      }
+      await modeApiRequest("PATCH", `/api/employees/${editingEmployee.id}`, payload);
+      await modeApiRequest("PUT", `/api/employees/${editingEmployee.id}/moto-rates`, { rates: validRates });
       await modeApiRequest("PUT", `/api/employees/${editingEmployee.id}/moto-pct-rates`, { rates: validPctRates });
     },
     onSuccess: () => {
@@ -2962,7 +2987,34 @@ export default function Payroll() {
                   <div key={idx} className="grid grid-cols-[1fr_72px_32px_72px_32px] gap-2 items-center">
                     <Select
                       value={row.locationId}
-                      onValueChange={(v) => setBalesRows(prev => prev.map((r, i) => i === idx ? { ...r, locationId: v, qty: "" } : r))}
+                      onValueChange={async (v) => {
+                        // Default the rate from the per-location config when the user picks a shop.
+                        // Falls back to the scalar employee.motosBonusRate (legacy) if no per-location row exists.
+                        // Race guard: capture the employeeId + row index + monotonic token at dispatch
+                        // time and bail out on apply if any of them changed (rapid clicks, employee
+                        // switch, dialog close). Without this, a slow response can overwrite a fresher
+                        // selection or — worse — apply rates from one employee onto another.
+                        const dispatchEmployeeId = selectedEmployee?.id;
+                        const dispatchLocationId = v;
+                        const fallbackRate = selectedEmployee?.motosBonusRate != null ? String(selectedEmployee.motosBonusRate) : "";
+                        // Optimistically set location + clear qty + clear rate so the user sees feedback immediately.
+                        setBalesRows(prev => prev.map((r, i) => i === idx ? { ...r, locationId: v, qty: "", rate: "" } : r));
+                        if (!selectedEmployee || !v) return;
+                        let resolvedRate = fallbackRate;
+                        try {
+                          const res = await modeApiRequest("GET", `/api/employees/${selectedEmployee.id}/moto-rates`);
+                          const rates: Array<{ locationId: number; rate: string }> = await res.json();
+                          const match = rates.find((r) => String(r.locationId) === v);
+                          if (match) resolvedRate = String(match.rate);
+                        } catch { /* keep fallback */ }
+                        // Apply only if the user hasn't moved on to a different employee or location.
+                        setBalesRows(prev => {
+                          if (selectedEmployee?.id !== dispatchEmployeeId) return prev; // employee switched
+                          const cur = prev[idx];
+                          if (!cur || cur.locationId !== dispatchLocationId) return prev; // row changed
+                          return prev.map((r, i) => i === idx ? { ...r, rate: resolvedRate } : r);
+                        });
+                      }}
                     >
                       <SelectTrigger data-testid={`select-bales-location-${idx}`} className="h-9">
                         <SelectValue placeholder="Shop" />

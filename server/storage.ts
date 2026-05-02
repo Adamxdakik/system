@@ -354,12 +354,19 @@ export interface IStorage {
   replaceEmployeeMotoRates(
     employeeId: number,
     rates: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }>,
+    auditCtx?: { userId?: string | null; action?: string; sourceEmployeeId?: number | null; context?: any },
   ): Promise<schema.EmployeeMotoRate[]>;
   getEmployeeMotoPctRates(employeeId: number): Promise<schema.EmployeeMotoPctRate[]>;
   replaceEmployeeMotoPctRates(
     employeeId: number,
     rates: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }>,
+    auditCtx?: { userId?: string | null; action?: string; sourceEmployeeId?: number | null; context?: any },
   ): Promise<schema.EmployeeMotoPctRate[]>;
+  copyEmployeeMotoRates(targetEmployeeId: number, sourceEmployeeId: number, userId?: string | null): Promise<schema.EmployeeMotoRate[]>;
+  copyEmployeeMotoPctRates(targetEmployeeId: number, sourceEmployeeId: number, userId?: string | null): Promise<schema.EmployeeMotoPctRate[]>;
+  bulkSetMotoRateAtLocation(locationId: number, employeeIds: number[], rate: string, sourceCompanyId: number | null, userId?: string | null): Promise<{ updated: number }>;
+  bulkSetMotoPctRateAtLocation(locationId: number, employeeIds: number[], pct: string, sourceCompanyId: number | null, userId?: string | null): Promise<{ updated: number }>;
+  getMotoRateAudit(employeeId: number, limit?: number): Promise<schema.MotoRateAudit[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -5043,39 +5050,74 @@ export class DbStorage implements IStorage {
   }
 
   // Per-employee per-location moto bonus rates ($/unit)
+  // Returns only LIVE rows (deleted_at IS NULL). Use getMotoRateAudit() for history.
   async getEmployeeMotoRates(employeeId: number): Promise<schema.EmployeeMotoRate[]> {
     return await db
       .select()
       .from(schema.employeeMotoRates)
-      .where(eq(schema.employeeMotoRates.employeeId, employeeId));
+      .where(
+        and(
+          eq(schema.employeeMotoRates.employeeId, employeeId),
+          isNull(schema.employeeMotoRates.deletedAt),
+        ),
+      );
   }
 
   async replaceEmployeeMotoRates(
     employeeId: number,
     rates: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }>,
+    auditCtx?: { userId?: string | null; action?: string; sourceEmployeeId?: number | null; context?: any },
   ): Promise<schema.EmployeeMotoRate[]> {
     return await db.transaction(async (tx) => {
-      // Serialize concurrent PUTs for the same employee to avoid delete-then-insert
-      // races against the UNIQUE(employee_id, location_id) constraint. The lock is
-      // tied to this transaction and released on commit/rollback.
+      // Serialize concurrent PUTs for the same employee. Lock is tx-scoped.
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${employeeId}::bigint)`);
+      // Snapshot live rows for audit BEFORE soft-deleting them.
+      const before = await tx
+        .select()
+        .from(schema.employeeMotoRates)
+        .where(
+          and(
+            eq(schema.employeeMotoRates.employeeId, employeeId),
+            isNull(schema.employeeMotoRates.deletedAt),
+          ),
+        );
+      // Soft-delete current live rows (preserves history).
       await tx
-        .delete(schema.employeeMotoRates)
-        .where(eq(schema.employeeMotoRates.employeeId, employeeId));
+        .update(schema.employeeMotoRates)
+        .set({ deletedAt: new Date() })
+        .where(
+          and(
+            eq(schema.employeeMotoRates.employeeId, employeeId),
+            isNull(schema.employeeMotoRates.deletedAt),
+          ),
+        );
 
-      if (rates.length === 0) return [];
+      let inserted: schema.EmployeeMotoRate[] = [];
+      if (rates.length > 0) {
+        inserted = await tx
+          .insert(schema.employeeMotoRates)
+          .values(
+            rates.map((r) => ({
+              employeeId,
+              locationId: r.locationId,
+              rate: r.rate,
+              sourceCompanyId: r.sourceCompanyId ?? null,
+            })),
+          )
+          .returning();
+      }
 
-      const inserted = await tx
-        .insert(schema.employeeMotoRates)
-        .values(
-          rates.map((r) => ({
-            employeeId,
-            locationId: r.locationId,
-            rate: r.rate,
-            sourceCompanyId: r.sourceCompanyId ?? null,
-          })),
-        )
-        .returning();
+      await tx.insert(schema.motoRateAudit).values({
+        employeeId,
+        tableName: "employee_moto_rates",
+        action: auditCtx?.action ?? "replace",
+        beforeData: before as any,
+        afterData: inserted as any,
+        userId: auditCtx?.userId ?? null,
+        sourceEmployeeId: auditCtx?.sourceEmployeeId ?? null,
+        context: (auditCtx?.context ?? null) as any,
+      });
+
       return inserted;
     });
   }
@@ -5085,35 +5127,208 @@ export class DbStorage implements IStorage {
     return await db
       .select()
       .from(schema.employeeMotoPctRates)
-      .where(eq(schema.employeeMotoPctRates.employeeId, employeeId));
+      .where(
+        and(
+          eq(schema.employeeMotoPctRates.employeeId, employeeId),
+          isNull(schema.employeeMotoPctRates.deletedAt),
+        ),
+      );
   }
 
   async replaceEmployeeMotoPctRates(
     employeeId: number,
     rates: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }>,
+    auditCtx?: { userId?: string | null; action?: string; sourceEmployeeId?: number | null; context?: any },
   ): Promise<schema.EmployeeMotoPctRate[]> {
     return await db.transaction(async (tx) => {
-      // Serialize concurrent PUTs per employee — see replaceEmployeeMotoRates above.
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${employeeId}::bigint)`);
+      const before = await tx
+        .select()
+        .from(schema.employeeMotoPctRates)
+        .where(
+          and(
+            eq(schema.employeeMotoPctRates.employeeId, employeeId),
+            isNull(schema.employeeMotoPctRates.deletedAt),
+          ),
+        );
       await tx
-        .delete(schema.employeeMotoPctRates)
-        .where(eq(schema.employeeMotoPctRates.employeeId, employeeId));
+        .update(schema.employeeMotoPctRates)
+        .set({ deletedAt: new Date() })
+        .where(
+          and(
+            eq(schema.employeeMotoPctRates.employeeId, employeeId),
+            isNull(schema.employeeMotoPctRates.deletedAt),
+          ),
+        );
 
-      if (rates.length === 0) return [];
+      let inserted: schema.EmployeeMotoPctRate[] = [];
+      if (rates.length > 0) {
+        inserted = await tx
+          .insert(schema.employeeMotoPctRates)
+          .values(
+            rates.map((r) => ({
+              employeeId,
+              locationId: r.locationId,
+              pct: r.pct,
+              sourceCompanyId: r.sourceCompanyId ?? null,
+            })),
+          )
+          .returning();
+      }
 
-      const inserted = await tx
-        .insert(schema.employeeMotoPctRates)
-        .values(
-          rates.map((r) => ({
-            employeeId,
-            locationId: r.locationId,
-            pct: r.pct,
-            sourceCompanyId: r.sourceCompanyId ?? null,
-          })),
-        )
-        .returning();
+      await tx.insert(schema.motoRateAudit).values({
+        employeeId,
+        tableName: "employee_moto_pct_rates",
+        action: auditCtx?.action ?? "replace",
+        beforeData: before as any,
+        afterData: inserted as any,
+        userId: auditCtx?.userId ?? null,
+        sourceEmployeeId: auditCtx?.sourceEmployeeId ?? null,
+        context: (auditCtx?.context ?? null) as any,
+      });
+
       return inserted;
     });
+  }
+
+  // Copy all live moto rates from sourceEmployeeId to targetEmployeeId (replace-all).
+  async copyEmployeeMotoRates(
+    targetEmployeeId: number,
+    sourceEmployeeId: number,
+    userId?: string | null,
+  ): Promise<schema.EmployeeMotoRate[]> {
+    const sourceRows = await this.getEmployeeMotoRates(sourceEmployeeId);
+    return this.replaceEmployeeMotoRates(
+      targetEmployeeId,
+      sourceRows.map((r) => ({ locationId: r.locationId, rate: r.rate, sourceCompanyId: r.sourceCompanyId })),
+      { userId, action: "copy_from", sourceEmployeeId },
+    );
+  }
+
+  async copyEmployeeMotoPctRates(
+    targetEmployeeId: number,
+    sourceEmployeeId: number,
+    userId?: string | null,
+  ): Promise<schema.EmployeeMotoPctRate[]> {
+    const sourceRows = await this.getEmployeeMotoPctRates(sourceEmployeeId);
+    return this.replaceEmployeeMotoPctRates(
+      targetEmployeeId,
+      sourceRows.map((r) => ({ locationId: r.locationId, pct: r.pct, sourceCompanyId: r.sourceCompanyId })),
+      { userId, action: "copy_from", sourceEmployeeId },
+    );
+  }
+
+  // Bulk set the rate at a single location for many employees. Other locations
+  // for each employee are preserved (only the one location row is replaced).
+  async bulkSetMotoRateAtLocation(
+    locationId: number,
+    employeeIds: number[],
+    rate: string,
+    sourceCompanyId: number | null,
+    userId?: string | null,
+  ): Promise<{ updated: number }> {
+    let updated = 0;
+    for (const empId of employeeIds) {
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${empId}::bigint)`);
+        // Snapshot before for audit
+        const before = await tx
+          .select()
+          .from(schema.employeeMotoRates)
+          .where(
+            and(
+              eq(schema.employeeMotoRates.employeeId, empId),
+              isNull(schema.employeeMotoRates.deletedAt),
+            ),
+          );
+        // Soft-delete only the row at this location (if any)
+        await tx
+          .update(schema.employeeMotoRates)
+          .set({ deletedAt: new Date() })
+          .where(
+            and(
+              eq(schema.employeeMotoRates.employeeId, empId),
+              eq(schema.employeeMotoRates.locationId, locationId),
+              isNull(schema.employeeMotoRates.deletedAt),
+            ),
+          );
+        const [inserted] = await tx
+          .insert(schema.employeeMotoRates)
+          .values({ employeeId: empId, locationId, rate, sourceCompanyId })
+          .returning();
+        await tx.insert(schema.motoRateAudit).values({
+          employeeId: empId,
+          tableName: "employee_moto_rates",
+          action: "bulk_set",
+          beforeData: before as any,
+          afterData: [inserted] as any,
+          userId: userId ?? null,
+          sourceEmployeeId: null,
+          context: { locationId, rate, sourceCompanyId } as any,
+        });
+        updated++;
+      });
+    }
+    return { updated };
+  }
+
+  async bulkSetMotoPctRateAtLocation(
+    locationId: number,
+    employeeIds: number[],
+    pct: string,
+    sourceCompanyId: number | null,
+    userId?: string | null,
+  ): Promise<{ updated: number }> {
+    let updated = 0;
+    for (const empId of employeeIds) {
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${empId}::bigint)`);
+        const before = await tx
+          .select()
+          .from(schema.employeeMotoPctRates)
+          .where(
+            and(
+              eq(schema.employeeMotoPctRates.employeeId, empId),
+              isNull(schema.employeeMotoPctRates.deletedAt),
+            ),
+          );
+        await tx
+          .update(schema.employeeMotoPctRates)
+          .set({ deletedAt: new Date() })
+          .where(
+            and(
+              eq(schema.employeeMotoPctRates.employeeId, empId),
+              eq(schema.employeeMotoPctRates.locationId, locationId),
+              isNull(schema.employeeMotoPctRates.deletedAt),
+            ),
+          );
+        const [inserted] = await tx
+          .insert(schema.employeeMotoPctRates)
+          .values({ employeeId: empId, locationId, pct, sourceCompanyId })
+          .returning();
+        await tx.insert(schema.motoRateAudit).values({
+          employeeId: empId,
+          tableName: "employee_moto_pct_rates",
+          action: "bulk_set",
+          beforeData: before as any,
+          afterData: [inserted] as any,
+          userId: userId ?? null,
+          sourceEmployeeId: null,
+          context: { locationId, pct, sourceCompanyId } as any,
+        });
+        updated++;
+      });
+    }
+    return { updated };
+  }
+
+  async getMotoRateAudit(employeeId: number, limit = 100): Promise<schema.MotoRateAudit[]> {
+    return await db
+      .select()
+      .from(schema.motoRateAudit)
+      .where(eq(schema.motoRateAudit.employeeId, employeeId))
+      .orderBy(desc(schema.motoRateAudit.createdAt))
+      .limit(limit);
   }
 }
 

@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "../db";
 import { storage } from "../storage";
-import { employees, locations, employeeMotoRates, employeeMotoPctRates } from "@shared/schema";
+import { employees, locations, employeeMotoRates, employeeMotoPctRates, motoRateAudit } from "@shared/schema";
 import { eq, inArray, asc } from "drizzle-orm";
 
 let EMP_A: number;
@@ -20,6 +20,7 @@ let LOC_2: number;
 
 async function cleanupRates(emps: number[]) {
   if (emps.length === 0) return;
+  await db.delete(motoRateAudit).where(inArray(motoRateAudit.employeeId, emps));
   await db.delete(employeeMotoRates).where(inArray(employeeMotoRates.employeeId, emps));
   await db.delete(employeeMotoPctRates).where(inArray(employeeMotoPctRates.employeeId, emps));
 }

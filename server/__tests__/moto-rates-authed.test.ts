@@ -171,4 +171,109 @@ describe("moto-rates authed tenant boundaries", () => {
     const body = await res.json();
     expect(body).toEqual([]);
   });
+
+  // -------- T02: Zod validation --------
+  it("PUT /moto-rates rejects rate=0 with 400 (Zod bound check)", async () => {
+    const res = await putRates(mainEmployeeId, {
+      rates: [{ locationId: mainLocationId, rate: "0" }],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("PUT /moto-rates rejects rate=99999 with 400 (Zod bound check)", async () => {
+    const res = await putRates(mainEmployeeId, {
+      rates: [{ locationId: mainLocationId, rate: "99999" }],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("PUT /moto-rates rejects malformed numeric rate=\"1abc\" with 400 (strict parser)", async () => {
+    const res = await putRates(mainEmployeeId, {
+      rates: [{ locationId: mainLocationId, rate: "1abc" }],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  // -------- T05: copy-from --------
+  it("POST /moto-rates/copy-from copies live rows from source to target", async () => {
+    // Seed source (mainEmployee) with one rate
+    await putRates(mainEmployeeId, { rates: [{ locationId: mainLocationId, rate: "9.99" }] });
+    // Find a second employee in MAIN to copy to. If only one exists, skip gracefully.
+    const all = await db.select().from(employees).where(eq(employees.companyId, mainCompanyId));
+    const target = all.find((e) => e.id !== mainEmployeeId);
+    if (!target) return; // single-employee dev seed; skip
+    const res = await fetch(`${BASE_URL}/api/employees/${target.id}/moto-rates/copy-from/${mainEmployeeId}`, {
+      method: "POST",
+      headers: { cookie },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.copied).toBe(1);
+    expect(body.rates[0].rate).toBe("9.9900");
+  });
+
+  // -------- T06: bulk-set --------
+  it("POST /locations/:id/moto-rates/bulk-set updates rates for many employees", async () => {
+    const all = await db.select().from(employees).where(eq(employees.companyId, mainCompanyId));
+    const ids = all.map((e) => e.id).slice(0, 2);
+    const res = await fetch(`${BASE_URL}/api/locations/${mainLocationId}/moto-rates/bulk-set`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({ rate: "5.55", employeeIds: ids }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.updated).toBe(ids.length);
+  });
+
+  it("POST /locations/:id/moto-rates/bulk-set rejects cross-tenant location with 403", async () => {
+    const res = await fetch(`${BASE_URL}/api/locations/${otherLocationId}/moto-rates/bulk-set`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({ rate: "5.55", employeeIds: [mainEmployeeId] }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  // -------- T04: audit log --------
+  it("GET /moto-rate-audit returns rows after rate changes", async () => {
+    const res = await fetch(`${BASE_URL}/api/employees/${mainEmployeeId}/moto-rate-audit`, {
+      headers: { cookie },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
+    expect(body.length).toBeGreaterThan(0);
+    expect(body[0]).toHaveProperty("action");
+    expect(body[0]).toHaveProperty("tableName");
+  });
+
+  // -------- T07: CSV export --------
+  it("GET /companies/:id/moto-rates/export.csv returns CSV with proper header", async () => {
+    const res = await fetch(`${BASE_URL}/api/companies/${mainCompanyId}/moto-rates/export.csv`, {
+      headers: { cookie },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/text\/csv/);
+    expect(res.headers.get("content-disposition")).toMatch(/attachment/);
+    const body = await res.text();
+    expect(body.split("\n")[0]).toBe("employee_code,employee_name,location_code,location_name,rate,pct");
+  });
+
+  it("GET /companies/:id/moto-rates/export.csv rejects cross-tenant company with 403", async () => {
+    const res = await fetch(`${BASE_URL}/api/companies/${otherCompanyId}/moto-rates/export.csv`, {
+      headers: { cookie },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  // -------- T10: health --------
+  it("GET /api/health returns ok with db status (no auth required)", async () => {
+    const res = await fetch(`${BASE_URL}/api/health`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("ok");
+    expect(body.db).toBe("ok");
+    expect(typeof body.uptimeSeconds).toBe("number");
+  });
 });

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, integer, decimal, date, boolean, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, integer, decimal, date, boolean, timestamp, uniqueIndex, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -196,6 +196,7 @@ export const employeeMotoRates = pgTable("employee_moto_rates", {
   locationId: integer("location_id").notNull(),
   sourceCompanyId: integer("source_company_id"),
   rate: decimal("rate", { precision: 15, scale: 4 }).notNull(),
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -209,11 +210,29 @@ export const employeeMotoPctRates = pgTable("employee_moto_pct_rates", {
   locationId: integer("location_id").notNull(),
   sourceCompanyId: integer("source_company_id"),
   pct: decimal("pct", { precision: 15, scale: 4 }).notNull(),
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 export type EmployeeMotoPctRate = typeof employeeMotoPctRates.$inferSelect;
 export type InsertEmployeeMotoPctRate = typeof employeeMotoPctRates.$inferInsert;
+
+// Audit log for all changes to per-employee moto rates (replace/copy/bulk).
+// Written inside the same transaction as the rate change so history is atomic.
+export const motoRateAudit = pgTable("moto_rate_audit", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull(),
+  tableName: text("table_name").notNull(),       // 'employee_moto_rates' | 'employee_moto_pct_rates'
+  action: text("action").notNull(),              // 'replace' | 'copy_from' | 'bulk_set'
+  beforeData: jsonb("before_data"),
+  afterData: jsonb("after_data"),
+  userId: text("user_id"),
+  sourceEmployeeId: integer("source_employee_id"),
+  context: jsonb("context"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type MotoRateAudit = typeof motoRateAudit.$inferSelect;
+export type InsertMotoRateAudit = typeof motoRateAudit.$inferInsert;
 
 export const employeeGroups = pgTable("employee_groups", {
   id: serial("id").primaryKey(),

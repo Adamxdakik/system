@@ -13,11 +13,16 @@ const REQUIRED_COLUMNS: ColumnCheck[] = [
   { table: "employees", column: "motos_bonus_rate" },
   { table: "container_offloads", column: "total_motos" },
   { table: "container_offloads", column: "additional_cost_per_moto" },
+  // 0008: soft-delete columns
+  { table: "employee_moto_rates", column: "deleted_at" },
+  { table: "employee_moto_pct_rates", column: "deleted_at" },
 ];
 
 const REQUIRED_TABLES: TableCheck[] = [
   { table: "employee_moto_rates" },
   { table: "employee_moto_pct_rates" },
+  // 0009: audit log
+  { table: "moto_rate_audit" },
 ];
 
 const MUST_NOT_EXIST_COLUMNS: ColumnCheck[] = [

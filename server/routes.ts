@@ -10,6 +10,12 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { asyncHandler } from "./lib/asyncHandler";
 import { validate } from "./lib/validate";
+import {
+  motoRatesPutSchema,
+  motoPctRatesPutSchema,
+  bulkSetMotoRateSchema,
+  bulkSetMotoPctRateSchema,
+} from "@shared/validation";
 import { chat, saveMessage, getConversationHistory, getConversationHistoryForAI, getAllChatHistory } from "./chatService";
 import {
   requireAuth,
@@ -255,6 +261,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Database connection failed:", error);
       res.status(500).json({ status: "error", message: error.message });
     }
+  });
+
+  // T10: full health endpoint — DB, uptime, version. No auth (used by deploy probes).
+  app.get("/api/health", async (_req, res) => {
+    let dbStatus: "ok" | "down" = "down";
+    let dbError: string | undefined;
+    try {
+      await db.execute(sql`SELECT 1`);
+      dbStatus = "ok";
+    } catch (e: any) {
+      dbError = e?.message ?? "unknown";
+    }
+    res.status(dbStatus === "ok" ? 200 : 503).json({
+      status: dbStatus === "ok" ? "ok" : "degraded",
+      db: dbStatus,
+      ...(dbError ? { dbError } : {}),
+      uptimeSeconds: Math.round(process.uptime()),
+      timestamp: new Date().toISOString(),
+      nodeEnv: process.env.NODE_ENV ?? "development",
+    });
   });
 
   // Authentication routes
@@ -2120,45 +2146,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/employees/:id/moto-rates", requireAuth, async (req, res) => {
-    try {
-      const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
-      if (!check.ok) return res.status(check.status).json({ message: check.message });
-      const body = req.body as { rates?: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }> };
-      const rates = Array.isArray(body?.rates) ? body.rates : [];
-      const accessible = await getAccessibleCompanyIds(req.session.userId);
-      const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
-      // Sanitize: only valid rows with locationId + rate > 0
-      const clean = rates
-        .filter((r) => r && Number.isFinite(Number(r.locationId)) && parseFloat(r.rate) > 0)
-        .map((r) => ({
-          locationId: Number(r.locationId),
+  app.put(
+    "/api/employees/:id/moto-rates",
+    requireAuth,
+    validate(motoRatesPutSchema),
+    async (req, res) => {
+      try {
+        const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+        if (!check.ok) return res.status(check.status).json({ message: check.message });
+        const body = req.body as { rates: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }> };
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        const clean = body.rates.map((r) => ({
+          locationId: r.locationId,
           rate: String(r.rate),
-          sourceCompanyId: r.sourceCompanyId != null ? Number(r.sourceCompanyId) : null,
+          sourceCompanyId: r.sourceCompanyId ?? null,
         }));
-      // Validate every locationId belongs to the current tenant company.
-      for (const row of clean) {
-        if (!tenantLocations.has(row.locationId)) {
-          return res.status(403).json({
-            message: `Access denied: locationId ${row.locationId} does not belong to your current company`,
-          });
+        for (const row of clean) {
+          if (!tenantLocations.has(row.locationId)) {
+            return res.status(403).json({
+              message: `Access denied: locationId ${row.locationId} does not belong to your current company`,
+            });
+          }
         }
-      }
-      // Validate sourceCompanyId is one the user has access to (when provided).
-      for (const row of clean) {
-        if (row.sourceCompanyId != null && !accessible.has(row.sourceCompanyId)) {
-          return res.status(403).json({
-            message: `Access denied: sourceCompanyId ${row.sourceCompanyId} is not in your accessible companies`,
-          });
+        for (const row of clean) {
+          if (row.sourceCompanyId != null && !accessible.has(row.sourceCompanyId)) {
+            return res.status(403).json({
+              message: `Access denied: sourceCompanyId ${row.sourceCompanyId} is not in your accessible companies`,
+            });
+          }
         }
+        const saved = await storage.replaceEmployeeMotoRates(check.employeeId, clean, {
+          userId: req.session.userId ?? null,
+          action: "replace",
+        });
+        res.json(saved);
+      } catch (err: any) {
+        console.error("PUT /api/employees/:id/moto-rates", err);
+        res.status(500).json({ message: err.message || "Failed to save moto rates" });
       }
-      const saved = await storage.replaceEmployeeMotoRates(check.employeeId, clean);
-      res.json(saved);
-    } catch (err: any) {
-      console.error("PUT /api/employees/:id/moto-rates", err);
-      res.status(500).json({ message: err.message || "Failed to save moto rates" });
-    }
-  });
+    },
+  );
 
   app.get("/api/employees/:id/moto-pct-rates", requireAuth, async (req, res) => {
     try {
@@ -2172,40 +2200,266 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/employees/:id/moto-pct-rates", requireAuth, async (req, res) => {
+  app.put(
+    "/api/employees/:id/moto-pct-rates",
+    requireAuth,
+    validate(motoPctRatesPutSchema),
+    async (req, res) => {
+      try {
+        const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+        if (!check.ok) return res.status(check.status).json({ message: check.message });
+        const body = req.body as { rates: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }> };
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        const clean = body.rates.map((r) => ({
+          locationId: r.locationId,
+          pct: String(r.pct),
+          sourceCompanyId: r.sourceCompanyId ?? null,
+        }));
+        for (const row of clean) {
+          if (!tenantLocations.has(row.locationId)) {
+            return res.status(403).json({
+              message: `Access denied: locationId ${row.locationId} does not belong to your current company`,
+            });
+          }
+        }
+        for (const row of clean) {
+          if (row.sourceCompanyId != null && !accessible.has(row.sourceCompanyId)) {
+            return res.status(403).json({
+              message: `Access denied: sourceCompanyId ${row.sourceCompanyId} is not in your accessible companies`,
+            });
+          }
+        }
+        const saved = await storage.replaceEmployeeMotoPctRates(check.employeeId, clean, {
+          userId: req.session.userId ?? null,
+          action: "replace",
+        });
+        res.json(saved);
+      } catch (err: any) {
+        console.error("PUT /api/employees/:id/moto-pct-rates", err);
+        res.status(500).json({ message: err.message || "Failed to save moto pct rates" });
+      }
+    },
+  );
+
+  // -------- T05: copy moto rates from another employee (same tenant) --------
+  // Hardening: even though both employees are tenant-checked, source rows may
+  // contain legacy/manual data with cross-tenant locationId or sourceCompanyId
+  // (e.g. before tenant guards existed). Filter to current-tenant locations
+  // and accessible companies before replacing — otherwise copy-from becomes a
+  // back-door for the very IDOR closed in audit-round-2.
+  app.post(
+    "/api/employees/:id/moto-rates/copy-from/:sourceId",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const target = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+        if (!target.ok) return res.status(target.status).json({ message: target.message });
+        const source = await verifyEmployeeForCurrentCompany(req.params.sourceId, req.session.currentCompanyId);
+        if (!source.ok) return res.status(source.status).json({ message: `Source employee: ${source.message}` });
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        const sourceRows = await storage.getEmployeeMotoRates(source.employeeId);
+        const filtered = sourceRows
+          .filter((r) => tenantLocations.has(r.locationId))
+          .filter((r) => r.sourceCompanyId == null || accessible.has(r.sourceCompanyId))
+          .map((r) => ({ locationId: r.locationId, rate: r.rate, sourceCompanyId: r.sourceCompanyId }));
+        const saved = await storage.replaceEmployeeMotoRates(
+          target.employeeId,
+          filtered,
+          { userId: req.session.userId ?? null, action: "copy_from", sourceEmployeeId: source.employeeId },
+        );
+        res.json({ copied: saved.length, skipped: sourceRows.length - filtered.length, rates: saved });
+      } catch (err: any) {
+        console.error("POST /moto-rates/copy-from", err);
+        res.status(500).json({ message: err.message || "Failed to copy moto rates" });
+      }
+    },
+  );
+
+  app.post(
+    "/api/employees/:id/moto-pct-rates/copy-from/:sourceId",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const target = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+        if (!target.ok) return res.status(target.status).json({ message: target.message });
+        const source = await verifyEmployeeForCurrentCompany(req.params.sourceId, req.session.currentCompanyId);
+        if (!source.ok) return res.status(source.status).json({ message: `Source employee: ${source.message}` });
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        const sourceRows = await storage.getEmployeeMotoPctRates(source.employeeId);
+        const filtered = sourceRows
+          .filter((r) => tenantLocations.has(r.locationId))
+          .filter((r) => r.sourceCompanyId == null || accessible.has(r.sourceCompanyId))
+          .map((r) => ({ locationId: r.locationId, pct: r.pct, sourceCompanyId: r.sourceCompanyId }));
+        const saved = await storage.replaceEmployeeMotoPctRates(
+          target.employeeId,
+          filtered,
+          { userId: req.session.userId ?? null, action: "copy_from", sourceEmployeeId: source.employeeId },
+        );
+        res.json({ copied: saved.length, skipped: sourceRows.length - filtered.length, rates: saved });
+      } catch (err: any) {
+        console.error("POST /moto-pct-rates/copy-from", err);
+        res.status(500).json({ message: err.message || "Failed to copy moto pct rates" });
+      }
+    },
+  );
+
+  // -------- T06: bulk-set moto rates for many employees at one location --------
+  app.post(
+    "/api/locations/:id/moto-rates/bulk-set",
+    requireAuth,
+    validate(bulkSetMotoRateSchema),
+    async (req, res) => {
+      try {
+        const locationId = parseInt(req.params.id, 10);
+        if (isNaN(locationId)) return res.status(400).json({ message: "Invalid location ID" });
+        if (!req.session.currentCompanyId) return res.status(400).json({ message: "No company selected" });
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        if (!tenantLocations.has(locationId)) {
+          return res.status(403).json({ message: `Access denied: locationId ${locationId} does not belong to your current company` });
+        }
+        const body = req.body as { rate: string; employeeIds: number[]; sourceCompanyId?: number | null };
+        // All employees must be in current tenant
+        const tenantEmployees = await storage.getAllEmployees(req.session.currentCompanyId);
+        const tenantEmpIds = new Set(tenantEmployees.map((e: any) => e.id));
+        for (const id of body.employeeIds) {
+          if (!tenantEmpIds.has(id)) {
+            return res.status(403).json({ message: `Access denied: employee ${id} not in your current company` });
+          }
+        }
+        if (body.sourceCompanyId != null) {
+          const accessible = await getAccessibleCompanyIds(req.session.userId);
+          if (!accessible.has(body.sourceCompanyId)) {
+            return res.status(403).json({ message: `Access denied: sourceCompanyId ${body.sourceCompanyId} is not in your accessible companies` });
+          }
+        }
+        const result = await storage.bulkSetMotoRateAtLocation(
+          locationId,
+          body.employeeIds,
+          String(body.rate),
+          body.sourceCompanyId ?? null,
+          req.session.userId ?? null,
+        );
+        res.json(result);
+      } catch (err: any) {
+        console.error("POST /locations/:id/moto-rates/bulk-set", err);
+        res.status(500).json({ message: err.message || "Failed to bulk-set moto rates" });
+      }
+    },
+  );
+
+  app.post(
+    "/api/locations/:id/moto-pct-rates/bulk-set",
+    requireAuth,
+    validate(bulkSetMotoPctRateSchema),
+    async (req, res) => {
+      try {
+        const locationId = parseInt(req.params.id, 10);
+        if (isNaN(locationId)) return res.status(400).json({ message: "Invalid location ID" });
+        if (!req.session.currentCompanyId) return res.status(400).json({ message: "No company selected" });
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        if (!tenantLocations.has(locationId)) {
+          return res.status(403).json({ message: `Access denied: locationId ${locationId} does not belong to your current company` });
+        }
+        const body = req.body as { pct: string; employeeIds: number[]; sourceCompanyId?: number | null };
+        const tenantEmployees = await storage.getAllEmployees(req.session.currentCompanyId);
+        const tenantEmpIds = new Set(tenantEmployees.map((e: any) => e.id));
+        for (const id of body.employeeIds) {
+          if (!tenantEmpIds.has(id)) {
+            return res.status(403).json({ message: `Access denied: employee ${id} not in your current company` });
+          }
+        }
+        if (body.sourceCompanyId != null) {
+          const accessible = await getAccessibleCompanyIds(req.session.userId);
+          if (!accessible.has(body.sourceCompanyId)) {
+            return res.status(403).json({ message: `Access denied: sourceCompanyId ${body.sourceCompanyId} is not in your accessible companies` });
+          }
+        }
+        const result = await storage.bulkSetMotoPctRateAtLocation(
+          locationId,
+          body.employeeIds,
+          String(body.pct),
+          body.sourceCompanyId ?? null,
+          req.session.userId ?? null,
+        );
+        res.json(result);
+      } catch (err: any) {
+        console.error("POST /locations/:id/moto-pct-rates/bulk-set", err);
+        res.status(500).json({ message: err.message || "Failed to bulk-set moto pct rates" });
+      }
+    },
+  );
+
+  // -------- T04: audit log fetch (per-employee, tenant-scoped) --------
+  app.get("/api/employees/:id/moto-rate-audit", requireAuth, async (req, res) => {
     try {
       const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
       if (!check.ok) return res.status(check.status).json({ message: check.message });
-      const body = req.body as { rates?: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }> };
-      const rates = Array.isArray(body?.rates) ? body.rates : [];
-      const accessible = await getAccessibleCompanyIds(req.session.userId);
-      const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
-      const clean = rates
-        .filter((r) => r && Number.isFinite(Number(r.locationId)) && parseFloat(r.pct) > 0)
-        .map((r) => ({
-          locationId: Number(r.locationId),
-          pct: String(r.pct),
-          sourceCompanyId: r.sourceCompanyId != null ? Number(r.sourceCompanyId) : null,
-        }));
-      for (const row of clean) {
-        if (!tenantLocations.has(row.locationId)) {
-          return res.status(403).json({
-            message: `Access denied: locationId ${row.locationId} does not belong to your current company`,
-          });
-        }
-      }
-      for (const row of clean) {
-        if (row.sourceCompanyId != null && !accessible.has(row.sourceCompanyId)) {
-          return res.status(403).json({
-            message: `Access denied: sourceCompanyId ${row.sourceCompanyId} is not in your accessible companies`,
-          });
-        }
-      }
-      const saved = await storage.replaceEmployeeMotoPctRates(check.employeeId, clean);
-      res.json(saved);
+      const rows = await storage.getMotoRateAudit(check.employeeId);
+      res.json(rows);
     } catch (err: any) {
-      console.error("PUT /api/employees/:id/moto-pct-rates", err);
-      res.status(500).json({ message: err.message || "Failed to save moto pct rates" });
+      console.error("GET /moto-rate-audit", err);
+      res.status(500).json({ message: err.message || "Failed to fetch audit log" });
+    }
+  });
+
+  // -------- T07: CSV export of all moto rates for a company --------
+  app.get("/api/companies/:id/moto-rates/export.csv", requireAuth, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.id, 10);
+      if (isNaN(companyId)) return res.status(400).json({ message: "Invalid company ID" });
+      // Tenant scope: only allow companies the user has access to
+      const accessible = await getAccessibleCompanyIds(req.session.userId);
+      if (!accessible.has(companyId)) {
+        return res.status(403).json({ message: "Access denied: company not in your accessible companies" });
+      }
+      // Join moto_rates + moto_pct_rates with employees + locations for this company.
+      const rows: Array<{
+        employee_code: string; employee_name: string;
+        location_code: string; location_name: string;
+        rate: string; pct: string;
+      }> = await db.execute(sql`
+        SELECT
+          e.code AS employee_code,
+          (e.first_name || ' ' || COALESCE(e.last_name, '')) AS employee_name,
+          l.code AS location_code,
+          l.name AS location_name,
+          COALESCE(mr.rate::text, '') AS rate,
+          COALESCE(pct.pct::text, '')  AS pct
+        FROM employees e
+        CROSS JOIN locations l
+        LEFT JOIN employee_moto_rates mr
+          ON mr.employee_id = e.id AND mr.location_id = l.id AND mr.deleted_at IS NULL
+        LEFT JOIN employee_moto_pct_rates pct
+          ON pct.employee_id = e.id AND pct.location_id = l.id AND pct.deleted_at IS NULL
+        WHERE e.company_id = ${companyId} AND l.company_id = ${companyId}
+          AND (mr.id IS NOT NULL OR pct.id IS NOT NULL)
+        ORDER BY e.code, l.code
+      `).then((r: any) => r.rows ?? r);
+
+      // Defense against CSV formula injection (CWE-1236): cells beginning with
+      // =, +, -, @, TAB, or CR can be interpreted as formulas by Excel/Sheets
+      // and exfiltrate data. Prefix such cells with a single quote (the OWASP
+      // recommended neutralizer) before normal CSV escaping.
+      const escape = (v: any) => {
+        let s = v == null ? "" : String(v);
+        if (s.length > 0 && /^[=+\-@\t\r]/.test(s)) {
+          s = "'" + s;
+        }
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const header = "employee_code,employee_name,location_code,location_name,rate,pct\n";
+      const csv = header + rows.map((r) =>
+        [r.employee_code, r.employee_name, r.location_code, r.location_name, r.rate, r.pct].map(escape).join(",")
+      ).join("\n") + "\n";
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="moto-rates-${companyId}-${Date.now()}.csv"`);
+      res.send(csv);
+    } catch (err: any) {
+      console.error("GET /moto-rates/export.csv", err);
+      res.status(500).json({ message: err.message || "Failed to export CSV" });
     }
   });
 
