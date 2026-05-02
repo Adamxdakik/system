@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ArrowLeft, Upload, Download, CheckCircle2, AlertCircle } from "lucide-react";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/excelHelper";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -34,7 +34,7 @@ export default function ImportStockItems() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [importComplete, setImportComplete] = useState(false);
 
-  const downloadTemplate = () => {
+  const downloadTemplate = async () => {
     const template = [
       { code: "ITEM001", name: "Honda CG 125", unit: "Unit", stockGroupCode: "GRP001" },
       { code: "ITEM002", name: "Yamaha YBR 125", unit: "Unit", stockGroupCode: "GRP001" },
@@ -43,7 +43,7 @@ export default function ImportStockItems() {
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Stock Items");
-    XLSX.writeFile(wb, "stock_items_template.xlsx");
+    await XLSX.writeFile(wb, "stock_items_template.xlsx");
 
     toast({
       title: "Template Downloaded",
@@ -62,7 +62,7 @@ export default function ImportStockItems() {
 
     try {
       const data = await selectedFile.arrayBuffer();
-      const workbook = XLSX.read(data);
+      const workbook = await XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
 

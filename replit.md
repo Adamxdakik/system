@@ -46,6 +46,18 @@ Preferred communication style: Simple, everyday language.
 - **Payroll**: Employee management and payroll voucher creation.
 - **Settings (Admin-only)**: Comprehensive admin panel for managing companies, users, fiscal periods, system preferences, role permissions, active sessions, and database statistics.
 
+## Recent Changes (2026-05-02)
+
+### Hardening pass
+- **Auth session bug fix**: `requireAuth` now returns `403 NO_COMPANY_SELECTED` (was `401`) when the user is logged in but has no company yet — this prevents the frontend from logging the user out. The `/api/auth/login` route now explicitly persists the session via `req.session.save()` before responding so the `Set-Cookie` header is guaranteed to land on the response.
+- **Centralized error handling**: New `server/lib/asyncHandler.ts` wrapper forwards rejected promises to Express's error pipeline. The error middleware in `server/index.ts` now handles `ZodError` → `400` with structured field errors, logs `5xx` responses, and includes optional `code` field on the JSON payload.
+- **Zod input validation**: New `server/lib/validate.ts` middleware (`validate(schema, source)`) validates `body`/`query`/`params` and forwards `ZodError`s to the error middleware. Applied to `/api/auth/login` (with `loginSchema`); pattern is ready for incremental adoption.
+- **xlsx → exceljs migration**: The unmaintained `xlsx` package (prototype-pollution + ReDoS CVEs, no fix) and `xlsx-js-style` follow-on have been swapped for an exceljs-backed shim exposed through `server/lib/excel.ts` and `client/src/lib/excelHelper.ts`. The shims preserve the SheetJS namespace API (`XLSX.utils.book_new`, `json_to_sheet`, `aoa_to_sheet`, `book_append_sheet`, `sheet_to_json`, `XLSX.read`, `XLSX.write`, `XLSX.writeFile`); only difference is that read/write are async (call sites now `await`).
+  - Note: `xlsx-js-style` is retained for `ERPRunPayroll.tsx` styled exports.
+- **Tooling**: Added `eslint.config.js` (flat config: typescript-eslint + react-hooks + react-refresh), `.prettierrc.json`, `vitest.config.ts`. New scripts: `lint`, `lint:fix`, `format`, `format:check`, `test`, `test:watch`. Initial vitest test for `asyncHandler`.
+- **Dependency cleanup**: Removed unused `passport`, `passport-local`, `memorystore`, `tw-animate-css` and the deprecated `xlsx` package itself.
+- **House cleaning**: Deleted `_trash/` (~112MB).
+
 ## External Dependencies
 
 - **UI Libraries**: Radix UI, Tailwind CSS, shadcn/ui, `cmdk`.

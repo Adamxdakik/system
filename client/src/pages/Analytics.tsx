@@ -25,7 +25,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/excelHelper";
 
 // Type definitions
 interface Account {
@@ -868,7 +868,7 @@ export default function Analytics() {
     );
   };
 
-  const exportRatiosToExcel = () => {
+  const exportRatiosToExcel = async () => {
     if (!ratiosData) return;
 
     const wb = XLSX.utils.book_new();
@@ -892,7 +892,7 @@ export default function Analytics() {
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     XLSX.utils.book_append_sheet(wb, ws, "Financial Ratios");
-    XLSX.writeFile(wb, "financial-ratios.xlsx");
+    await XLSX.writeFile(wb, "financial-ratios.xlsx");
 
     toast({ title: "Excel Exported", description: "Report downloaded successfully" });
   };

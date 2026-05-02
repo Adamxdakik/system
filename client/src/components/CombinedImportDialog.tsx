@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/excelHelper";
 import { Download, Package } from "lucide-react";
 import type { Location } from "@shared/schema";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -77,7 +77,7 @@ export function CombinedImportDialog({ open, onOpenChange }: CombinedImportDialo
     },
   });
 
-  const downloadPricesTemplate = () => {
+  const downloadPricesTemplate = async () => {
     const template = [
       { Barcode: "BAR001", "Selling Price": 100.00 },
       { Barcode: "BAR002", "Selling Price": 200.00 },
@@ -86,7 +86,7 @@ export function CombinedImportDialog({ open, onOpenChange }: CombinedImportDialo
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Prices");
-    XLSX.writeFile(wb, "selling_prices_template.xlsx");
+    await XLSX.writeFile(wb, "selling_prices_template.xlsx");
 
     toast({
       title: "Template Downloaded",
@@ -122,7 +122,7 @@ export function CombinedImportDialog({ open, onOpenChange }: CombinedImportDialo
     setIsProcessing(true);
     try {
       const arrayBuffer = await pricesFile.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const workbook = await XLSX.read(arrayBuffer, { type: "array" });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(worksheet) as Array<{ Barcode?: string; "Selling Price"?: string | number }>;
 
@@ -165,7 +165,7 @@ export function CombinedImportDialog({ open, onOpenChange }: CombinedImportDialo
     }
   };
 
-  const downloadOpeningTemplate = () => {
+  const downloadOpeningTemplate = async () => {
     const template = [
       { Barcode: "BAR001", Qty: 100, Rate: 10.50, "Total Value": 1050.00 },
       { Barcode: "BAR002", Qty: 50, Rate: 25.00, "Total Value": 1250.00 },
@@ -174,7 +174,7 @@ export function CombinedImportDialog({ open, onOpenChange }: CombinedImportDialo
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Opening Balances");
-    XLSX.writeFile(wb, "opening_balances_template.xlsx");
+    await XLSX.writeFile(wb, "opening_balances_template.xlsx");
 
     toast({
       title: "Template Downloaded",
@@ -201,7 +201,7 @@ export function CombinedImportDialog({ open, onOpenChange }: CombinedImportDialo
     setIsProcessingOpening(true);
     try {
       const arrayBuffer = await openingFile.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const workbook = await XLSX.read(arrayBuffer, { type: "array" });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(worksheet) as Array<{ 
         Barcode?: string; 

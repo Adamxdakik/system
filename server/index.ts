@@ -157,10 +157,30 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Centralized error handler. Handles Zod validation errors with 400 + details,
+    // honors err.status/err.statusCode for thrown HTTP errors, and never leaks
+    // stack traces to clients in production.
+    if (err?.name === "ZodError" && Array.isArray(err.errors)) {
+      return res.status(400).json({
+        message: "Invalid request",
+        errors: err.errors.map((e: any) => ({
+          path: Array.isArray(e.path) ? e.path.join(".") : String(e.path ?? ""),
+          message: e.message,
+          code: e.code,
+        })),
+      });
+    }
+
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
+    if (status >= 500) {
+      console.error("[error-middleware]", err);
+    }
+
+    const payload: Record<string, unknown> = { message };
+    if (err.code) payload.code = err.code;
+    res.status(status).json(payload);
   });
 
   // importantly only setup vite in development and after

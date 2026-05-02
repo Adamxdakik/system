@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCompany } from "@/contexts/CompanyContext";
 import { formatNumber } from "@/lib/utils";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/excelHelper";
 import type { Container, Supplier } from "@shared/schema";
 
 interface SoldContainer {
@@ -99,7 +99,7 @@ export default function Containers() {
     setSearchTerm("");
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     const data = containers.map((container) => ({
       "Container Number": container.containerNumber,
       Supplier: getSupplierName(container.supplierId),
@@ -111,7 +111,7 @@ export default function Containers() {
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Containers");
-    XLSX.writeFile(workbook, "containers.xlsx");
+    await XLSX.writeFile(workbook, "containers.xlsx");
   };
 
   if (isLoading) {

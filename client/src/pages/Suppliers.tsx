@@ -35,7 +35,7 @@ import { Users, Container, DollarSign, Download, Edit, EyeOff, Eye, ExternalLink
 import { useCompany } from "@/contexts/CompanyContext";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/excelHelper";
 
 interface SupplierWithStats {
   id: number;
@@ -129,7 +129,7 @@ export default function Suppliers() {
     setCompanyFilter("all");
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     if (!selectedSupplier || unifiedLedger.length === 0) return;
 
     const exportData = unifiedLedger.map((txn: any) => ({
@@ -146,7 +146,7 @@ export default function Suppliers() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Supplier Ledger");
     
     const fileName = `${selectedSupplier.legalName}_Ledger_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    await XLSX.writeFile(workbook, fileName);
   };
 
   return (

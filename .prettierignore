@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+client/dist
+package-lock.json
+attached_assets
+_trash
+*.md
+*.log

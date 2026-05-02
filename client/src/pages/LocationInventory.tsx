@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/excelHelper";
 
 interface Location {
   id: number;

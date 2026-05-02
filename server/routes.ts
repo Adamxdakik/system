@@ -1,12 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
-import * as XLSX from "xlsx";
+import * as XLSX from "./lib/excel";
 import bcrypt from "bcryptjs";
 import { createHash } from "crypto";
 import CryptoJS from "crypto-js";
+import { z } from "zod";
 import { storage } from "./storage";
 import { db } from "./db";
+import { asyncHandler } from "./lib/asyncHandler";
+import { validate } from "./lib/validate";
 import { chat, saveMessage, getConversationHistory, getConversationHistoryForAI, getAllChatHistory } from "./chatService";
 import {
   requireAuth,
@@ -88,7 +91,6 @@ import {
   assemblyHistory,
   loginHistory,
 } from "@shared/schema";
-import { z } from "zod";
 import { eq, and, inArray, sql, like, ne, desc, asc, or, isNotNull, lt, gte, lte, not, isNull } from "drizzle-orm";
 import { format } from "date-fns";
 
@@ -113,6 +115,12 @@ interface ActiveUserEntry {
 }
 const activeUsers = new Map<string, ActiveUserEntry>();
 const ACTIVE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+// Auth request schemas (validated via the validate() middleware)
+const loginSchema = z.object({
+  username: z.string().min(1, "Username is required").max(255),
+  password: z.string().min(1, "Password is required").max(1024),
+});
 
 // Helper function to hash passwords with bcrypt (async)
 async function hashPassword(password: string): Promise<string> {
@@ -255,40 +263,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Authentication routes
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      console.log("Login attempt started for username:", req.body.username);
-      const { username, password } = req.body;
+  // Validates body with Zod, races the DB lookup against a timeout, and
+  // explicitly persists the session before responding so the Set-Cookie
+  // header is guaranteed to be present on the response.
+  app.post(
+    "/api/auth/login",
+    validate(loginSchema),
+    asyncHandler(async (req, res) => {
+      const { username, password } = req.body as { username: string; password: string };
 
-      if (!username || !password) {
-        return res
-          .status(400)
-          .json({ message: "Username and password are required" });
-      }
-
-      console.log("Fetching user from database...");
       const user = (await Promise.race([
         storage.getUserByUsername(username),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Database query timeout")), 5000),
         ),
-      ])) as any;
-      console.log("User fetch complete:", user ? "Found" : "Not found");
+      ])) as Awaited<ReturnType<typeof storage.getUserByUsername>>;
+
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      const { valid: passwordValid, needsMigration } = await verifyPassword(password, user.password);
+      const { valid: passwordValid, needsMigration } = await verifyPassword(
+        password,
+        user.password,
+      );
       if (!passwordValid) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       // Migrate legacy SHA256 password to bcrypt on successful login
       if (needsMigration) {
-        console.log("Migrating legacy password hash to bcrypt for user:", user.id);
         const newHash = await hashPassword(password);
         await storage.updateUser(user.id, { password: newHash });
-        console.log("Password migration complete for user:", user.id);
       }
 
       if (!user.active) {
@@ -308,25 +314,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.cashAccountId = firstCompany.cashAccountId;
       }
 
-      console.log("✅ Login successful, session saved");
-
-      // Record login history
+      // Record login history (non-blocking — failures here must not fail login)
       try {
         await db.insert(loginHistory).values({
           userId: user.id,
           username: user.username,
-          ipAddress: (req.headers["x-forwarded-for"] as string) || req.socket?.remoteAddress || null,
+          ipAddress:
+            (req.headers["x-forwarded-for"] as string) ||
+            req.socket?.remoteAddress ||
+            null,
           userAgent: req.headers["user-agent"] || null,
         });
-      } catch { /* non-blocking */ }
+      } catch {
+        /* non-blocking */
+      }
 
-      // Return user without password
+      // Explicitly persist the session before responding so the Set-Cookie
+      // header is guaranteed to land on the response. With async work
+      // happening between mutating req.session and res.json(), the implicit
+      // save can race the response and leave the client unauthenticated.
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => (err ? reject(err) : resolve()));
+      });
+
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+    }),
+  );
 
   app.post("/api/auth/logout", (req, res) => {
     if (req.session?.userId) activeUsers.delete(req.session.userId);
@@ -6432,7 +6446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No file uploaded" });
         }
 
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+        const workbook = await XLSX.read(req.file.buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const rawData = XLSX.utils.sheet_to_json(worksheet);
@@ -7111,7 +7125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download sample PO import template
-  app.get("/api/po-import/template", (_req, res) => {
+  app.get("/api/po-import/template", async (_req, res) => {
     try {
       // Sample data for the template
       const sampleData = [
@@ -7200,7 +7214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       XLSX.utils.book_append_sheet(workbook, worksheet, "PO Import");
 
       // Generate buffer
-      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      const buffer = await XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 
       // Set headers for download
       res.setHeader(
@@ -7233,7 +7247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No file uploaded" });
         }
 
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+        const workbook = await XLSX.read(req.file.buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const rawData = XLSX.utils.sheet_to_json(worksheet);
@@ -7603,7 +7617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download sample POS import template
-  app.get("/api/pos-import/template", (_req, res) => {
+  app.get("/api/pos-import/template", async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -7627,7 +7641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const worksheet = XLSX.utils.json_to_sheet(sampleData);
       XLSX.utils.book_append_sheet(workbook, worksheet, "POS Import");
 
-      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      const buffer = await XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 
       res.setHeader(
         "Content-Disposition",
@@ -7661,7 +7675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No file uploaded" });
         }
 
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+        const workbook = await XLSX.read(req.file.buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const rawData = XLSX.utils.sheet_to_json(worksheet);
@@ -8021,7 +8035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download sample Stock Transfer import template
-  app.get("/api/stock-transfer-import/template", (_req, res) => {
+  app.get("/api/stock-transfer-import/template", async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -8042,7 +8056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const worksheet = XLSX.utils.json_to_sheet(sampleData);
       XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Transfer");
 
-      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      const buffer = await XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 
       res.setHeader(
         "Content-Disposition",
@@ -8060,7 +8074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Multi-source Stock Transfer Import - Template
-  app.get("/api/stock-transfer-import/template-multi-source", (_req, res) => {
+  app.get("/api/stock-transfer-import/template-multi-source", async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -8084,7 +8098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const worksheet = XLSX.utils.json_to_sheet(sampleData);
       XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Transfer");
 
-      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      const buffer = await XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 
       res.setHeader(
         "Content-Disposition",
@@ -8117,7 +8131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No file uploaded" });
         }
 
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+        const workbook = await XLSX.read(req.file.buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const rawData = XLSX.utils.sheet_to_json(worksheet);
@@ -22372,7 +22386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Parse Excel file
-      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const workbook = await XLSX.read(req.file.buffer, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(worksheet);
@@ -22883,7 +22897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Parse Excel file
-      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const workbook = await XLSX.read(req.file.buffer, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(worksheet);

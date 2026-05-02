@@ -11,20 +11,32 @@ var __export = (target, all) => {
 // shared/schema.ts
 var schema_exports = {};
 __export(schema_exports, {
+  ASSEMBLY_STAGES: () => ASSEMBLY_STAGES,
+  FEATURE_KEYS: () => FEATURE_KEYS,
+  FEATURE_ROUTES: () => FEATURE_ROUTES,
+  ROUTE_TO_FEATURE: () => ROUTE_TO_FEATURE,
+  assemblyHistory: () => assemblyHistory,
+  assemblyInventory: () => assemblyInventory,
+  assemblyTasks: () => assemblyTasks,
   baleProducts: () => baleProducts,
   baleSequences: () => baleSequences,
   baleTransferItems: () => baleTransferItems,
   baleTransfers: () => baleTransfers,
   bales: () => bales,
   bankAccounts: () => bankAccounts,
+  bikePurchases: () => bikePurchases,
+  chatMessages: () => chatMessages,
+  communicationLogs: () => communicationLogs,
   companies: () => companies,
   companySettings: () => companySettings,
   containerCharges: () => containerCharges,
+  containerItems: () => containerItems,
   containerOffloads: () => containerOffloads,
   containerSales: () => containerSales,
   containers: () => containers,
   customerBalances: () => customerBalances,
   customers: () => customers,
+  dashboardAccountSelections: () => dashboardAccountSelections,
   dashboardCashAccounts: () => dashboardCashAccounts,
   dashboardPayableAccounts: () => dashboardPayableAccounts,
   draftPosSaleItems: () => draftPosSaleItems,
@@ -35,19 +47,27 @@ __export(schema_exports, {
   fiscalPeriodClosures: () => fiscalPeriodClosures,
   fixedAssets: () => fixedAssets,
   importLogs: () => importLogs,
+  insertAssemblyHistorySchema: () => insertAssemblyHistorySchema,
+  insertAssemblyInventorySchema: () => insertAssemblyInventorySchema,
+  insertAssemblyTaskSchema: () => insertAssemblyTaskSchema,
   insertBaleProductSchema: () => insertBaleProductSchema,
   insertBaleSchema: () => insertBaleSchema,
   insertBaleTransferItemSchema: () => insertBaleTransferItemSchema,
   insertBaleTransferSchema: () => insertBaleTransferSchema,
   insertBankAccountSchema: () => insertBankAccountSchema,
+  insertBikePurchaseSchema: () => insertBikePurchaseSchema,
+  insertChatMessageSchema: () => insertChatMessageSchema,
+  insertCommunicationLogSchema: () => insertCommunicationLogSchema,
   insertCompanySchema: () => insertCompanySchema,
   insertCompanySettingsSchema: () => insertCompanySettingsSchema,
   insertContainerChargeSchema: () => insertContainerChargeSchema,
+  insertContainerItemSchema: () => insertContainerItemSchema,
   insertContainerOffloadSchema: () => insertContainerOffloadSchema,
   insertContainerSaleSchema: () => insertContainerSaleSchema,
   insertContainerSchema: () => insertContainerSchema,
   insertCustomerBalanceSchema: () => insertCustomerBalanceSchema,
   insertCustomerSchema: () => insertCustomerSchema,
+  insertDashboardAccountSelectionSchema: () => insertDashboardAccountSelectionSchema,
   insertDashboardCashAccountSchema: () => insertDashboardCashAccountSchema,
   insertDashboardPayableAccountSchema: () => insertDashboardPayableAccountSchema,
   insertDraftPosSaleItemSchema: () => insertDraftPosSaleItemSchema,
@@ -64,12 +84,17 @@ __export(schema_exports, {
   insertLocationSchema: () => insertLocationSchema,
   insertMixBatchSchema: () => insertMixBatchSchema,
   insertMixBatchSourceSchema: () => insertMixBatchSourceSchema,
+  insertMotoAssemblyPartSchema: () => insertMotoAssemblyPartSchema,
+  insertMotoAssemblySchema: () => insertMotoAssemblySchema,
   insertPOLineItemSchema: () => insertPOLineItemSchema,
+  insertPartPurchaseSchema: () => insertPartPurchaseSchema,
   insertProductionBaleSchema: () => insertProductionBaleSchema,
   insertPurchaseOrderSchema: () => insertPurchaseOrderSchema,
+  insertRoleFeaturePermissionSchema: () => insertRoleFeaturePermissionSchema,
   insertSalaryAdvanceDeductionSchema: () => insertSalaryAdvanceDeductionSchema,
   insertSalaryAdvanceSchema: () => insertSalaryAdvanceSchema,
   insertSalesItemSchema: () => insertSalesItemSchema,
+  insertServiceHistorySchema: () => insertServiceHistorySchema,
   insertStockAdjustmentItemSchema: () => insertStockAdjustmentItemSchema,
   insertStockAdjustmentVoucherSchema: () => insertStockAdjustmentVoucherSchema,
   insertStockGroupSchema: () => insertStockGroupSchema,
@@ -84,19 +109,26 @@ __export(schema_exports, {
   insertUserSchema: () => insertUserSchema,
   insertVoucherEntrySchema: () => insertVoucherEntrySchema,
   insertVoucherSchema: () => insertVoucherSchema,
+  insertWarrantySchema: () => insertWarrantySchema,
   interCompanyTransfers: () => interCompanyTransfers,
   inventory: () => inventory,
   ledgerAccounts: () => ledgerAccounts,
   locations: () => locations,
+  loginHistory: () => loginHistory,
   mixBatchSources: () => mixBatchSources,
   mixBatches: () => mixBatches,
+  motoAssemblies: () => motoAssemblies,
+  motoAssemblyParts: () => motoAssemblyParts,
   offloadRequestSchema: () => offloadRequestSchema,
+  partPurchases: () => partPurchases,
   poLineItems: () => poLineItems,
   productionBales: () => productionBales,
   purchaseOrders: () => purchaseOrders,
+  roleFeaturePermissions: () => roleFeaturePermissions,
   salaryAdvanceDeductions: () => salaryAdvanceDeductions,
   salaryAdvances: () => salaryAdvances,
   salesItems: () => salesItems,
+  serviceHistory: () => serviceHistory,
   stockAdjustmentItems: () => stockAdjustmentItems,
   stockAdjustmentVouchers: () => stockAdjustmentVouchers,
   stockGroups: () => stockGroups,
@@ -115,13 +147,14 @@ __export(schema_exports, {
   userPreferences: () => userPreferences,
   users: () => users,
   voucherEntries: () => voucherEntries,
-  vouchers: () => vouchers
+  vouchers: () => vouchers,
+  warranties: () => warranties
 });
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, serial, integer, decimal, date, boolean, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var companies, insertCompanySchema, userCompanyRoles, insertUserCompanyRoleSchema, users, insertUserSchema, locations, insertLocationSchema, ledgerAccounts, insertLedgerAccountSchema, updateLedgerAccountSchema, employees, insertEmployeeSchema, employeeGroups, insertEmployeeGroupSchema, employeeGroupMembers, insertEmployeeGroupMemberSchema, suppliers, insertSupplierSchema, stockGroups, insertStockGroupSchema, stockItems, insertStockItemSchema, stockItemCodeAliases, insertStockItemCodeAliasSchema, bankAccounts, insertBankAccountSchema, fixedAssets, insertFixedAssetSchema, containers, insertContainerSchema, purchaseOrders, insertPurchaseOrderSchema, poLineItems, insertPOLineItemSchema, containerCharges, insertContainerChargeSchema, importLogs, insertImportLogSchema, inventory, insertInventorySchema, containerOffloads, insertContainerOffloadSchema, offloadRequestSchema, vouchers, insertVoucherSchema, voucherEntries, insertVoucherEntrySchema, fiscalPeriodClosures, insertFiscalPeriodClosureSchema, stockTransferVouchers, insertStockTransferVoucherSchema, stockTransferItems, insertStockTransferItemSchema, stockAdjustmentVouchers, insertStockAdjustmentVoucherSchema, stockAdjustmentItems, insertStockAdjustmentItemSchema, updateStockTransferItemSchema, updateStockTransferSchema, updateStockAdjustmentItemSchema, updateStockAdjustmentSchema, salesItems, insertSalesItemSchema, draftPosSales, insertDraftPosSaleSchema, draftPosSaleItems, insertDraftPosSaleItemSchema, customers, insertCustomerSchema, containerSales, insertContainerSaleSchema, interCompanyTransfers, insertInterCompanyTransferSchema, salaryAdvances, insertSalaryAdvanceSchema, salaryAdvanceDeductions, insertSalaryAdvanceDeductionSchema, dashboardCashAccounts, insertDashboardCashAccountSchema, dashboardPayableAccounts, insertDashboardPayableAccountSchema, companySettings, insertCompanySettingsSchema, bales, insertBaleSchema, mixBatches, insertMixBatchSchema, mixBatchSources, insertMixBatchSourceSchema, baleProducts, insertBaleProductSchema, baleSequences, productionBales, insertProductionBaleSchema, baleTransfers, insertBaleTransferSchema, baleTransferItems, insertBaleTransferItemSchema, customerBalances, insertCustomerBalanceSchema, stockItemLocationPrices, insertStockItemLocationPriceSchema, userPreferences, insertUserPreferencesSchema;
+var companies, insertCompanySchema, userCompanyRoles, insertUserCompanyRoleSchema, users, insertUserSchema, locations, insertLocationSchema, ledgerAccounts, insertLedgerAccountSchema, updateLedgerAccountSchema, employees, insertEmployeeSchema, employeeGroups, insertEmployeeGroupSchema, employeeGroupMembers, insertEmployeeGroupMemberSchema, suppliers, insertSupplierSchema, stockGroups, insertStockGroupSchema, stockItems, insertStockItemSchema, stockItemCodeAliases, insertStockItemCodeAliasSchema, bankAccounts, insertBankAccountSchema, fixedAssets, insertFixedAssetSchema, containers, insertContainerSchema, purchaseOrders, insertPurchaseOrderSchema, poLineItems, insertPOLineItemSchema, containerCharges, insertContainerChargeSchema, containerItems, insertContainerItemSchema, importLogs, insertImportLogSchema, inventory, insertInventorySchema, containerOffloads, insertContainerOffloadSchema, offloadRequestSchema, vouchers, insertVoucherSchema, voucherEntries, insertVoucherEntrySchema, fiscalPeriodClosures, insertFiscalPeriodClosureSchema, stockTransferVouchers, insertStockTransferVoucherSchema, stockTransferItems, insertStockTransferItemSchema, stockAdjustmentVouchers, insertStockAdjustmentVoucherSchema, stockAdjustmentItems, insertStockAdjustmentItemSchema, updateStockTransferItemSchema, updateStockTransferSchema, updateStockAdjustmentItemSchema, updateStockAdjustmentSchema, salesItems, insertSalesItemSchema, draftPosSales, insertDraftPosSaleSchema, draftPosSaleItems, insertDraftPosSaleItemSchema, customers, insertCustomerSchema, bikePurchases, insertBikePurchaseSchema, partPurchases, insertPartPurchaseSchema, serviceHistory, insertServiceHistorySchema, warranties, insertWarrantySchema, communicationLogs, insertCommunicationLogSchema, containerSales, insertContainerSaleSchema, interCompanyTransfers, insertInterCompanyTransferSchema, salaryAdvances, insertSalaryAdvanceSchema, salaryAdvanceDeductions, insertSalaryAdvanceDeductionSchema, dashboardCashAccounts, insertDashboardCashAccountSchema, dashboardPayableAccounts, insertDashboardPayableAccountSchema, companySettings, insertCompanySettingsSchema, bales, insertBaleSchema, mixBatches, insertMixBatchSchema, mixBatchSources, insertMixBatchSourceSchema, baleProducts, insertBaleProductSchema, baleSequences, productionBales, insertProductionBaleSchema, baleTransfers, insertBaleTransferSchema, baleTransferItems, insertBaleTransferItemSchema, customerBalances, insertCustomerBalanceSchema, stockItemLocationPrices, insertStockItemLocationPriceSchema, userPreferences, insertUserPreferencesSchema, chatMessages, insertChatMessageSchema, dashboardAccountSelections, insertDashboardAccountSelectionSchema, roleFeaturePermissions, insertRoleFeaturePermissionSchema, motoAssemblies, insertMotoAssemblySchema, motoAssemblyParts, insertMotoAssemblyPartSchema, ASSEMBLY_STAGES, assemblyInventory, insertAssemblyInventorySchema, assemblyHistory, insertAssemblyHistorySchema, assemblyTasks, insertAssemblyTaskSchema, FEATURE_KEYS, loginHistory, FEATURE_ROUTES, ROUTE_TO_FEATURE;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -164,6 +197,8 @@ var init_schema = __esm({
       username: text("username").notNull().unique(),
       password: text("password").notNull(),
       active: boolean("active").notNull().default(true),
+      chatbotEnabled: boolean("chatbot_enabled").notNull().default(false),
+      employeeInventoryAccess: boolean("employee_inventory_access").notNull().default(false),
       createdAt: timestamp("created_at").notNull().defaultNow()
     });
     insertUserSchema = createInsertSchema(users).omit({
@@ -182,6 +217,7 @@ var init_schema = __esm({
       state: text("state"),
       country: text("country"),
       active: boolean("active").notNull().default(true),
+      deletedAt: timestamp("deleted_at"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     });
     insertLocationSchema = createInsertSchema(locations).omit({
@@ -206,6 +242,7 @@ var init_schema = __esm({
       openingBalance: decimal("opening_balance", { precision: 20, scale: 2 }).default("0"),
       openingBalanceSide: text("opening_balance_side"),
       active: boolean("active").notNull().default(true),
+      deletedAt: timestamp("deleted_at"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     }, (t) => ({
       uniqueCompanyCode: uniqueIndex("ledger_accounts_company_code_unique").on(t.companyId, t.code)
@@ -243,6 +280,11 @@ var init_schema = __esm({
       totalDeposits: decimal("total_deposits", { precision: 15, scale: 2 }).notNull().default("0"),
       totalWithdrawals: decimal("total_withdrawals", { precision: 15, scale: 2 }).notNull().default("0"),
       active: boolean("active").notNull().default(true),
+      salesBonusPct: decimal("sales_bonus_pct", { precision: 10, scale: 4 }),
+      salesBonusPctSourceCompanyId: integer("sales_bonus_pct_source_company_id"),
+      salesBonusPctLocationId: integer("sales_bonus_pct_location_id"),
+      balesBonusRate: decimal("bales_bonus_rate", { precision: 10, scale: 4 }),
+      deletedAt: timestamp("deleted_at"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     });
     insertEmployeeSchema = createInsertSchema(employees).omit({
@@ -311,6 +353,7 @@ var init_schema = __esm({
       paymentTerms: text("payment_terms"),
       openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0"),
       active: boolean("active").notNull().default(true),
+      deletedAt: timestamp("deleted_at"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     });
     insertSupplierSchema = createInsertSchema(suppliers).omit({
@@ -332,7 +375,9 @@ var init_schema = __esm({
       code: varchar("code", { length: 50 }).notNull(),
       name: text("name").notNull(),
       parentId: integer("parent_id"),
+      allocateImportCosts: boolean("allocate_import_costs").notNull().default(false),
       active: boolean("active").notNull().default(true),
+      deletedAt: timestamp("deleted_at"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     }, (t) => ({
       uniqueCompanyCode: uniqueIndex("stock_groups_company_code_unique").on(t.companyId, t.code)
@@ -343,7 +388,8 @@ var init_schema = __esm({
     }).extend({
       companyId: z.number().min(1, "Company is required"),
       code: z.string().min(1, "Code is required"),
-      name: z.string().min(1, "Name is required")
+      name: z.string().min(1, "Name is required"),
+      allocateImportCosts: z.boolean().optional().default(false)
     });
     stockItems = pgTable("stock_items", {
       id: serial("id").primaryKey(),
@@ -358,6 +404,7 @@ var init_schema = __esm({
       reorderLevel: decimal("reorder_level", { precision: 15, scale: 3 }).default("0"),
       sellingPrice: decimal("selling_price", { precision: 15, scale: 2 }).default("0"),
       active: boolean("active").notNull().default(true),
+      deletedAt: timestamp("deleted_at"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     }, (t) => ({
       uniqueCompanyCode: uniqueIndex("stock_items_company_code_unique").on(t.companyId, t.code)
@@ -402,6 +449,7 @@ var init_schema = __esm({
       openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0"),
       openingBalanceSide: text("opening_balance_side"),
       active: boolean("active").notNull().default(true),
+      deletedAt: timestamp("deleted_at"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     });
     insertBankAccountSchema = createInsertSchema(bankAccounts).omit({
@@ -454,6 +502,16 @@ var init_schema = __esm({
       itemName: text("item_name"),
       ratePerKg: decimal("rate_per_kg", { precision: 10, scale: 2 }),
       totalKg: decimal("total_kg", { precision: 15, scale: 2 }),
+      carrier: text("carrier"),
+      vesselName: text("vessel_name"),
+      originPort: text("origin_port"),
+      destinationPort: text("destination_port"),
+      departureDate: date("departure_date"),
+      estimatedArrival: date("estimated_arrival"),
+      trackingStatus: text("tracking_status"),
+      lastLocation: text("last_location"),
+      lastTrackingUpdate: timestamp("last_tracking_update"),
+      trackingEvents: text("tracking_events"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     });
     insertContainerSchema = createInsertSchema(containers).omit({
@@ -475,7 +533,12 @@ var init_schema = __esm({
       currency: text("currency").notNull().default("USD"),
       itemsTotal: decimal("items_total", { precision: 20, scale: 2 }).default("0"),
       freight: decimal("freight", { precision: 20, scale: 2 }).default("0"),
+      surcharge: decimal("surcharge", { precision: 20, scale: 2 }).default("0"),
+      fumigation: decimal("fumigation", { precision: 20, scale: 2 }).default("0"),
+      documentCharges: decimal("document_charges", { precision: 20, scale: 2 }).default("0"),
+      discount: decimal("discount", { precision: 20, scale: 2 }).default("0"),
       otherCharges: decimal("other_charges", { precision: 20, scale: 2 }).default("0"),
+      chargesEdited: boolean("charges_edited").default(false),
       status: text("status").notNull().default("Open"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     });
@@ -488,7 +551,12 @@ var init_schema = __esm({
       containerId: z.number().min(1, "Container is required"),
       supplierId: z.number().min(1, "Supplier is required"),
       freight: z.string().optional(),
-      otherCharges: z.string().optional()
+      surcharge: z.string().optional(),
+      fumigation: z.string().optional(),
+      documentCharges: z.string().optional(),
+      discount: z.string().optional(),
+      otherCharges: z.string().optional(),
+      chargesEdited: z.boolean().optional()
     });
     poLineItems = pgTable("po_line_items", {
       id: serial("id").primaryKey(),
@@ -527,6 +595,29 @@ var init_schema = __esm({
       chargeType: z.string().min(1, "Charge type is required"),
       amount: z.string().min(1, "Amount is required")
     });
+    containerItems = pgTable("container_items", {
+      id: serial("id").primaryKey(),
+      containerId: integer("container_id").notNull(),
+      stockItemId: integer("stock_item_id"),
+      itemName: text("item_name").notNull(),
+      quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+      ratePerKg: decimal("rate_per_kg", { precision: 15, scale: 2 }).notNull(),
+      weightKg: decimal("weight_kg", { precision: 15, scale: 3 }).notNull(),
+      lineTotal: decimal("line_total", { precision: 20, scale: 2 }).notNull(),
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    });
+    insertContainerItemSchema = createInsertSchema(containerItems).omit({
+      id: true,
+      createdAt: true
+    }).extend({
+      containerId: z.number().min(1, "Container is required"),
+      stockItemId: z.number().optional(),
+      itemName: z.string().min(1, "Item name is required"),
+      quantity: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Quantity must be positive"),
+      ratePerKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Rate must be non-negative"),
+      weightKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Weight must be positive"),
+      lineTotal: z.string().min(1, "Line total is required")
+    });
     importLogs = pgTable("import_logs", {
       id: serial("id").primaryKey(),
       fileName: text("file_name").notNull(),
@@ -554,6 +645,8 @@ var init_schema = __esm({
       quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull().default("0"),
       averageRate: decimal("average_rate", { precision: 20, scale: 2 }).notNull().default("0"),
       totalValue: decimal("total_value", { precision: 20, scale: 2 }).notNull().default("0"),
+      color: text("color"),
+      assignedStatus: text("assigned_status"),
       lastUpdated: timestamp("last_updated").notNull().defaultNow()
     });
     insertInventorySchema = createInsertSchema(inventory).omit({
@@ -564,7 +657,9 @@ var init_schema = __esm({
       stockItemId: z.number().min(1, "Stock item is required"),
       quantity: z.string(),
       averageRate: z.string(),
-      totalValue: z.string()
+      totalValue: z.string(),
+      color: z.string().optional(),
+      assignedStatus: z.string().optional()
     });
     containerOffloads = pgTable("container_offloads", {
       id: serial("id").primaryKey(),
@@ -584,13 +679,13 @@ var init_schema = __esm({
       offloadedAt: true,
       totalCharges: true,
       totalBales: true,
-      additionalCostPerBale: true
+      additionalCostPerBale: true,
+      officeCharges: true,
+      transferCharges: true
     }).extend({
       containerId: z.number().min(1, "Container is required"),
       locationId: z.number().min(1, "Location is required"),
       duties: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Duties must be a valid non-negative number"),
-      officeCharges: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Office charges must be a valid non-negative number"),
-      transferCharges: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Transfer charges must be a valid non-negative number"),
       transportFees: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Transport fees must be a valid non-negative number")
     });
     offloadRequestSchema = insertContainerOffloadSchema.omit({
@@ -598,14 +693,13 @@ var init_schema = __esm({
     }).extend({
       offloadDate: z.string().min(1, "Offload date is required").regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD required)"),
       dutiesAccountId: z.number().nullable().optional(),
-      officeChargesAccountId: z.number().nullable().optional(),
-      officeChargesCashAccountId: z.number().nullable().optional(),
       transportAccountId: z.number().nullable().optional(),
       additionalCharges: z.array(z.object({
         description: z.string().min(1, "Description is required"),
         amount: z.number().min(0, "Amount must be non-negative"),
         ledgerAccountId: z.number().min(1, "Ledger account is required")
-      })).optional()
+      })).optional(),
+      costAllocationGroupIds: z.array(z.number()).optional()
     });
     vouchers = pgTable("vouchers", {
       id: serial("id").primaryKey(),
@@ -618,6 +712,7 @@ var init_schema = __esm({
       description: text("description"),
       totalAmount: decimal("total_amount", { precision: 20, scale: 2 }).notNull(),
       optional: boolean("optional").notNull().default(false),
+      deletedAt: timestamp("deleted_at"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     });
     insertVoucherSchema = createInsertSchema(vouchers).omit({
@@ -864,9 +959,14 @@ var init_schema = __esm({
       code: varchar("code", { length: 50 }).notNull(),
       legalName: text("legal_name").notNull(),
       phone: text("phone"),
+      whatsapp: text("whatsapp"),
+      email: text("email"),
+      locationId: integer("location_id"),
+      customerType: text("customer_type"),
       openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0"),
       openingBalanceSide: varchar("opening_balance_side", { length: 2 }).default("Dr"),
       active: boolean("active").notNull().default(true),
+      deletedAt: timestamp("deleted_at"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     }, (t) => ({
       uniqueCompanyCode: uniqueIndex("customers_company_code_unique").on(t.companyId, t.code)
@@ -877,10 +977,143 @@ var init_schema = __esm({
       code: true
     }).extend({
       companyId: z.number().min(1, "Company is required"),
-      legalName: z.string().min(1, "Legal name is required"),
+      legalName: z.string().min(1, "Full name is required"),
+      phone: z.string().optional(),
+      whatsapp: z.string().optional(),
+      email: z.string().email().optional().or(z.literal("")),
+      locationId: z.number().optional(),
+      customerType: z.string().optional(),
       openingBalance: z.string().optional(),
       openingBalanceSide: z.enum(["Dr", "Cr"]).optional(),
       ledgerAccountId: z.number().optional()
+    });
+    bikePurchases = pgTable("bike_purchases", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      customerId: integer("customer_id").notNull(),
+      bikeModel: text("bike_model").notNull(),
+      color: varchar("color", { length: 50 }),
+      saleDate: date("sale_date").notNull(),
+      invoiceNumber: varchar("invoice_number", { length: 100 }),
+      warrantyStartDate: date("warranty_start_date"),
+      deletedAt: timestamp("deleted_at"),
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    });
+    insertBikePurchaseSchema = createInsertSchema(bikePurchases).omit({
+      id: true,
+      createdAt: true,
+      deletedAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      customerId: z.number().min(1, "Customer is required"),
+      bikeModel: z.string().min(1, "Bike model is required"),
+      color: z.string().optional(),
+      saleDate: z.string().min(1, "Sale date is required"),
+      invoiceNumber: z.string().optional(),
+      warrantyStartDate: z.string().optional()
+    });
+    partPurchases = pgTable("part_purchases", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      customerId: integer("customer_id").notNull(),
+      partName: text("part_name").notNull(),
+      quantity: integer("quantity").notNull().default(1),
+      price: decimal("price", { precision: 15, scale: 2 }).notNull(),
+      purchaseDate: date("purchase_date").notNull(),
+      linkedInvoice: varchar("linked_invoice", { length: 100 }),
+      deletedAt: timestamp("deleted_at"),
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    });
+    insertPartPurchaseSchema = createInsertSchema(partPurchases).omit({
+      id: true,
+      createdAt: true,
+      deletedAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      customerId: z.number().min(1, "Customer is required"),
+      partName: z.string().min(1, "Part name is required"),
+      quantity: z.number().min(1, "Quantity must be at least 1"),
+      price: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Price must be non-negative"),
+      purchaseDate: z.string().min(1, "Purchase date is required"),
+      linkedInvoice: z.string().optional()
+    });
+    serviceHistory = pgTable("service_history", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      customerId: integer("customer_id").notNull(),
+      serviceDate: date("service_date").notNull(),
+      bikeModel: text("bike_model").notNull(),
+      mileage: integer("mileage"),
+      serviceType: varchar("service_type", { length: 50 }).notNull(),
+      partsUsed: text("parts_used"),
+      technicianName: varchar("technician_name", { length: 100 }),
+      notes: text("notes"),
+      deletedAt: timestamp("deleted_at"),
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    });
+    insertServiceHistorySchema = createInsertSchema(serviceHistory).omit({
+      id: true,
+      createdAt: true,
+      deletedAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      customerId: z.number().min(1, "Customer is required"),
+      serviceDate: z.string().min(1, "Service date is required"),
+      bikeModel: z.string().min(1, "Bike model is required"),
+      mileage: z.number().optional(),
+      serviceType: z.string().min(1, "Service type is required"),
+      partsUsed: z.string().optional(),
+      technicianName: z.string().optional(),
+      notes: z.string().optional()
+    });
+    warranties = pgTable("warranties", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      customerId: integer("customer_id").notNull(),
+      bikeModel: text("bike_model").notNull(),
+      warrantyStartDate: date("warranty_start_date").notNull(),
+      warrantyDuration: integer("warranty_duration").notNull(),
+      // in months
+      warrantyStatus: varchar("warranty_status", { length: 20 }).notNull().default("Active"),
+      voidReason: text("void_reason"),
+      notes: text("notes"),
+      deletedAt: timestamp("deleted_at"),
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    });
+    insertWarrantySchema = createInsertSchema(warranties).omit({
+      id: true,
+      createdAt: true,
+      deletedAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      customerId: z.number().min(1, "Customer is required"),
+      bikeModel: z.string().min(1, "Bike model is required"),
+      warrantyStartDate: z.string().min(1, "Warranty start date is required"),
+      warrantyDuration: z.number().min(1, "Warranty duration is required"),
+      warrantyStatus: z.enum(["Active", "Expired", "Void"]).default("Active"),
+      voidReason: z.string().optional(),
+      notes: z.string().optional()
+    });
+    communicationLogs = pgTable("communication_logs", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      customerId: integer("customer_id").notNull(),
+      contactDate: date("contact_date").notNull(),
+      contactType: varchar("contact_type", { length: 20 }).notNull(),
+      notes: text("notes"),
+      deletedAt: timestamp("deleted_at"),
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    });
+    insertCommunicationLogSchema = createInsertSchema(communicationLogs).omit({
+      id: true,
+      createdAt: true,
+      deletedAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      customerId: z.number().min(1, "Customer is required"),
+      contactDate: z.string().min(1, "Contact date is required"),
+      contactType: z.enum(["Call", "WhatsApp"]),
+      notes: z.string().optional()
     });
     containerSales = pgTable("container_sales", {
       id: serial("id").primaryKey(),
@@ -1313,6 +1546,278 @@ var init_schema = __esm({
       userId: z.string().min(1, "User ID is required"),
       dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY"]).default("MM/DD/YYYY")
     });
+    chatMessages = pgTable("chat_messages", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      userId: varchar("user_id").notNull(),
+      role: text("role").notNull(),
+      // 'user' or 'assistant'
+      content: text("content").notNull(),
+      sessionId: varchar("session_id").notNull(),
+      // Groups messages in a conversation
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    }, (t) => ({
+      sessionIdx: index("chat_messages_session_idx").on(t.sessionId),
+      userIdx: index("chat_messages_user_idx").on(t.userId),
+      companyIdx: index("chat_messages_company_idx").on(t.companyId)
+    }));
+    insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+      id: true,
+      createdAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      userId: z.string().min(1, "User ID is required"),
+      role: z.enum(["user", "assistant"]),
+      content: z.string().min(1, "Content is required"),
+      sessionId: z.string().min(1, "Session ID is required")
+    });
+    dashboardAccountSelections = pgTable("dashboard_account_selections", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      selectionType: text("selection_type").notNull(),
+      // 'availableCash' or 'cashToPay'
+      accountIds: integer("account_ids").array().notNull().default([]),
+      createdAt: timestamp("created_at").notNull().defaultNow(),
+      updatedAt: timestamp("updated_at").notNull().defaultNow()
+    }, (t) => ({
+      uniqueCompanyType: uniqueIndex("dashboard_account_selections_company_type_unique").on(t.companyId, t.selectionType)
+    }));
+    insertDashboardAccountSelectionSchema = createInsertSchema(dashboardAccountSelections).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      selectionType: z.enum(["availableCash", "cashToPay"]),
+      accountIds: z.array(z.number()).default([])
+    });
+    roleFeaturePermissions = pgTable("role_feature_permissions", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      role: text("role").notNull(),
+      featureKey: text("feature_key").notNull(),
+      enabled: boolean("enabled").notNull().default(true),
+      createdAt: timestamp("created_at").notNull().defaultNow(),
+      updatedAt: timestamp("updated_at").notNull().defaultNow()
+    }, (t) => ({
+      uniqueCompanyRoleFeature: uniqueIndex("role_feature_permissions_unique").on(t.companyId, t.role, t.featureKey)
+    }));
+    insertRoleFeaturePermissionSchema = createInsertSchema(roleFeaturePermissions).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      role: z.enum(["Admin", "Owner", "Manager", "POS1", "POS2", "POS3", "POS4", "POS5", "POS6"]),
+      featureKey: z.string().min(1, "Feature key is required"),
+      enabled: z.boolean().default(true)
+    });
+    motoAssemblies = pgTable("moto_assemblies", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      locationId: integer("location_id").notNull(),
+      assemblyCode: varchar("assembly_code", { length: 50 }).notNull(),
+      vin: varchar("vin", { length: 50 }),
+      motoModel: text("moto_model").notNull(),
+      status: text("status").notNull().default("in_progress"),
+      // in_progress, completed, sold
+      totalPartsCost: decimal("total_parts_cost", { precision: 15, scale: 2 }).notNull().default("0"),
+      laborCost: decimal("labor_cost", { precision: 15, scale: 2 }).notNull().default("0"),
+      totalCost: decimal("total_cost", { precision: 15, scale: 2 }).notNull().default("0"),
+      notes: text("notes"),
+      assemblyDate: date("assembly_date").notNull(),
+      completedDate: date("completed_date"),
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    }, (t) => ({
+      uniqueCompanyCode: uniqueIndex("moto_assemblies_company_code_unique").on(t.companyId, t.assemblyCode)
+    }));
+    insertMotoAssemblySchema = createInsertSchema(motoAssemblies).omit({
+      id: true,
+      createdAt: true,
+      totalPartsCost: true,
+      totalCost: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      locationId: z.number().min(1, "Location is required"),
+      assemblyCode: z.string().optional(),
+      vin: z.string().optional(),
+      motoModel: z.string().min(1, "Moto model is required"),
+      status: z.enum(["in_progress", "completed", "sold"]).default("in_progress"),
+      laborCost: z.string().optional(),
+      notes: z.string().optional(),
+      assemblyDate: z.string().min(1, "Assembly date is required"),
+      completedDate: z.string().optional()
+    });
+    motoAssemblyParts = pgTable("moto_assembly_parts", {
+      id: serial("id").primaryKey(),
+      motoAssemblyId: integer("moto_assembly_id").notNull(),
+      stockItemId: integer("stock_item_id").notNull(),
+      quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+      unitCost: decimal("unit_cost", { precision: 15, scale: 2 }).notNull(),
+      totalCost: decimal("total_cost", { precision: 15, scale: 2 }).notNull(),
+      notes: text("notes"),
+      addedAt: timestamp("added_at").notNull().defaultNow()
+    });
+    insertMotoAssemblyPartSchema = createInsertSchema(motoAssemblyParts).omit({
+      id: true,
+      addedAt: true
+    }).extend({
+      motoAssemblyId: z.number().min(1, "Moto assembly is required"),
+      stockItemId: z.number().min(1, "Stock item is required"),
+      quantity: z.string().min(1, "Quantity is required"),
+      unitCost: z.string().min(1, "Unit cost is required"),
+      totalCost: z.string().optional(),
+      notes: z.string().optional()
+    });
+    ASSEMBLY_STAGES = ["Full CKD", "Welded", "Painted", "Final Product"];
+    assemblyInventory = pgTable("assembly_inventory", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      locationId: integer("location_id").notNull(),
+      stockItemId: integer("stock_item_id").notNull(),
+      stage: text("stage").notNull(),
+      // Full CKD, Welded, Painted, Final Product
+      qty: integer("qty").notNull().default(0),
+      createdAt: timestamp("created_at").notNull().defaultNow(),
+      updatedAt: timestamp("updated_at").notNull().defaultNow()
+    }, (t) => ({
+      uniqueLocationStageItem: uniqueIndex("assembly_inventory_unique").on(t.locationId, t.stage, t.stockItemId)
+    }));
+    insertAssemblyInventorySchema = createInsertSchema(assemblyInventory).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      locationId: z.number().min(1, "Location is required"),
+      stockItemId: z.number().min(1, "Stock item is required"),
+      stage: z.enum(["Full CKD", "Welded", "Painted", "Final Product"]),
+      qty: z.number().min(0, "Quantity must be 0 or greater")
+    });
+    assemblyHistory = pgTable("assembly_history", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      locationId: integer("location_id").notNull(),
+      userId: varchar("user_id").notNull(),
+      username: text("username"),
+      stockItemId: integer("stock_item_id").notNull(),
+      stockItemName: text("stock_item_name"),
+      actionType: text("action_type").notNull(),
+      // SAVE or TRANSFER
+      fromStage: text("from_stage"),
+      toStage: text("to_stage"),
+      qtyChanged: integer("qty_changed").notNull(),
+      description: text("description"),
+      technician: text("technician"),
+      // manually editable
+      status: text("status").default("pending"),
+      // pending or completed
+      completed: boolean("completed").default(false),
+      // yes/no toggle
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    });
+    insertAssemblyHistorySchema = createInsertSchema(assemblyHistory).omit({
+      id: true,
+      createdAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      locationId: z.number().min(1, "Location is required"),
+      userId: z.string().min(1, "User ID is required"),
+      stockItemId: z.number().min(1, "Stock item is required"),
+      actionType: z.enum(["SAVE", "TRANSFER"]),
+      qtyChanged: z.number()
+    });
+    assemblyTasks = pgTable("assembly_tasks", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      stockItemId: integer("stock_item_id").notNull(),
+      // bike model
+      stockItemName: text("stock_item_name"),
+      // cached name for display
+      technician: text("technician"),
+      // manually typed technician name
+      user: text("user"),
+      // user who performed the action
+      action: text("action"),
+      // action type (e.g., TRANSFER)
+      details: text("details"),
+      // details (e.g., stage transition)
+      qty: integer("qty").default(1),
+      // quantity
+      status: text("status").notNull().default("pending"),
+      // auto-set to pending
+      completed: boolean("completed").notNull().default(false),
+      // yes/no
+      date: date("date").notNull(),
+      createdAt: timestamp("created_at").notNull().defaultNow(),
+      updatedAt: timestamp("updated_at").notNull().defaultNow()
+    });
+    insertAssemblyTaskSchema = createInsertSchema(assemblyTasks).omit({
+      id: true,
+      createdAt: true,
+      updatedAt: true
+    }).extend({
+      companyId: z.number().min(1, "Company is required"),
+      stockItemId: z.number().min(1, "Stock item is required"),
+      date: z.string().min(1, "Date is required")
+    });
+    FEATURE_KEYS = [
+      "dashboard",
+      "pos",
+      "pos_daybook",
+      "stock_items",
+      "location_inventory",
+      "containers",
+      "stock_otw",
+      "moto_assembly",
+      "factory_production",
+      "analytics",
+      "accounts",
+      "suppliers",
+      "customers",
+      "vouchers",
+      "daybook",
+      "payroll",
+      "create",
+      "stock_query",
+      "location_summary",
+      "sales_report",
+      "settings"
+    ];
+    loginHistory = pgTable("login_history", {
+      id: serial("id").primaryKey(),
+      userId: varchar("user_id").notNull(),
+      username: text("username").notNull(),
+      ipAddress: text("ip_address"),
+      userAgent: text("user_agent"),
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    });
+    FEATURE_ROUTES = {
+      dashboard: "/",
+      pos: "/pos",
+      pos_daybook: "/pos-daybook",
+      stock_items: "/stock-items",
+      location_inventory: "/location-inventory",
+      containers: "/containers",
+      stock_otw: "/stock-otw",
+      moto_assembly: "/moto-assembly",
+      factory_production: "/factory-production",
+      analytics: "/analytics",
+      accounts: "/accounts",
+      suppliers: "/suppliers",
+      customers: "/customers",
+      vouchers: "/vouchers",
+      daybook: "/daybook",
+      payroll: "/payroll",
+      create: "/create",
+      stock_query: "/stock-query",
+      location_summary: "/location-summary",
+      sales_report: "/sales-report",
+      settings: "/settings"
+    };
+    ROUTE_TO_FEATURE = Object.fromEntries(
+      Object.entries(FEATURE_ROUTES).map(([key, route]) => [route, key])
+    );
   }
 });
 
@@ -1326,29 +1831,118 @@ import fs2 from "fs";
 // server/routes.ts
 import { createServer } from "http";
 import multer from "multer";
-import * as XLSX from "xlsx";
-import crypto from "crypto-js";
+
+// server/lib/excel.ts
+import ExcelJS from "exceljs";
+var utils = {
+  book_new: () => new ExcelJS.Workbook(),
+  json_to_sheet: (data) => {
+    if (data.length === 0) return { kind: "json", data: [], headers: [] };
+    return { kind: "json", data, headers: Object.keys(data[0]) };
+  },
+  aoa_to_sheet: (data) => ({ kind: "aoa", aoa: data }),
+  book_append_sheet: (workbook, sheetData, name) => {
+    const worksheet = workbook.addWorksheet(name);
+    if (sheetData.kind === "aoa") {
+      for (const row of sheetData.aoa) worksheet.addRow(row);
+    } else {
+      worksheet.addRow(sheetData.headers);
+      for (const item of sheetData.data) {
+        worksheet.addRow(sheetData.headers.map((h) => item[h] ?? ""));
+      }
+    }
+    return worksheet;
+  },
+  sheet_to_json: (worksheet, options) => {
+    const out = [];
+    if (options?.header === 1) {
+      worksheet.eachRow((row) => {
+        const arr = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          arr[colNumber - 1] = unwrapCell(cell.value);
+        });
+        out.push(arr);
+      });
+      return out;
+    }
+    const headers = [];
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) {
+        row.eachCell((cell, colNumber) => {
+          headers[colNumber - 1] = String(unwrapCell(cell.value) ?? "");
+        });
+      } else {
+        const obj = {};
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          const header = headers[colNumber - 1];
+          if (header) obj[header] = unwrapCell(cell.value);
+        });
+        if (Object.keys(obj).length > 0) out.push(obj);
+      }
+    });
+    return out;
+  }
+};
+function unwrapCell(value) {
+  if (value && typeof value === "object") {
+    if ("result" in value) return value.result;
+    if ("text" in value) return value.text;
+  }
+  return value;
+}
+async function read(data, _options) {
+  const workbook = new ExcelJS.Workbook();
+  let buffer;
+  if (data instanceof ArrayBuffer) {
+    buffer = data;
+  } else {
+    const view = data;
+    buffer = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+  }
+  await workbook.xlsx.load(buffer);
+  const SheetNames = [];
+  const Sheets = {};
+  workbook.eachSheet((ws) => {
+    SheetNames.push(ws.name);
+    Sheets[ws.name] = ws;
+  });
+  return { workbook, SheetNames, Sheets };
+}
+async function write(workbook, _options) {
+  const buf = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buf);
+}
+
+// server/routes.ts
+import bcrypt from "bcryptjs";
+import { createHash } from "crypto";
+import CryptoJS from "crypto-js";
+import { z as z2 } from "zod";
 
 // server/storage.ts
-import { eq, and, or, sql as sql2, inArray, desc, ne } from "drizzle-orm";
+import { eq, and, or, sql as sql2, inArray, desc, ne, isNull } from "drizzle-orm";
 
 // server/db.ts
 init_schema();
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 var connectionString;
-if (process.env.NODE_ENV === "development" && process.env.PGHOST) {
+var dbHost = "";
+if (process.env.DATABASE_URL) {
+  connectionString = process.env.DATABASE_URL;
+  const match = connectionString.match(/@([^:\/]+)/);
+  dbHost = match ? match[1] : "";
+  console.log("\u2713 Using DATABASE_URL for PostgreSQL connection");
+} else if (process.env.PGHOST && process.env.PGPORT && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE) {
   const { PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE } = process.env;
   connectionString = `postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}`;
-  console.log("Using Replit database for development");
-} else if (process.env.DATABASE_URL) {
-  connectionString = process.env.DATABASE_URL;
-  console.log("Using DATABASE_URL for production");
+  dbHost = PGHOST;
+  console.log("\u2713 Using Replit PostgreSQL database");
 } else {
-  throw new Error("No database configuration found. Did you forget to provision a database?");
+  throw new Error("No database configuration found. Set DATABASE_URL or provision a PostgreSQL database.");
 }
 console.log("Database connection endpoint:", connectionString.replace(/:[^:@]*@/, ":***@"));
-var isLocalReplitDB = process.env.PGHOST === "helium";
+var isLocalReplitDB = dbHost === "helium";
 var sslExplicitlyDisabled = process.env.PGSSLMODE === "disable";
 var requiresSSL = !isLocalReplitDB && !sslExplicitlyDisabled;
 if (!requiresSSL && !isLocalReplitDB) {
@@ -1386,6 +1980,10 @@ var DbStorage = class {
   async updateUser(id, updates) {
     const [user] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
     return user;
+  }
+  async deleteUser(id) {
+    await db.delete(userCompanyRoles).where(eq(userCompanyRoles.userId, id));
+    await db.delete(users).where(eq(users.id, id));
   }
   async getUserCompanyRole(userId, companyId) {
     const [role] = await db.select().from(userCompanyRoles).where(
@@ -1432,14 +2030,46 @@ var DbStorage = class {
     await db.execute(sql2`DELETE FROM stock_item_location_prices WHERE stock_item_id IN (SELECT id FROM stock_items WHERE company_id = ${id})`);
     await db.delete(stockItems).where(eq(stockItems.companyId, id));
     await db.delete(stockGroups).where(eq(stockGroups.companyId, id));
-    await db.execute(sql2`DELETE FROM mix_batch_sources WHERE mix_batch_id IN (SELECT id FROM mix_batches WHERE company_id = ${id})`);
-    await db.delete(mixBatches).where(eq(mixBatches.companyId, id));
-    await db.delete(productionBales).where(eq(productionBales.companyId, id));
-    await db.execute(sql2`DELETE FROM bale_transfer_items WHERE transfer_id IN (SELECT id FROM bale_transfers WHERE company_id = ${id})`);
-    await db.delete(baleTransfers).where(eq(baleTransfers.companyId, id));
-    await db.delete(baleProducts).where(eq(baleProducts.companyId, id));
-    await db.delete(baleSequences).where(eq(baleSequences.companyId, id));
-    await db.delete(bales).where(eq(bales.companyId, id));
+    try {
+      await db.execute(sql2`DELETE FROM mix_batch_sources WHERE mix_batch_id IN (SELECT id FROM mix_batches WHERE company_id = ${id})`);
+    } catch (e) {
+      if (!e.message?.includes("does not exist")) throw e;
+    }
+    try {
+      await db.delete(mixBatches).where(eq(mixBatches.companyId, id));
+    } catch (e) {
+      if (!e.message?.includes("does not exist")) throw e;
+    }
+    try {
+      await db.delete(productionBales).where(eq(productionBales.companyId, id));
+    } catch (e) {
+      if (!e.message?.includes("does not exist")) throw e;
+    }
+    try {
+      await db.execute(sql2`DELETE FROM bale_transfer_items WHERE transfer_id IN (SELECT id FROM bale_transfers WHERE company_id = ${id})`);
+    } catch (e) {
+      if (!e.message?.includes("does not exist")) throw e;
+    }
+    try {
+      await db.delete(baleTransfers).where(eq(baleTransfers.companyId, id));
+    } catch (e) {
+      if (!e.message?.includes("does not exist")) throw e;
+    }
+    try {
+      await db.delete(baleProducts).where(eq(baleProducts.companyId, id));
+    } catch (e) {
+      if (!e.message?.includes("does not exist")) throw e;
+    }
+    try {
+      await db.delete(baleSequences).where(eq(baleSequences.companyId, id));
+    } catch (e) {
+      if (!e.message?.includes("does not exist")) throw e;
+    }
+    try {
+      await db.delete(bales).where(eq(bales.companyId, id));
+    } catch (e) {
+      if (!e.message?.includes("does not exist")) throw e;
+    }
     await db.delete(salaryAdvances).where(eq(salaryAdvances.companyId, id));
     await db.execute(sql2`DELETE FROM employee_group_members WHERE employee_group_id IN (SELECT id FROM employee_groups WHERE company_id = ${id})`);
     await db.delete(employeeGroups).where(eq(employeeGroups.companyId, id));
@@ -1477,7 +2107,12 @@ var DbStorage = class {
   // Locations
   async getAllLocations(companyId) {
     console.log("[storage.getAllLocations] Querying locations for companyId:", companyId);
-    const locations2 = await db.select().from(locations).where(eq(locations.companyId, companyId));
+    const locations2 = await db.select().from(locations).where(
+      and(
+        eq(locations.companyId, companyId),
+        isNull(locations.deletedAt)
+      )
+    );
     console.log("[storage.getAllLocations] Query returned:", locations2.length, "locations");
     return locations2;
   }
@@ -1496,11 +2131,16 @@ var DbStorage = class {
     return created;
   }
   async deleteLocation(id) {
-    await db.delete(locations).where(eq(locations.id, id));
+    await db.update(locations).set({ deletedAt: /* @__PURE__ */ new Date(), active: false }).where(eq(locations.id, id));
   }
   // Ledger Accounts
   async getAllLedgerAccounts(companyId) {
-    return await db.select().from(ledgerAccounts).where(eq(ledgerAccounts.companyId, companyId));
+    return await db.select().from(ledgerAccounts).where(
+      and(
+        eq(ledgerAccounts.companyId, companyId),
+        isNull(ledgerAccounts.deletedAt)
+      )
+    );
   }
   async getLedgerAccountByCode(code, companyId) {
     const [account] = await db.select().from(ledgerAccounts).where(
@@ -1519,7 +2159,7 @@ var DbStorage = class {
     return created;
   }
   async deleteLedgerAccount(id) {
-    await db.delete(ledgerAccounts).where(eq(ledgerAccounts.id, id));
+    await db.update(ledgerAccounts).set({ deletedAt: /* @__PURE__ */ new Date(), active: false }).where(eq(ledgerAccounts.id, id));
   }
   async getLedgerAccountById(id) {
     const [account] = await db.select().from(ledgerAccounts).where(eq(ledgerAccounts.id, id));
@@ -1532,7 +2172,12 @@ var DbStorage = class {
   }
   // Employees
   async getAllEmployees(companyId) {
-    const employees2 = await db.select().from(employees).where(eq(employees.companyId, companyId));
+    const employees2 = await db.select().from(employees).where(
+      and(
+        eq(employees.companyId, companyId),
+        isNull(employees.deletedAt)
+      )
+    );
     return employees2.map((emp) => ({
       ...emp,
       firstName: emp.firstName || emp.first_name,
@@ -1603,11 +2248,12 @@ var DbStorage = class {
           ledgerBalance
         };
       }
+      const now = /* @__PURE__ */ new Date();
       if (linkedAccount) {
-        await tx.delete(ledgerAccounts).where(eq(ledgerAccounts.id, linkedAccount.id));
+        await tx.update(ledgerAccounts).set({ deletedAt: now, active: false }).where(eq(ledgerAccounts.id, linkedAccount.id));
       }
       await tx.delete(employeeGroupMembers).where(eq(employeeGroupMembers.employeeId, id));
-      await tx.delete(employees).where(eq(employees.id, id));
+      await tx.update(employees).set({ deletedAt: now, active: false }).where(eq(employees.id, id));
       return { success: true };
     });
   }
@@ -1702,13 +2348,27 @@ var DbStorage = class {
     );
     return group;
   }
+  async getStockGroupById(id, companyId) {
+    const [group] = await db.select().from(stockGroups).where(
+      and(
+        eq(stockGroups.id, id),
+        eq(stockGroups.companyId, companyId)
+      )
+    );
+    return group;
+  }
   async createStockGroup(group) {
     const [created] = await db.insert(stockGroups).values(group).returning();
     return created;
   }
   // Stock Items
   async getAllStockItems(companyId) {
-    return await db.select().from(stockItems).where(eq(stockItems.companyId, companyId));
+    return await db.select().from(stockItems).where(
+      and(
+        eq(stockItems.companyId, companyId),
+        isNull(stockItems.deletedAt)
+      )
+    );
   }
   async getStockItemByCode(code, companyId) {
     const [item] = await db.select().from(stockItems).where(
@@ -1732,7 +2392,7 @@ var DbStorage = class {
     return updated;
   }
   async deleteStockItem(id) {
-    await db.delete(stockItems).where(eq(stockItems.id, id));
+    await db.update(stockItems).set({ deletedAt: /* @__PURE__ */ new Date(), active: false }).where(eq(stockItems.id, id));
   }
   async bulkGetStockItemsByIds(ids, companyId) {
     if (ids.length === 0) return [];
@@ -1745,7 +2405,7 @@ var DbStorage = class {
   }
   async bulkDeleteStockItems(ids) {
     if (ids.length === 0) return;
-    await db.delete(stockItems).where(inArray(stockItems.id, ids));
+    await db.update(stockItems).set({ deletedAt: /* @__PURE__ */ new Date(), active: false }).where(inArray(stockItems.id, ids));
   }
   async getStockItemByCodeOrAlias(code, companyId) {
     const [directMatch] = await db.select().from(stockItems).where(
@@ -1775,6 +2435,9 @@ var DbStorage = class {
   async getStockItemCodeAliases(stockItemId) {
     return await db.select().from(stockItemCodeAliases).where(eq(stockItemCodeAliases.stockItemId, stockItemId));
   }
+  async getAllCompanyCodeAliases(companyId) {
+    return await db.select().from(stockItemCodeAliases).where(eq(stockItemCodeAliases.companyId, companyId));
+  }
   async getStockItemCodeAliasById(id) {
     const [alias] = await db.select().from(stockItemCodeAliases).where(eq(stockItemCodeAliases.id, id)).limit(1);
     return alias;
@@ -1788,7 +2451,12 @@ var DbStorage = class {
   }
   // Bank Accounts
   async getAllBankAccounts(companyId) {
-    return await db.select().from(bankAccounts).where(eq(bankAccounts.companyId, companyId));
+    return await db.select().from(bankAccounts).where(
+      and(
+        eq(bankAccounts.companyId, companyId),
+        isNull(bankAccounts.deletedAt)
+      )
+    );
   }
   async getBankAccountByCode(code) {
     const [account] = await db.select().from(bankAccounts).where(eq(bankAccounts.code, code));
@@ -1845,7 +2513,7 @@ var DbStorage = class {
     if (entryCount > 0) {
       throw new Error(`Cannot delete bank account: ${entryCount} voucher entries exist`);
     }
-    await db.delete(bankAccounts).where(
+    await db.update(bankAccounts).set({ deletedAt: /* @__PURE__ */ new Date(), active: false }).where(
       and(
         eq(bankAccounts.id, id),
         eq(bankAccounts.companyId, companyId)
@@ -1962,7 +2630,11 @@ var DbStorage = class {
       throw new Error("Purchase order not found");
     }
     const containerId = po.containerId;
-    const poTotal = parseFloat(po.itemsTotal || "0");
+    const poItemsTotal = parseFloat(po.itemsTotal || "0");
+    const poFreight = parseFloat(po.freight || "0");
+    const poOtherCharges = parseFloat(po.otherCharges || "0");
+    const poCharges = poFreight + poOtherCharges;
+    const [container] = await db.select().from(containers).where(eq(containers.id, containerId)).limit(1);
     await db.delete(poLineItems).where(eq(poLineItems.poId, id));
     await db.delete(purchaseOrders).where(eq(purchaseOrders.id, id));
     if (po.voucherId) {
@@ -1970,24 +2642,36 @@ var DbStorage = class {
       await db.delete(vouchers).where(eq(vouchers.id, po.voucherId));
     }
     const remainingPOs = await db.select().from(purchaseOrders).where(eq(purchaseOrders.containerId, containerId)).limit(1);
-    if (remainingPOs.length === 0) {
+    if (remainingPOs.length === 0 && container) {
+      const chargeVouchers = await db.select().from(vouchers).where(
+        and(
+          eq(vouchers.companyId, po.companyId),
+          sql2`${vouchers.description} LIKE ${"% - Container " + container.containerNumber}`
+        )
+      );
+      for (const chargeVoucher of chargeVouchers) {
+        await db.delete(voucherEntries).where(eq(voucherEntries.voucherId, chargeVoucher.id));
+        await db.delete(vouchers).where(eq(vouchers.id, chargeVoucher.id));
+      }
       await db.delete(containerCharges).where(eq(containerCharges.containerId, containerId));
       await db.delete(importLogs).where(eq(importLogs.containerId, containerId));
       await db.delete(containers).where(eq(containers.id, containerId));
-    } else {
-      const [container] = await db.select().from(containers).where(eq(containers.id, containerId)).limit(1);
-      if (container) {
-        const newItemsTotal = Math.max(0, parseFloat(container.itemsTotal || "0") - poTotal);
-        const chargesTotal = parseFloat(container.chargesTotal || "0");
-        const newGrandTotal = newItemsTotal + chargesTotal;
-        await db.update(containers).set({
-          itemsTotal: newItemsTotal.toString(),
-          grandTotal: newGrandTotal.toString()
-        }).where(eq(containers.id, containerId));
-      }
+    } else if (container) {
+      const newItemsTotal = Math.max(0, parseFloat(container.itemsTotal || "0") - poItemsTotal);
+      const newChargesTotal = Math.max(0, parseFloat(container.chargesTotal || "0") - poCharges);
+      const newGrandTotal = newItemsTotal + newChargesTotal;
+      await db.update(containers).set({
+        itemsTotal: newItemsTotal.toString(),
+        chargesTotal: newChargesTotal.toString(),
+        grandTotal: newGrandTotal.toString()
+      }).where(eq(containers.id, containerId));
     }
   }
   async deleteContainer(id) {
+    const [container] = await db.select().from(containers).where(eq(containers.id, id)).limit(1);
+    if (!container) {
+      throw new Error("Container not found");
+    }
     const pos = await db.select().from(purchaseOrders).where(eq(purchaseOrders.containerId, id));
     for (const po of pos) {
       await db.delete(poLineItems).where(eq(poLineItems.poId, po.id));
@@ -1997,6 +2681,28 @@ var DbStorage = class {
       }
       await db.delete(purchaseOrders).where(eq(purchaseOrders.id, po.id));
     }
+    const chargeVouchers = await db.select().from(vouchers).where(
+      and(
+        eq(vouchers.companyId, container.companyId),
+        sql2`${vouchers.description} LIKE ${"% - Container " + container.containerNumber}`
+      )
+    );
+    for (const chargeVoucher of chargeVouchers) {
+      await db.delete(voucherEntries).where(eq(voucherEntries.voucherId, chargeVoucher.id));
+      await db.delete(vouchers).where(eq(vouchers.id, chargeVoucher.id));
+    }
+    const manualVoucherNumber = `MCONT-${id}`;
+    const manualVouchers = await db.select().from(vouchers).where(
+      and(
+        eq(vouchers.companyId, container.companyId),
+        eq(vouchers.voucherNumber, manualVoucherNumber)
+      )
+    );
+    for (const manualVoucher of manualVouchers) {
+      await db.delete(voucherEntries).where(eq(voucherEntries.voucherId, manualVoucher.id));
+      await db.delete(vouchers).where(eq(vouchers.id, manualVoucher.id));
+    }
+    await db.delete(containerItems).where(eq(containerItems.containerId, id));
     await db.delete(containerCharges).where(eq(containerCharges.containerId, id));
     await db.delete(importLogs).where(eq(importLogs.containerId, id));
     await db.delete(containers).where(eq(containers.id, id));
@@ -2029,6 +2735,27 @@ var DbStorage = class {
   async createContainerCharge(charge) {
     const [created] = await db.insert(containerCharges).values(charge).returning();
     return created;
+  }
+  async deleteContainerCharges(containerId) {
+    await db.delete(containerCharges).where(eq(containerCharges.containerId, containerId));
+  }
+  // Container Items (manual entry)
+  async getContainerItems(containerId) {
+    return await db.select().from(containerItems).where(eq(containerItems.containerId, containerId));
+  }
+  async createContainerItem(item) {
+    const [created] = await db.insert(containerItems).values(item).returning();
+    return created;
+  }
+  async updateContainerItem(id, updates) {
+    const [updated] = await db.update(containerItems).set(updates).where(eq(containerItems.id, id)).returning();
+    return updated;
+  }
+  async deleteContainerItem(id) {
+    await db.delete(containerItems).where(eq(containerItems.id, id));
+  }
+  async deleteContainerItems(containerId) {
+    await db.delete(containerItems).where(eq(containerItems.containerId, containerId));
   }
   // Import Logs
   async getImportLogByHash(hash) {
@@ -2182,21 +2909,64 @@ var DbStorage = class {
     return { updated, errors };
   }
   // Container Offload
-  async offloadContainer(containerId, locationId, duties, dutiesAccountId, officeCharges, officeChargesAccountId, officeChargesCashAccountId, transferCharges, transportFees, transportAccountId, additionalCharges = [], offloadDate) {
+  async offloadContainer(containerId, locationId, duties, dutiesAccountId, transportFees, transportAccountId, additionalCharges = [], offloadDate, costAllocationGroupIds = []) {
+    const container = await this.getContainerById(containerId);
+    if (!container) {
+      throw new Error(`Container ${containerId} not found`);
+    }
     const pos = await this.getPurchaseOrdersByContainer(containerId);
     const allLineItems = [];
     for (const po of pos) {
       const items = await this.getLineItemsByPO(po.id);
       allLineItems.push(...items);
     }
-    const totalBales = allLineItems.reduce((sum, item) => {
-      if (!item.stockItemId || item.stockItemId === 0) {
-        return sum;
+    const manualContainerItems = await this.getContainerItems(containerId);
+    let effectiveCostAllocationGroupIds = costAllocationGroupIds;
+    if (effectiveCostAllocationGroupIds.length === 0) {
+      const stockGroupsWithCostAllocation = await db.select({ id: stockGroups.id }).from(stockGroups).where(
+        and(
+          eq(stockGroups.companyId, container.companyId),
+          eq(stockGroups.allocateImportCosts, true)
+        )
+      );
+      effectiveCostAllocationGroupIds = stockGroupsWithCostAllocation.map((g) => g.id);
+    }
+    const costAllocationGroupIdSet = new Set(effectiveCostAllocationGroupIds);
+    const stockItemIdSet = /* @__PURE__ */ new Set();
+    allLineItems.filter((item) => item.stockItemId && item.stockItemId !== 0).forEach((item) => stockItemIdSet.add(item.stockItemId));
+    manualContainerItems.filter((item) => item.stockItemId && item.stockItemId !== 0).forEach((item) => stockItemIdSet.add(item.stockItemId));
+    const uniqueStockItemIds = Array.from(stockItemIdSet);
+    const stockItemsWithGroups = uniqueStockItemIds.length > 0 ? await db.select({ id: stockItems.id, stockGroupId: stockItems.stockGroupId }).from(stockItems).where(inArray(stockItems.id, uniqueStockItemIds)) : [];
+    const stockItemGroupMap = /* @__PURE__ */ new Map();
+    for (const item of stockItemsWithGroups) {
+      stockItemGroupMap.set(item.id, item.stockGroupId);
+    }
+    const hasCostAllocationGroups = costAllocationGroupIdSet.size > 0;
+    const shouldAllocateCosts = (stockItemId) => {
+      if (!hasCostAllocationGroups) {
+        return true;
       }
-      return sum + parseFloat(item.quantity);
-    }, 0);
+      const groupId = stockItemGroupMap.get(stockItemId);
+      return groupId !== null && groupId !== void 0 && costAllocationGroupIdSet.has(groupId);
+    };
+    let totalBales = 0;
+    for (const item of allLineItems) {
+      if (!item.stockItemId || item.stockItemId === 0) continue;
+      if (!shouldAllocateCosts(item.stockItemId)) continue;
+      let qty = parseFloat(item.quantity);
+      if (!isFinite(qty) || qty <= 0) qty = 1;
+      totalBales += qty;
+    }
+    for (const item of manualContainerItems) {
+      if (!item.stockItemId || item.stockItemId === 0) continue;
+      if (!shouldAllocateCosts(item.stockItemId)) continue;
+      let qty = parseFloat(item.quantity);
+      if (!isFinite(qty) || qty <= 0) qty = 1;
+      totalBales += qty;
+    }
     const additionalChargesTotal = additionalCharges.reduce((sum, charge) => sum + charge.amount, 0);
-    const totalCharges = parseFloat(duties) + parseFloat(officeCharges) + parseFloat(transferCharges) + parseFloat(transportFees) + additionalChargesTotal;
+    const poCharges = parseFloat(container.chargesTotal || "0");
+    const totalCharges = parseFloat(duties || "0") + parseFloat(transportFees || "0") + additionalChargesTotal + poCharges;
     const additionalCostPerBale = totalBales > 0 ? totalCharges / totalBales : 0;
     const itemsMap = /* @__PURE__ */ new Map();
     for (const item of allLineItems) {
@@ -2205,17 +2975,76 @@ var DbStorage = class {
         console.warn(`Skipping line item ${item.id} - invalid stock item ID: ${stockItemId}`);
         continue;
       }
-      const quantity = parseFloat(item.quantity);
-      const rate = parseFloat(item.rate);
+      let quantity = parseFloat(item.quantity);
+      if (!isFinite(quantity) || quantity <= 0) {
+        console.warn(`PO line item ${item.id} has invalid quantity (${item.quantity}), defaulting to 1`);
+        quantity = 1;
+      }
+      let rate = parseFloat(item.rate);
+      if (!isFinite(rate)) {
+        console.warn(`PO line item ${item.id} has invalid rate (${item.rate}), defaulting to 0`);
+        rate = 0;
+      }
+      const weightedContribution = rate * quantity;
+      if (!isFinite(weightedContribution)) {
+        console.warn(`PO line item ${item.id} has invalid weighted contribution, skipping`);
+        continue;
+      }
       if (itemsMap.has(stockItemId)) {
         const existing = itemsMap.get(stockItemId);
         existing.totalQuantity += quantity;
-        existing.weightedRateSum += rate * quantity;
+        existing.weightedRateSum += weightedContribution;
       } else {
         itemsMap.set(stockItemId, {
           stockItemId,
           totalQuantity: quantity,
-          weightedRateSum: rate * quantity
+          weightedRateSum: weightedContribution
+        });
+      }
+    }
+    for (const item of manualContainerItems) {
+      const stockItemId = item.stockItemId;
+      if (!stockItemId || stockItemId === 0) {
+        console.warn(`Skipping container item ${item.id} - invalid stock item ID: ${stockItemId}`);
+        continue;
+      }
+      let quantity = parseFloat(item.quantity);
+      if (!isFinite(quantity) || quantity <= 0) {
+        console.warn(`Container item ${item.id} has invalid quantity (${item.quantity}), defaulting to 1`);
+        quantity = 1;
+      }
+      let rate = 0;
+      if (item.lineTotal) {
+        const lineTotal = parseFloat(item.lineTotal);
+        if (isFinite(lineTotal)) {
+          rate = lineTotal / quantity;
+        }
+      }
+      if (rate === 0 && item.ratePerKg && item.weightKg) {
+        const ratePerKg = parseFloat(item.ratePerKg);
+        const weightKg = parseFloat(item.weightKg);
+        if (isFinite(ratePerKg) && isFinite(weightKg)) {
+          rate = ratePerKg * weightKg / quantity;
+        }
+      }
+      if (!isFinite(rate)) {
+        console.warn(`Container item ${item.id} has invalid rate, defaulting to 0`);
+        rate = 0;
+      }
+      const weightedContribution = rate * quantity;
+      if (!isFinite(weightedContribution)) {
+        console.warn(`Container item ${item.id} has invalid weighted contribution (rate=${rate}, qty=${quantity}), skipping`);
+        continue;
+      }
+      if (itemsMap.has(stockItemId)) {
+        const existing = itemsMap.get(stockItemId);
+        existing.totalQuantity += quantity;
+        existing.weightedRateSum += weightedContribution;
+      } else {
+        itemsMap.set(stockItemId, {
+          stockItemId,
+          totalQuantity: quantity,
+          weightedRateSum: weightedContribution
         });
       }
     }
@@ -2225,7 +3054,8 @@ var DbStorage = class {
         continue;
       }
       const averageOriginalRate = data.weightedRateSum / data.totalQuantity;
-      const newRate = averageOriginalRate + additionalCostPerBale;
+      const itemCostAddition = shouldAllocateCosts(stockItemId) ? additionalCostPerBale : 0;
+      const newRate = averageOriginalRate + itemCostAddition;
       if (!isFinite(newRate)) {
         throw new Error(`Calculated rate is infinite for stock item ${stockItemId}. averageRate=${averageOriginalRate}, additionalCost=${additionalCostPerBale}`);
       }
@@ -2277,13 +3107,32 @@ var DbStorage = class {
       }
     }
     await this.updateContainer(containerId, { status: "OFFLOADED" });
-    const container = await this.getContainerById(containerId);
     const location = await this.getLocationById(locationId);
-    if (!container || !location) {
-      throw new Error("Container or location not found");
+    if (!location) {
+      throw new Error("Location not found");
     }
     const voucherDate = offloadDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const findOrCreateExpenseAccount = async (code, name) => {
+    const findOrCreateExpensesParent = async () => {
+      let [parentAccount] = await db.select().from(ledgerAccounts).where(
+        and(
+          eq(ledgerAccounts.companyId, location.companyId),
+          eq(ledgerAccounts.code, "EXPENSES")
+        )
+      ).limit(1);
+      if (!parentAccount) {
+        [parentAccount] = await db.insert(ledgerAccounts).values({
+          companyId: location.companyId,
+          code: "EXPENSES",
+          name: "Expenses",
+          accountType: "Expense",
+          subType: "Expense",
+          openingBalance: "0",
+          openingBalanceSide: "Dr"
+        }).returning();
+      }
+      return parentAccount.id;
+    };
+    const findOrCreateExpenseAccount = async (code, name, parentId) => {
       let account = await db.select().from(ledgerAccounts).where(
         and(
           eq(ledgerAccounts.companyId, location.companyId),
@@ -2297,15 +3146,20 @@ var DbStorage = class {
           name,
           accountType: "Expense",
           subType: "Direct Expense",
+          parentId,
           openingBalance: "0",
           openingBalanceSide: "Dr"
         }).returning();
         account = [newAccount];
+      } else if (account[0].parentId !== parentId) {
+        await db.update(ledgerAccounts).set({ parentId }).where(eq(ledgerAccounts.id, account[0].id));
+        account[0].parentId = parentId;
       }
       return account[0].id;
     };
+    const expensesParentId = await findOrCreateExpensesParent();
     if (dutiesAccountId && parseFloat(duties) > 0) {
-      const dutiesExpenseAccountId = await findOrCreateExpenseAccount("DUTIES", "Duties");
+      const dutiesExpenseAccountId = await findOrCreateExpenseAccount("DUTIES", "Duties", expensesParentId);
       const voucherNumber = `DUTY-${container.containerNumber}-${Date.now()}`;
       const [voucher] = await db.insert(vouchers).values({
         companyId: location.companyId,
@@ -2330,34 +3184,8 @@ var DbStorage = class {
         narration: `Duties for container ${container.containerNumber}`
       });
     }
-    if (officeChargesAccountId && officeChargesCashAccountId && parseFloat(officeCharges) > 0) {
-      const officeExpenseAccountId = await findOrCreateExpenseAccount("OFFICE_CHARGES", "Office Charges");
-      const voucherNumber = `OFFICE-${container.containerNumber}-${Date.now()}`;
-      const [voucher] = await db.insert(vouchers).values({
-        companyId: location.companyId,
-        voucherNumber,
-        voucherType: "Payment",
-        voucherDate,
-        description: `Office charges for container ${container.containerNumber}`,
-        totalAmount: officeCharges
-      }).returning();
-      await db.insert(voucherEntries).values({
-        voucherId: voucher.id,
-        ledgerAccountId: officeExpenseAccountId,
-        debitAmount: officeCharges,
-        creditAmount: "0",
-        narration: `Office charges for container ${container.containerNumber}`
-      });
-      await db.insert(voucherEntries).values({
-        voucherId: voucher.id,
-        ledgerAccountId: officeChargesCashAccountId,
-        debitAmount: "0",
-        creditAmount: officeCharges,
-        narration: `Office charges for container ${container.containerNumber}`
-      });
-    }
     if (transportAccountId && parseFloat(transportFees) > 0) {
-      const transportExpenseAccountId = await findOrCreateExpenseAccount("TRANSPORT", "Transport Charges");
+      const transportExpenseAccountId = await findOrCreateExpenseAccount("TRANSPORT", "Transport Charges", expensesParentId);
       const voucherNumber = `TRANS-${container.containerNumber}-${Date.now()}`;
       const [voucher] = await db.insert(vouchers).values({
         companyId: location.companyId,
@@ -2382,9 +3210,6 @@ var DbStorage = class {
         narration: `Transport fees for container ${container.containerNumber}`
       });
     }
-    if (parseFloat(transferCharges) > 0) {
-      const transferExpenseAccountId = await findOrCreateExpenseAccount("TRANSFER_CHARGES", "Transfer Charges");
-    }
     for (const charge of additionalCharges) {
       if (charge.amount > 0) {
         const voucherNumber = `CHG-${container.containerNumber}-${Date.now()}`;
@@ -2398,7 +3223,8 @@ var DbStorage = class {
         }).returning();
         const additionalExpenseAccountId = await findOrCreateExpenseAccount(
           "ADDITIONAL_CHARGES",
-          "Additional Container Charges"
+          "Additional Container Charges",
+          expensesParentId
         );
         await db.insert(voucherEntries).values({
           voucherId: voucher.id,
@@ -2419,10 +3245,10 @@ var DbStorage = class {
     const [offload] = await db.insert(containerOffloads).values({
       containerId,
       locationId,
-      duties,
-      officeCharges,
-      transferCharges,
-      transportFees,
+      duties: duties || "0",
+      officeCharges: "0",
+      transferCharges: "0",
+      transportFees: transportFees || "0",
       totalCharges: totalCharges.toFixed(2),
       totalBales: totalBales.toFixed(3),
       additionalCostPerBale: additionalCostPerBale.toFixed(2),
@@ -2522,7 +3348,8 @@ var DbStorage = class {
   async getVoucherEntriesBySupplier(supplierId, companyId, startDate, endDate) {
     const conditions = [
       eq(voucherEntries.supplierId, supplierId),
-      eq(vouchers.optional, false)
+      eq(vouchers.optional, false),
+      isNull(vouchers.deletedAt)
     ];
     if (companyId) {
       conditions.push(eq(vouchers.companyId, companyId));
@@ -3081,10 +3908,10 @@ var DbStorage = class {
           ));
           if (destInventory) {
             const currentQty = parseFloat(destInventory.quantity);
-            const currentValue = parseFloat(destInventory.totalValue);
+            const currentRate = parseFloat(destInventory.averageRate || "0");
             const newQty = currentQty + quantity;
-            const newValue = currentValue + totalAmount;
-            const newRate = newQty > 0 ? newValue / newQty : 0;
+            const newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+            const newValue = newQty * newRate;
             await tx.update(inventory).set({
               quantity: newQty.toFixed(3),
               averageRate: newRate.toFixed(2),
@@ -3159,8 +3986,8 @@ var DbStorage = class {
             let newRate;
             if (adjustmentType === "Production") {
               newQty = currentQty + quantity;
-              newValue = currentValue + totalAmount;
-              newRate = newQty > 0 ? newValue / newQty : 0;
+              newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+              newValue = newQty * newRate;
             } else {
               newQty = currentQty - Math.abs(quantity);
               newValue = newQty > 0 ? newQty * currentRate : 0;
@@ -3246,10 +4073,10 @@ var DbStorage = class {
           ));
           if (sourceInventory) {
             const currentQty = parseFloat(sourceInventory.quantity);
-            const currentValue = parseFloat(sourceInventory.totalValue);
+            const currentRate = parseFloat(sourceInventory.averageRate || "0");
             const newQty = currentQty + quantity;
-            const newValue = currentValue + totalAmount;
-            const newRate = newQty > 0 ? newValue / newQty : 0;
+            const newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+            const newValue = newQty * newRate;
             await tx.update(inventory).set({
               quantity: newQty.toFixed(3),
               averageRate: newRate.toFixed(2),
@@ -3339,10 +4166,10 @@ var DbStorage = class {
           ));
           if (destInventory) {
             const currentQty = parseFloat(destInventory.quantity);
-            const currentValue = parseFloat(destInventory.totalValue);
+            const currentRate = parseFloat(destInventory.averageRate || "0");
             const newQty = currentQty + quantity;
-            const newValue = currentValue + totalAmount;
-            const newRate = newQty > 0 ? newValue / newQty : 0;
+            const newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+            const newValue = newQty * newRate;
             await tx.update(inventory).set({
               quantity: newQty.toFixed(3),
               averageRate: newRate.toFixed(2),
@@ -3404,8 +4231,7 @@ var DbStorage = class {
           ));
           if (currentInventory) {
             const currentQty = parseFloat(currentInventory.quantity);
-            const currentValue = parseFloat(currentInventory.totalValue);
-            const currentRate = parseFloat(currentInventory.averageRate);
+            const currentRate = parseFloat(currentInventory.averageRate || "0");
             let newQty;
             let newValue;
             let newRate;
@@ -3415,8 +4241,8 @@ var DbStorage = class {
               newRate = currentRate;
             } else {
               newQty = currentQty + Math.abs(quantity);
-              newValue = currentValue + totalAmount;
-              newRate = newQty > 0 ? newValue / newQty : 0;
+              newRate = newQty > 0 ? (currentQty * currentRate + Math.abs(quantity) * rate) / newQty : 0;
+              newValue = newQty * newRate;
             }
             await tx.update(inventory).set({
               quantity: newQty.toFixed(3),
@@ -3470,15 +4296,14 @@ var DbStorage = class {
           ));
           if (currentInventory) {
             const currentQty = parseFloat(currentInventory.quantity);
-            const currentValue = parseFloat(currentInventory.totalValue);
-            const currentRate = parseFloat(currentInventory.averageRate);
+            const currentRate = parseFloat(currentInventory.averageRate || "0");
             let newQty;
             let newValue;
             let newRate;
             if (adjustmentType === "Production") {
               newQty = currentQty + quantity;
-              newValue = currentValue + totalAmount;
-              newRate = newQty > 0 ? newValue / newQty : 0;
+              newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+              newValue = newQty * newRate;
             } else {
               newQty = currentQty - Math.abs(quantity);
               newValue = newQty > 0 ? newQty * currentRate : 0;
@@ -3618,7 +4443,7 @@ var DbStorage = class {
       quantityIn: sql2`'0'`,
       rate: stockTransferItems.rate,
       amount: sql2`(${stockTransferItems.quantity}::numeric * ${stockTransferItems.rate}::numeric)::text`
-    }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq(stockTransferItems.stockTransferVoucherId, stockTransferVouchers.id)).innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id)).leftJoin(locations, eq(stockTransferItems.sourceLocationId, locations.id)).where(and(
+    }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id)).leftJoin(locations, eq(stockTransferItems.sourceLocationId, locations.id)).where(and(
       eq(stockTransferItems.stockItemId, stockItemId),
       eq(vouchers.companyId, companyId),
       eq(vouchers.optional, false)
@@ -3635,7 +4460,7 @@ var DbStorage = class {
       quantityIn: stockTransferItems.quantity,
       rate: stockTransferItems.rate,
       amount: sql2`(${stockTransferItems.quantity}::numeric * ${stockTransferItems.rate}::numeric)::text`
-    }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq(stockTransferItems.stockTransferVoucherId, stockTransferVouchers.id)).innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id)).leftJoin(locations, eq(stockTransferVouchers.destinationLocationId, locations.id)).where(and(
+    }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id)).leftJoin(locations, eq(stockTransferVouchers.destinationLocationId, locations.id)).where(and(
       eq(stockTransferItems.stockItemId, stockItemId),
       eq(vouchers.companyId, companyId),
       eq(vouchers.optional, false)
@@ -3652,7 +4477,7 @@ var DbStorage = class {
       quantityIn: sql2`CASE WHEN ${stockAdjustmentItems.quantity}::numeric > 0 THEN ${stockAdjustmentItems.quantity} ELSE '0' END`,
       rate: stockAdjustmentItems.rate,
       amount: sql2`(${stockAdjustmentItems.quantity}::numeric * ${stockAdjustmentItems.rate}::numeric)::text`
-    }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq(stockAdjustmentItems.stockAdjustmentVoucherId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq(stockAdjustmentVouchers.voucherId, vouchers.id)).leftJoin(locations, eq(stockAdjustmentVouchers.locationId, locations.id)).where(and(
+    }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq(stockAdjustmentVouchers.voucherId, vouchers.id)).leftJoin(locations, eq(stockAdjustmentVouchers.locationId, locations.id)).where(and(
       eq(stockAdjustmentItems.stockItemId, stockItemId),
       eq(vouchers.companyId, companyId),
       eq(vouchers.optional, false)
@@ -3663,7 +4488,10 @@ var DbStorage = class {
   }
   // Customer Methods
   async getAllCustomers(companyId) {
-    return await db.select().from(customers).where(eq(customers.companyId, companyId)).orderBy(customers.legalName);
+    return await db.select().from(customers).where(and(
+      eq(customers.companyId, companyId),
+      isNull(customers.deletedAt)
+    )).orderBy(customers.legalName);
   }
   async getCustomerById(id) {
     const [customer] = await db.select().from(customers).where(eq(customers.id, id));
@@ -3680,6 +4508,136 @@ var DbStorage = class {
   async updateCustomer(id, updates) {
     const [customer] = await db.update(customers).set(updates).where(eq(customers.id, id)).returning();
     return customer;
+  }
+  // Bike Purchase Methods
+  async getAllBikePurchases(companyId) {
+    return await db.select().from(bikePurchases).where(and(
+      eq(bikePurchases.companyId, companyId),
+      isNull(bikePurchases.deletedAt)
+    )).orderBy(sql2`${bikePurchases.saleDate} DESC`);
+  }
+  async getBikePurchaseById(id) {
+    const [purchase] = await db.select().from(bikePurchases).where(eq(bikePurchases.id, id));
+    return purchase;
+  }
+  async getBikePurchasesByCustomer(customerId, companyId) {
+    return await db.select().from(bikePurchases).where(and(
+      eq(bikePurchases.customerId, customerId),
+      eq(bikePurchases.companyId, companyId),
+      isNull(bikePurchases.deletedAt)
+    )).orderBy(sql2`${bikePurchases.saleDate} DESC`);
+  }
+  async createBikePurchase(purchase) {
+    const [newPurchase] = await db.insert(bikePurchases).values(purchase).returning();
+    return newPurchase;
+  }
+  async updateBikePurchase(id, updates) {
+    const [purchase] = await db.update(bikePurchases).set(updates).where(eq(bikePurchases.id, id)).returning();
+    return purchase;
+  }
+  // Part Purchase Methods
+  async getAllPartPurchases(companyId) {
+    return await db.select().from(partPurchases).where(and(
+      eq(partPurchases.companyId, companyId),
+      isNull(partPurchases.deletedAt)
+    )).orderBy(sql2`${partPurchases.purchaseDate} DESC`);
+  }
+  async getPartPurchaseById(id) {
+    const [purchase] = await db.select().from(partPurchases).where(eq(partPurchases.id, id));
+    return purchase;
+  }
+  async getPartPurchasesByCustomer(customerId, companyId) {
+    return await db.select().from(partPurchases).where(and(
+      eq(partPurchases.customerId, customerId),
+      eq(partPurchases.companyId, companyId),
+      isNull(partPurchases.deletedAt)
+    )).orderBy(sql2`${partPurchases.purchaseDate} DESC`);
+  }
+  async createPartPurchase(purchase) {
+    const [newPurchase] = await db.insert(partPurchases).values(purchase).returning();
+    return newPurchase;
+  }
+  async updatePartPurchase(id, updates) {
+    const [purchase] = await db.update(partPurchases).set(updates).where(eq(partPurchases.id, id)).returning();
+    return purchase;
+  }
+  // Service History Methods
+  async getAllServiceHistory(companyId) {
+    return await db.select().from(serviceHistory).where(and(
+      eq(serviceHistory.companyId, companyId),
+      isNull(serviceHistory.deletedAt)
+    )).orderBy(sql2`${serviceHistory.serviceDate} DESC`);
+  }
+  async getServiceHistoryById(id) {
+    const [record] = await db.select().from(serviceHistory).where(eq(serviceHistory.id, id));
+    return record;
+  }
+  async getServiceHistoryByCustomer(customerId, companyId) {
+    return await db.select().from(serviceHistory).where(and(
+      eq(serviceHistory.customerId, customerId),
+      eq(serviceHistory.companyId, companyId),
+      isNull(serviceHistory.deletedAt)
+    )).orderBy(sql2`${serviceHistory.serviceDate} DESC`);
+  }
+  async createServiceHistory(record) {
+    const [newRecord] = await db.insert(serviceHistory).values(record).returning();
+    return newRecord;
+  }
+  async updateServiceHistory(id, updates) {
+    const [record] = await db.update(serviceHistory).set(updates).where(eq(serviceHistory.id, id)).returning();
+    return record;
+  }
+  // Warranty Methods
+  async getAllWarranties(companyId) {
+    return await db.select().from(warranties).where(and(
+      eq(warranties.companyId, companyId),
+      isNull(warranties.deletedAt)
+    )).orderBy(sql2`${warranties.warrantyStartDate} DESC`);
+  }
+  async getWarrantyById(id) {
+    const [warranty] = await db.select().from(warranties).where(eq(warranties.id, id));
+    return warranty;
+  }
+  async getWarrantiesByCustomer(customerId, companyId) {
+    return await db.select().from(warranties).where(and(
+      eq(warranties.customerId, customerId),
+      eq(warranties.companyId, companyId),
+      isNull(warranties.deletedAt)
+    )).orderBy(sql2`${warranties.warrantyStartDate} DESC`);
+  }
+  async createWarranty(warranty) {
+    const [newWarranty] = await db.insert(warranties).values(warranty).returning();
+    return newWarranty;
+  }
+  async updateWarranty(id, updates) {
+    const [warranty] = await db.update(warranties).set(updates).where(eq(warranties.id, id)).returning();
+    return warranty;
+  }
+  // Communication Log Methods
+  async getAllCommunicationLogs(companyId) {
+    return await db.select().from(communicationLogs).where(and(
+      eq(communicationLogs.companyId, companyId),
+      isNull(communicationLogs.deletedAt)
+    )).orderBy(sql2`${communicationLogs.contactDate} DESC`);
+  }
+  async getCommunicationLogById(id) {
+    const [log2] = await db.select().from(communicationLogs).where(eq(communicationLogs.id, id));
+    return log2;
+  }
+  async getCommunicationLogsByCustomer(customerId, companyId) {
+    return await db.select().from(communicationLogs).where(and(
+      eq(communicationLogs.customerId, customerId),
+      eq(communicationLogs.companyId, companyId),
+      isNull(communicationLogs.deletedAt)
+    )).orderBy(sql2`${communicationLogs.contactDate} DESC`);
+  }
+  async createCommunicationLog(log2) {
+    const [newLog] = await db.insert(communicationLogs).values(log2).returning();
+    return newLog;
+  }
+  async updateCommunicationLog(id, updates) {
+    const [log2] = await db.update(communicationLogs).set(updates).where(eq(communicationLogs.id, id)).returning();
+    return log2;
   }
   // Inter-Company Transfer Methods
   async getAllInterCompanyTransfers(companyId) {
@@ -3908,7 +4866,7 @@ var DbStorage = class {
     return created;
   }
   async updateBaleTransferItem(id, updates) {
-    const [updated] = await db.update(baleTransferItems).set({ ...updates, updatedAt: sql2`now()` }).where(eq(baleTransferItems.id, id)).returning();
+    const [updated] = await db.update(baleTransferItems).set(updates).where(eq(baleTransferItems.id, id)).returning();
     return updated;
   }
   async deleteBaleTransferItem(id) {
@@ -4150,8 +5108,583 @@ var DbStorage = class {
     }
     return await db.select().from(customerBalances).where(and(...conditions)).orderBy(customerBalances.transactionDate);
   }
+  // Role Feature Permissions
+  async getRoleFeaturePermissions(companyId) {
+    return await db.select().from(roleFeaturePermissions).where(eq(roleFeaturePermissions.companyId, companyId));
+  }
+  async getRoleFeaturePermission(companyId, role, featureKey) {
+    const [permission] = await db.select().from(roleFeaturePermissions).where(and(
+      eq(roleFeaturePermissions.companyId, companyId),
+      eq(roleFeaturePermissions.role, role),
+      eq(roleFeaturePermissions.featureKey, featureKey)
+    ));
+    return permission;
+  }
+  async upsertRoleFeaturePermission(permission) {
+    const [result] = await db.insert(roleFeaturePermissions).values(permission).onConflictDoUpdate({
+      target: [
+        roleFeaturePermissions.companyId,
+        roleFeaturePermissions.role,
+        roleFeaturePermissions.featureKey
+      ],
+      set: {
+        enabled: permission.enabled,
+        updatedAt: /* @__PURE__ */ new Date()
+      }
+    }).returning();
+    return result;
+  }
+  async bulkUpsertRoleFeaturePermissions(permissions) {
+    if (permissions.length === 0) return [];
+    const results = [];
+    for (const permission of permissions) {
+      const result = await this.upsertRoleFeaturePermission(permission);
+      results.push(result);
+    }
+    return results;
+  }
 };
 var storage = new DbStorage();
+
+// server/lib/asyncHandler.ts
+function asyncHandler(fn) {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+
+// server/lib/validate.ts
+import { ZodError } from "zod";
+function validate(schema, source = "body") {
+  return (req, res, next) => {
+    try {
+      const parsed = schema.parse(req[source]);
+      req[source] = parsed;
+      next();
+    } catch (err) {
+      if (err instanceof ZodError) {
+        return res.status(400).json({
+          message: "Invalid request",
+          errors: err.errors.map((e) => ({
+            path: e.path.join("."),
+            message: e.message,
+            code: e.code
+          }))
+        });
+      }
+      next(err);
+    }
+  };
+}
+
+// server/chatService.ts
+import { GoogleGenAI } from "@google/genai";
+init_schema();
+import { eq as eq2, and as and2, desc as desc2, sql as sql3, isNull as isNull2 } from "drizzle-orm";
+var ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+async function getERPContext(companyId) {
+  const dataFetchedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const thirtyDaysAgo = /* @__PURE__ */ new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const [
+    inventory2,
+    stockItems2,
+    stockGroups2,
+    ledgerAccounts2,
+    suppliers2,
+    customers2,
+    locations2,
+    recentVouchers,
+    purchaseOrders2,
+    containerSales2
+  ] = await Promise.all([
+    db.select({
+      stockItemId: inventory.stockItemId,
+      locationId: inventory.locationId,
+      quantity: inventory.quantity,
+      averageRate: inventory.averageRate,
+      totalValue: inventory.totalValue
+    }).from(inventory).where(eq2(inventory.companyId, companyId)).limit(500),
+    db.select({
+      id: stockItems.id,
+      code: stockItems.code,
+      name: stockItems.name,
+      stockGroupId: stockItems.stockGroupId,
+      sellingPrice: stockItems.sellingPrice,
+      reorderLevel: stockItems.reorderLevel
+    }).from(stockItems).where(and2(
+      eq2(stockItems.companyId, companyId),
+      eq2(stockItems.active, true)
+    )).limit(200),
+    db.select({
+      id: stockGroups.id,
+      code: stockGroups.code,
+      name: stockGroups.name
+    }).from(stockGroups).where(eq2(stockGroups.companyId, companyId)),
+    db.select({
+      id: ledgerAccounts.id,
+      code: ledgerAccounts.code,
+      name: ledgerAccounts.name,
+      accountType: ledgerAccounts.accountType,
+      openingBalance: ledgerAccounts.openingBalance
+    }).from(ledgerAccounts).where(and2(
+      eq2(ledgerAccounts.companyId, companyId),
+      eq2(ledgerAccounts.active, true)
+    )).limit(200),
+    db.select({
+      id: suppliers.id,
+      code: suppliers.code,
+      legalName: suppliers.legalName,
+      phone: suppliers.phone,
+      email: suppliers.email
+    }).from(suppliers).where(eq2(suppliers.active, true)).limit(100),
+    db.select({
+      id: customers.id,
+      code: customers.code,
+      legalName: customers.legalName,
+      phone: customers.phone
+    }).from(customers).where(and2(
+      eq2(customers.companyId, companyId),
+      eq2(customers.active, true)
+    )).limit(100),
+    db.select({
+      id: locations.id,
+      code: locations.code,
+      name: locations.name,
+      city: locations.city
+    }).from(locations).where(and2(
+      eq2(locations.companyId, companyId),
+      eq2(locations.active, true)
+    )),
+    db.select({
+      id: vouchers.id,
+      voucherNumber: vouchers.voucherNumber,
+      voucherType: vouchers.voucherType,
+      voucherDate: vouchers.voucherDate,
+      totalAmount: vouchers.totalAmount,
+      description: vouchers.description
+    }).from(vouchers).where(and2(
+      eq2(vouchers.companyId, companyId),
+      isNull2(vouchers.deletedAt)
+    )).orderBy(desc2(vouchers.createdAt)).limit(100),
+    db.select({
+      id: purchaseOrders.id,
+      poNumber: purchaseOrders.poNumber,
+      supplierId: purchaseOrders.supplierId,
+      status: purchaseOrders.status,
+      itemsTotal: purchaseOrders.itemsTotal,
+      freight: purchaseOrders.freight,
+      currency: purchaseOrders.currency,
+      createdAt: purchaseOrders.createdAt
+    }).from(purchaseOrders).where(eq2(purchaseOrders.companyId, companyId)).orderBy(desc2(purchaseOrders.createdAt)).limit(50),
+    db.select({
+      id: containerSales.id,
+      containerId: containerSales.containerId,
+      customerId: containerSales.customerId,
+      containerCost: containerSales.containerCost,
+      commission: containerSales.commission,
+      totalAmount: containerSales.totalAmount,
+      paymentStatus: containerSales.paymentStatus,
+      paidAmount: containerSales.paidAmount,
+      saleDate: containerSales.saleDate
+    }).from(containerSales).where(eq2(containerSales.companyId, companyId)).orderBy(desc2(containerSales.saleDate)).limit(50)
+  ]);
+  const salesSummary = await db.select({
+    totalSales: sql3`COALESCE(SUM(CAST(${vouchers.totalAmount} AS NUMERIC)), 0)`,
+    count: sql3`COUNT(*)`
+  }).from(vouchers).where(and2(
+    eq2(vouchers.companyId, companyId),
+    eq2(vouchers.voucherType, "Receipt"),
+    isNull2(vouchers.deletedAt)
+  ));
+  const profitAnalysis = await db.select({
+    totalSales: sql3`COALESCE(SUM(CAST(${salesItems.totalSales} AS NUMERIC)), 0)`,
+    totalCost: sql3`COALESCE(SUM(CAST(${salesItems.totalCost} AS NUMERIC)), 0)`,
+    totalProfit: sql3`COALESCE(SUM(CAST(${salesItems.profit} AS NUMERIC)), 0)`,
+    itemsSold: sql3`COUNT(*)`
+  }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(
+    eq2(vouchers.companyId, companyId),
+    isNull2(vouchers.deletedAt)
+  ));
+  const lowStockAlerts = [];
+  const inventoryMap = new Map(inventory2.map((i) => [i.stockItemId, parseFloat(i.quantity || "0")]));
+  for (const item of stockItems2) {
+    const qty = inventoryMap.get(item.id) || 0;
+    const reorderLevel = parseFloat(item.reorderLevel || "0");
+    if (reorderLevel > 0 && qty <= reorderLevel) {
+      lowStockAlerts.push({
+        itemId: item.id,
+        itemCode: item.code,
+        itemName: item.name,
+        currentQty: qty,
+        reorderLevel,
+        status: qty === 0 ? "OUT_OF_STOCK" : "LOW_STOCK"
+      });
+    }
+  }
+  const suppliersWithBalances = await db.select({
+    id: suppliers.id,
+    code: suppliers.code,
+    legalName: suppliers.legalName,
+    openingBalance: suppliers.openingBalance
+  }).from(suppliers).where(eq2(suppliers.active, true));
+  const supplierBalances = await Promise.all(
+    suppliersWithBalances.map(async (supplier) => {
+      const entries = await db.select({
+        debitAmount: voucherEntries.debitAmount,
+        creditAmount: voucherEntries.creditAmount
+      }).from(voucherEntries).innerJoin(vouchers, eq2(voucherEntries.voucherId, vouchers.id)).where(and2(
+        eq2(voucherEntries.supplierId, supplier.id),
+        eq2(vouchers.optional, false),
+        isNull2(vouchers.deletedAt)
+      ));
+      const openingBalance = parseFloat(supplier.openingBalance || "0");
+      const balance = entries.reduce((sum, entry) => {
+        const credit = parseFloat(entry.creditAmount || "0");
+        const debit = parseFloat(entry.debitAmount || "0");
+        if (credit > 0 && debit === 0) {
+          return sum + credit;
+        } else if (debit > 0 && credit === 0) {
+          return sum - debit;
+        }
+        return sum;
+      }, openingBalance);
+      return {
+        supplierId: supplier.id,
+        supplierCode: supplier.code,
+        supplierName: supplier.legalName || "Unknown",
+        openingBalance,
+        balance,
+        status: balance > 0 ? "PAYABLE" : balance < 0 ? "OVERPAID" : "SETTLED"
+      };
+    })
+  );
+  const filteredSupplierBalances = supplierBalances.filter((sb) => Math.abs(sb.balance) > 0.01);
+  let customerBalancesList = [];
+  try {
+    const customerBalancesRaw = await db.select({
+      customerId: customerBalances.customerId,
+      totalDebit: sql3`COALESCE(SUM(CAST(${customerBalances.debitAmount} AS NUMERIC)), 0)`,
+      totalCredit: sql3`COALESCE(SUM(CAST(${customerBalances.creditAmount} AS NUMERIC)), 0)`
+    }).from(customerBalances).where(eq2(customerBalances.companyId, companyId)).groupBy(customerBalances.customerId);
+    customerBalancesList = customerBalancesRaw.map((cb) => {
+      const customer = customers2.find((c) => c.id === cb.customerId);
+      const balance = parseFloat(cb.totalDebit) - parseFloat(cb.totalCredit);
+      return {
+        customerId: cb.customerId,
+        customerName: customer?.legalName || "Unknown",
+        balance
+      };
+    }).filter((cb) => Math.abs(cb.balance) > 0.01);
+  } catch (error) {
+    console.error("Error fetching customer balances:", error);
+  }
+  const financialSummary = {
+    totalPayables: filteredSupplierBalances.filter((s) => s.balance > 0).reduce((sum, s) => sum + s.balance, 0),
+    totalReceivables: customerBalancesList.filter((c) => c.balance > 0).reduce((sum, c) => sum + c.balance, 0),
+    openPurchaseOrders: purchaseOrders2.filter((po) => po.status === "Open").length,
+    pendingContainerSales: containerSales2.filter((cs) => cs.paymentStatus !== "PAID").length
+  };
+  const inventoryValueByLocation = await db.select({
+    locationId: inventory.locationId,
+    totalValue: sql3`COALESCE(SUM(CAST(${inventory.totalValue} AS NUMERIC)), 0)`,
+    itemCount: sql3`COUNT(DISTINCT ${inventory.stockItemId})`
+  }).from(inventory).where(eq2(inventory.companyId, companyId)).groupBy(inventory.locationId);
+  const inventoryByLocationWithNames = inventoryValueByLocation.map((inv) => {
+    const location = locations2.find((l) => l.id === inv.locationId);
+    return {
+      locationId: inv.locationId,
+      locationName: location?.name || "Unknown",
+      totalValue: parseFloat(inv.totalValue),
+      itemCount: inv.itemCount
+    };
+  });
+  const topSellingItems = await db.select({
+    stockItemId: salesItems.stockItemId,
+    totalQuantity: sql3`SUM(CAST(${salesItems.quantity} AS NUMERIC))`,
+    totalRevenue: sql3`SUM(CAST(${salesItems.totalSales} AS NUMERIC))`,
+    totalProfit: sql3`SUM(CAST(${salesItems.profit} AS NUMERIC))`
+  }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(
+    eq2(vouchers.companyId, companyId),
+    isNull2(vouchers.deletedAt)
+  )).groupBy(salesItems.stockItemId).orderBy(desc2(sql3`SUM(CAST(${salesItems.totalSales} AS NUMERIC))`)).limit(10);
+  const topSellingWithNames = topSellingItems.map((item) => {
+    const stockItem = stockItems2.find((s) => s.id === item.stockItemId);
+    const profitMargin = parseFloat(item.totalRevenue) > 0 ? (parseFloat(item.totalProfit) / parseFloat(item.totalRevenue) * 100).toFixed(1) : "0";
+    return {
+      itemId: item.stockItemId,
+      itemName: stockItem?.name || "Unknown",
+      itemCode: stockItem?.code || "N/A",
+      totalQuantity: parseFloat(item.totalQuantity).toFixed(2),
+      totalRevenue: parseFloat(item.totalRevenue).toFixed(2),
+      totalProfit: parseFloat(item.totalProfit).toFixed(2),
+      profitMargin: profitMargin + "%"
+    };
+  });
+  const recentTransactions = recentVouchers.slice(0, 20).map((v) => ({
+    id: v.id,
+    number: v.voucherNumber,
+    type: v.voucherType,
+    date: v.voucherDate,
+    amount: v.totalAmount,
+    description: v.description
+  }));
+  return {
+    dataFetchedAt,
+    // Real-time timestamp
+    inventory: inventory2,
+    stockItems: stockItems2,
+    stockGroups: stockGroups2,
+    ledgerAccounts: ledgerAccounts2,
+    suppliers: suppliers2,
+    customers: customers2,
+    locations: locations2,
+    recentVouchers,
+    salesSummary: salesSummary[0] || { totalSales: "0", count: 0 },
+    profitAnalysis: profitAnalysis[0] || { totalSales: "0", totalCost: "0", totalProfit: "0", itemsSold: 0 },
+    lowStockAlerts,
+    supplierBalances: filteredSupplierBalances,
+    customerBalances: customerBalancesList,
+    purchaseOrders: purchaseOrders2,
+    containerSales: containerSales2,
+    financialSummary,
+    inventoryValueByLocation: inventoryByLocationWithNames,
+    topSellingItems: topSellingWithNames,
+    recentTransactions
+  };
+}
+function buildSystemPrompt(context, userPreferences2) {
+  const currency = userPreferences2?.currency || "USD";
+  const profitMargin = parseFloat(context.profitAnalysis.totalSales) > 0 ? (parseFloat(context.profitAnalysis.totalProfit) / parseFloat(context.profitAnalysis.totalSales) * 100).toFixed(1) : "0";
+  const fetchTime = new Date(context.dataFetchedAt);
+  const formattedTime = fetchTime.toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "medium"
+  });
+  return `You are an intelligent AI assistant for an ERP/POS system called "ERP Assistant". You help business owners and managers understand their data, make decisions, and get insights.
+
+## \u26A1 REAL-TIME DATA (fetched: ${formattedTime})
+All data below is LIVE from the database - not cached. These numbers reflect the current state RIGHT NOW.
+
+## YOUR CAPABILITIES:
+1. **Data Analysis**: Answer questions about inventory, sales, finances, suppliers, and customers
+2. **Business Insights**: Provide actionable recommendations based on data patterns
+3. **What-If Analysis**: Help users simulate scenarios (pricing changes, stock projections)
+4. **Alerts & Monitoring**: Highlight critical issues that need attention
+5. **Multi-language**: Respond in the same language as the user's question
+
+## CURRENT COMPANY DATA (REAL-TIME as of ${formattedTime}):
+
+### \u{1F4CA} EXECUTIVE SUMMARY:
+- Total Inventory Items: ${context.inventory.length} items across ${context.locations.length} locations
+- Total Inventory Value: $${context.inventoryValueByLocation.reduce((sum, l) => sum + l.totalValue, 0).toLocaleString()}
+- Active Stock Items: ${context.stockItems.length}
+- Active Suppliers: ${context.suppliers.length}
+- Active Customers: ${context.customers.length}
+
+### \u{1F4B0} FINANCIAL OVERVIEW:
+- Total Sales Revenue: $${parseFloat(context.profitAnalysis.totalSales).toLocaleString()}
+- Total Cost of Goods: $${parseFloat(context.profitAnalysis.totalCost).toLocaleString()}
+- Gross Profit: $${parseFloat(context.profitAnalysis.totalProfit).toLocaleString()}
+- Profit Margin: ${profitMargin}%
+- Items Sold: ${context.profitAnalysis.itemsSold}
+
+### \u{1F3E6} ACCOUNTS SUMMARY:
+- Total Payables (to suppliers): $${context.financialSummary.totalPayables.toLocaleString()}
+- Total Receivables (from customers): $${context.financialSummary.totalReceivables.toLocaleString()}
+- Open Purchase Orders: ${context.financialSummary.openPurchaseOrders}
+- Pending Container Sales: ${context.financialSummary.pendingContainerSales}
+
+### \u26A0\uFE0F ALERTS & WARNINGS:
+${context.lowStockAlerts.length > 0 ? `
+LOW STOCK ITEMS (${context.lowStockAlerts.length} items need attention):
+${context.lowStockAlerts.slice(0, 10).map((a) => `- ${a.itemName} (${a.itemCode}): ${a.currentQty} units left (reorder at ${a.reorderLevel}) - ${a.status}`).join("\n")}
+` : "No low stock alerts at this time."}
+
+${context.supplierBalances.filter((s) => s.balance > 1e3).length > 0 ? `
+SIGNIFICANT SUPPLIER BALANCES:
+${context.supplierBalances.filter((s) => s.balance > 1e3).slice(0, 5).map((s) => `- ${s.supplierName}: $${s.balance.toLocaleString()} ${s.status}`).join("\n")}
+` : ""}
+
+### \u{1F4C8} TOP SELLING ITEMS:
+${context.topSellingItems.length > 0 ? context.topSellingItems.slice(0, 5).map(
+    (item, i) => `${i + 1}. ${item.itemName} - Revenue: $${parseFloat(item.totalRevenue).toLocaleString()}, Profit: $${parseFloat(item.totalProfit).toLocaleString()} (${item.profitMargin} margin)`
+  ).join("\n") : "No sales data available yet."}
+
+### \u{1F4CD} INVENTORY BY LOCATION:
+${context.inventoryValueByLocation.map(
+    (l) => `- ${l.locationName}: $${l.totalValue.toLocaleString()} (${l.itemCount} items)`
+  ).join("\n")}
+
+### \u{1F4CB} RECENT TRANSACTIONS (Last 20):
+${context.recentTransactions.slice(0, 10).map(
+    (t) => `- ${t.type} #${t.number}: $${t.amount} on ${t.date}${t.description ? ` - ${t.description}` : ""}`
+  ).join("\n")}
+
+### \u{1F4E6} PURCHASE ORDERS:
+- Total POs: ${context.purchaseOrders.length}
+- Open POs: ${context.purchaseOrders.filter((po) => po.status === "Open").length}
+- Recent POs: ${context.purchaseOrders.slice(0, 5).map((po) => `${po.poNumber} ($${po.itemsTotal})`).join(", ") || "None"}
+
+### \u{1F3F7}\uFE0F STOCK ITEMS (Sample):
+${JSON.stringify(context.stockItems.slice(0, 15).map((s) => ({
+    code: s.code,
+    name: s.name,
+    sellingPrice: s.sellingPrice
+  })), null, 2)}
+
+### \u{1F465} SUPPLIERS:
+${JSON.stringify(context.suppliers.slice(0, 10).map((s) => ({
+    code: s.code,
+    name: s.legalName,
+    phone: s.phone
+  })), null, 2)}
+
+### \u{1F464} CUSTOMERS:
+${JSON.stringify(context.customers.slice(0, 10).map((c) => ({
+    code: c.code,
+    name: c.legalName,
+    phone: c.phone
+  })), null, 2)}
+
+## RESPONSE GUIDELINES:
+
+1. **Be Conversational**: Respond naturally, not like a database report
+2. **Use Tables**: For lists of items, use markdown tables for clarity
+3. **Highlight Important Numbers**: Use bold for key figures
+4. **Provide Context**: Explain what numbers mean for the business
+5. **Suggest Actions**: When appropriate, suggest what the user could do
+6. **Be Honest**: If data is missing or you can't answer, say so clearly
+
+## QUICK ACTION SUGGESTIONS:
+When relevant, you can suggest these actions:
+- "Would you like me to list all low stock items?"
+- "I can show you the full supplier balance breakdown"
+- "Want me to calculate projected inventory for next month?"
+- "I can identify your most and least profitable items"
+
+## WHAT-IF ANALYSIS CAPABILITIES:
+You can help with scenarios like:
+- "What if we increase prices by X%?" - Calculate new profit margins
+- "What if we order X units?" - Estimate cost and inventory levels
+- "How long will current stock last?" - Based on sales velocity
+
+## FORMATTING:
+- Use **bold** for emphasis
+- Use \`code\` for item codes and numbers
+- Use tables for structured data:
+  | Item | Quantity | Value |
+  |------|----------|-------|
+  | ... | ... | ... |
+- Use bullet points for lists
+- Keep responses concise but informative
+
+Remember: You're talking to business owners who need actionable insights, not raw data dumps.`;
+}
+function generateQuickSuggestions(context) {
+  const suggestions = [];
+  if (context.lowStockAlerts.length > 0) {
+    suggestions.push(`Show me the ${context.lowStockAlerts.length} items that are low on stock`);
+  }
+  if (context.supplierBalances.filter((s) => s.balance > 0).length > 0) {
+    suggestions.push("What are my outstanding supplier payments?");
+  }
+  if (context.topSellingItems.length > 0) {
+    suggestions.push("What are my top selling products?");
+  }
+  suggestions.push("Give me a summary of today's business");
+  suggestions.push("Which items have the highest profit margin?");
+  suggestions.push("How is my inventory distributed across locations?");
+  return suggestions.slice(0, 4);
+}
+async function chat(userMessage, companyId, conversationHistory = [], userPreferences2) {
+  if (!process.env.GEMINI_API_KEY) {
+    return {
+      response: "AI chatbot is not configured. Please ask an administrator to set up the GEMINI_API_KEY.",
+      suggestions: []
+    };
+  }
+  try {
+    console.log("[ChatService] Getting ERP context for company:", companyId);
+    const context = await getERPContext(companyId);
+    console.log("[ChatService] ERP context retrieved successfully");
+    const systemPrompt = buildSystemPrompt(context, userPreferences2);
+    const suggestions = generateQuickSuggestions(context);
+    console.log("[ChatService] System prompt built, suggestions generated");
+    const contents = [
+      { role: "user", parts: [{ text: systemPrompt }] },
+      { role: "model", parts: [{ text: "I understand. I'm your ERP Assistant, ready to help you understand your business data, provide insights, and answer questions in any language. How can I help you today?" }] },
+      ...conversationHistory.map((msg) => ({
+        role: msg.role === "user" ? "user" : "model",
+        parts: [{ text: msg.content }]
+      })),
+      { role: "user", parts: [{ text: userMessage }] }
+    ];
+    console.log("[ChatService] Calling Gemini API...");
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents
+    });
+    console.log("[ChatService] Gemini API response received");
+    return {
+      response: response.text || "I couldn't generate a response. Please try again.",
+      suggestions
+    };
+  } catch (error) {
+    console.error("[ChatService] ERROR:", error.message);
+    console.error("[ChatService] Stack:", error.stack);
+    if (error.message?.includes("API_KEY") || error.message?.includes("API key")) {
+      return {
+        response: "Invalid API key. Please check your GEMINI_API_KEY configuration.",
+        suggestions: []
+      };
+    }
+    if (error.message?.includes("quota") || error.message?.includes("rate limit")) {
+      return {
+        response: "API quota exceeded. Please try again later or check your Gemini API usage limits.",
+        suggestions: []
+      };
+    }
+    throw error;
+  }
+}
+async function saveMessage(companyId, userId, role, content, sessionId) {
+  await db.insert(chatMessages).values({
+    companyId,
+    userId,
+    role,
+    content,
+    sessionId
+  });
+}
+async function getConversationHistory(sessionId, userId, limit = 10) {
+  const whereClause = userId ? and2(eq2(chatMessages.sessionId, sessionId), eq2(chatMessages.userId, userId)) : eq2(chatMessages.sessionId, sessionId);
+  const messages = await db.select({
+    id: chatMessages.id,
+    role: chatMessages.role,
+    message: chatMessages.content,
+    createdAt: chatMessages.createdAt
+  }).from(chatMessages).where(whereClause).orderBy(desc2(chatMessages.createdAt)).limit(limit);
+  return messages.reverse();
+}
+async function getConversationHistoryForAI(sessionId, limit = 10) {
+  const messages = await db.select({
+    role: chatMessages.role,
+    content: chatMessages.content
+  }).from(chatMessages).where(eq2(chatMessages.sessionId, sessionId)).orderBy(desc2(chatMessages.createdAt)).limit(limit);
+  return messages.reverse();
+}
+async function getAllChatHistory(companyId, limit = 100) {
+  const messages = await db.select({
+    id: chatMessages.id,
+    userId: chatMessages.userId,
+    role: chatMessages.role,
+    content: chatMessages.content,
+    sessionId: chatMessages.sessionId,
+    createdAt: chatMessages.createdAt
+  }).from(chatMessages).where(eq2(chatMessages.companyId, companyId)).orderBy(desc2(chatMessages.createdAt)).limit(limit);
+  return messages;
+}
 
 // server/auth.ts
 async function requireAuth(req, res, next) {
@@ -4164,7 +5697,7 @@ async function requireAuth(req, res, next) {
     return res.status(401).json({ message: "User not found" });
   }
   if (!req.session.currentCompanyId) {
-    return res.status(401).json({ message: "No company selected" });
+    return res.status(403).json({ message: "No company selected", code: "NO_COMPANY_SELECTED" });
   }
   const userCompanyRole = await storage.getUserCompanyRole(req.session.userId, req.session.currentCompanyId);
   if (!userCompanyRole) {
@@ -4224,12 +5757,39 @@ function requireNonPOS(req, res, next) {
 
 // server/routes.ts
 init_schema();
-import { z as z2 } from "zod";
-import { eq as eq2, and as and2, inArray as inArray2, sql as sql3, like, desc as desc2, or as or2 } from "drizzle-orm";
+import { eq as eq3, and as and3, inArray as inArray2, sql as sql4, like, ne as ne2, desc as desc3, asc as asc2, or as or2, isNotNull, lt as lt2, gte, lte, isNull as isNull3 } from "drizzle-orm";
 import { format } from "date-fns";
-var upload = multer({ storage: multer.memoryStorage() });
-function hashPassword(password) {
-  return crypto.SHA256(password).toString();
+var upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024
+    // 10MB limit
+  }
+});
+var BCRYPT_SALT_ROUNDS = 12;
+var activeUsers = /* @__PURE__ */ new Map();
+var ACTIVE_TIMEOUT_MS = 5 * 60 * 1e3;
+var loginSchema = z2.object({
+  username: z2.string().min(1, "Username is required").max(255),
+  password: z2.string().min(1, "Password is required").max(1024)
+});
+async function hashPassword(password) {
+  return bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+}
+function isLegacySHA256Hash(hash) {
+  return hash.length === 64 && /^[a-f0-9]+$/i.test(hash);
+}
+function verifyLegacyPassword(password, hash) {
+  const sha256Hash = CryptoJS.SHA256(password).toString().toLowerCase();
+  return sha256Hash === hash.toLowerCase();
+}
+async function verifyPassword(password, hash) {
+  if (isLegacySHA256Hash(hash)) {
+    const isValid2 = verifyLegacyPassword(password, hash);
+    return { valid: isValid2, needsMigration: isValid2 };
+  }
+  const isValid = await bcrypt.compare(password, hash);
+  return { valid: isValid, needsMigration: false };
 }
 async function syncEmployeeBalancesFromEntries(entries, companyId, reverse = false) {
   const allAccounts = await storage.getAllLedgerAccounts(companyId);
@@ -4270,7 +5830,7 @@ async function syncEmployeeBalancesFromEntries(entries, companyId, reverse = fal
     const newBalance = currentBalance + change;
     await db.update(employees).set({
       currentBalance: newBalance.toFixed(2)
-    }).where(eq2(employees.id, employee.id));
+    }).where(eq3(employees.id, employee.id));
     console.log(`[Payroll Sync] Employee ID ${employeeId} (${employee.code}): balance changed by ${change.toFixed(2)} (new balance: ${newBalance.toFixed(2)})`);
   }
   for (const [employeeCode, change] of Array.from(employeeBalanceChangesByCode.entries())) {
@@ -4281,41 +5841,44 @@ async function syncEmployeeBalancesFromEntries(entries, companyId, reverse = fal
     const newBalance = currentBalance + change;
     await db.update(employees).set({
       currentBalance: newBalance.toFixed(2)
-    }).where(eq2(employees.id, employee.id));
+    }).where(eq3(employees.id, employee.id));
     console.log(`[Payroll Sync] Employee ${employeeCode}: balance changed by ${change.toFixed(2)} (new balance: ${newBalance.toFixed(2)})`);
   }
 }
 async function registerRoutes(app2) {
   app2.get("/api/health/db", async (_req, res) => {
     try {
-      const result = await db.execute(sql3`SELECT 1 as test`);
+      const result = await db.execute(sql4`SELECT 1 as test`);
       res.json({ status: "ok", message: "Database connection successful" });
     } catch (error) {
       console.error("Database connection failed:", error);
       res.status(500).json({ status: "error", message: error.message });
     }
   });
-  app2.post("/api/auth/login", async (req, res) => {
-    try {
-      console.log("Login attempt started for username:", req.body.username);
+  app2.post(
+    "/api/auth/login",
+    validate(loginSchema),
+    asyncHandler(async (req, res) => {
       const { username, password } = req.body;
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password are required" });
-      }
-      console.log("Fetching user from database...");
       const user = await Promise.race([
         storage.getUserByUsername(username),
         new Promise(
           (_2, reject) => setTimeout(() => reject(new Error("Database query timeout")), 5e3)
         )
       ]);
-      console.log("User fetch complete:", user ? "Found" : "Not found");
       if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
-      const hashedPassword = hashPassword(password);
-      if (user.password !== hashedPassword) {
+      const { valid: passwordValid, needsMigration } = await verifyPassword(
+        password,
+        user.password
+      );
+      if (!passwordValid) {
         return res.status(401).json({ message: "Invalid credentials" });
+      }
+      if (needsMigration) {
+        const newHash = await hashPassword(password);
+        await storage.updateUser(user.id, { password: newHash });
       }
       if (!user.active) {
         return res.status(403).json({ message: "Account is inactive" });
@@ -4330,20 +5893,66 @@ async function registerRoutes(app2) {
         req.session.currentPOSStation = firstCompany.posStation;
         req.session.cashAccountId = firstCompany.cashAccountId;
       }
-      console.log("\u2705 Login successful, session saved");
+      try {
+        await db.insert(loginHistory).values({
+          userId: user.id,
+          username: user.username,
+          ipAddress: req.headers["x-forwarded-for"] || req.socket?.remoteAddress || null,
+          userAgent: req.headers["user-agent"] || null
+        });
+      } catch {
+      }
+      await new Promise((resolve, reject) => {
+        req.session.save((err) => err ? reject(err) : resolve());
+      });
       const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+    })
+  );
   app2.post("/api/auth/logout", (req, res) => {
+    if (req.session?.userId) activeUsers.delete(req.session.userId);
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ message: "Failed to logout" });
       }
       res.json({ message: "Logged out successfully" });
     });
+  });
+  app2.post("/api/users/heartbeat", requireAuth, (req, res) => {
+    const user = req.user;
+    const { currentPage } = req.body;
+    activeUsers.set(user.id, {
+      userId: user.id,
+      username: user.username,
+      role: req.session.currentRole || "User",
+      currentPage: currentPage || "/",
+      lastActive: /* @__PURE__ */ new Date()
+    });
+    res.json({ ok: true });
+  });
+  app2.get("/api/active-users", requireAuth, (_req, res) => {
+    const cutoff = new Date(Date.now() - ACTIVE_TIMEOUT_MS);
+    const result = [];
+    for (const [id, entry] of activeUsers) {
+      if (entry.lastActive >= cutoff) {
+        result.push(entry);
+      } else {
+        activeUsers.delete(id);
+      }
+    }
+    res.json(result);
+  });
+  app2.get("/api/login-history", requireAuth, async (req, res) => {
+    try {
+      const usernameFilter = req.query.username || "";
+      let rows = await db.select().from(loginHistory).orderBy(desc3(loginHistory.createdAt)).limit(200);
+      if (usernameFilter) {
+        rows = rows.filter((r) => r.username.toLowerCase().includes(usernameFilter.toLowerCase()));
+      }
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
   });
   app2.get("/api/auth/me", requireAuth, async (req, res) => {
     if (!req.user) {
@@ -4379,7 +5988,7 @@ async function registerRoutes(app2) {
         if (existing) {
           return res.status(400).json({ message: "Username already exists" });
         }
-        const hashedPassword = hashPassword(parsed.password);
+        const hashedPassword = await hashPassword(parsed.password);
         const user = await storage.createUser({
           ...parsed,
           password: hashedPassword
@@ -4400,11 +6009,28 @@ async function registerRoutes(app2) {
         const { id } = req.params;
         const updates = req.body;
         if (updates.password) {
-          updates.password = hashPassword(updates.password);
+          updates.password = await hashPassword(updates.password);
         }
         const user = await storage.updateUser(id, updates);
         const { password: _, ...userWithoutPassword } = user;
         res.json(userWithoutPassword);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.delete(
+    "/api/users/:id",
+    requireAuth,
+    requireRole("Admin"),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        if (req.user?.id === id) {
+          return res.status(400).json({ message: "Cannot delete your own account" });
+        }
+        await storage.deleteUser(id);
+        res.json({ message: "User deleted successfully" });
       } catch (error) {
         res.status(400).json({ message: error.message });
       }
@@ -4478,7 +6104,7 @@ async function registerRoutes(app2) {
       if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const prefs = await db.select().from(userPreferences).where(eq2(userPreferences.userId, req.user.id));
+      const prefs = await db.select().from(userPreferences).where(eq3(userPreferences.userId, req.user.id));
       if (prefs.length === 0) {
         return res.json({ dateFormat: "MM/DD/YYYY" });
       }
@@ -4496,7 +6122,7 @@ async function registerRoutes(app2) {
       if (!["MM/DD/YYYY", "DD/MM/YYYY"].includes(dateFormat)) {
         return res.status(400).json({ message: "Invalid date format" });
       }
-      const existing = await db.select().from(userPreferences).where(eq2(userPreferences.userId, req.user.id));
+      const existing = await db.select().from(userPreferences).where(eq3(userPreferences.userId, req.user.id));
       if (existing.length === 0) {
         const newPrefs = await db.insert(userPreferences).values({
           userId: req.user.id,
@@ -4504,7 +6130,7 @@ async function registerRoutes(app2) {
         }).returning();
         return res.json(newPrefs[0]);
       }
-      const updated = await db.update(userPreferences).set({ dateFormat, updatedAt: /* @__PURE__ */ new Date() }).where(eq2(userPreferences.userId, req.user.id)).returning();
+      const updated = await db.update(userPreferences).set({ dateFormat, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(userPreferences.userId, req.user.id)).returning();
       res.json(updated[0]);
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -4603,7 +6229,13 @@ async function registerRoutes(app2) {
       req.session.cashAccountId = userRole.cashAccountId;
       req.session.canSellNegativeStock = userRole.canSellNegativeStock;
       req.session.canEditDaybook = userRole.canEditDaybook;
-      res.json({ message: "Company set successfully", companyId });
+      req.session.save((err) => {
+        if (err) {
+          console.error("Error saving session:", err);
+          return res.status(500).json({ message: "Failed to save session" });
+        }
+        res.json({ message: "Company set successfully", companyId });
+      });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -4775,6 +6407,34 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
+  app2.get("/api/employee-inventory", requireAuth, async (req, res) => {
+    try {
+      if (!req.session.currentCompanyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      if (!req.user?.employeeInventoryAccess) {
+        return res.status(403).json({ message: "Access denied: Employee inventory access not enabled" });
+      }
+      const inventory2 = await storage.getCompanyInventory(req.session.currentCompanyId);
+      const locations2 = await storage.getAllLocations(req.session.currentCompanyId);
+      const locationMap = new Map(locations2.map((l) => [l.id, l.name]));
+      const sanitizedInventory = inventory2.filter((item) => parseFloat(item.quantity || "0") !== 0).map((item) => ({
+        stockItemId: item.stockItemId,
+        stockItemCode: item.stockItemCode,
+        stockItemName: item.stockItemName,
+        stockGroupId: item.stockGroupId,
+        stockGroupName: item.stockGroupName,
+        stockGroupCode: item.stockGroupCode,
+        locationId: item.locationId,
+        locationName: locationMap.get(item.locationId) || "Unknown",
+        quantity: item.quantity,
+        stockItemUom: item.stockItemUom
+      }));
+      res.json(sanitizedInventory);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   app2.post(
     "/api/locations/:locationId/import-cost-prices",
     requireAuth,
@@ -4850,7 +6510,8 @@ async function registerRoutes(app2) {
             companyId: req.session.currentCompanyId,
             code: "UNCATEGORIZED",
             name: "Uncategorized",
-            active: true
+            active: true,
+            allocateImportCosts: false
           });
         }
         const results = {
@@ -5185,6 +6846,304 @@ async function registerRoutes(app2) {
       }
     }
   );
+  app2.post(
+    "/api/ledger-accounts/zero-balances",
+    requireAuth,
+    requireRole("Admin"),
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const { accountIds } = req.body;
+        if (!accountIds || !Array.isArray(accountIds) || accountIds.length === 0) {
+          return res.status(400).json({ message: "No accounts selected" });
+        }
+        const allAccounts = await storage.getAllLedgerAccounts(req.session.currentCompanyId);
+        const validAccountIds = allAccounts.map((a) => a.id);
+        const accountsToUpdate = accountIds.filter((id) => validAccountIds.includes(id));
+        if (accountsToUpdate.length === 0) {
+          return res.status(400).json({ message: "No valid accounts found" });
+        }
+        let count = 0;
+        for (const accountId of accountsToUpdate) {
+          await storage.updateLedgerAccount({
+            id: accountId,
+            openingBalance: "0",
+            openingBalanceSide: void 0
+          });
+          count++;
+        }
+        res.json({ message: `Opening balances zeroed for ${count} account(s)`, count });
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.post(
+    "/api/admin/initialize-accounting-balances",
+    requireAuth,
+    requireRole("Admin"),
+    async (req, res) => {
+      try {
+        const results = [];
+        const allCompanies = await storage.getAllCompanies();
+        for (const company of allCompanies) {
+          const companyId = company.id;
+          const getAccountTypeBalance = async (accountType, isLiability = false) => {
+            const accounts = await db.select().from(ledgerAccounts).where(
+              and3(
+                eq3(ledgerAccounts.companyId, companyId),
+                eq3(ledgerAccounts.accountType, accountType),
+                isNull3(ledgerAccounts.deletedAt)
+              )
+            );
+            let totalBalance = 0;
+            for (const account of accounts) {
+              const entries = await db.select({
+                creditAmount: voucherEntries.creditAmount,
+                debitAmount: voucherEntries.debitAmount
+              }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+                and3(
+                  eq3(voucherEntries.ledgerAccountId, account.id),
+                  eq3(vouchers.companyId, companyId),
+                  isNull3(vouchers.deletedAt),
+                  eq3(vouchers.optional, false)
+                )
+              );
+              const openingBalanceRaw = parseFloat(account.openingBalance || "0");
+              const openingSide = account.openingBalanceSide || "Dr";
+              let signedOpening;
+              if (isLiability) {
+                signedOpening = openingSide === "Cr" ? openingBalanceRaw : -openingBalanceRaw;
+              } else {
+                signedOpening = openingSide === "Dr" ? openingBalanceRaw : -openingBalanceRaw;
+              }
+              const balance = entries.reduce((sum, entry) => {
+                const credit = parseFloat(entry.creditAmount || "0");
+                const debit = parseFloat(entry.debitAmount || "0");
+                if (isLiability) {
+                  return sum + credit - debit;
+                } else {
+                  return sum + debit - credit;
+                }
+              }, signedOpening);
+              totalBalance += balance;
+            }
+            return totalBalance;
+          };
+          const supplierEntries = await db.select({
+            creditAmount: voucherEntries.creditAmount,
+            debitAmount: voucherEntries.debitAmount
+          }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+            and3(
+              isNotNull(voucherEntries.supplierId),
+              eq3(vouchers.companyId, companyId),
+              isNull3(vouchers.deletedAt),
+              eq3(vouchers.optional, false)
+            )
+          );
+          const supplierBalance = supplierEntries.reduce((sum, entry) => {
+            const credit = parseFloat(entry.creditAmount || "0");
+            const debit = parseFloat(entry.debitAmount || "0");
+            return sum + credit - debit;
+          }, 0);
+          const otwContainers = await db.select().from(containers).where(
+            and3(
+              eq3(containers.companyId, companyId),
+              eq3(containers.status, "OTW")
+            )
+          );
+          const stockOtwValue = otwContainers.reduce((sum, container) => {
+            return sum + parseFloat(container.grandTotal || "0");
+          }, 0);
+          const dutyAgentBalance = await getAccountTypeBalance("Duty Agent", true);
+          const transporterAgentBalance = await getAccountTypeBalance("Transporter Agent", true);
+          const loansBalance = await getAccountTypeBalance("Loans", true);
+          const cashBalance = await getAccountTypeBalance("Cash", false);
+          const bankBalance = await getAccountTypeBalance("Bank", false);
+          const directExpenseBalance = await getAccountTypeBalance("Direct Expense", false);
+          const indirectExpenseBalance = await getAccountTypeBalance("Indirect Expense", false);
+          const incomeBalance = await getAccountTypeBalance("Income", true);
+          const inventoryItems = await db.select({
+            totalValue: inventory.totalValue
+          }).from(inventory).innerJoin(locations, eq3(inventory.locationId, locations.id)).where(
+            and3(
+              eq3(inventory.companyId, companyId),
+              isNull3(locations.deletedAt)
+            )
+          );
+          const stockOnFloorValue = inventoryItems.reduce((sum, item) => {
+            const totalValue = parseFloat(item.totalValue || "0");
+            return sum + totalValue;
+          }, 0);
+          const cogsData = await db.select({
+            totalCost: salesItems.totalCost
+          }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(
+            and3(
+              eq3(vouchers.companyId, companyId),
+              isNull3(vouchers.deletedAt),
+              eq3(vouchers.optional, false)
+            )
+          );
+          const cogsBalance = cogsData.reduce((sum, item) => {
+            return sum + parseFloat(item.totalCost || "0");
+          }, 0);
+          const advancesData = await db.select({
+            remainingBalance: salaryAdvances.remainingBalance
+          }).from(salaryAdvances).where(
+            and3(
+              eq3(salaryAdvances.companyId, companyId),
+              eq3(salaryAdvances.fullyPaid, false)
+            )
+          );
+          const salaryAdvancesBalance = advancesData.reduce((sum, advance) => {
+            return sum + parseFloat(advance.remainingBalance || "0");
+          }, 0);
+          const employeesData = await db.select({
+            currentBalance: employees.currentBalance
+          }).from(employees).where(
+            and3(
+              eq3(employees.companyId, companyId),
+              isNull3(employees.deletedAt)
+            )
+          );
+          const payrollLiabilitiesBalance = employeesData.reduce((sum, emp) => {
+            const balance = parseFloat(emp.currentBalance || "0");
+            return sum + (balance > 0 ? balance : 0);
+          }, 0);
+          const assetBalance = await getAccountTypeBalance("Asset", false);
+          const governmentTaxesBalance = await getAccountTypeBalance("Government Taxes", false);
+          const liabilityBalance = await getAccountTypeBalance("Liability", true);
+          const profitBalance = await getAccountTypeBalance("Profit", true);
+          const assetComponents = [
+            { name: "Stock OTW", value: stockOtwValue },
+            { name: "Cash", value: cashBalance },
+            { name: "Bank", value: bankBalance },
+            { name: "Stock on Floor", value: stockOnFloorValue },
+            { name: "Assets", value: assetBalance },
+            { name: "Direct Expenses", value: directExpenseBalance },
+            { name: "Indirect Expenses", value: indirectExpenseBalance },
+            { name: "Government Taxes", value: governmentTaxesBalance },
+            { name: "COGS", value: cogsBalance },
+            { name: "Salary Advances", value: salaryAdvancesBalance }
+          ].filter((c) => Math.abs(c.value) >= 0.01);
+          const liabilityComponents = [
+            { name: "Supplier Balance", value: supplierBalance },
+            { name: "Duty Agent", value: dutyAgentBalance },
+            { name: "Transporter Agent", value: transporterAgentBalance },
+            { name: "Loans", value: loansBalance },
+            { name: "Liabilities", value: liabilityBalance },
+            { name: "Profit/Equity", value: profitBalance },
+            { name: "Income", value: incomeBalance },
+            { name: "Payroll Liabilities", value: payrollLiabilitiesBalance }
+          ].filter((c) => Math.abs(c.value) >= 0.01);
+          const totalAssets = stockOtwValue + cashBalance + bankBalance + stockOnFloorValue + assetBalance + directExpenseBalance + indirectExpenseBalance + governmentTaxesBalance + cogsBalance + salaryAdvancesBalance;
+          const totalLiabilities = supplierBalance + dutyAgentBalance + transporterAgentBalance + loansBalance + liabilityBalance + profitBalance + incomeBalance + payrollLiabilitiesBalance;
+          const netImportCycleBalance = totalAssets - totalLiabilities;
+          const componentsBreakdown = {
+            assets: assetComponents,
+            liabilities: liabilityComponents,
+            totalAssets,
+            totalLiabilities
+          };
+          if (Math.abs(netImportCycleBalance) < 1) {
+            results.push({
+              companyId,
+              companyName: company.name,
+              imbalance: netImportCycleBalance,
+              accountCreated: false,
+              message: "Already balanced (imbalance < $1)",
+              components: componentsBreakdown
+            });
+            continue;
+          }
+          const existingProfitAccounts = await db.select().from(ledgerAccounts).where(
+            and3(
+              eq3(ledgerAccounts.companyId, companyId),
+              eq3(ledgerAccounts.accountType, "Profit"),
+              isNull3(ledgerAccounts.deletedAt)
+            )
+          );
+          if (existingProfitAccounts.length > 0) {
+            const profitAccount = existingProfitAccounts[0];
+            const currentBalance = parseFloat(profitAccount.openingBalance || "0");
+            const currentSide = profitAccount.openingBalanceSide || "Cr";
+            const currentSigned = currentSide === "Cr" ? currentBalance : -currentBalance;
+            const newSigned = currentSigned + netImportCycleBalance;
+            const newOpeningBalance = Math.abs(newSigned).toFixed(2);
+            const newOpeningBalanceSide = newSigned >= 0 ? "Cr" : "Dr";
+            await db.update(ledgerAccounts).set({
+              openingBalance: newOpeningBalance,
+              openingBalanceSide: newOpeningBalanceSide
+            }).where(eq3(ledgerAccounts.id, profitAccount.id));
+            results.push({
+              companyId,
+              companyName: company.name,
+              imbalance: netImportCycleBalance,
+              accountCreated: false,
+              accountCode: profitAccount.code,
+              accountName: profitAccount.name,
+              previousBalance: `${currentBalance.toFixed(2)} ${currentSide}`,
+              openingBalance: newOpeningBalance,
+              openingBalanceSide: newOpeningBalanceSide,
+              message: `Updated ${profitAccount.code} - ${profitAccount.name}: ${currentBalance.toFixed(2)} ${currentSide} \u2192 ${newOpeningBalance} ${newOpeningBalanceSide}`,
+              components: componentsBreakdown
+            });
+            continue;
+          }
+          let nextCodeNum = 1;
+          const accountCode = `CAP-${String(nextCodeNum).padStart(3, "0")}`;
+          const accountName = "Owner's Capital";
+          const openingBalanceSide = netImportCycleBalance > 0 ? "Cr" : "Dr";
+          const openingBalanceAmount = Math.abs(netImportCycleBalance).toFixed(2);
+          await storage.createLedgerAccount({
+            companyId,
+            code: accountCode,
+            name: accountName,
+            accountType: "Profit",
+            openingBalance: openingBalanceAmount,
+            openingBalanceSide,
+            active: true
+          });
+          results.push({
+            companyId,
+            companyName: company.name,
+            imbalance: netImportCycleBalance,
+            accountCreated: true,
+            accountCode,
+            accountName,
+            openingBalance: openingBalanceAmount,
+            openingBalanceSide,
+            message: `Created ${accountCode} - ${accountName} with opening balance ${openingBalanceAmount} ${openingBalanceSide}`,
+            components: componentsBreakdown
+          });
+        }
+        const sqlStatements = [];
+        for (const result of results) {
+          if (result.accountCreated) {
+            sqlStatements.push(
+              `INSERT INTO ledger_accounts (company_id, code, name, account_type, opening_balance, opening_balance_side, active)
+VALUES (${result.companyId}, '${result.accountCode}', '${result.accountName}', 'Profit', ${result.openingBalance}, '${result.openingBalanceSide}', true);`
+            );
+          } else if (result.accountUpdated) {
+            sqlStatements.push(
+              `UPDATE ledger_accounts SET opening_balance = '${result.openingBalance}', opening_balance_side = '${result.openingBalanceSide}'
+WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
+            );
+          }
+        }
+        res.json({
+          message: `Processed ${results.length} companies`,
+          results,
+          sqlForProduction: sqlStatements.length > 0 ? sqlStatements.join("\n\n") : "No accounts needed to be created or updated"
+        });
+      } catch (error) {
+        console.error("Error initializing accounting balances:", error);
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
   app2.get("/api/employees", requireAuth, async (req, res) => {
     try {
       if (!req.session.currentCompanyId) {
@@ -5239,7 +7198,7 @@ async function registerRoutes(app2) {
       if (parsed.openingBalance && parseFloat(parsed.openingBalance) > 0) {
         await db.update(employees).set({
           currentBalance: parsed.openingBalance
-        }).where(eq2(employees.id, employee.id));
+        }).where(eq3(employees.id, employee.id));
         employee = {
           ...employee,
           currentBalance: parsed.openingBalance
@@ -5424,9 +7383,9 @@ async function registerRoutes(app2) {
           const members = await Promise.all(
             memberRecords.map(async (m) => {
               const [worker] = await db.select().from(employees).where(
-                and2(
-                  eq2(employees.id, m.employeeId),
-                  eq2(employees.companyId, companyId)
+                and3(
+                  eq3(employees.id, m.employeeId),
+                  eq3(employees.companyId, companyId)
                 )
               );
               console.log(`DEBUG: Looking for employee ${m.employeeId} in company ${companyId}, found:`, worker ? worker.id : "NOT FOUND");
@@ -5494,7 +7453,7 @@ async function registerRoutes(app2) {
         if (!group || group.companyId !== companyId) {
           return res.status(403).json({ message: "Group not found or access denied" });
         }
-        const [worker] = await db.select().from(employees).where(and2(eq2(employees.id, workerId), eq2(employees.companyId, companyId)));
+        const [worker] = await db.select().from(employees).where(and3(eq3(employees.id, workerId), eq3(employees.companyId, companyId)));
         if (!worker) {
           return res.status(404).json({ message: "Worker not found" });
         }
@@ -5544,7 +7503,7 @@ async function registerRoutes(app2) {
         if (isNaN(depositAmount) || depositAmount <= 0) {
           return res.status(400).json({ message: "Amount must be a positive number" });
         }
-        const [employee] = await db.select().from(employees).where(eq2(employees.id, employeeId));
+        const [employee] = await db.select().from(employees).where(eq3(employees.id, employeeId));
         if (!employee) {
           return res.status(404).json({ message: "Employee not found" });
         }
@@ -5560,20 +7519,6 @@ async function registerRoutes(app2) {
             code: "SALARY_EXPENSE",
             name: "Salary Expense",
             accountType: "Expense",
-            openingBalance: "0",
-            active: true
-          });
-        }
-        const employeeAccountCode = `EMP-${employee.code}`;
-        let employeeAccount = allAccounts.find(
-          (a) => a.code === employeeAccountCode
-        );
-        if (!employeeAccount) {
-          employeeAccount = await storage.createLedgerAccount({
-            companyId: req.session.currentCompanyId,
-            code: employeeAccountCode,
-            name: `${employee.firstName} ${employee.lastName} - Salary Account`,
-            accountType: "Liability",
             openingBalance: "0",
             active: true
           });
@@ -5597,7 +7542,8 @@ async function registerRoutes(app2) {
         });
         await db.insert(voucherEntries).values({
           voucherId: voucher.id,
-          ledgerAccountId: employeeAccount.id,
+          ledgerAccountId: null,
+          employeeId: employee.id,
           debitAmount: "0",
           creditAmount: depositAmount.toFixed(2),
           narration: `Salary deposit - ${voucherNumber}`
@@ -5607,7 +7553,7 @@ async function registerRoutes(app2) {
         await db.update(employees).set({
           currentBalance: newBalance.toFixed(2),
           totalDeposits: newTotalDeposits.toFixed(2)
-        }).where(eq2(employees.id, employeeId));
+        }).where(eq3(employees.id, employeeId));
         res.json({
           voucher,
           employee: {
@@ -5684,7 +7630,7 @@ async function registerRoutes(app2) {
         });
         const results = [];
         for (const deposit of deposits) {
-          const [employee] = await db.select().from(employees).where(eq2(employees.id, deposit.employeeId));
+          const [employee] = await db.select().from(employees).where(eq3(employees.id, deposit.employeeId));
           if (!employee) {
             continue;
           }
@@ -5692,24 +7638,10 @@ async function registerRoutes(app2) {
             continue;
           }
           const depositAmount = parseFloat(deposit.amount);
-          const employeeAccountCode = `EMP-${employee.code}`;
-          let employeeAccount = allAccounts.find(
-            (a) => a.code === employeeAccountCode
-          );
-          if (!employeeAccount) {
-            employeeAccount = await storage.createLedgerAccount({
-              companyId: req.session.currentCompanyId,
-              code: employeeAccountCode,
-              name: `${employee.firstName} ${employee.lastName} - Salary Account`,
-              accountType: "Liability",
-              openingBalance: "0",
-              active: true
-            });
-            allAccounts.push(employeeAccount);
-          }
           await db.insert(voucherEntries).values({
             voucherId: voucher.id,
-            ledgerAccountId: employeeAccount.id,
+            ledgerAccountId: null,
+            employeeId: employee.id,
             debitAmount: "0",
             creditAmount: depositAmount.toFixed(2),
             narration: `Salary deposit for ${employee.firstName} ${employee.lastName} - ${voucherNumber}`
@@ -5719,7 +7651,7 @@ async function registerRoutes(app2) {
           await db.update(employees).set({
             currentBalance: newBalance.toFixed(2),
             totalDeposits: newTotalDeposits.toFixed(2)
-          }).where(eq2(employees.id, deposit.employeeId));
+          }).where(eq3(employees.id, deposit.employeeId));
           results.push({
             employeeId: employee.id,
             name: `${employee.firstName} ${employee.lastName}`,
@@ -5799,7 +7731,7 @@ async function registerRoutes(app2) {
         });
         const results = [];
         for (const bonus of validBonuses) {
-          const [employee] = await db.select().from(employees).where(eq2(employees.id, bonus.employeeId));
+          const [employee] = await db.select().from(employees).where(eq3(employees.id, bonus.employeeId));
           if (!employee) {
             continue;
           }
@@ -5807,24 +7739,10 @@ async function registerRoutes(app2) {
             continue;
           }
           const bonusAmount = parseFloat(bonus.amount);
-          const employeeAccountCode = `EMP-${employee.code}`;
-          let employeeAccount = allAccounts.find(
-            (a) => a.code === employeeAccountCode
-          );
-          if (!employeeAccount) {
-            employeeAccount = await storage.createLedgerAccount({
-              companyId: req.session.currentCompanyId,
-              code: employeeAccountCode,
-              name: `${employee.firstName} ${employee.lastName} - Salary Account`,
-              accountType: "Liability",
-              openingBalance: "0",
-              active: true
-            });
-            allAccounts.push(employeeAccount);
-          }
           await db.insert(voucherEntries).values({
             voucherId: voucher.id,
-            ledgerAccountId: employeeAccount.id,
+            ledgerAccountId: null,
+            employeeId: employee.id,
             debitAmount: "0",
             creditAmount: bonusAmount.toFixed(2),
             narration: `Bonus for ${employee.firstName} ${employee.lastName} - ${voucherNumber}`
@@ -5834,7 +7752,7 @@ async function registerRoutes(app2) {
           await db.update(employees).set({
             currentBalance: newBalance.toFixed(2),
             totalDeposits: newTotalDeposits.toFixed(2)
-          }).where(eq2(employees.id, bonus.employeeId));
+          }).where(eq3(employees.id, bonus.employeeId));
           results.push({
             employeeId: employee.id,
             name: `${employee.firstName} ${employee.lastName}`,
@@ -5876,7 +7794,7 @@ async function registerRoutes(app2) {
           return res.status(400).json({ message: "No valid withdrawal amounts provided" });
         }
         for (const withdrawal of validWithdrawals) {
-          const [employee] = await db.select().from(employees).where(eq2(employees.id, withdrawal.employeeId));
+          const [employee] = await db.select().from(employees).where(eq3(employees.id, withdrawal.employeeId));
           if (!employee) continue;
           if (employee.companyId !== req.session.currentCompanyId) continue;
           const balance = parseFloat(employee.currentBalance);
@@ -5893,7 +7811,7 @@ async function registerRoutes(app2) {
         );
         let paymentAccount;
         if (paymentAccountType === "bank") {
-          [paymentAccount] = await db.select().from(bankAccounts).where(eq2(bankAccounts.id, parseInt(paymentAccountId)));
+          [paymentAccount] = await db.select().from(bankAccounts).where(eq3(bankAccounts.id, parseInt(paymentAccountId)));
         } else {
           const allAccounts2 = await storage.getAllLedgerAccounts(req.session.currentCompanyId);
           paymentAccount = allAccounts2.find((a) => a.id === parseInt(paymentAccountId));
@@ -5934,26 +7852,14 @@ async function registerRoutes(app2) {
         });
         const results = [];
         for (const withdrawal of validWithdrawals) {
-          const [employee] = await db.select().from(employees).where(eq2(employees.id, withdrawal.employeeId));
+          const [employee] = await db.select().from(employees).where(eq3(employees.id, withdrawal.employeeId));
           if (!employee) continue;
           if (employee.companyId !== req.session.currentCompanyId) continue;
           const withdrawAmount = parseFloat(withdrawal.amount);
-          const employeeAccountCode = `EMP-${employee.code}`;
-          let employeeAccount = allAccounts.find((a) => a.code === employeeAccountCode);
-          if (!employeeAccount) {
-            employeeAccount = await storage.createLedgerAccount({
-              companyId: req.session.currentCompanyId,
-              code: employeeAccountCode,
-              name: `${employee.firstName} ${employee.lastName} - Salary Account`,
-              accountType: "Liability",
-              openingBalance: "0",
-              active: true
-            });
-            allAccounts.push(employeeAccount);
-          }
           await db.insert(voucherEntries).values({
             voucherId: voucher.id,
-            ledgerAccountId: employeeAccount.id,
+            ledgerAccountId: null,
+            employeeId: employee.id,
             debitAmount: withdrawAmount.toFixed(2),
             creditAmount: "0",
             narration: `Withdrawal for ${employee.firstName} ${employee.lastName} - ${voucherNumber}`
@@ -5963,7 +7869,7 @@ async function registerRoutes(app2) {
           await db.update(employees).set({
             currentBalance: newBalance.toFixed(2),
             totalWithdrawals: newTotalWithdrawals.toFixed(2)
-          }).where(eq2(employees.id, withdrawal.employeeId));
+          }).where(eq3(employees.id, withdrawal.employeeId));
           results.push({
             employeeId: employee.id,
             name: `${employee.firstName} ${employee.lastName}`,
@@ -5998,7 +7904,7 @@ async function registerRoutes(app2) {
         if (isNaN(bonusAmount) || bonusAmount <= 0) {
           return res.status(400).json({ message: "Amount must be a positive number" });
         }
-        const [employee] = await db.select().from(employees).where(eq2(employees.id, employeeId));
+        const [employee] = await db.select().from(employees).where(eq3(employees.id, employeeId));
         if (!employee) {
           return res.status(404).json({ message: "Employee not found" });
         }
@@ -6014,20 +7920,6 @@ async function registerRoutes(app2) {
             code: "SALARY_EXPENSE",
             name: "Salary Expense",
             accountType: "Expense",
-            openingBalance: "0",
-            active: true
-          });
-        }
-        const employeeAccountCode = `EMP-${employee.code}`;
-        let employeeAccount = allAccounts.find(
-          (a) => a.code === employeeAccountCode
-        );
-        if (!employeeAccount) {
-          employeeAccount = await storage.createLedgerAccount({
-            companyId: req.session.currentCompanyId,
-            code: employeeAccountCode,
-            name: `${employee.firstName} ${employee.lastName} - Salary Account`,
-            accountType: "Liability",
             openingBalance: "0",
             active: true
           });
@@ -6051,7 +7943,8 @@ async function registerRoutes(app2) {
         });
         await db.insert(voucherEntries).values({
           voucherId: voucher.id,
-          ledgerAccountId: employeeAccount.id,
+          ledgerAccountId: null,
+          employeeId: employee.id,
           debitAmount: "0",
           creditAmount: bonusAmount.toFixed(2),
           narration: `Bonus payment - ${voucherNumber}`
@@ -6061,7 +7954,7 @@ async function registerRoutes(app2) {
         await db.update(employees).set({
           currentBalance: newBalance.toFixed(2),
           totalDeposits: newTotalDeposits.toFixed(2)
-        }).where(eq2(employees.id, employeeId));
+        }).where(eq3(employees.id, employeeId));
         res.json({
           voucher,
           employee: {
@@ -6104,7 +7997,7 @@ async function registerRoutes(app2) {
         if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
           return res.status(400).json({ message: "Amount must be a positive number" });
         }
-        const [employee] = await db.select().from(employees).where(eq2(employees.id, employeeId));
+        const [employee] = await db.select().from(employees).where(eq3(employees.id, employeeId));
         if (!employee) {
           return res.status(404).json({ message: "Employee not found" });
         }
@@ -6113,16 +8006,6 @@ async function registerRoutes(app2) {
           return res.status(400).json({
             message: `Insufficient balance. Current balance: ${currentBalance.toFixed(2)}`
           });
-        }
-        const employeeAccountCode = `EMP-${employee.code}`;
-        const allAccounts = await storage.getAllLedgerAccounts(
-          req.session.currentCompanyId
-        );
-        const employeeAccount = allAccounts.find(
-          (a) => a.code === employeeAccountCode
-        );
-        if (!employeeAccount) {
-          return res.status(404).json({ message: "Employee account not found" });
         }
         const voucherNumber = `SAL-WD-${Date.now()}`;
         const [voucher] = await db.insert(vouchers).values({
@@ -6136,7 +8019,8 @@ async function registerRoutes(app2) {
         }).returning();
         await db.insert(voucherEntries).values({
           voucherId: voucher.id,
-          ledgerAccountId: employeeAccount.id,
+          ledgerAccountId: null,
+          employeeId: employee.id,
           debitAmount: withdrawalAmount.toFixed(2),
           creditAmount: "0",
           narration: `Salary withdrawal - ${voucherNumber}`
@@ -6158,7 +8042,7 @@ async function registerRoutes(app2) {
         await db.update(employees).set({
           currentBalance: newBalance.toFixed(2),
           totalWithdrawals: newTotalWithdrawals.toFixed(2)
-        }).where(eq2(employees.id, employeeId));
+        }).where(eq3(employees.id, employeeId));
         res.json({
           voucher,
           employee: {
@@ -6191,7 +8075,7 @@ async function registerRoutes(app2) {
         if (isNaN(paymentAmount) || paymentAmount <= 0) {
           return res.status(400).json({ message: "Amount must be a positive number" });
         }
-        const [employee] = await db.select().from(employees).where(eq2(employees.id, employeeId));
+        const [employee] = await db.select().from(employees).where(eq3(employees.id, employeeId));
         if (!employee) {
           return res.status(404).json({ message: "Worker not found" });
         }
@@ -6381,11 +8265,11 @@ async function registerRoutes(app2) {
             if (employeeAccount) {
               const entries = await db.select({
                 creditAmount: voucherEntries.creditAmount
-              }).from(voucherEntries).innerJoin(vouchers, eq2(voucherEntries.voucherId, vouchers.id)).where(
-                and2(
-                  eq2(vouchers.companyId, req.session.currentCompanyId),
-                  eq2(voucherEntries.ledgerAccountId, employeeAccount.id),
-                  eq2(vouchers.optional, false)
+              }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+                and3(
+                  eq3(vouchers.companyId, req.session.currentCompanyId),
+                  eq3(voucherEntries.ledgerAccountId, employeeAccount.id),
+                  eq3(vouchers.optional, false)
                 )
               );
               totalPaid = entries.reduce(
@@ -6543,10 +8427,10 @@ async function registerRoutes(app2) {
       if (!req.session.currentCompanyId) {
         return res.status(400).json({ message: "No company selected" });
       }
-      const customers3 = await storage.getAllCustomers(
+      const customers2 = await storage.getAllCustomers(
         req.session.currentCompanyId
       );
-      res.json(customers3);
+      res.json(customers2);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -6556,9 +8440,9 @@ async function registerRoutes(app2) {
       if (!req.session.currentCompanyId) {
         return res.status(400).json({ message: "No company selected" });
       }
-      const customers3 = await storage.getAllCustomers(req.session.currentCompanyId);
+      const customers2 = await storage.getAllCustomers(req.session.currentCompanyId);
       const customersWithBalances = await Promise.all(
-        customers3.map(async (customer) => {
+        customers2.map(async (customer) => {
           if (customer.ledgerAccountId) {
             const entries = await storage.getVoucherEntriesByLedger(customer.ledgerAccountId);
             const openingBalance = parseFloat(customer.openingBalance || "0");
@@ -6708,6 +8592,590 @@ async function registerRoutes(app2) {
       }
     }
   );
+  app2.delete(
+    "/api/customers/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const customerId = parseInt(req.params.id);
+        if (isNaN(customerId)) {
+          return res.status(400).json({ message: "Invalid customer ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existingCustomer = await storage.getCustomerById(customerId);
+        if (!existingCustomer) {
+          return res.status(404).json({ message: "Customer not found" });
+        }
+        if (existingCustomer.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({
+            message: "Access denied: Customer belongs to a different company"
+          });
+        }
+        await storage.updateCustomer(customerId, { deletedAt: /* @__PURE__ */ new Date() });
+        res.json({ message: "Customer deleted successfully" });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/bike-purchases",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const purchases = await storage.getAllBikePurchases(req.session.currentCompanyId);
+        res.json(purchases);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/bike-purchases/customer/:customerId",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const customerId = parseInt(req.params.customerId);
+        if (isNaN(customerId)) {
+          return res.status(400).json({ message: "Invalid customer ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const purchases = await storage.getBikePurchasesByCustomer(customerId, req.session.currentCompanyId);
+        res.json(purchases);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.post(
+    "/api/bike-purchases",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const parsed = insertBikePurchaseSchema.parse({
+          ...req.body,
+          companyId: req.session.currentCompanyId
+        });
+        const purchase = await storage.createBikePurchase(parsed);
+        res.status(201).json(purchase);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.put(
+    "/api/bike-purchases/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const purchaseId = parseInt(req.params.id);
+        if (isNaN(purchaseId)) {
+          return res.status(400).json({ message: "Invalid purchase ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existing = await storage.getBikePurchaseById(purchaseId);
+        if (!existing) {
+          return res.status(404).json({ message: "Bike purchase not found" });
+        }
+        if (existing.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        const parsed = insertBikePurchaseSchema.partial().parse(req.body);
+        const purchase = await storage.updateBikePurchase(purchaseId, parsed);
+        res.json(purchase);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.delete(
+    "/api/bike-purchases/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const purchaseId = parseInt(req.params.id);
+        if (isNaN(purchaseId)) {
+          return res.status(400).json({ message: "Invalid purchase ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existing = await storage.getBikePurchaseById(purchaseId);
+        if (!existing) {
+          return res.status(404).json({ message: "Bike purchase not found" });
+        }
+        if (existing.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        await storage.updateBikePurchase(purchaseId, { deletedAt: /* @__PURE__ */ new Date() });
+        res.json({ message: "Bike purchase deleted successfully" });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/part-purchases",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const purchases = await storage.getAllPartPurchases(req.session.currentCompanyId);
+        res.json(purchases);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/part-purchases/customer/:customerId",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const customerId = parseInt(req.params.customerId);
+        if (isNaN(customerId)) {
+          return res.status(400).json({ message: "Invalid customer ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const purchases = await storage.getPartPurchasesByCustomer(customerId, req.session.currentCompanyId);
+        res.json(purchases);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.post(
+    "/api/part-purchases",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const parsed = insertPartPurchaseSchema.parse({
+          ...req.body,
+          companyId: req.session.currentCompanyId
+        });
+        const purchase = await storage.createPartPurchase(parsed);
+        res.status(201).json(purchase);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.put(
+    "/api/part-purchases/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const purchaseId = parseInt(req.params.id);
+        if (isNaN(purchaseId)) {
+          return res.status(400).json({ message: "Invalid purchase ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existing = await storage.getPartPurchaseById(purchaseId);
+        if (!existing) {
+          return res.status(404).json({ message: "Part purchase not found" });
+        }
+        if (existing.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        const parsed = insertPartPurchaseSchema.partial().parse(req.body);
+        const purchase = await storage.updatePartPurchase(purchaseId, parsed);
+        res.json(purchase);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.delete(
+    "/api/part-purchases/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const purchaseId = parseInt(req.params.id);
+        if (isNaN(purchaseId)) {
+          return res.status(400).json({ message: "Invalid purchase ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existing = await storage.getPartPurchaseById(purchaseId);
+        if (!existing) {
+          return res.status(404).json({ message: "Part purchase not found" });
+        }
+        if (existing.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        await storage.updatePartPurchase(purchaseId, { deletedAt: /* @__PURE__ */ new Date() });
+        res.json({ message: "Part purchase deleted successfully" });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/service-history",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const records = await storage.getAllServiceHistory(req.session.currentCompanyId);
+        res.json(records);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/service-history/customer/:customerId",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const customerId = parseInt(req.params.customerId);
+        if (isNaN(customerId)) {
+          return res.status(400).json({ message: "Invalid customer ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const records = await storage.getServiceHistoryByCustomer(customerId, req.session.currentCompanyId);
+        res.json(records);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.post(
+    "/api/service-history",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const parsed = insertServiceHistorySchema.parse({
+          ...req.body,
+          companyId: req.session.currentCompanyId
+        });
+        const record = await storage.createServiceHistory(parsed);
+        res.status(201).json(record);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.put(
+    "/api/service-history/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const recordId = parseInt(req.params.id);
+        if (isNaN(recordId)) {
+          return res.status(400).json({ message: "Invalid service record ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existing = await storage.getServiceHistoryById(recordId);
+        if (!existing) {
+          return res.status(404).json({ message: "Service record not found" });
+        }
+        if (existing.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        const parsed = insertServiceHistorySchema.partial().parse(req.body);
+        const record = await storage.updateServiceHistory(recordId, parsed);
+        res.json(record);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.delete(
+    "/api/service-history/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const recordId = parseInt(req.params.id);
+        if (isNaN(recordId)) {
+          return res.status(400).json({ message: "Invalid service record ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existing = await storage.getServiceHistoryById(recordId);
+        if (!existing) {
+          return res.status(404).json({ message: "Service record not found" });
+        }
+        if (existing.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        await storage.updateServiceHistory(recordId, { deletedAt: /* @__PURE__ */ new Date() });
+        res.json({ message: "Service record deleted successfully" });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/warranties",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const warranties2 = await storage.getAllWarranties(req.session.currentCompanyId);
+        res.json(warranties2);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/warranties/customer/:customerId",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const customerId = parseInt(req.params.customerId);
+        if (isNaN(customerId)) {
+          return res.status(400).json({ message: "Invalid customer ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const warranties2 = await storage.getWarrantiesByCustomer(customerId, req.session.currentCompanyId);
+        res.json(warranties2);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.post(
+    "/api/warranties",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const parsed = insertWarrantySchema.parse({
+          ...req.body,
+          companyId: req.session.currentCompanyId
+        });
+        const warranty = await storage.createWarranty(parsed);
+        res.status(201).json(warranty);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.put(
+    "/api/warranties/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const warrantyId = parseInt(req.params.id);
+        if (isNaN(warrantyId)) {
+          return res.status(400).json({ message: "Invalid warranty ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existing = await storage.getWarrantyById(warrantyId);
+        if (!existing) {
+          return res.status(404).json({ message: "Warranty not found" });
+        }
+        if (existing.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        const parsed = insertWarrantySchema.partial().parse(req.body);
+        const warranty = await storage.updateWarranty(warrantyId, parsed);
+        res.json(warranty);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.delete(
+    "/api/warranties/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const warrantyId = parseInt(req.params.id);
+        if (isNaN(warrantyId)) {
+          return res.status(400).json({ message: "Invalid warranty ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existing = await storage.getWarrantyById(warrantyId);
+        if (!existing) {
+          return res.status(404).json({ message: "Warranty not found" });
+        }
+        if (existing.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        await storage.updateWarranty(warrantyId, { deletedAt: /* @__PURE__ */ new Date() });
+        res.json({ message: "Warranty deleted successfully" });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/communication-logs",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const logs = await storage.getAllCommunicationLogs(req.session.currentCompanyId);
+        res.json(logs);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/communication-logs/customer/:customerId",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const customerId = parseInt(req.params.customerId);
+        if (isNaN(customerId)) {
+          return res.status(400).json({ message: "Invalid customer ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const logs = await storage.getCommunicationLogsByCustomer(customerId, req.session.currentCompanyId);
+        res.json(logs);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.post(
+    "/api/communication-logs",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const parsed = insertCommunicationLogSchema.parse({
+          ...req.body,
+          companyId: req.session.currentCompanyId
+        });
+        const log2 = await storage.createCommunicationLog(parsed);
+        res.status(201).json(log2);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.put(
+    "/api/communication-logs/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const logId = parseInt(req.params.id);
+        if (isNaN(logId)) {
+          return res.status(400).json({ message: "Invalid communication log ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existing = await storage.getCommunicationLogById(logId);
+        if (!existing) {
+          return res.status(404).json({ message: "Communication log not found" });
+        }
+        if (existing.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        const parsed = insertCommunicationLogSchema.partial().parse(req.body);
+        const log2 = await storage.updateCommunicationLog(logId, parsed);
+        res.json(log2);
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  );
+  app2.delete(
+    "/api/communication-logs/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const logId = parseInt(req.params.id);
+        if (isNaN(logId)) {
+          return res.status(400).json({ message: "Invalid communication log ID" });
+        }
+        if (!req.session.currentCompanyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const existing = await storage.getCommunicationLogById(logId);
+        if (!existing) {
+          return res.status(404).json({ message: "Communication log not found" });
+        }
+        if (existing.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        await storage.updateCommunicationLog(logId, { deletedAt: /* @__PURE__ */ new Date() });
+        res.json({ message: "Communication log deleted successfully" });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
   app2.get(
     "/api/container-sales",
     requireAuth,
@@ -6842,7 +9310,7 @@ async function registerRoutes(app2) {
             commissionAccountId,
             voucherId: voucher.id
           }).returning();
-          await tx.update(containers).set({ status: "SOLD" }).where(eq2(containers.id, parsed.containerId));
+          await tx.update(containers).set({ status: "SOLD" }).where(eq3(containers.id, parsed.containerId));
           return createdSale;
         });
         res.status(201).json(sale);
@@ -7045,29 +9513,12 @@ async function registerRoutes(app2) {
           // Initially, remaining balance equals full amount
         };
         const parsed = insertSalaryAdvanceSchema.parse(dataWithCompany);
-        const employee = await db.select().from(employees).where(eq2(employees.id, parsed.employeeId)).limit(1);
+        const employee = await db.select().from(employees).where(eq3(employees.id, parsed.employeeId)).limit(1);
         if (!employee || employee.length === 0) {
           return res.status(404).json({ message: "Employee not found" });
         }
         if (employee[0].companyId !== req.session.currentCompanyId) {
           return res.status(403).json({ message: "Employee belongs to a different company" });
-        }
-        const allAccounts = await storage.getAllLedgerAccounts(
-          req.session.currentCompanyId
-        );
-        const employeeAccountCode = `EMP-${employee[0].code}`;
-        let employeeAccount = allAccounts.find(
-          (a) => a.code === employeeAccountCode
-        );
-        if (!employeeAccount) {
-          employeeAccount = await storage.createLedgerAccount({
-            companyId: req.session.currentCompanyId,
-            code: employeeAccountCode,
-            name: `${employee[0].firstName} ${employee[0].lastName} - Salary Account`,
-            accountType: "Liability",
-            openingBalance: "0",
-            active: true
-          });
         }
         const cashAccountId = req.body.cashAccountId || req.session.cashAccountId;
         if (!cashAccountId) {
@@ -7085,7 +9536,8 @@ async function registerRoutes(app2) {
         }).returning();
         await db.insert(voucherEntries).values({
           voucherId: voucher.id,
-          ledgerAccountId: employeeAccount.id,
+          ledgerAccountId: null,
+          employeeId: employee[0].id,
           debitAmount: parsed.amount,
           creditAmount: "0",
           narration: `Salary advance - ${voucherNumber}`
@@ -7148,7 +9600,7 @@ async function registerRoutes(app2) {
         await db.update(salaryAdvances).set({
           remainingBalance: newRemainingBalance.toFixed(2),
           fullyPaid: isFullyPaid
-        }).where(eq2(salaryAdvances.id, advanceId));
+        }).where(eq3(salaryAdvances.id, advanceId));
         res.json({
           message: "Deduction recorded successfully",
           newRemainingBalance: newRemainingBalance.toFixed(2),
@@ -7301,18 +9753,77 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
+  app2.post("/api/stock-items/import-opening-balances", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      if (!req.session.currentCompanyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { openingBalances } = req.body;
+      if (!Array.isArray(openingBalances) || openingBalances.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty opening balances array" });
+      }
+      let updated = 0;
+      let notFound = 0;
+      const notFoundBarcodes = [];
+      const allItems = await storage.getAllStockItems(req.session.currentCompanyId);
+      const itemsByCode = /* @__PURE__ */ new Map();
+      const itemsById = new Map(allItems.map((i) => [i.id, i]));
+      for (const item of allItems) {
+        if (item.code && typeof item.code === "string") {
+          itemsByCode.set(item.code.toLowerCase(), item);
+        }
+      }
+      const allAliases = await storage.getAllCompanyCodeAliases(req.session.currentCompanyId);
+      const itemsByAlias = /* @__PURE__ */ new Map();
+      for (const alias of allAliases) {
+        if (alias.aliasCode && typeof alias.aliasCode === "string") {
+          const item = itemsById.get(alias.stockItemId);
+          if (item) {
+            itemsByAlias.set(alias.aliasCode.toLowerCase(), item);
+          }
+        }
+      }
+      for (const entry of openingBalances) {
+        const { barcode, openingQty, openingRate, openingValue } = entry;
+        if (!barcode || typeof barcode !== "string") continue;
+        const barcodeLC = barcode.toLowerCase();
+        const item = itemsByCode.get(barcodeLC) || itemsByAlias.get(barcodeLC);
+        if (item) {
+          const qty = parseFloat(openingQty) || 0;
+          const rate = parseFloat(openingRate) || 0;
+          let totalValue = parseFloat(openingValue) || 0;
+          if (totalValue === 0 && qty > 0 && rate > 0) {
+            totalValue = qty * rate;
+          }
+          await storage.updateStockItem(item.id, {
+            openingQty: String(qty),
+            openingRate: String(rate),
+            openingValue: String(totalValue)
+          });
+          updated++;
+        } else {
+          notFound++;
+          notFoundBarcodes.push(barcode);
+        }
+      }
+      const message = `Updated opening balances for ${updated} item(s)${notFound > 0 ? `. ${notFound} barcode(s) not found: ${notFoundBarcodes.slice(0, 5).join(", ")}${notFoundBarcodes.length > 5 ? "..." : ""}` : "."}`;
+      res.json({ message, updated, notFound, notFoundBarcodes });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   app2.post("/api/stock-items/bulk-update-uom", requireAuth, requireNonPOS, async (req, res) => {
     try {
       if (!req.session.currentCompanyId) {
         return res.status(400).json({ message: "No company selected" });
       }
       const baleItems = await db.query.stockItems.findMany({
-        where: and2(
-          eq2(stockItems.companyId, req.session.currentCompanyId),
+        where: and3(
+          eq3(stockItems.companyId, req.session.currentCompanyId),
           or2(
-            eq2(stockItems.uom, "bale"),
-            eq2(stockItems.uom, "Bale"),
-            eq2(stockItems.uom, "BALE")
+            eq3(stockItems.uom, "bale"),
+            eq3(stockItems.uom, "Bale"),
+            eq3(stockItems.uom, "BALE")
           )
         )
       });
@@ -7414,7 +9925,8 @@ async function registerRoutes(app2) {
             companyId: req.session.currentCompanyId,
             code: "UNCATEGORIZED",
             name: "Uncategorized",
-            active: true
+            active: true,
+            allocateImportCosts: false
           });
         }
         const validStockGroups = await storage.getAllStockGroups(
@@ -7860,12 +10372,12 @@ async function registerRoutes(app2) {
         openingValue: stockItems.openingValue,
         sellingPrice: stockItems.sellingPrice,
         active: stockItems.active
-      }).from(stockItems).leftJoin(stockGroups, eq2(stockItems.stockGroupId, stockGroups.id)).where(eq2(stockItems.companyId, req.session.currentCompanyId));
+      }).from(stockItems).leftJoin(stockGroups, eq3(stockItems.stockGroupId, stockGroups.id)).where(eq3(stockItems.companyId, req.session.currentCompanyId));
       const inventoryRecords = await db.select({
         stockItemId: inventory.stockItemId,
         quantity: inventory.quantity,
         totalValue: inventory.totalValue
-      }).from(inventory).innerJoin(locations, eq2(inventory.locationId, locations.id)).where(eq2(locations.companyId, req.session.currentCompanyId));
+      }).from(inventory).innerJoin(locations, eq3(inventory.locationId, locations.id)).where(eq3(locations.companyId, req.session.currentCompanyId));
       const inventoryMap = /* @__PURE__ */ new Map();
       for (const record of inventoryRecords) {
         const existing = inventoryMap.get(record.stockItemId) || {
@@ -8023,14 +10535,14 @@ async function registerRoutes(app2) {
         if (!req.file) {
           return res.status(400).json({ message: "No file uploaded" });
         }
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+        const workbook = await read(req.file.buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const rawData = XLSX.utils.sheet_to_json(worksheet);
+        const rawData = utils.sheet_to_json(worksheet);
         if (rawData.length === 0) {
           return res.status(400).json({ message: "Excel file is empty" });
         }
-        const fileHash = crypto.MD5(req.file.buffer.toString("base64")).toString();
+        const fileHash = createHash("md5").update(req.file.buffer).digest("hex");
         const existingImport = await storage.getImportLogByHash(fileHash);
         if (existingImport) {
           return res.status(400).json({
@@ -8046,59 +10558,69 @@ async function registerRoutes(app2) {
         const allStockItems = await storage.getAllStockItems(
           req.session.currentCompanyId
         );
+        const getColumnValue = (row, ...possibleNames) => {
+          for (const name of possibleNames) {
+            if (row[name] !== void 0 && row[name] !== null && row[name] !== "") {
+              return row[name];
+            }
+          }
+          return void 0;
+        };
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
           const rowNum = i + 2;
-          if (row.Charge_Type && row.Charge_Amount) {
+          const chargeType = getColumnValue(row, "Charge_Type", "Charge Type");
+          const chargeAmount = getColumnValue(row, "Charge_Amount", "Charge Amount");
+          if (chargeType && chargeAmount) {
             chargeRows.push({
               rowNum,
-              chargeType: row.Charge_Type,
-              amount: parseFloat(row.Charge_Amount),
-              containerNumber: row.Container_Number
+              chargeType,
+              amount: parseFloat(chargeAmount),
+              containerNumber: getColumnValue(row, "Container_Number", "Container Number") || ""
             });
-          } else if (row.Item_Barcode || row.Item_Name) {
+          } else if (getColumnValue(row, "Item_Barcode", "Item Barcode") || getColumnValue(row, "Item_Name", "Item Name")) {
             let stockItem = null;
-            let itemName = row.Item_Name;
-            if (row.Item_Barcode) {
+            const itemBarcode = getColumnValue(row, "Item_Barcode", "Item Barcode");
+            const itemNameValue = getColumnValue(row, "Item_Name", "Item Name");
+            let itemName = itemNameValue || "";
+            if (itemBarcode) {
               stockItem = await storage.getStockItemByCodeOrAlias(
-                row.Item_Barcode,
+                itemBarcode,
                 req.session.currentCompanyId
               );
               if (stockItem) {
                 itemName = stockItem.name;
               }
-            } else if (row.Item_Name) {
+            } else if (itemNameValue) {
               stockItem = allStockItems.find(
-                (item) => item.name === row.Item_Name
+                (item) => item.name === itemNameValue
               );
             }
-            const quantity = parseFloat(row.Quantity);
-            const rate = parseFloat(row.Rate);
-            if (!quantity || quantity <= 0) {
-              errors.push(`Row ${rowNum}: Quantity must be greater than 0`);
+            const quantity = parseFloat(getColumnValue(row, "Quantity") || "0");
+            const rate = parseFloat(getColumnValue(row, "Rate") || "0");
+            if (!quantity || quantity <= 0 || isNaN(quantity)) {
               continue;
             }
-            if (rate === void 0 || rate < 0) {
-              errors.push(`Row ${rowNum}: Rate must be non-negative`);
+            if (isNaN(rate) || rate < 0) {
               continue;
             }
             itemRows.push({
               rowNum,
-              poNumber: row.PO_Number,
-              containerNumber: row.Container_Number,
-              supplierCode: row.Supplier_Code,
-              barcode: row.Item_Barcode || null,
+              poNumber: getColumnValue(row, "PO_Number", "PO Number") || "",
+              containerNumber: getColumnValue(row, "Container_Number", "Container Number") || "",
+              supplierCode: getColumnValue(row, "Supplier_Code", "Supplier Code") || "",
+              barcode: itemBarcode || null,
               stockItemId: stockItem?.id || null,
               itemName,
               quantity,
               rate,
               lineTotal: quantity * rate,
-              currency: row.Currency || "USD",
-              freight: parseFloat(row.Freight || 0),
-              surcharge: parseFloat(row.Surcharge || 0),
-              fumigation: parseFloat(row.Fumigation || 0),
-              discount: parseFloat(row.Discount || 0),
-              documentCharges: parseFloat(row.Document_Charges || 0)
+              currency: getColumnValue(row, "Currency") || "USD",
+              freight: parseFloat(getColumnValue(row, "Freight") || "0"),
+              surcharge: parseFloat(getColumnValue(row, "Surcharge") || "0"),
+              fumigation: parseFloat(getColumnValue(row, "Fumigation") || "0"),
+              discount: parseFloat(getColumnValue(row, "Discount") || "0"),
+              documentCharges: parseFloat(getColumnValue(row, "Document_Charges", "Document Charges") || "0")
             });
           }
         }
@@ -8377,22 +10899,63 @@ async function registerRoutes(app2) {
           active: true
         });
       }
-      for (const [poNumber, items] of Object.entries(poGroups)) {
+      const charges = containerPreview.charges;
+      const containerFreight = charges.freight || 0;
+      const containerSurcharge = charges.surcharge || 0;
+      const containerFumigation = charges.fumigation || 0;
+      const containerDocumentCharges = charges.documentCharges || 0;
+      const containerDiscount = charges.discount || 0;
+      const containerOtherCharges = charges.otherCharges || 0;
+      const hasAnyCharges = containerFreight > 0 || containerSurcharge > 0 || containerFumigation > 0 || containerDocumentCharges > 0 || containerDiscount > 0 || containerOtherCharges > 0;
+      const totalAllItemsValue = Object.values(poGroups).reduce((sum, items) => {
+        return sum + items.reduce((s, item) => s + item.lineTotal, 0);
+      }, 0);
+      let allocatedFreight = 0, allocatedSurcharge = 0, allocatedFumigation = 0;
+      let allocatedDocCharges = 0, allocatedDiscount = 0, allocatedOtherCharges = 0;
+      const poEntries = Object.entries(poGroups);
+      for (let poIndex = 0; poIndex < poEntries.length; poIndex++) {
+        const [poNumber, items] = poEntries[poIndex];
+        const isLastPO = poIndex === poEntries.length - 1;
         const poItems = items;
-        const poTotal = poItems.reduce((sum, item) => sum + item.lineTotal, 0);
+        const poItemsTotal = poItems.reduce((sum, item) => sum + item.lineTotal, 0);
+        const proportion = totalAllItemsValue > 0 ? poItemsTotal / totalAllItemsValue : 0;
+        let poFreight, poSurcharge, poFumigation, poDocumentCharges, poDiscount, poOtherCharges;
+        if (isLastPO) {
+          poFreight = Math.round((containerFreight - allocatedFreight) * 100) / 100;
+          poSurcharge = Math.round((containerSurcharge - allocatedSurcharge) * 100) / 100;
+          poFumigation = Math.round((containerFumigation - allocatedFumigation) * 100) / 100;
+          poDocumentCharges = Math.round((containerDocumentCharges - allocatedDocCharges) * 100) / 100;
+          poDiscount = Math.round((containerDiscount - allocatedDiscount) * 100) / 100;
+          poOtherCharges = Math.round((containerOtherCharges - allocatedOtherCharges) * 100) / 100;
+        } else {
+          poFreight = Math.round(containerFreight * proportion * 100) / 100;
+          poSurcharge = Math.round(containerSurcharge * proportion * 100) / 100;
+          poFumigation = Math.round(containerFumigation * proportion * 100) / 100;
+          poDocumentCharges = Math.round(containerDocumentCharges * proportion * 100) / 100;
+          poDiscount = Math.round(containerDiscount * proportion * 100) / 100;
+          poOtherCharges = Math.round(containerOtherCharges * proportion * 100) / 100;
+          allocatedFreight += poFreight;
+          allocatedSurcharge += poSurcharge;
+          allocatedFumigation += poFumigation;
+          allocatedDocCharges += poDocumentCharges;
+          allocatedDiscount += poDiscount;
+          allocatedOtherCharges += poOtherCharges;
+        }
+        const poChargesTotal = poFreight + poSurcharge + poFumigation + poDocumentCharges - poDiscount + poOtherCharges;
+        const poGrandTotal = poItemsTotal + poChargesTotal;
         const voucher = await storage.createVoucher({
           companyId: req.session.currentCompanyId,
           voucherNumber: `PO-${poNumber}-${Date.now()}`,
           voucherType: "Purchase",
           voucherDate: importDate,
           description: `Purchase Order ${poNumber} - Container ${containerNumber}`,
-          totalAmount: poTotal.toString(),
+          totalAmount: poGrandTotal.toString(),
           optional: false
         });
         await storage.createVoucherEntry({
           voucherId: voucher.id,
           ledgerAccountId: purchasesAccount.id,
-          debitAmount: poTotal.toString(),
+          debitAmount: poGrandTotal.toString(),
           creditAmount: "0",
           narration: `PO ${poNumber} - Container ${containerNumber}`
         });
@@ -8400,7 +10963,7 @@ async function registerRoutes(app2) {
           voucherId: voucher.id,
           supplierId,
           debitAmount: "0",
-          creditAmount: poTotal.toString(),
+          creditAmount: poGrandTotal.toString(),
           narration: `PO ${poNumber} - Container ${containerNumber}`
         });
         const po = await storage.createPurchaseOrder({
@@ -8410,7 +10973,14 @@ async function registerRoutes(app2) {
           supplierId,
           voucherId: voucher.id,
           currency: poItems[0].currency,
-          itemsTotal: poTotal.toString()
+          itemsTotal: poItemsTotal.toString(),
+          freight: poFreight.toString(),
+          surcharge: poSurcharge.toString(),
+          fumigation: poFumigation.toString(),
+          documentCharges: poDocumentCharges.toString(),
+          discount: poDiscount.toString(),
+          otherCharges: poOtherCharges.toString(),
+          chargesEdited: hasAnyCharges
         });
         for (const item of poItems) {
           let stockItemId = item.stockItemId;
@@ -8442,19 +11012,15 @@ async function registerRoutes(app2) {
           });
         }
       }
-      const charges = containerPreview.charges;
-      const chargeTypes = [
+      const chargeTypesForContainer = [
         { type: "Freight", amount: charges.freight, isNegative: false },
         { type: "Surcharge", amount: charges.surcharge, isNegative: false },
         { type: "Fumigation", amount: charges.fumigation, isNegative: false },
         { type: "Discount", amount: charges.discount, isNegative: true },
-        {
-          type: "Document Charges",
-          amount: charges.documentCharges,
-          isNegative: false
-        }
+        { type: "Document Charges", amount: charges.documentCharges, isNegative: false },
+        { type: "Other Charges", amount: charges.otherCharges, isNegative: false }
       ];
-      for (const charge of chargeTypes) {
+      for (const charge of chargeTypesForContainer) {
         if (charge.amount > 0) {
           const actualAmount = charge.isNegative ? -charge.amount : charge.amount;
           await storage.createContainerCharge({
@@ -8462,46 +11028,6 @@ async function registerRoutes(app2) {
             chargeType: charge.type,
             amount: actualAmount.toString()
           });
-          const chargeVoucher = await storage.createVoucher({
-            companyId: req.session.currentCompanyId,
-            voucherNumber: `CHARGE-${containerNumber}-${charge.type.toUpperCase().replace(/\s+/g, "_")}-${Date.now()}`,
-            voucherType: "Purchase",
-            voucherDate: importDate,
-            description: `${charge.type} - Container ${containerNumber}`,
-            totalAmount: Math.abs(actualAmount).toString(),
-            optional: false
-          });
-          if (!charge.isNegative) {
-            await storage.createVoucherEntry({
-              voucherId: chargeVoucher.id,
-              ledgerAccountId: importChargesAccount.id,
-              debitAmount: actualAmount.toString(),
-              creditAmount: "0",
-              narration: `${charge.type} - Container ${containerNumber}`
-            });
-            await storage.createVoucherEntry({
-              voucherId: chargeVoucher.id,
-              supplierId,
-              debitAmount: "0",
-              creditAmount: actualAmount.toString(),
-              narration: `${charge.type} - Container ${containerNumber}`
-            });
-          } else {
-            await storage.createVoucherEntry({
-              voucherId: chargeVoucher.id,
-              ledgerAccountId: importChargesAccount.id,
-              debitAmount: "0",
-              creditAmount: Math.abs(actualAmount).toString(),
-              narration: `${charge.type} - Container ${containerNumber}`
-            });
-            await storage.createVoucherEntry({
-              voucherId: chargeVoucher.id,
-              supplierId,
-              debitAmount: Math.abs(actualAmount).toString(),
-              creditAmount: "0",
-              narration: `${charge.type} - Container ${containerNumber}`
-            });
-          }
         }
       }
       await storage.createImportLog({
@@ -8523,7 +11049,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/po-import/template", (_req, res) => {
+  app2.get("/api/po-import/template", async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -8602,10 +11128,10 @@ async function registerRoutes(app2) {
           Document_Charges: 0
         }
       ];
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(sampleData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, "PO Import");
-      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      const workbook = utils.book_new();
+      const worksheet = utils.json_to_sheet(sampleData);
+      utils.book_append_sheet(workbook, worksheet, "PO Import");
+      const buffer = await write(workbook, { type: "buffer", bookType: "xlsx" });
       res.setHeader(
         "Content-Disposition",
         "attachment; filename=PO_Import_Template.xlsx"
@@ -8632,10 +11158,10 @@ async function registerRoutes(app2) {
         if (!req.file) {
           return res.status(400).json({ message: "No file uploaded" });
         }
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+        const workbook = await read(req.file.buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const rawData = XLSX.utils.sheet_to_json(worksheet);
+        const rawData = utils.sheet_to_json(worksheet);
         if (rawData.length === 0) {
           return res.status(400).json({ message: "Excel file is empty" });
         }
@@ -8715,9 +11241,9 @@ async function registerRoutes(app2) {
           validatedItem.stockItemName = stockItem.name;
           validatedItem.stockItemUom = stockItem.uom;
           const inventoryItem = await db.select().from(inventory).where(
-            and2(
-              eq2(inventory.stockItemId, stockItem.id),
-              eq2(inventory.locationId, locationId)
+            and3(
+              eq3(inventory.stockItemId, stockItem.id),
+              eq3(inventory.locationId, locationId)
             )
           ).limit(1);
           if (inventoryItem.length > 0) {
@@ -8830,9 +11356,9 @@ async function registerRoutes(app2) {
             );
           }
           const [inventoryRecord] = await tx.select().from(inventory).where(
-            and2(
-              eq2(inventory.stockItemId, stockItem.id),
-              eq2(inventory.locationId, locationId)
+            and3(
+              eq3(inventory.stockItemId, stockItem.id),
+              eq3(inventory.locationId, locationId)
             )
           ).limit(1);
           let costPrice = 0;
@@ -8859,9 +11385,9 @@ async function registerRoutes(app2) {
             await tx.update(inventory).set({
               quantity: (currentQty - item.quantity).toString()
             }).where(
-              and2(
-                eq2(inventory.stockItemId, stockItem.id),
-                eq2(inventory.locationId, locationId)
+              and3(
+                eq3(inventory.stockItemId, stockItem.id),
+                eq3(inventory.locationId, locationId)
               )
             );
           } else {
@@ -8891,7 +11417,7 @@ async function registerRoutes(app2) {
         });
         await tx.update(vouchers).set({
           totalAmount: totalSales.toString()
-        }).where(eq2(vouchers.id, voucher.id));
+        }).where(eq3(vouchers.id, voucher.id));
       });
       res.json({
         success: true,
@@ -8903,7 +11429,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/pos-import/template", (_req, res) => {
+  app2.get("/api/pos-import/template", async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -8922,10 +11448,10 @@ async function registerRoutes(app2) {
           Rate: 15.75
         }
       ];
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(sampleData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, "POS Import");
-      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      const workbook = utils.book_new();
+      const worksheet = utils.json_to_sheet(sampleData);
+      utils.book_append_sheet(workbook, worksheet, "POS Import");
+      const buffer = await write(workbook, { type: "buffer", bookType: "xlsx" });
       res.setHeader(
         "Content-Disposition",
         "attachment; filename=POS_Import_Template.xlsx"
@@ -8952,10 +11478,10 @@ async function registerRoutes(app2) {
         if (!req.file) {
           return res.status(400).json({ message: "No file uploaded" });
         }
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+        const workbook = await read(req.file.buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const rawData = XLSX.utils.sheet_to_json(worksheet);
+        const rawData = utils.sheet_to_json(worksheet);
         if (rawData.length === 0) {
           return res.status(400).json({ message: "Excel file is empty" });
         }
@@ -9032,9 +11558,9 @@ async function registerRoutes(app2) {
           validatedItem.stockItemName = stockItem.name;
           validatedItem.stockItemUom = stockItem.uom;
           const [inventoryItem] = await db.select().from(inventory).where(
-            and2(
-              eq2(inventory.stockItemId, stockItem.id),
-              eq2(inventory.locationId, sourceLocationId)
+            and3(
+              eq3(inventory.stockItemId, stockItem.id),
+              eq3(inventory.locationId, sourceLocationId)
             )
           ).limit(1);
           if (inventoryItem) {
@@ -9100,9 +11626,9 @@ async function registerRoutes(app2) {
           return res.status(400).json({ message: `Stock item not found: ${item.barcode}` });
         }
         const [inventoryItem] = await db.select().from(inventory).where(
-          and2(
-            eq2(inventory.stockItemId, stockItem.id),
-            eq2(inventory.locationId, sourceLocationId)
+          and3(
+            eq3(inventory.stockItemId, stockItem.id),
+            eq3(inventory.locationId, sourceLocationId)
           )
         ).limit(1);
         const rate = inventoryItem ? parseFloat(inventoryItem.averageRate || "0") : parseFloat(stockItem.sellingPrice || "0");
@@ -9142,9 +11668,9 @@ async function registerRoutes(app2) {
             totalAmount: itemTotal.toString()
           });
           const [sourceInventory] = await tx.select().from(inventory).where(
-            and2(
-              eq2(inventory.stockItemId, item.stockItemId),
-              eq2(inventory.locationId, sourceLocationId)
+            and3(
+              eq3(inventory.stockItemId, item.stockItemId),
+              eq3(inventory.locationId, sourceLocationId)
             )
           ).limit(1);
           if (sourceInventory) {
@@ -9153,7 +11679,7 @@ async function registerRoutes(app2) {
             await tx.update(inventory).set({
               quantity: newQty.toString(),
               totalValue: newValue.toString()
-            }).where(eq2(inventory.id, sourceInventory.id));
+            }).where(eq3(inventory.id, sourceInventory.id));
           } else {
             const negativeQty = -parseFloat(item.quantity);
             await tx.insert(inventory).values({
@@ -9166,9 +11692,9 @@ async function registerRoutes(app2) {
             });
           }
           const [destInventory] = await tx.select().from(inventory).where(
-            and2(
-              eq2(inventory.stockItemId, item.stockItemId),
-              eq2(inventory.locationId, destinationLocationId)
+            and3(
+              eq3(inventory.stockItemId, item.stockItemId),
+              eq3(inventory.locationId, destinationLocationId)
             )
           ).limit(1);
           if (destInventory) {
@@ -9183,7 +11709,7 @@ async function registerRoutes(app2) {
               quantity: newQty.toString(),
               averageRate: newAvgRate.toString(),
               totalValue: newValue.toString()
-            }).where(eq2(inventory.id, destInventory.id));
+            }).where(eq3(inventory.id, destInventory.id));
           } else {
             const qty = parseFloat(item.quantity);
             const rate = parseFloat(item.rate);
@@ -9208,7 +11734,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/stock-transfer-import/template", (_req, res) => {
+  app2.get("/api/stock-transfer-import/template", async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -9224,10 +11750,10 @@ async function registerRoutes(app2) {
           Quantity: 15
         }
       ];
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(sampleData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Transfer");
-      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      const workbook = utils.book_new();
+      const worksheet = utils.json_to_sheet(sampleData);
+      utils.book_append_sheet(workbook, worksheet, "Stock Transfer");
+      const buffer = await write(workbook, { type: "buffer", bookType: "xlsx" });
       res.setHeader(
         "Content-Disposition",
         "attachment; filename=Stock_Transfer_Import_Template.xlsx"
@@ -9242,7 +11768,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/stock-transfer-import/template-multi-source", (_req, res) => {
+  app2.get("/api/stock-transfer-import/template-multi-source", async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -9261,10 +11787,10 @@ async function registerRoutes(app2) {
           Quantity: 15
         }
       ];
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(sampleData);
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Transfer");
-      const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+      const workbook = utils.book_new();
+      const worksheet = utils.json_to_sheet(sampleData);
+      utils.book_append_sheet(workbook, worksheet, "Stock Transfer");
+      const buffer = await write(workbook, { type: "buffer", bookType: "xlsx" });
       res.setHeader(
         "Content-Disposition",
         "attachment; filename=Stock_Transfer_Multi_Source_Template.xlsx"
@@ -9292,10 +11818,10 @@ async function registerRoutes(app2) {
         if (!req.file) {
           return res.status(400).json({ message: "No file uploaded" });
         }
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+        const workbook = await read(req.file.buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const rawData = XLSX.utils.sheet_to_json(worksheet);
+        const rawData = utils.sheet_to_json(worksheet);
         if (rawData.length === 0) {
           return res.status(400).json({ message: "Excel file is empty" });
         }
@@ -9393,10 +11919,10 @@ async function registerRoutes(app2) {
           validatedItem.stockItemId = stockItem.id;
           validatedItem.stockItemName = stockItem.name;
           const inventoryResult = await db.select().from(inventory).where(
-            and2(
-              eq2(inventory.companyId, req.session.currentCompanyId),
-              eq2(inventory.locationId, sourceLocationId),
-              eq2(inventory.stockItemId, stockItem.id)
+            and3(
+              eq3(inventory.companyId, req.session.currentCompanyId),
+              eq3(inventory.locationId, sourceLocationId),
+              eq3(inventory.stockItemId, stockItem.id)
             )
           ).limit(1);
           const invRecord = inventoryResult[0];
@@ -9478,10 +12004,10 @@ async function registerRoutes(app2) {
           });
         }
         const sourceInv = await db.select().from(inventory).where(
-          and2(
-            eq2(inventory.companyId, req.session.currentCompanyId),
-            eq2(inventory.locationId, item.sourceLocationId),
-            eq2(inventory.stockItemId, item.stockItemId)
+          and3(
+            eq3(inventory.companyId, req.session.currentCompanyId),
+            eq3(inventory.locationId, item.sourceLocationId),
+            eq3(inventory.stockItemId, item.stockItemId)
           )
         ).limit(1);
         const serverRate = sourceInv[0] ? parseFloat(sourceInv[0].averageRate || "0") : parseFloat(stockItem.sellingPrice || "0");
@@ -9499,11 +12025,11 @@ async function registerRoutes(app2) {
       }
       await db.transaction(async (tx) => {
         const existingVouchers = await tx.select({ voucherNumber: vouchers.voucherNumber }).from(vouchers).where(
-          and2(
-            eq2(vouchers.companyId, req.session.currentCompanyId),
-            eq2(vouchers.voucherType, "Stock Transfer")
+          and3(
+            eq3(vouchers.companyId, req.session.currentCompanyId),
+            eq3(vouchers.voucherType, "Stock Transfer")
           )
-        ).orderBy(desc2(vouchers.id)).limit(1);
+        ).orderBy(desc3(vouchers.id)).limit(1);
         let nextNumber = 1;
         if (existingVouchers.length > 0) {
           const lastNum = existingVouchers[0].voucherNumber;
@@ -9544,10 +12070,10 @@ async function registerRoutes(app2) {
             totalAmount: itemTotal.toString()
           });
           const sourceInventory = await tx.select().from(inventory).where(
-            and2(
-              eq2(inventory.companyId, req.session.currentCompanyId),
-              eq2(inventory.locationId, sourceLocationId),
-              eq2(inventory.stockItemId, item.stockItemId)
+            and3(
+              eq3(inventory.companyId, req.session.currentCompanyId),
+              eq3(inventory.locationId, sourceLocationId),
+              eq3(inventory.stockItemId, item.stockItemId)
             )
           ).limit(1);
           if (sourceInventory[0]) {
@@ -9561,7 +12087,7 @@ async function registerRoutes(app2) {
               quantity: newQty.toString(),
               averageRate: newAvgRate.toString(),
               totalValue: newValue.toString()
-            }).where(eq2(inventory.id, sourceInventory[0].id));
+            }).where(eq3(inventory.id, sourceInventory[0].id));
           } else {
             const negativeQty = -qty;
             await tx.insert(inventory).values({
@@ -9574,10 +12100,10 @@ async function registerRoutes(app2) {
             });
           }
           const destInventory = await tx.select().from(inventory).where(
-            and2(
-              eq2(inventory.companyId, req.session.currentCompanyId),
-              eq2(inventory.locationId, destinationLocationId),
-              eq2(inventory.stockItemId, item.stockItemId)
+            and3(
+              eq3(inventory.companyId, req.session.currentCompanyId),
+              eq3(inventory.locationId, destinationLocationId),
+              eq3(inventory.stockItemId, item.stockItemId)
             )
           ).limit(1);
           if (destInventory[0]) {
@@ -9591,7 +12117,7 @@ async function registerRoutes(app2) {
               quantity: newQty.toString(),
               averageRate: newAvgRate.toString(),
               totalValue: newValue.toString()
-            }).where(eq2(inventory.id, destInventory[0].id));
+            }).where(eq3(inventory.id, destInventory[0].id));
           } else {
             await tx.insert(inventory).values({
               companyId: req.session.currentCompanyId,
@@ -9750,16 +12276,212 @@ async function registerRoutes(app2) {
           ...po,
           items: allLineItems[index2]
         }));
+        const containerItems2 = await storage.getContainerItems(containerId);
         res.json({
           container,
           pos: posWithItems,
-          charges
+          charges,
+          items: containerItems2
         });
       } catch (error) {
         res.status(500).json({ message: error.message });
       }
     }
   );
+  app2.get("/api/containers/:id/items", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const containerId = parseInt(req.params.id);
+      const items = await storage.getContainerItems(containerId);
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/containers/:id/items", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const containerId = parseInt(req.params.id);
+      const container = await storage.getContainerById(containerId);
+      if (!container) {
+        return res.status(404).json({ message: "Container not found" });
+      }
+      const { stockItemId, itemName, quantity, ratePerKg, weightKg } = req.body;
+      const lineTotal = (parseFloat(quantity) * parseFloat(ratePerKg)).toFixed(2);
+      const item = await storage.createContainerItem({
+        containerId,
+        stockItemId: stockItemId || null,
+        itemName,
+        quantity,
+        ratePerKg,
+        weightKg,
+        lineTotal
+      });
+      const allItems = await storage.getContainerItems(containerId);
+      const itemsTotal = allItems.reduce((sum, i) => sum + parseFloat(i.lineTotal), 0);
+      const charges = await storage.getChargesByContainer(containerId);
+      const chargesTotal = charges.reduce((sum, c) => sum + parseFloat(c.amount), 0);
+      await storage.updateContainer(containerId, {
+        itemsTotal: itemsTotal.toFixed(2),
+        chargesTotal: chargesTotal.toFixed(2),
+        grandTotal: (itemsTotal + chargesTotal).toFixed(2)
+      });
+      res.status(201).json(item);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.patch("/api/containers/:id/items/:itemId", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const containerId = parseInt(req.params.id);
+      const itemId = parseInt(req.params.itemId);
+      const { stockItemId, itemName, quantity, ratePerKg, weightKg } = req.body;
+      const lineTotal = (parseFloat(quantity) * parseFloat(ratePerKg)).toFixed(2);
+      const item = await storage.updateContainerItem(itemId, {
+        stockItemId: stockItemId || null,
+        itemName,
+        quantity,
+        ratePerKg,
+        weightKg,
+        lineTotal
+      });
+      const allItems = await storage.getContainerItems(containerId);
+      const itemsTotal = allItems.reduce((sum, i) => sum + parseFloat(i.lineTotal), 0);
+      const charges = await storage.getChargesByContainer(containerId);
+      const chargesTotal = charges.reduce((sum, c) => sum + parseFloat(c.amount), 0);
+      await storage.updateContainer(containerId, {
+        itemsTotal: itemsTotal.toFixed(2),
+        chargesTotal: chargesTotal.toFixed(2),
+        grandTotal: (itemsTotal + chargesTotal).toFixed(2)
+      });
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.delete("/api/containers/:id/items/:itemId", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const containerId = parseInt(req.params.id);
+      const itemId = parseInt(req.params.itemId);
+      await storage.deleteContainerItem(itemId);
+      const allItems = await storage.getContainerItems(containerId);
+      const itemsTotal = allItems.reduce((sum, i) => sum + parseFloat(i.lineTotal), 0);
+      const charges = await storage.getChargesByContainer(containerId);
+      const chargesTotal = charges.reduce((sum, c) => sum + parseFloat(c.amount), 0);
+      await storage.updateContainer(containerId, {
+        itemsTotal: itemsTotal.toFixed(2),
+        chargesTotal: chargesTotal.toFixed(2),
+        grandTotal: (itemsTotal + chargesTotal).toFixed(2)
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/containers/:id/charges", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const containerId = parseInt(req.params.id);
+      const container = await storage.getContainerById(containerId);
+      if (!container) {
+        return res.status(404).json({ message: "Container not found" });
+      }
+      const { charges } = req.body;
+      await storage.deleteContainerCharges(containerId);
+      for (const charge of charges) {
+        await storage.createContainerCharge({
+          containerId,
+          chargeType: charge.chargeType,
+          amount: charge.amount
+        });
+      }
+      const allItems = await storage.getContainerItems(containerId);
+      const itemsTotal = allItems.reduce((sum, i) => sum + parseFloat(i.lineTotal), 0);
+      const allCharges = await storage.getChargesByContainer(containerId);
+      const chargesTotal = allCharges.reduce((sum, c) => sum + parseFloat(c.amount), 0);
+      await storage.updateContainer(containerId, {
+        itemsTotal: itemsTotal.toFixed(2),
+        chargesTotal: chargesTotal.toFixed(2),
+        grandTotal: (itemsTotal + chargesTotal).toFixed(2)
+      });
+      res.json({ success: true, charges: allCharges });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/containers/:id/create-purchase-voucher", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const containerId = parseInt(req.params.id);
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const container = await storage.getContainerById(containerId);
+      if (!container) {
+        return res.status(404).json({ message: "Container not found" });
+      }
+      if (!container.supplierId) {
+        return res.status(400).json({ message: "Container has no supplier assigned" });
+      }
+      const voucherNumber = `MCONT-${containerId}`;
+      const existingVouchers = await db.select().from(vouchers).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.voucherNumber, voucherNumber),
+          eq3(vouchers.voucherType, "Purchase")
+        )
+      ).limit(1);
+      if (existingVouchers.length > 0) {
+        return res.json({ success: true, message: "Purchase voucher already exists", voucherId: existingVouchers[0].id });
+      }
+      const items = await storage.getContainerItems(containerId);
+      const charges = await storage.getChargesByContainer(containerId);
+      const itemsTotal = items.reduce((sum, i) => sum + parseFloat(i.lineTotal), 0);
+      const chargesTotal = charges.reduce((sum, c) => sum + parseFloat(c.amount), 0);
+      const grandTotal = itemsTotal + chargesTotal;
+      if (grandTotal <= 0) {
+        return res.json({ success: true, message: "No items to process", grandTotal: 0 });
+      }
+      let purchasesAccount = await storage.getLedgerAccountByCode("PURCHASES", companyId);
+      if (!purchasesAccount) {
+        purchasesAccount = await storage.createLedgerAccount({
+          companyId,
+          code: "PURCHASES",
+          name: "Purchases",
+          accountType: "Expense",
+          openingBalance: "0",
+          openingBalanceSide: "Dr",
+          active: true
+        });
+      }
+      const voucherDate = container.importDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+      const itemNames = items.map((i) => i.itemName).join(", ");
+      const voucher = await storage.createVoucher({
+        companyId,
+        voucherNumber,
+        voucherType: "Purchase",
+        voucherDate,
+        description: `Manual Container ${container.containerNumber} - ${itemNames.substring(0, 100)}`,
+        totalAmount: grandTotal.toFixed(2),
+        optional: false
+      });
+      await storage.createVoucherEntry({
+        voucherId: voucher.id,
+        ledgerAccountId: purchasesAccount.id,
+        debitAmount: grandTotal.toFixed(2),
+        creditAmount: "0",
+        narration: `Container ${container.containerNumber} manual import`
+      });
+      await storage.createVoucherEntry({
+        voucherId: voucher.id,
+        supplierId: container.supplierId,
+        debitAmount: "0",
+        creditAmount: grandTotal.toFixed(2),
+        narration: `Container ${container.containerNumber} manual import`
+      });
+      res.json({ success: true, voucherId: voucher.id, grandTotal });
+    } catch (error) {
+      console.error("Error creating purchase voucher for manual container:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
   app2.post(
     "/api/containers/:id/offload",
     requireAuth,
@@ -9779,13 +12501,10 @@ async function registerRoutes(app2) {
           offloadDate,
           duties,
           dutiesAccountId,
-          officeCharges,
-          officeChargesAccountId,
-          officeChargesCashAccountId,
-          transferCharges,
           transportFees,
           transportAccountId,
-          additionalCharges = []
+          additionalCharges = [],
+          costAllocationGroupIds = []
         } = validation.data;
         const container = await storage.getContainerById(containerId);
         if (!container) {
@@ -9793,39 +12512,71 @@ async function registerRoutes(app2) {
         }
         const isEdit = container.status === "OFFLOADED";
         if (isEdit) {
-          const [existingOffload] = await db.select().from(containerOffloads).where(eq2(containerOffloads.containerId, containerId)).limit(1);
+          const [existingOffload] = await db.select().from(containerOffloads).where(eq3(containerOffloads.containerId, containerId)).limit(1);
           if (existingOffload) {
             const pos = await storage.getPurchaseOrdersByContainer(containerId);
             for (const po of pos) {
               const lineItems = await storage.getLineItemsByPO(po.id);
               for (const item of lineItems) {
+                if (!item.stockItemId || item.stockItemId === 0) {
+                  console.warn(`Skipping line item ${item.id} with invalid stockItemId: ${item.stockItemId}`);
+                  continue;
+                }
                 const [inv] = await db.select().from(inventory).where(
-                  and2(
-                    eq2(inventory.stockItemId, item.stockItemId),
-                    eq2(inventory.locationId, existingOffload.locationId)
+                  and3(
+                    eq3(inventory.stockItemId, item.stockItemId),
+                    eq3(inventory.locationId, existingOffload.locationId)
                   )
                 ).limit(1);
                 if (inv) {
                   const newQty = parseFloat(inv.quantity) - parseFloat(item.quantity);
                   if (newQty <= 0) {
-                    await db.delete(inventory).where(eq2(inventory.id, inv.id));
+                    await db.delete(inventory).where(eq3(inventory.id, inv.id));
                   } else {
-                    await db.update(inventory).set({ quantity: newQty.toString() }).where(eq2(inventory.id, inv.id));
+                    await db.update(inventory).set({ quantity: newQty.toString() }).where(eq3(inventory.id, inv.id));
                   }
                 }
               }
             }
+            const manualItems = await storage.getContainerItems(containerId);
+            for (const item of manualItems) {
+              if (!item.stockItemId || item.stockItemId === 0) {
+                console.warn(`Skipping container item ${item.id} with invalid stockItemId: ${item.stockItemId}`);
+                continue;
+              }
+              const [inv] = await db.select().from(inventory).where(
+                and3(
+                  eq3(inventory.stockItemId, item.stockItemId),
+                  eq3(inventory.locationId, existingOffload.locationId)
+                )
+              ).limit(1);
+              if (inv) {
+                const qty = parseFloat(item.quantity) || 1;
+                const newQty = parseFloat(inv.quantity) - qty;
+                if (newQty <= 0) {
+                  await db.delete(inventory).where(eq3(inventory.id, inv.id));
+                } else {
+                  await db.update(inventory).set({ quantity: newQty.toString() }).where(eq3(inventory.id, inv.id));
+                }
+              }
+            }
             const oldVouchers = await db.select().from(vouchers).where(
-              and2(
-                eq2(vouchers.companyId, container.companyId),
-                sql3`LOWER(${vouchers.description}) LIKE LOWER('%container ${container.containerNumber}%')`
+              and3(
+                eq3(vouchers.companyId, container.companyId),
+                sql4`LOWER(${vouchers.description}) LIKE LOWER('%container ${container.containerNumber}%')`,
+                sql4`(
+                    ${vouchers.voucherNumber} LIKE 'DUTY-%' OR
+                    ${vouchers.voucherNumber} LIKE 'OFFICE-%' OR
+                    ${vouchers.voucherNumber} LIKE 'TRANS-%' OR
+                    ${vouchers.voucherNumber} LIKE 'CHG-%'
+                  )`
               )
             );
             for (const voucher of oldVouchers) {
-              await db.delete(voucherEntries).where(eq2(voucherEntries.voucherId, voucher.id));
-              await db.delete(vouchers).where(eq2(vouchers.id, voucher.id));
+              await db.delete(voucherEntries).where(eq3(voucherEntries.voucherId, voucher.id));
+              await db.delete(vouchers).where(eq3(vouchers.id, voucher.id));
             }
-            await db.delete(containerOffloads).where(eq2(containerOffloads.id, existingOffload.id));
+            await db.delete(containerOffloads).where(eq3(containerOffloads.id, existingOffload.id));
           }
           await storage.updateContainer(containerId, { status: "IN_TRANSIT" });
         }
@@ -9834,14 +12585,11 @@ async function registerRoutes(app2) {
           locationId,
           duties,
           dutiesAccountId,
-          officeCharges,
-          officeChargesAccountId,
-          officeChargesCashAccountId,
-          transferCharges,
           transportFees,
           transportAccountId,
           additionalCharges,
-          offloadDate
+          offloadDate,
+          costAllocationGroupIds
         );
         res.json(offload);
       } catch (error) {
@@ -9872,9 +12620,9 @@ async function registerRoutes(app2) {
         if (container.status !== "OFFLOADED") {
           return res.status(400).json({ message: "Container is not offloaded" });
         }
-        const [offloadRecord] = await db.select().from(containerOffloads).where(eq2(containerOffloads.containerId, containerId)).limit(1);
+        const [offloadRecord] = await db.select().from(containerOffloads).where(eq3(containerOffloads.containerId, containerId)).limit(1);
         if (!offloadRecord) {
-          await db.update(containers).set({ status: "IN_TRANSIT" }).where(eq2(containers.id, containerId));
+          await db.update(containers).set({ status: "IN_TRANSIT" }).where(eq3(containers.id, containerId));
           return res.json({
             message: "Container status reversed to IN_TRANSIT (no offload record to clean up)"
           });
@@ -9884,36 +12632,68 @@ async function registerRoutes(app2) {
           for (const po of pos) {
             const lineItems = await storage.getLineItemsByPO(po.id);
             for (const item of lineItems) {
+              if (!item.stockItemId || item.stockItemId === 0) {
+                console.warn(`Reverse offload: Skipping line item ${item.id} with invalid stockItemId: ${item.stockItemId}`);
+                continue;
+              }
               const [inv] = await tx.select().from(inventory).where(
-                and2(
-                  eq2(inventory.stockItemId, item.stockItemId),
-                  eq2(inventory.locationId, offloadRecord.locationId)
+                and3(
+                  eq3(inventory.stockItemId, item.stockItemId),
+                  eq3(inventory.locationId, offloadRecord.locationId)
                 )
               ).limit(1);
               if (inv) {
                 const newQty = parseFloat(inv.quantity) - parseFloat(item.quantity);
                 if (newQty <= 0) {
-                  await tx.delete(inventory).where(eq2(inventory.id, inv.id));
+                  await tx.delete(inventory).where(eq3(inventory.id, inv.id));
                 } else {
-                  await tx.update(inventory).set({ quantity: newQty.toString() }).where(eq2(inventory.id, inv.id));
+                  await tx.update(inventory).set({ quantity: newQty.toString() }).where(eq3(inventory.id, inv.id));
                 }
               }
             }
           }
+          const manualItems = await storage.getContainerItems(containerId);
+          for (const item of manualItems) {
+            if (!item.stockItemId || item.stockItemId === 0) {
+              console.warn(`Reverse offload: Skipping container item ${item.id} with invalid stockItemId: ${item.stockItemId}`);
+              continue;
+            }
+            const [inv] = await tx.select().from(inventory).where(
+              and3(
+                eq3(inventory.stockItemId, item.stockItemId),
+                eq3(inventory.locationId, offloadRecord.locationId)
+              )
+            ).limit(1);
+            if (inv) {
+              const qty = parseFloat(item.quantity) || 1;
+              const newQty = parseFloat(inv.quantity) - qty;
+              if (newQty <= 0) {
+                await tx.delete(inventory).where(eq3(inventory.id, inv.id));
+              } else {
+                await tx.update(inventory).set({ quantity: newQty.toString() }).where(eq3(inventory.id, inv.id));
+              }
+            }
+          }
           const containerVouchers = await tx.select().from(vouchers).where(
-            and2(
-              eq2(vouchers.companyId, req.session.currentCompanyId),
-              like(sql3`LOWER(${vouchers.description})`, `%container ${container.containerNumber.toLowerCase()}%`)
+            and3(
+              eq3(vouchers.companyId, req.session.currentCompanyId),
+              like(sql4`LOWER(${vouchers.description})`, `%container ${container.containerNumber.toLowerCase()}%`),
+              sql4`(
+                  ${vouchers.voucherNumber} LIKE 'DUTY-%' OR
+                  ${vouchers.voucherNumber} LIKE 'OFFICE-%' OR
+                  ${vouchers.voucherNumber} LIKE 'TRANS-%' OR
+                  ${vouchers.voucherNumber} LIKE 'CHG-%'
+                )`
             )
           );
           for (const voucher of containerVouchers) {
-            await tx.delete(voucherEntries).where(eq2(voucherEntries.voucherId, voucher.id));
-            await tx.delete(vouchers).where(eq2(vouchers.id, voucher.id));
+            await tx.delete(voucherEntries).where(eq3(voucherEntries.voucherId, voucher.id));
+            await tx.delete(vouchers).where(eq3(vouchers.id, voucher.id));
           }
-          await tx.delete(containerOffloads).where(eq2(containerOffloads.id, offloadRecord.id));
+          await tx.delete(containerOffloads).where(eq3(containerOffloads.id, offloadRecord.id));
           await tx.update(containers).set({
             status: "IN_TRANSIT"
-          }).where(eq2(containers.id, containerId));
+          }).where(eq3(containers.id, containerId));
         });
         res.json({
           success: true,
@@ -9949,8 +12729,6 @@ async function registerRoutes(app2) {
         }
         const validation = offloadRequestSchema.extend({
           dutiesAccountId: z2.number().optional(),
-          officeChargesAccountId: z2.number().optional(),
-          officeChargesCashAccountId: z2.number().optional(),
           transportAccountId: z2.number().optional(),
           additionalCharges: z2.array(z2.object({
             description: z2.string(),
@@ -9966,15 +12744,11 @@ async function registerRoutes(app2) {
           offloadDate,
           duties,
           dutiesAccountId,
-          officeCharges,
-          officeChargesAccountId,
-          officeChargesCashAccountId,
-          transferCharges,
           transportFees,
           transportAccountId,
           additionalCharges = []
         } = validation.data;
-        const [currentOffload] = await db.select().from(containerOffloads).where(eq2(containerOffloads.containerId, containerId)).limit(1);
+        const [currentOffload] = await db.select().from(containerOffloads).where(eq3(containerOffloads.containerId, containerId)).limit(1);
         if (!currentOffload) {
           return res.status(404).json({ message: "Offload record not found" });
         }
@@ -9985,13 +12759,13 @@ async function registerRoutes(app2) {
               const lineItems = await storage.getLineItemsByPO(po.id);
               for (const item of lineItems) {
                 const [oldInv] = await tx.select().from(inventory).where(
-                  and2(
-                    eq2(inventory.stockItemId, item.stockItemId),
-                    eq2(inventory.locationId, currentOffload.locationId)
+                  and3(
+                    eq3(inventory.stockItemId, item.stockItemId),
+                    eq3(inventory.locationId, currentOffload.locationId)
                   )
                 ).limit(1);
                 if (oldInv) {
-                  await tx.delete(inventory).where(eq2(inventory.id, oldInv.id));
+                  await tx.delete(inventory).where(eq3(inventory.id, oldInv.id));
                   await tx.insert(inventory).values({
                     companyId: req.session.currentCompanyId,
                     locationId,
@@ -10004,28 +12778,28 @@ async function registerRoutes(app2) {
             }
           }
           const additionalChargesTotal = additionalCharges.reduce((sum, charge) => sum + charge.amount, 0);
-          const totalCharges = parseFloat(duties) + parseFloat(officeCharges) + parseFloat(transferCharges) + parseFloat(transportFees) + additionalChargesTotal;
+          const totalCharges = parseFloat(duties || "0") + parseFloat(transportFees || "0") + additionalChargesTotal;
           const totalBales = parseFloat(currentOffload.totalBales);
           const additionalCostPerBale = totalBales > 0 ? totalCharges / totalBales : 0;
           await tx.update(containerOffloads).set({
             locationId,
-            duties,
-            officeCharges,
-            transferCharges,
-            transportFees,
+            duties: duties || "0",
+            officeCharges: "0",
+            transferCharges: "0",
+            transportFees: transportFees || "0",
             totalCharges: totalCharges.toString(),
             additionalCostPerBale: additionalCostPerBale.toString(),
             offloadedAt: offloadDate ? new Date(offloadDate) : currentOffload.offloadedAt
-          }).where(eq2(containerOffloads.id, currentOffload.id));
+          }).where(eq3(containerOffloads.id, currentOffload.id));
           const containerVouchers = await tx.select().from(vouchers).where(
-            and2(
-              eq2(vouchers.companyId, req.session.currentCompanyId),
-              sql3`${vouchers.description} LIKE '%Container ${container.containerNumber}%'`
+            and3(
+              eq3(vouchers.companyId, req.session.currentCompanyId),
+              sql4`${vouchers.description} LIKE '%Container ${container.containerNumber}%'`
             )
           );
           for (const voucher of containerVouchers) {
-            await tx.delete(voucherEntries).where(eq2(voucherEntries.voucherId, voucher.id));
-            await tx.delete(vouchers).where(eq2(vouchers.id, voucher.id));
+            await tx.delete(voucherEntries).where(eq3(voucherEntries.voucherId, voucher.id));
+            await tx.delete(vouchers).where(eq3(vouchers.id, voucher.id));
           }
         });
         res.json({
@@ -10049,7 +12823,7 @@ async function registerRoutes(app2) {
         return res.status(403).json({ message: "Only Admin and Owner can view purchase orders" });
       }
       const po = await db.query.purchaseOrders.findFirst({
-        where: eq2(purchaseOrders.id, id)
+        where: eq3(purchaseOrders.id, id)
       });
       if (!po) {
         return res.status(404).json({ message: "Purchase order not found" });
@@ -10060,20 +12834,64 @@ async function registerRoutes(app2) {
         });
       }
       const lineItems = await db.query.poLineItems.findMany({
-        where: eq2(poLineItems.poId, id)
+        where: eq3(poLineItems.poId, id)
       });
       const supplier = await db.query.suppliers.findFirst({
-        where: eq2(suppliers.id, po.supplierId)
+        where: eq3(suppliers.id, po.supplierId)
       });
       const container = await db.query.containers.findFirst({
-        where: eq2(containers.id, po.containerId)
+        where: eq3(containers.id, po.containerId)
       });
+      const poFreight = parseFloat(po.freight?.toString() || "0");
+      const poSurcharge = parseFloat(po.surcharge?.toString() || "0");
+      const poFumigation = parseFloat(po.fumigation?.toString() || "0");
+      const poDocCharges = parseFloat(po.documentCharges?.toString() || "0");
+      const poDiscount = parseFloat(po.discount?.toString() || "0");
+      const poOtherCharges = parseFloat(po.otherCharges?.toString() || "0");
+      let finalCharges = {
+        freight: poFreight.toString(),
+        surcharge: poSurcharge.toString(),
+        fumigation: poFumigation.toString(),
+        documentCharges: poDocCharges.toString(),
+        discount: poDiscount.toString(),
+        otherCharges: poOtherCharges.toString()
+      };
+      if (poFreight === 0 && poSurcharge === 0 && poFumigation === 0 && poDocCharges === 0 && poDiscount === 0 && poOtherCharges === 0 && !po.chargesEdited) {
+        const containerChargesData = await db.query.containerCharges.findMany({
+          where: eq3(containerCharges.containerId, po.containerId)
+        });
+        for (const charge of containerChargesData) {
+          const amount = parseFloat(charge.amount?.toString() || "0");
+          switch (charge.chargeType) {
+            case "Freight":
+              finalCharges.freight = Math.abs(amount).toString();
+              break;
+            case "Surcharge":
+              finalCharges.surcharge = Math.abs(amount).toString();
+              break;
+            case "Fumigation":
+              finalCharges.fumigation = Math.abs(amount).toString();
+              break;
+            case "Document Charges":
+              finalCharges.documentCharges = Math.abs(amount).toString();
+              break;
+            case "Discount":
+              finalCharges.discount = Math.abs(amount).toString();
+              break;
+            case "Other Charges":
+              finalCharges.otherCharges = Math.abs(amount).toString();
+              break;
+          }
+        }
+      }
       res.json({
         ...po,
         items: lineItems,
         supplierName: supplier?.legalName || "Unknown Supplier",
         supplierCode: supplier?.code || "",
-        containerNumber: container?.containerNumber || ""
+        containerNumber: container?.containerNumber || "",
+        ...finalCharges,
+        itemsTotal: po.itemsTotal?.toString() || "0"
       });
     } catch (error) {
       console.error("Get PO error:", error);
@@ -10117,54 +12935,93 @@ async function registerRoutes(app2) {
           };
         });
         await db.transaction(async (tx) => {
-          await tx.delete(poLineItems).where(eq2(poLineItems.poId, id));
+          await tx.delete(poLineItems).where(eq3(poLineItems.poId, id));
           if (newItems.length > 0) {
             await tx.insert(poLineItems).values(newItems);
           }
-          const freight = parseFloat(req.body.freight || existingPO.freight || "0");
-          const otherCharges = parseFloat(req.body.otherCharges || existingPO.otherCharges || "0");
+          const freight = parseFloat(req.body.freight ?? existingPO.freight ?? "0");
+          const surcharge = parseFloat(req.body.surcharge ?? existingPO.surcharge ?? "0");
+          const fumigation = parseFloat(req.body.fumigation ?? existingPO.fumigation ?? "0");
+          const documentCharges = parseFloat(req.body.documentCharges ?? existingPO.documentCharges ?? "0");
+          const discount = parseFloat(req.body.discount ?? existingPO.discount ?? "0");
+          const otherCharges = parseFloat(req.body.otherCharges ?? existingPO.otherCharges ?? "0");
+          const chargesWereEdited2 = req.body.freight !== void 0 || req.body.surcharge !== void 0 || req.body.fumigation !== void 0 || req.body.documentCharges !== void 0 || req.body.discount !== void 0 || req.body.otherCharges !== void 0;
           await tx.update(purchaseOrders).set({
             itemsTotal: itemsTotal.toFixed(2),
             freight: freight.toFixed(2),
+            surcharge: surcharge.toFixed(2),
+            fumigation: fumigation.toFixed(2),
+            documentCharges: documentCharges.toFixed(2),
+            discount: discount.toFixed(2),
             otherCharges: otherCharges.toFixed(2),
+            chargesEdited: chargesWereEdited2 ? true : existingPO.chargesEdited,
             poNumber: req.body.poNumber || existingPO.poNumber,
             currency: req.body.currency || existingPO.currency,
             status: req.body.status || existingPO.status
-          }).where(eq2(purchaseOrders.id, id));
+          }).where(eq3(purchaseOrders.id, id));
           const container2 = await storage.getContainerById(existingPO.containerId);
           if (container2) {
             const allPOs = await storage.getAllPurchaseOrders(existingPO.companyId);
             const containerPOs = allPOs.filter((po) => po.containerId === existingPO.containerId);
             let totalItemsCost = 0;
-            let totalFreight = 0;
-            let totalOtherCharges = 0;
+            let totalCharges = 0;
             for (const po of containerPOs) {
               if (po.id === id) {
                 totalItemsCost += itemsTotal;
-                totalFreight += freight;
-                totalOtherCharges += otherCharges;
+                totalCharges += freight + surcharge + fumigation + documentCharges - discount + otherCharges;
               } else {
                 totalItemsCost += parseFloat(po.itemsTotal || "0");
-                totalFreight += parseFloat(po.freight || "0");
-                totalOtherCharges += parseFloat(po.otherCharges || "0");
+                totalCharges += parseFloat(po.freight || "0") + parseFloat(po.surcharge || "0") + parseFloat(po.fumigation || "0") + parseFloat(po.documentCharges || "0") - parseFloat(po.discount || "0") + parseFloat(po.otherCharges || "0");
               }
             }
-            const chargesTotal = totalFreight + totalOtherCharges;
+            const chargesTotal = totalCharges;
             await tx.update(containers).set({
               itemsTotal: totalItemsCost.toFixed(2),
               chargesTotal: chargesTotal.toFixed(2),
               grandTotal: (totalItemsCost + chargesTotal).toFixed(2)
-            }).where(eq2(containers.id, existingPO.containerId));
+            }).where(eq3(containers.id, existingPO.containerId));
           }
           if (existingPO.voucherId) {
-            const poGrandTotal = itemsTotal + freight + otherCharges;
-            await tx.update(vouchers).set({ totalAmount: poGrandTotal.toFixed(2) }).where(eq2(vouchers.id, existingPO.voucherId));
-            const existingEntries = await tx.select().from(voucherEntries).where(eq2(voucherEntries.voucherId, existingPO.voucherId));
+            const poGrandTotal = itemsTotal + freight + surcharge + fumigation + documentCharges - discount + otherCharges;
+            await tx.update(vouchers).set({ totalAmount: poGrandTotal.toFixed(2) }).where(eq3(vouchers.id, existingPO.voucherId));
+            const existingEntries = await tx.select().from(voucherEntries).where(eq3(voucherEntries.voucherId, existingPO.voucherId));
             for (const entry of existingEntries) {
               if (parseFloat(entry.debitAmount || "0") > 0) {
-                await tx.update(voucherEntries).set({ debitAmount: poGrandTotal.toFixed(2) }).where(eq2(voucherEntries.id, entry.id));
+                await tx.update(voucherEntries).set({ debitAmount: poGrandTotal.toFixed(2) }).where(eq3(voucherEntries.id, entry.id));
               } else if (parseFloat(entry.creditAmount || "0") > 0) {
-                await tx.update(voucherEntries).set({ creditAmount: poGrandTotal.toFixed(2) }).where(eq2(voucherEntries.id, entry.id));
+                await tx.update(voucherEntries).set({ creditAmount: poGrandTotal.toFixed(2) }).where(eq3(voucherEntries.id, entry.id));
+              }
+            }
+          }
+          if (chargesWereEdited2 && existingPO.containerId) {
+            const chargeTypeMap = [
+              { field: "freight", chargeType: "Freight", amount: freight },
+              { field: "surcharge", chargeType: "Surcharge", amount: surcharge },
+              { field: "fumigation", chargeType: "Fumigation", amount: fumigation },
+              { field: "documentCharges", chargeType: "Document Charges", amount: documentCharges },
+              { field: "discount", chargeType: "Discount", amount: -discount },
+              // Discount stored as negative
+              { field: "otherCharges", chargeType: "Other Charges", amount: otherCharges }
+            ];
+            for (const { chargeType, amount } of chargeTypeMap) {
+              const existingCharge = await tx.select().from(containerCharges).where(and3(
+                eq3(containerCharges.containerId, existingPO.containerId),
+                eq3(containerCharges.chargeType, chargeType)
+              )).limit(1);
+              if (amount === 0) {
+                if (existingCharge.length > 0) {
+                  await tx.delete(containerCharges).where(eq3(containerCharges.id, existingCharge[0].id));
+                }
+              } else {
+                if (existingCharge.length > 0) {
+                  await tx.update(containerCharges).set({ amount: amount.toFixed(2) }).where(eq3(containerCharges.id, existingCharge[0].id));
+                } else {
+                  await tx.insert(containerCharges).values({
+                    containerId: existingPO.containerId,
+                    chargeType,
+                    amount: amount.toFixed(2)
+                  });
+                }
               }
             }
           }
@@ -10192,9 +13049,135 @@ async function registerRoutes(app2) {
         allowedUpdates.status = req.body.status;
       if (req.body.freight !== void 0)
         allowedUpdates.freight = req.body.freight;
+      if (req.body.surcharge !== void 0)
+        allowedUpdates.surcharge = req.body.surcharge;
+      if (req.body.fumigation !== void 0)
+        allowedUpdates.fumigation = req.body.fumigation;
+      if (req.body.documentCharges !== void 0)
+        allowedUpdates.documentCharges = req.body.documentCharges;
+      if (req.body.discount !== void 0)
+        allowedUpdates.discount = req.body.discount;
       if (req.body.otherCharges !== void 0)
         allowedUpdates.otherCharges = req.body.otherCharges;
+      const chargesWereEdited = req.body.freight !== void 0 || req.body.surcharge !== void 0 || req.body.fumigation !== void 0 || req.body.documentCharges !== void 0 || req.body.discount !== void 0 || req.body.otherCharges !== void 0;
+      if (chargesWereEdited) {
+        allowedUpdates.chargesEdited = true;
+      }
+      const newFreight = parseFloat(req.body.freight ?? existingPO.freight ?? "0");
+      const newSurcharge = parseFloat(req.body.surcharge ?? existingPO.surcharge ?? "0");
+      const newFumigation = parseFloat(req.body.fumigation ?? existingPO.fumigation ?? "0");
+      const newDocumentCharges = parseFloat(req.body.documentCharges ?? existingPO.documentCharges ?? "0");
+      const newDiscount = parseFloat(req.body.discount ?? existingPO.discount ?? "0");
+      const newOtherCharges = parseFloat(req.body.otherCharges ?? existingPO.otherCharges ?? "0");
+      const newItemsTotal = parseFloat(req.body.itemsTotal ?? existingPO.itemsTotal ?? "0");
+      const oldFreight = parseFloat(existingPO.freight || "0");
+      const oldSurcharge = parseFloat(existingPO.surcharge || "0");
+      const oldFumigation = parseFloat(existingPO.fumigation || "0");
+      const oldDocumentCharges = parseFloat(existingPO.documentCharges || "0");
+      const oldDiscount = parseFloat(existingPO.discount || "0");
+      const oldOtherCharges = parseFloat(existingPO.otherCharges || "0");
+      const oldItemsTotal = parseFloat(existingPO.itemsTotal || "0");
+      const newGrandTotal = newItemsTotal + newFreight + newSurcharge + newFumigation + newDocumentCharges - newDiscount + newOtherCharges;
+      const oldGrandTotal = oldItemsTotal + oldFreight + oldSurcharge + oldFumigation + oldDocumentCharges - oldDiscount + oldOtherCharges;
       const updated = await storage.updatePurchaseOrder(id, allowedUpdates);
+      if (Math.abs(newGrandTotal - oldGrandTotal) > 1e-3 && existingPO.voucherId) {
+        await db.transaction(async (tx) => {
+          await tx.update(vouchers).set({ totalAmount: newGrandTotal.toFixed(2) }).where(eq3(vouchers.id, existingPO.voucherId));
+          const existingEntries = await tx.select().from(voucherEntries).where(eq3(voucherEntries.voucherId, existingPO.voucherId));
+          for (const entry of existingEntries) {
+            if (parseFloat(entry.debitAmount || "0") > 0) {
+              await tx.update(voucherEntries).set({ debitAmount: newGrandTotal.toFixed(2) }).where(eq3(voucherEntries.id, entry.id));
+            } else if (parseFloat(entry.creditAmount || "0") > 0) {
+              await tx.update(voucherEntries).set({ creditAmount: newGrandTotal.toFixed(2) }).where(eq3(voucherEntries.id, entry.id));
+            }
+          }
+          const container = await storage.getContainerById(existingPO.containerId);
+          if (container) {
+            const allPOs = await storage.getAllPurchaseOrders(existingPO.companyId);
+            const containerPOs = allPOs.filter((po) => po.containerId === existingPO.containerId);
+            let totalItemsCost = 0;
+            let totalCharges = 0;
+            for (const po of containerPOs) {
+              if (po.id === id) {
+                totalItemsCost += newItemsTotal;
+                totalCharges += newFreight + newSurcharge + newFumigation + newDocumentCharges - newDiscount + newOtherCharges;
+              } else {
+                totalItemsCost += parseFloat(po.itemsTotal || "0");
+                totalCharges += parseFloat(po.freight || "0") + parseFloat(po.surcharge || "0") + parseFloat(po.fumigation || "0") + parseFloat(po.documentCharges || "0") - parseFloat(po.discount || "0") + parseFloat(po.otherCharges || "0");
+              }
+            }
+            const chargesTotal = totalCharges;
+            await tx.update(containers).set({
+              itemsTotal: totalItemsCost.toFixed(2),
+              chargesTotal: chargesTotal.toFixed(2),
+              grandTotal: (totalItemsCost + chargesTotal).toFixed(2)
+            }).where(eq3(containers.id, existingPO.containerId));
+          }
+          if (chargesWereEdited && existingPO.containerId) {
+            const chargeTypeMap = [
+              { field: "freight", chargeType: "Freight", amount: newFreight },
+              { field: "surcharge", chargeType: "Surcharge", amount: newSurcharge },
+              { field: "fumigation", chargeType: "Fumigation", amount: newFumigation },
+              { field: "documentCharges", chargeType: "Document Charges", amount: newDocumentCharges },
+              { field: "discount", chargeType: "Discount", amount: -newDiscount },
+              // Discount stored as negative
+              { field: "otherCharges", chargeType: "Other Charges", amount: newOtherCharges }
+            ];
+            for (const { chargeType, amount } of chargeTypeMap) {
+              const existingCharge = await tx.select().from(containerCharges).where(and3(
+                eq3(containerCharges.containerId, existingPO.containerId),
+                eq3(containerCharges.chargeType, chargeType)
+              )).limit(1);
+              if (amount === 0) {
+                if (existingCharge.length > 0) {
+                  await tx.delete(containerCharges).where(eq3(containerCharges.id, existingCharge[0].id));
+                }
+              } else {
+                if (existingCharge.length > 0) {
+                  await tx.update(containerCharges).set({ amount: amount.toFixed(2) }).where(eq3(containerCharges.id, existingCharge[0].id));
+                } else {
+                  await tx.insert(containerCharges).values({
+                    containerId: existingPO.containerId,
+                    chargeType,
+                    amount: amount.toFixed(2)
+                  });
+                }
+              }
+            }
+          }
+        });
+      } else if (chargesWereEdited && existingPO.containerId) {
+        const chargeTypeMap = [
+          { field: "freight", chargeType: "Freight", amount: newFreight },
+          { field: "surcharge", chargeType: "Surcharge", amount: newSurcharge },
+          { field: "fumigation", chargeType: "Fumigation", amount: newFumigation },
+          { field: "documentCharges", chargeType: "Document Charges", amount: newDocumentCharges },
+          { field: "discount", chargeType: "Discount", amount: -newDiscount },
+          // Discount stored as negative
+          { field: "otherCharges", chargeType: "Other Charges", amount: newOtherCharges }
+        ];
+        for (const { chargeType, amount } of chargeTypeMap) {
+          const existingCharge = await db.select().from(containerCharges).where(and3(
+            eq3(containerCharges.containerId, existingPO.containerId),
+            eq3(containerCharges.chargeType, chargeType)
+          )).limit(1);
+          if (amount === 0) {
+            if (existingCharge.length > 0) {
+              await db.delete(containerCharges).where(eq3(containerCharges.id, existingCharge[0].id));
+            }
+          } else {
+            if (existingCharge.length > 0) {
+              await db.update(containerCharges).set({ amount: amount.toFixed(2) }).where(eq3(containerCharges.id, existingCharge[0].id));
+            } else {
+              await db.insert(containerCharges).values({
+                containerId: existingPO.containerId,
+                chargeType,
+                amount: amount.toFixed(2)
+              });
+            }
+          }
+        }
+      }
       res.json(updated);
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -10248,6 +13231,138 @@ async function registerRoutes(app2) {
         await storage.deleteContainer(id);
         res.json({ message: "Container deleted successfully" });
       } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.patch(
+    "/api/containers/:id/tracking",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) {
+          return res.status(400).json({ message: "Invalid container ID" });
+        }
+        const existingContainer = await storage.getContainerById(id);
+        if (!existingContainer) {
+          return res.status(404).json({ message: "Container not found" });
+        }
+        if (existingContainer.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({
+            message: "Access denied: Container belongs to a different company"
+          });
+        }
+        const { carrier, vesselName, originPort, destinationPort, departureDate, estimatedArrival, trackingStatus, lastLocation } = req.body;
+        await db.update(containers).set({
+          carrier: carrier ?? existingContainer.carrier,
+          vesselName: vesselName ?? existingContainer.vesselName,
+          originPort: originPort ?? existingContainer.originPort,
+          destinationPort: destinationPort ?? existingContainer.destinationPort,
+          departureDate: departureDate ?? existingContainer.departureDate,
+          estimatedArrival: estimatedArrival ?? existingContainer.estimatedArrival,
+          trackingStatus: trackingStatus ?? existingContainer.trackingStatus,
+          lastLocation: lastLocation ?? existingContainer.lastLocation,
+          lastTrackingUpdate: /* @__PURE__ */ new Date()
+        }).where(eq3(containers.id, id));
+        const updatedContainer = await storage.getContainerById(id);
+        res.json(updatedContainer);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.post(
+    "/api/containers/:id/track",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) {
+          return res.status(400).json({ message: "Invalid container ID" });
+        }
+        const existingContainer = await storage.getContainerById(id);
+        if (!existingContainer) {
+          return res.status(404).json({ message: "Container not found" });
+        }
+        if (existingContainer.companyId !== req.session.currentCompanyId) {
+          return res.status(403).json({
+            message: "Access denied: Container belongs to a different company"
+          });
+        }
+        const apiKey = process.env.TRACKINGMORE_API_KEY;
+        if (!apiKey) {
+          return res.status(400).json({
+            message: "TrackingMore API key not configured. Please add TRACKINGMORE_API_KEY to your secrets."
+          });
+        }
+        const { carrier } = req.body;
+        const carrierCode = carrier || existingContainer.carrier;
+        if (!carrierCode) {
+          return res.status(400).json({
+            message: "Carrier code is required for tracking. Please update the container with a carrier."
+          });
+        }
+        const trackingNumber = existingContainer.containerNumber;
+        const response = await fetch("https://api.trackingmore.com/v4/trackings/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Tracking-Api-Key": apiKey
+          },
+          body: JSON.stringify({
+            tracking_number: trackingNumber,
+            courier_code: carrierCode
+          })
+        });
+        const data = await response.json();
+        if (data.meta?.code === 200 || data.meta?.code === 4016) {
+          const getResponse = await fetch(`https://api.trackingmore.com/v4/trackings/get?tracking_numbers=${trackingNumber}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "Tracking-Api-Key": apiKey
+            }
+          });
+          const trackingData = await getResponse.json();
+          if (trackingData.data && trackingData.data.length > 0) {
+            const tracking = trackingData.data[0];
+            const events = tracking.origin_info?.trackinfo || [];
+            const latestEvent = events[0];
+            await db.update(containers).set({
+              carrier: carrierCode,
+              trackingStatus: tracking.delivery_status || latestEvent?.checkpoint_status || "In Transit",
+              lastLocation: latestEvent?.checkpoint_delivery_substatus || latestEvent?.location || "",
+              originPort: tracking.origin_info?.origin || existingContainer.originPort,
+              destinationPort: tracking.destination_info?.destination || existingContainer.destinationPort,
+              estimatedArrival: tracking.destination_info?.arrival_time || existingContainer.estimatedArrival,
+              trackingEvents: JSON.stringify(events.slice(0, 20)),
+              lastTrackingUpdate: /* @__PURE__ */ new Date()
+            }).where(eq3(containers.id, id));
+            const updatedContainer = await storage.getContainerById(id);
+            res.json({
+              success: true,
+              container: updatedContainer,
+              trackingData: tracking
+            });
+          } else {
+            res.json({
+              success: true,
+              message: "Tracking created but no data available yet. Try again later.",
+              container: existingContainer
+            });
+          }
+        } else {
+          res.status(400).json({
+            success: false,
+            message: data.meta?.message || "Failed to fetch tracking data",
+            details: data
+          });
+        }
+      } catch (error) {
+        console.error("Tracking API error:", error);
         res.status(500).json({ message: error.message });
       }
     }
@@ -10356,9 +13471,9 @@ async function registerRoutes(app2) {
         });
       }
       const allVouchers = await db.select().from(vouchers).where(
-        and2(
-          eq2(vouchers.companyId, req.session.currentCompanyId),
-          eq2(vouchers.voucherType, "Sales")
+        and3(
+          eq3(vouchers.companyId, req.session.currentCompanyId),
+          eq3(vouchers.voucherType, "Sales")
         )
       ).execute();
       if (allVouchers.length === 0) {
@@ -10394,7 +13509,7 @@ async function registerRoutes(app2) {
       let skippedCount = 0;
       for (const voucher of vouchersNeedingBackfill) {
         await db.transaction(async (tx) => {
-          const items = await tx.select().from(salesItems).where(eq2(salesItems.voucherId, voucher.id)).execute();
+          const items = await tx.select().from(salesItems).where(eq3(salesItems.voucherId, voucher.id)).execute();
           if (items.length === 0) {
             console.warn(`No sales items found for voucher ${voucher.id}, skipping`);
             skippedCount++;
@@ -10407,13 +13522,13 @@ async function registerRoutes(app2) {
             return;
           }
           const firstItem = items[0];
-          const stockItem = await tx.select().from(stockItems).where(eq2(stockItems.id, firstItem.stockItemId)).limit(1);
+          const stockItem = await tx.select().from(stockItems).where(eq3(stockItems.id, firstItem.stockItemId)).limit(1);
           if (stockItem.length === 0) {
             console.warn(`Could not find stock item ${firstItem.stockItemId} for voucher ${voucher.id}, skipping`);
             skippedCount++;
             return;
           }
-          const inventoryRecords = await tx.select().from(inventory).where(eq2(inventory.stockItemId, stockItem[0].id)).limit(1);
+          const inventoryRecords = await tx.select().from(inventory).where(eq3(inventory.stockItemId, stockItem[0].id)).limit(1);
           if (inventoryRecords.length === 0) {
             console.warn(`Could not determine location for voucher ${voucher.id}, skipping`);
             skippedCount++;
@@ -10426,7 +13541,7 @@ async function registerRoutes(app2) {
             skippedCount++;
             return;
           }
-          await tx.delete(voucherEntries).where(eq2(voucherEntries.voucherId, voucher.id));
+          await tx.delete(voucherEntries).where(eq3(voucherEntries.voucherId, voucher.id));
           await tx.insert(voucherEntries).values({
             voucherId: voucher.id,
             ledgerAccountId: cashAccountId,
@@ -10465,13 +13580,12 @@ async function registerRoutes(app2) {
       const banks = await storage.getAllBankAccounts(companyId);
       const assets = await storage.getAllFixedAssets(companyId);
       const suppliers2 = await storage.getAllSuppliers();
-      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and2(eq2(vouchers.companyId, companyId), eq2(vouchers.optional, false))).execute();
+      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false), isNull3(vouchers.deletedAt))).execute();
       const companyVoucherIds = companyVouchers.map((v) => v.id);
       const allEntries = companyVoucherIds.length > 0 ? await db.select().from(voucherEntries).where(inArray2(voucherEntries.voucherId, companyVoucherIds)).execute() : [];
       const ledgerBalances = /* @__PURE__ */ new Map();
       const bankBalances = /* @__PURE__ */ new Map();
       const assetBalances = /* @__PURE__ */ new Map();
-      const supplierBalances = /* @__PURE__ */ new Map();
       for (const entry of allEntries) {
         const debit = parseFloat(entry.debitAmount || "0");
         const credit = parseFloat(entry.creditAmount || "0");
@@ -10504,23 +13618,6 @@ async function registerRoutes(app2) {
             debits: existing.debits + debit,
             credits: existing.credits + credit
           });
-        }
-        if (entry.supplierId) {
-          const existing = supplierBalances.get(entry.supplierId) || {
-            debits: 0,
-            credits: 0
-          };
-          if (credit > 0 && debit === 0) {
-            supplierBalances.set(entry.supplierId, {
-              debits: existing.debits,
-              credits: existing.credits + credit
-            });
-          } else if (debit > 0 && credit === 0) {
-            supplierBalances.set(entry.supplierId, {
-              debits: existing.debits + debit,
-              credits: existing.credits
-            });
-          }
         }
       }
       const calculateBalance = (openingBalance, openingBalanceSide, debits, credits) => {
@@ -10612,23 +13709,31 @@ async function registerRoutes(app2) {
             active: asset.active,
             parentId: null
           };
-        }),
-        ...suppliers2.map((supplier) => {
-          const movements = supplierBalances.get(supplier.id) || {
-            debits: 0,
-            credits: 0
-          };
+        })
+      ];
+      const supplierAccountsList = await Promise.all(
+        suppliers2.map(async (supplier) => {
+          const entries = await storage.getVoucherEntriesBySupplier(supplier.id);
           const openingBalance = parseFloat(supplier.openingBalance || "0");
-          const calculatedBalance = openingBalance + movements.credits - movements.debits;
+          const calculatedBalance = entries.reduce((sum, entry) => {
+            const credit = parseFloat(entry.creditAmount || "0");
+            const debit = parseFloat(entry.debitAmount || "0");
+            if (credit > 0 && debit === 0) {
+              return sum + credit;
+            } else if (debit > 0 && credit === 0) {
+              return sum - debit;
+            }
+            return sum;
+          }, openingBalance);
           const balanceSide = calculatedBalance >= 0 ? "Cr" : "Dr";
-          const absoluteBalance = Math.abs(calculatedBalance);
           return {
             id: `supplier-${supplier.id}`,
             accountId: supplier.id,
             type: "supplier",
             code: supplier.code,
             name: supplier.legalName,
-            balance: absoluteBalance.toFixed(2),
+            balance: calculatedBalance.toFixed(2),
+            // Signed value, not absolute
             balanceSide,
             openingBalance,
             openingBalanceSide: "Cr",
@@ -10637,8 +13742,9 @@ async function registerRoutes(app2) {
             parentId: null
           };
         })
-      ];
-      res.json(accounts);
+      );
+      const allAccounts = [...accounts, ...supplierAccountsList];
+      res.json(allAccounts);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -10672,7 +13778,7 @@ async function registerRoutes(app2) {
       const assets = await storage.getAllFixedAssets(companyId);
       const suppliers2 = await storage.getAllSuppliers();
       const employeesData = await storage.getAllEmployees(companyId);
-      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and2(eq2(vouchers.companyId, companyId), eq2(vouchers.optional, false))).execute();
+      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false), isNull3(vouchers.deletedAt))).execute();
       const companyVoucherIds = companyVouchers.map((v) => v.id);
       const allEntries = companyVoucherIds.length > 0 ? await db.select().from(voucherEntries).where(inArray2(voucherEntries.voucherId, companyVoucherIds)).execute() : [];
       const ledgerBalances = /* @__PURE__ */ new Map();
@@ -11115,9 +14221,9 @@ async function registerRoutes(app2) {
           }
         } catch (error) {
           if (createdVoucher?.id) {
-            await db.delete(voucherEntries).where(eq2(voucherEntries.voucherId, createdVoucher.id)).catch(() => {
+            await db.delete(voucherEntries).where(eq3(voucherEntries.voucherId, createdVoucher.id)).catch(() => {
             });
-            await db.delete(vouchers).where(eq2(vouchers.id, createdVoucher.id)).catch(() => {
+            await db.delete(vouchers).where(eq3(vouchers.id, createdVoucher.id)).catch(() => {
             });
           }
           throw error;
@@ -11293,22 +14399,22 @@ async function registerRoutes(app2) {
         }
         const total = entries.reduce((sum, entry) => sum + parseFloat(entry.amount || "0"), 0);
         const result = await db.transaction(async (tx) => {
-          const [existingVoucher] = await tx.select().from(vouchers).where(eq2(vouchers.id, voucherId));
+          const [existingVoucher] = await tx.select().from(vouchers).where(eq3(vouchers.id, voucherId));
           if (!existingVoucher) {
             throw new Error("Voucher not found");
           }
           if (existingVoucher.companyId !== req.session.currentCompanyId) {
             throw new Error("Access denied: Voucher belongs to a different company");
           }
-          const oldEntries = await tx.select().from(voucherEntries).where(eq2(voucherEntries.voucherId, voucherId));
+          const oldEntries = await tx.select().from(voucherEntries).where(eq3(voucherEntries.voucherId, voucherId));
           const [updatedVoucher] = await tx.update(vouchers).set({
             voucherType,
             voucherDate,
             description: notes || null,
             totalAmount: total.toFixed(2),
             optional: optional ?? false
-          }).where(eq2(vouchers.id, voucherId)).returning();
-          await tx.delete(voucherEntries).where(eq2(voucherEntries.voucherId, voucherId));
+          }).where(eq3(vouchers.id, voucherId)).returning();
+          await tx.delete(voucherEntries).where(eq3(voucherEntries.voucherId, voucherId));
           const voucherEntriesToCreate = [];
           for (const entry of entries) {
             const amount = entry.amount;
@@ -11527,21 +14633,21 @@ async function registerRoutes(app2) {
           return res.status(400).json({ message: "Total debits must equal total credits" });
         }
         const result = await db.transaction(async (tx) => {
-          const [existingVoucher] = await tx.select().from(vouchers).where(eq2(vouchers.id, voucherId));
+          const [existingVoucher] = await tx.select().from(vouchers).where(eq3(vouchers.id, voucherId));
           if (!existingVoucher) {
             throw new Error("Voucher not found");
           }
           if (existingVoucher.companyId !== req.session.currentCompanyId) {
             throw new Error("Access denied: Voucher belongs to a different company");
           }
-          const oldEntries = await tx.select().from(voucherEntries).where(eq2(voucherEntries.voucherId, voucherId));
+          const oldEntries = await tx.select().from(voucherEntries).where(eq3(voucherEntries.voucherId, voucherId));
           const [updatedVoucher] = await tx.update(vouchers).set({
             voucherDate,
             description: notes || null,
             totalAmount: Math.max(totalDebits, totalCredits).toFixed(2),
             optional: optional ?? false
-          }).where(eq2(vouchers.id, voucherId)).returning();
-          await tx.delete(voucherEntries).where(eq2(voucherEntries.voucherId, voucherId));
+          }).where(eq3(vouchers.id, voucherId)).returning();
+          await tx.delete(voucherEntries).where(eq3(voucherEntries.voucherId, voucherId));
           const voucherEntriesToCreate = [];
           for (const entry of entries) {
             const amount = entry.amount;
@@ -11630,7 +14736,7 @@ async function registerRoutes(app2) {
       }
       let salesItemsList = null;
       if (voucher.voucherType === "Sales") {
-        const items = await db.select().from(salesItems).where(eq2(salesItems.voucherId, id));
+        const items = await db.select().from(salesItems).where(eq3(salesItems.voucherId, id));
         if (items.length > 0) {
           const itemsWithDetails = await Promise.all(
             items.map(async (item) => {
@@ -11650,9 +14756,9 @@ async function registerRoutes(app2) {
       }
       let adjustmentData = null;
       if (voucher.voucherType === "Consumption" || voucher.voucherType === "Mixed" || voucher.voucherType === "Production") {
-        const adjustment = await db.select().from(stockAdjustmentVouchers).where(eq2(stockAdjustmentVouchers.voucherId, id)).limit(1);
+        const adjustment = await db.select().from(stockAdjustmentVouchers).where(eq3(stockAdjustmentVouchers.voucherId, id)).limit(1);
         if (adjustment.length > 0) {
-          const items = await db.select().from(stockAdjustmentItems).where(eq2(stockAdjustmentItems.adjustmentId, adjustment[0].id));
+          const items = await db.select().from(stockAdjustmentItems).where(eq3(stockAdjustmentItems.adjustmentId, adjustment[0].id));
           const itemsWithDetails = await Promise.all(
             items.map(async (item) => {
               const stockItem = await storage.getStockItemById(
@@ -11693,9 +14799,9 @@ async function registerRoutes(app2) {
       }
       let transferData = null;
       if (voucher.voucherType === "Stock Transfer") {
-        const transfer = await db.select().from(stockTransferVouchers).where(eq2(stockTransferVouchers.voucherId, id)).limit(1);
+        const transfer = await db.select().from(stockTransferVouchers).where(eq3(stockTransferVouchers.voucherId, id)).limit(1);
         if (transfer.length > 0) {
-          const items = await db.select().from(stockTransferItems).where(eq2(stockTransferItems.transferId, transfer[0].id));
+          const items = await db.select().from(stockTransferItems).where(eq3(stockTransferItems.transferId, transfer[0].id));
           const itemsWithDetails = await Promise.all(
             items.map(async (item) => {
               const stockItem = await storage.getStockItemById(
@@ -11796,11 +14902,11 @@ async function registerRoutes(app2) {
           if (req.body.optional !== void 0 && existingVoucher.optional !== req.body.optional) {
             const wasOptional2 = existingVoucher.optional;
             const willBeOptional = req.body.optional;
-            const hasStockTransfer = await tx.select().from(stockTransferVouchers).where(eq2(stockTransferVouchers.voucherId, id)).limit(1);
-            const hasStockAdjustment = await tx.select().from(stockAdjustmentVouchers).where(eq2(stockAdjustmentVouchers.voucherId, id)).limit(1);
+            const hasStockTransfer = await tx.select().from(stockTransferVouchers).where(eq3(stockTransferVouchers.voucherId, id)).limit(1);
+            const hasStockAdjustment = await tx.select().from(stockAdjustmentVouchers).where(eq3(stockAdjustmentVouchers.voucherId, id)).limit(1);
             if (hasStockTransfer.length > 0) {
               const transfer = hasStockTransfer[0];
-              const items = await tx.select().from(stockTransferItems).where(eq2(stockTransferItems.transferId, transfer.id));
+              const items = await tx.select().from(stockTransferItems).where(eq3(stockTransferItems.transferId, transfer.id));
               const itemsWithoutSource = items.filter((item) => !item.sourceLocationId);
               if (itemsWithoutSource.length > 0) {
                 throw new Error(`Cannot toggle optional status: This stock transfer has ${itemsWithoutSource.length} items missing source location data.`);
@@ -11810,26 +14916,26 @@ async function registerRoutes(app2) {
                 const rate = parseFloat(item.rate);
                 const totalAmount = quantity * rate;
                 if (willBeOptional) {
-                  const [sourceInv] = await tx.select().from(inventory).where(and2(
-                    eq2(inventory.locationId, item.sourceLocationId),
-                    eq2(inventory.stockItemId, item.stockItemId)
+                  const [sourceInv] = await tx.select().from(inventory).where(and3(
+                    eq3(inventory.locationId, item.sourceLocationId),
+                    eq3(inventory.stockItemId, item.stockItemId)
                   ));
                   if (sourceInv) {
                     const currentQty = parseFloat(sourceInv.quantity);
-                    const currentValue = parseFloat(sourceInv.totalValue);
+                    const currentRate = parseFloat(sourceInv.averageRate || "0");
                     const newQty = currentQty + quantity;
-                    const newValue = currentValue + totalAmount;
-                    const newRate = newQty > 0 ? newValue / newQty : 0;
+                    const newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+                    const newValue = newQty * newRate;
                     await tx.update(inventory).set({
                       quantity: newQty.toFixed(3),
                       averageRate: newRate.toFixed(2),
                       totalValue: newValue.toFixed(2),
                       lastUpdated: /* @__PURE__ */ new Date()
-                    }).where(eq2(inventory.id, sourceInv.id));
+                    }).where(eq3(inventory.id, sourceInv.id));
                   }
-                  const [destInv] = await tx.select().from(inventory).where(and2(
-                    eq2(inventory.locationId, transfer.destinationLocationId),
-                    eq2(inventory.stockItemId, item.stockItemId)
+                  const [destInv] = await tx.select().from(inventory).where(and3(
+                    eq3(inventory.locationId, transfer.destinationLocationId),
+                    eq3(inventory.stockItemId, item.stockItemId)
                   ));
                   if (destInv) {
                     const currentQty = parseFloat(destInv.quantity);
@@ -11841,12 +14947,12 @@ async function registerRoutes(app2) {
                       averageRate: currentRate.toFixed(2),
                       totalValue: newValue.toFixed(2),
                       lastUpdated: /* @__PURE__ */ new Date()
-                    }).where(eq2(inventory.id, destInv.id));
+                    }).where(eq3(inventory.id, destInv.id));
                   }
                 } else {
-                  const [sourceInv] = await tx.select().from(inventory).where(and2(
-                    eq2(inventory.locationId, item.sourceLocationId),
-                    eq2(inventory.stockItemId, item.stockItemId)
+                  const [sourceInv] = await tx.select().from(inventory).where(and3(
+                    eq3(inventory.locationId, item.sourceLocationId),
+                    eq3(inventory.stockItemId, item.stockItemId)
                   ));
                   if (sourceInv) {
                     const currentQty = parseFloat(sourceInv.quantity);
@@ -11858,26 +14964,26 @@ async function registerRoutes(app2) {
                       averageRate: currentRate.toFixed(2),
                       totalValue: newValue.toFixed(2),
                       lastUpdated: /* @__PURE__ */ new Date()
-                    }).where(eq2(inventory.id, sourceInv.id));
+                    }).where(eq3(inventory.id, sourceInv.id));
                   }
-                  const [destInv] = await tx.select().from(inventory).where(and2(
-                    eq2(inventory.locationId, transfer.destinationLocationId),
-                    eq2(inventory.stockItemId, item.stockItemId)
+                  const [destInv] = await tx.select().from(inventory).where(and3(
+                    eq3(inventory.locationId, transfer.destinationLocationId),
+                    eq3(inventory.stockItemId, item.stockItemId)
                   ));
                   if (destInv) {
                     const currentQty = parseFloat(destInv.quantity);
-                    const currentValue = parseFloat(destInv.totalValue);
+                    const currentRate = parseFloat(destInv.averageRate || "0");
                     const newQty = currentQty + quantity;
-                    const newValue = currentValue + totalAmount;
-                    const newRate = newQty > 0 ? newValue / newQty : 0;
+                    const newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+                    const newValue = newQty * newRate;
                     await tx.update(inventory).set({
                       quantity: newQty.toFixed(3),
                       averageRate: newRate.toFixed(2),
                       totalValue: newValue.toFixed(2),
                       lastUpdated: /* @__PURE__ */ new Date()
-                    }).where(eq2(inventory.id, destInv.id));
+                    }).where(eq3(inventory.id, destInv.id));
                   } else {
-                    const [destLocation] = await tx.select().from(locations).where(eq2(locations.id, transfer.destinationLocationId));
+                    const [destLocation] = await tx.select().from(locations).where(eq3(locations.id, transfer.destinationLocationId));
                     if (destLocation) {
                       await tx.insert(inventory).values({
                         companyId: destLocation.companyId,
@@ -11895,19 +15001,18 @@ async function registerRoutes(app2) {
             }
             if (hasStockAdjustment.length > 0) {
               const adjustment = hasStockAdjustment[0];
-              const items = await tx.select().from(stockAdjustmentItems).where(eq2(stockAdjustmentItems.adjustmentId, adjustment.id));
+              const items = await tx.select().from(stockAdjustmentItems).where(eq3(stockAdjustmentItems.adjustmentId, adjustment.id));
               for (const item of items) {
                 const quantity = parseFloat(item.quantity);
                 const rate = parseFloat(item.rate);
                 const totalAmount = Math.abs(quantity) * rate;
-                const [currentInv] = await tx.select().from(inventory).where(and2(
-                  eq2(inventory.locationId, adjustment.locationId),
-                  eq2(inventory.stockItemId, item.stockItemId)
+                const [currentInv] = await tx.select().from(inventory).where(and3(
+                  eq3(inventory.locationId, adjustment.locationId),
+                  eq3(inventory.stockItemId, item.stockItemId)
                 ));
                 if (currentInv) {
                   const currentQty = parseFloat(currentInv.quantity);
-                  const currentValue = parseFloat(currentInv.totalValue);
-                  const currentRate = parseFloat(currentInv.averageRate);
+                  const currentRate = parseFloat(currentInv.averageRate || "0");
                   let newQty;
                   let newValue;
                   let newRate;
@@ -11918,14 +15023,14 @@ async function registerRoutes(app2) {
                       newRate = currentRate;
                     } else {
                       newQty = currentQty + Math.abs(quantity);
-                      newValue = currentValue + totalAmount;
-                      newRate = newQty > 0 ? newValue / newQty : 0;
+                      newRate = newQty > 0 ? (currentQty * currentRate + Math.abs(quantity) * rate) / newQty : 0;
+                      newValue = newQty * newRate;
                     }
                   } else {
                     if (adjustment.adjustmentType === "Production") {
                       newQty = currentQty + quantity;
-                      newValue = currentValue + totalAmount;
-                      newRate = newQty > 0 ? newValue / newQty : 0;
+                      newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+                      newValue = newQty * newRate;
                     } else {
                       newQty = currentQty - Math.abs(quantity);
                       newValue = newQty > 0 ? newQty * currentRate : 0;
@@ -11937,9 +15042,9 @@ async function registerRoutes(app2) {
                     averageRate: newRate.toFixed(2),
                     totalValue: newValue.toFixed(2),
                     lastUpdated: /* @__PURE__ */ new Date()
-                  }).where(eq2(inventory.id, currentInv.id));
+                  }).where(eq3(inventory.id, currentInv.id));
                 } else if (!willBeOptional && adjustment.adjustmentType === "Production") {
-                  const [loc] = await tx.select().from(locations).where(eq2(locations.id, adjustment.locationId));
+                  const [loc] = await tx.select().from(locations).where(eq3(locations.id, adjustment.locationId));
                   if (loc) {
                     await tx.insert(inventory).values({
                       companyId: loc.companyId,
@@ -11955,8 +15060,8 @@ async function registerRoutes(app2) {
               }
             }
           }
-          await tx.update(vouchers).set(voucherUpdates).where(eq2(vouchers.id, id));
-          await tx.delete(voucherEntries).where(eq2(voucherEntries.voucherId, id));
+          await tx.update(vouchers).set(voucherUpdates).where(eq3(vouchers.id, id));
+          await tx.delete(voucherEntries).where(eq3(voucherEntries.voucherId, id));
           if (req.body.entries && Array.isArray(req.body.entries)) {
             for (const entry of req.body.entries) {
               await tx.insert(voucherEntries).values({
@@ -12044,12 +15149,12 @@ async function registerRoutes(app2) {
         const wasOptional = existingVoucher.optional;
         const willBeOptional = optional;
         await db.transaction(async (tx) => {
-          const hasStockTransfer = await tx.select().from(stockTransferVouchers).where(eq2(stockTransferVouchers.voucherId, id)).limit(1);
-          const hasStockAdjustment = await tx.select().from(stockAdjustmentVouchers).where(eq2(stockAdjustmentVouchers.voucherId, id)).limit(1);
+          const hasStockTransfer = await tx.select().from(stockTransferVouchers).where(eq3(stockTransferVouchers.voucherId, id)).limit(1);
+          const hasStockAdjustment = await tx.select().from(stockAdjustmentVouchers).where(eq3(stockAdjustmentVouchers.voucherId, id)).limit(1);
           if (wasOptional !== willBeOptional) {
             if (hasStockTransfer.length > 0) {
               const transfer = hasStockTransfer[0];
-              const items = await tx.select().from(stockTransferItems).where(eq2(stockTransferItems.transferId, transfer.id));
+              const items = await tx.select().from(stockTransferItems).where(eq3(stockTransferItems.transferId, transfer.id));
               const itemsWithoutSource = items.filter((item) => !item.sourceLocationId);
               if (itemsWithoutSource.length > 0) {
                 throw new ValidationError(`Cannot toggle optional status: This stock transfer has ${itemsWithoutSource.length} items missing source location data. It was created before per-item source locations were tracked.`);
@@ -12059,26 +15164,26 @@ async function registerRoutes(app2) {
                 const rate = parseFloat(item.rate);
                 const totalAmount = quantity * rate;
                 if (willBeOptional) {
-                  const [sourceInv] = await tx.select().from(inventory).where(and2(
-                    eq2(inventory.locationId, item.sourceLocationId),
-                    eq2(inventory.stockItemId, item.stockItemId)
+                  const [sourceInv] = await tx.select().from(inventory).where(and3(
+                    eq3(inventory.locationId, item.sourceLocationId),
+                    eq3(inventory.stockItemId, item.stockItemId)
                   ));
                   if (sourceInv) {
                     const currentQty = parseFloat(sourceInv.quantity);
-                    const currentValue = parseFloat(sourceInv.totalValue);
+                    const currentRate = parseFloat(sourceInv.averageRate || "0");
                     const newQty = currentQty + quantity;
-                    const newValue = currentValue + totalAmount;
-                    const newRate = newQty > 0 ? newValue / newQty : 0;
+                    const newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+                    const newValue = newQty * newRate;
                     await tx.update(inventory).set({
                       quantity: newQty.toFixed(3),
                       averageRate: newRate.toFixed(2),
                       totalValue: newValue.toFixed(2),
                       lastUpdated: /* @__PURE__ */ new Date()
-                    }).where(eq2(inventory.id, sourceInv.id));
+                    }).where(eq3(inventory.id, sourceInv.id));
                   }
-                  const [destInv] = await tx.select().from(inventory).where(and2(
-                    eq2(inventory.locationId, transfer.destinationLocationId),
-                    eq2(inventory.stockItemId, item.stockItemId)
+                  const [destInv] = await tx.select().from(inventory).where(and3(
+                    eq3(inventory.locationId, transfer.destinationLocationId),
+                    eq3(inventory.stockItemId, item.stockItemId)
                   ));
                   if (destInv) {
                     const currentQty = parseFloat(destInv.quantity);
@@ -12090,12 +15195,12 @@ async function registerRoutes(app2) {
                       averageRate: currentRate.toFixed(2),
                       totalValue: newValue.toFixed(2),
                       lastUpdated: /* @__PURE__ */ new Date()
-                    }).where(eq2(inventory.id, destInv.id));
+                    }).where(eq3(inventory.id, destInv.id));
                   }
                 } else {
-                  const [sourceInv] = await tx.select().from(inventory).where(and2(
-                    eq2(inventory.locationId, item.sourceLocationId),
-                    eq2(inventory.stockItemId, item.stockItemId)
+                  const [sourceInv] = await tx.select().from(inventory).where(and3(
+                    eq3(inventory.locationId, item.sourceLocationId),
+                    eq3(inventory.stockItemId, item.stockItemId)
                   ));
                   if (sourceInv) {
                     const currentQty = parseFloat(sourceInv.quantity);
@@ -12107,26 +15212,26 @@ async function registerRoutes(app2) {
                       averageRate: currentRate.toFixed(2),
                       totalValue: newValue.toFixed(2),
                       lastUpdated: /* @__PURE__ */ new Date()
-                    }).where(eq2(inventory.id, sourceInv.id));
+                    }).where(eq3(inventory.id, sourceInv.id));
                   }
-                  const [destInv] = await tx.select().from(inventory).where(and2(
-                    eq2(inventory.locationId, transfer.destinationLocationId),
-                    eq2(inventory.stockItemId, item.stockItemId)
+                  const [destInv] = await tx.select().from(inventory).where(and3(
+                    eq3(inventory.locationId, transfer.destinationLocationId),
+                    eq3(inventory.stockItemId, item.stockItemId)
                   ));
                   if (destInv) {
                     const currentQty = parseFloat(destInv.quantity);
-                    const currentValue = parseFloat(destInv.totalValue);
+                    const currentRate = parseFloat(destInv.averageRate || "0");
                     const newQty = currentQty + quantity;
-                    const newValue = currentValue + totalAmount;
-                    const newRate = newQty > 0 ? newValue / newQty : 0;
+                    const newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+                    const newValue = newQty * newRate;
                     await tx.update(inventory).set({
                       quantity: newQty.toFixed(3),
                       averageRate: newRate.toFixed(2),
                       totalValue: newValue.toFixed(2),
                       lastUpdated: /* @__PURE__ */ new Date()
-                    }).where(eq2(inventory.id, destInv.id));
+                    }).where(eq3(inventory.id, destInv.id));
                   } else {
-                    const [destLocation] = await tx.select().from(locations).where(eq2(locations.id, transfer.destinationLocationId));
+                    const [destLocation] = await tx.select().from(locations).where(eq3(locations.id, transfer.destinationLocationId));
                     if (destLocation) {
                       await tx.insert(inventory).values({
                         companyId: destLocation.companyId,
@@ -12144,19 +15249,18 @@ async function registerRoutes(app2) {
             }
             if (hasStockAdjustment.length > 0) {
               const adjustment = hasStockAdjustment[0];
-              const items = await tx.select().from(stockAdjustmentItems).where(eq2(stockAdjustmentItems.adjustmentId, adjustment.id));
+              const items = await tx.select().from(stockAdjustmentItems).where(eq3(stockAdjustmentItems.adjustmentId, adjustment.id));
               for (const item of items) {
                 const quantity = parseFloat(item.quantity);
                 const rate = parseFloat(item.rate);
                 const totalAmount = Math.abs(quantity) * rate;
-                const [currentInv] = await tx.select().from(inventory).where(and2(
-                  eq2(inventory.locationId, adjustment.locationId),
-                  eq2(inventory.stockItemId, item.stockItemId)
+                const [currentInv] = await tx.select().from(inventory).where(and3(
+                  eq3(inventory.locationId, adjustment.locationId),
+                  eq3(inventory.stockItemId, item.stockItemId)
                 ));
                 if (currentInv) {
                   const currentQty = parseFloat(currentInv.quantity);
-                  const currentValue = parseFloat(currentInv.totalValue);
-                  const currentRate = parseFloat(currentInv.averageRate);
+                  const currentRate = parseFloat(currentInv.averageRate || "0");
                   let newQty;
                   let newValue;
                   let newRate;
@@ -12167,14 +15271,14 @@ async function registerRoutes(app2) {
                       newRate = currentRate;
                     } else {
                       newQty = currentQty + Math.abs(quantity);
-                      newValue = currentValue + totalAmount;
-                      newRate = newQty > 0 ? newValue / newQty : 0;
+                      newRate = newQty > 0 ? (currentQty * currentRate + Math.abs(quantity) * rate) / newQty : 0;
+                      newValue = newQty * newRate;
                     }
                   } else {
                     if (adjustment.adjustmentType === "Production") {
                       newQty = currentQty + quantity;
-                      newValue = currentValue + totalAmount;
-                      newRate = newQty > 0 ? newValue / newQty : 0;
+                      newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+                      newValue = newQty * newRate;
                     } else {
                       newQty = currentQty - Math.abs(quantity);
                       newValue = newQty > 0 ? newQty * currentRate : 0;
@@ -12186,9 +15290,9 @@ async function registerRoutes(app2) {
                     averageRate: newRate.toFixed(2),
                     totalValue: newValue.toFixed(2),
                     lastUpdated: /* @__PURE__ */ new Date()
-                  }).where(eq2(inventory.id, currentInv.id));
+                  }).where(eq3(inventory.id, currentInv.id));
                 } else if (!willBeOptional && adjustment.adjustmentType === "Production") {
-                  const [loc] = await tx.select().from(locations).where(eq2(locations.id, adjustment.locationId));
+                  const [loc] = await tx.select().from(locations).where(eq3(locations.id, adjustment.locationId));
                   if (loc) {
                     await tx.insert(inventory).values({
                       companyId: loc.companyId,
@@ -12204,7 +15308,7 @@ async function registerRoutes(app2) {
               }
             }
           }
-          await tx.update(vouchers).set({ optional }).where(eq2(vouchers.id, id));
+          await tx.update(vouchers).set({ optional }).where(eq3(vouchers.id, id));
         });
         if (wasOptional !== willBeOptional && req.session.currentCompanyId) {
           const entries = await storage.getVoucherEntriesByVoucher(id);
@@ -12305,7 +15409,7 @@ async function registerRoutes(app2) {
         if (isNaN(parsedLocationId) || parsedLocationId <= 0) {
           return res.status(400).json({ message: "Invalid location ID" });
         }
-        const [targetLocation] = await db.select().from(locations).where(eq2(locations.id, parsedLocationId));
+        const [targetLocation] = await db.select().from(locations).where(eq3(locations.id, parsedLocationId));
         if (!targetLocation) {
           return res.status(404).json({ message: "Location not found" });
         }
@@ -12345,15 +15449,15 @@ async function registerRoutes(app2) {
           profit: profit.toFixed(2)
         };
       });
-      const oldSalesItems = await db.select().from(salesItems).where(eq2(salesItems.voucherId, id));
+      const oldSalesItems = await db.select().from(salesItems).where(eq3(salesItems.voucherId, id));
       if (existingVoucher.locationId) {
         for (const oldItem of oldSalesItems) {
           const quantity = parseFloat(oldItem.quantity);
           const costPrice = parseFloat(oldItem.costPrice);
           const [currentInventory] = await db.select().from(inventory).where(
-            and2(
-              eq2(inventory.locationId, existingVoucher.locationId),
-              eq2(inventory.stockItemId, oldItem.stockItemId)
+            and3(
+              eq3(inventory.locationId, existingVoucher.locationId),
+              eq3(inventory.stockItemId, oldItem.stockItemId)
             )
           );
           if (currentInventory) {
@@ -12365,7 +15469,7 @@ async function registerRoutes(app2) {
               quantity: newQuantity.toFixed(3),
               averageRate: newAverageRate.toFixed(2),
               totalValue: newTotalValue.toFixed(2)
-            }).where(eq2(inventory.id, currentInventory.id));
+            }).where(eq3(inventory.id, currentInventory.id));
           } else {
             await db.insert(inventory).values({
               companyId: existingVoucher.companyId,
@@ -12378,16 +15482,16 @@ async function registerRoutes(app2) {
           }
         }
       }
-      await db.delete(salesItems).where(eq2(salesItems.voucherId, id));
+      await db.delete(salesItems).where(eq3(salesItems.voucherId, id));
       const targetLocationId = validatedLocationId !== null ? validatedLocationId : existingVoucher.locationId;
       if (targetLocationId) {
         for (const newItem of salesItemsData) {
           const quantity = parseFloat(newItem.quantity);
           const costPrice = parseFloat(newItem.costPrice);
           const [currentInventory] = await db.select().from(inventory).where(
-            and2(
-              eq2(inventory.locationId, targetLocationId),
-              eq2(inventory.stockItemId, newItem.stockItemId)
+            and3(
+              eq3(inventory.locationId, targetLocationId),
+              eq3(inventory.stockItemId, newItem.stockItemId)
             )
           );
           if (currentInventory) {
@@ -12405,7 +15509,7 @@ async function registerRoutes(app2) {
               quantity: newQuantity.toFixed(3),
               averageRate: newAverageRate.toFixed(2),
               totalValue: newTotalValue.toFixed(2)
-            }).where(eq2(inventory.id, currentInventory.id));
+            }).where(eq3(inventory.id, currentInventory.id));
           }
         }
       }
@@ -12414,7 +15518,7 @@ async function registerRoutes(app2) {
       let finalPaymentAccountType = paymentAccountType;
       let finalIsCreditSale = isCreditSale;
       if (!finalPaymentAccountId || !finalPaymentAccountType) {
-        const existingEntries = await db.select().from(voucherEntries).where(eq2(voucherEntries.voucherId, id));
+        const existingEntries = await db.select().from(voucherEntries).where(eq3(voucherEntries.voucherId, id));
         const debitEntries = existingEntries.filter(
           (entry) => parseFloat(entry.debitAmount || "0") > 0
         );
@@ -12428,7 +15532,7 @@ async function registerRoutes(app2) {
         } else {
           for (const entry of debitEntries) {
             if (entry.ledgerAccountId) {
-              const [ledgerAccount] = await db.select().from(ledgerAccounts).where(eq2(ledgerAccounts.id, entry.ledgerAccountId)).limit(1);
+              const [ledgerAccount] = await db.select().from(ledgerAccounts).where(eq3(ledgerAccounts.id, entry.ledgerAccountId)).limit(1);
               if (ledgerAccount) {
                 if (ledgerAccount.accountType === "Cash") {
                   finalPaymentAccountId = String(entry.ledgerAccountId);
@@ -12449,7 +15553,7 @@ async function registerRoutes(app2) {
         }
       }
       if (finalPaymentAccountId && finalPaymentAccountType) {
-        await db.delete(voucherEntries).where(eq2(voucherEntries.voucherId, id));
+        await db.delete(voucherEntries).where(eq3(voucherEntries.voucherId, id));
         const accountId = parseInt(finalPaymentAccountId);
         const accountType = finalPaymentAccountType;
         const debitEntry = {
@@ -12500,7 +15604,7 @@ async function registerRoutes(app2) {
           voucherUpdates.locationName = location.name;
         }
       }
-      const updated = await db.update(vouchers).set(voucherUpdates).where(eq2(vouchers.id, id)).returning();
+      const updated = await db.update(vouchers).set(voucherUpdates).where(eq3(vouchers.id, id)).returning();
       res.json(updated[0]);
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -12549,7 +15653,7 @@ async function registerRoutes(app2) {
             return res.status(403).json({ message: "Insufficient permissions to edit vouchers" });
           }
         }
-        const [po] = await db.select().from(purchaseOrders).where(eq2(purchaseOrders.voucherId, id)).limit(1);
+        const [po] = await db.select().from(purchaseOrders).where(eq3(purchaseOrders.voucherId, id)).limit(1);
         if (!po) {
           return res.status(404).json({ message: "Associated purchase order not found" });
         }
@@ -12570,10 +15674,10 @@ async function registerRoutes(app2) {
             lineTotal: lineTotal.toFixed(2)
           };
         });
-        await db.delete(poLineItems).where(eq2(poLineItems.poId, po.id));
+        await db.delete(poLineItems).where(eq3(poLineItems.poId, po.id));
         await db.insert(poLineItems).values(poItemsData);
-        await db.update(purchaseOrders).set({ itemsTotal: totalAmount.toFixed(2) }).where(eq2(purchaseOrders.id, po.id));
-        const [container] = await db.select().from(containers).where(eq2(containers.id, po.containerId)).limit(1);
+        await db.update(purchaseOrders).set({ itemsTotal: totalAmount.toFixed(2) }).where(eq3(purchaseOrders.id, po.id));
+        const [container] = await db.select().from(containers).where(eq3(containers.id, po.containerId)).limit(1);
         if (container) {
           const containerItemsTotal = parseFloat(container.itemsTotal || "0");
           const containerChargesTotal = parseFloat(
@@ -12585,14 +15689,14 @@ async function registerRoutes(app2) {
           await db.update(containers).set({
             itemsTotal: newContainerItemsTotal.toFixed(2),
             grandTotal: newContainerGrandTotal.toFixed(2)
-          }).where(eq2(containers.id, po.containerId));
+          }).where(eq3(containers.id, po.containerId));
         }
         const voucherUpdates = {
           totalAmount: totalAmount.toFixed(2)
         };
         if (voucherDate !== void 0) voucherUpdates.voucherDate = voucherDate;
         if (description !== void 0) voucherUpdates.description = description;
-        const updated = await db.update(vouchers).set(voucherUpdates).where(eq2(vouchers.id, id)).returning();
+        const updated = await db.update(vouchers).set(voucherUpdates).where(eq3(vouchers.id, id)).returning();
         res.json(updated[0]);
       } catch (error) {
         res.status(500).json({ message: error.message });
@@ -12647,7 +15751,7 @@ async function registerRoutes(app2) {
             return res.status(403).json({ message: "Insufficient permissions to edit vouchers" });
           }
         }
-        let adjustmentVoucher = await db.select().from(stockAdjustmentVouchers).where(eq2(stockAdjustmentVouchers.voucherId, id)).limit(1).then((rows) => rows[0]);
+        let adjustmentVoucher = await db.select().from(stockAdjustmentVouchers).where(eq3(stockAdjustmentVouchers.voucherId, id)).limit(1).then((rows) => rows[0]);
         if (!adjustmentVoucher) {
           let adjustmentType = "production";
           if (existingVoucher.voucherType === "Consumption")
@@ -12676,16 +15780,16 @@ async function registerRoutes(app2) {
             totalAmount: itemTotal.toFixed(2)
           };
         });
-        const oldAdjustmentItems = await db.select().from(stockAdjustmentItems).where(eq2(stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
+        const oldAdjustmentItems = await db.select().from(stockAdjustmentItems).where(eq3(stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
         const oldLocationId = adjustmentVoucher.locationId;
         for (const oldItem of oldAdjustmentItems) {
           const quantity = parseFloat(oldItem.quantity);
           const rate = parseFloat(oldItem.rate);
           const reversedQuantity = -quantity;
           const [currentInventory] = await db.select().from(inventory).where(
-            and2(
-              eq2(inventory.locationId, oldLocationId),
-              eq2(inventory.stockItemId, oldItem.stockItemId)
+            and3(
+              eq3(inventory.locationId, oldLocationId),
+              eq3(inventory.stockItemId, oldItem.stockItemId)
             )
           );
           if (currentInventory) {
@@ -12703,18 +15807,18 @@ async function registerRoutes(app2) {
               quantity: newQuantity.toFixed(3),
               averageRate: newAverageRate.toFixed(2),
               totalValue: newTotalValue.toFixed(2)
-            }).where(eq2(inventory.id, currentInventory.id));
+            }).where(eq3(inventory.id, currentInventory.id));
           }
         }
-        await db.delete(stockAdjustmentItems).where(eq2(stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
+        await db.delete(stockAdjustmentItems).where(eq3(stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
         const newLocationId = parseInt(locationId);
         for (const newItem of adjustmentItemsData) {
           const quantity = parseFloat(newItem.quantity);
           const rate = parseFloat(newItem.rate);
           const [currentInventory] = await db.select().from(inventory).where(
-            and2(
-              eq2(inventory.locationId, newLocationId),
-              eq2(inventory.stockItemId, newItem.stockItemId)
+            and3(
+              eq3(inventory.locationId, newLocationId),
+              eq3(inventory.stockItemId, newItem.stockItemId)
             )
           );
           if (currentInventory) {
@@ -12732,7 +15836,7 @@ async function registerRoutes(app2) {
               quantity: newQuantity.toFixed(3),
               averageRate: newAverageRate.toFixed(2),
               totalValue: newTotalValue.toFixed(2)
-            }).where(eq2(inventory.id, currentInventory.id));
+            }).where(eq3(inventory.id, currentInventory.id));
           } else {
             await db.insert(inventory).values({
               companyId: existingVoucher.companyId,
@@ -12745,7 +15849,7 @@ async function registerRoutes(app2) {
           }
         }
         await db.insert(stockAdjustmentItems).values(adjustmentItemsData);
-        await db.update(stockAdjustmentVouchers).set({ locationId: parseInt(locationId), notes: description || "" }).where(eq2(stockAdjustmentVouchers.id, adjustmentVoucher.id));
+        await db.update(stockAdjustmentVouchers).set({ locationId: parseInt(locationId), notes: description || "" }).where(eq3(stockAdjustmentVouchers.id, adjustmentVoucher.id));
         const parsedLocationId = parseInt(locationId);
         const voucherUpdates = {
           totalAmount: totalAmount.toFixed(2),
@@ -12757,7 +15861,7 @@ async function registerRoutes(app2) {
         }
         if (voucherDate !== void 0) voucherUpdates.voucherDate = voucherDate;
         if (description !== void 0) voucherUpdates.description = description;
-        const updated = await db.update(vouchers).set(voucherUpdates).where(eq2(vouchers.id, id)).returning();
+        const updated = await db.update(vouchers).set(voucherUpdates).where(eq3(vouchers.id, id)).returning();
         res.json(updated[0]);
       } catch (error) {
         res.status(500).json({ message: error.message });
@@ -12820,7 +15924,7 @@ async function registerRoutes(app2) {
         }
         console.log(`[Stock Transfer Edit] Starting update for voucher ${id}`);
         const updated = await db.transaction(async (tx) => {
-          let transferVoucher = await tx.select().from(stockTransferVouchers).where(eq2(stockTransferVouchers.voucherId, id)).limit(1).then((rows) => rows[0]);
+          let transferVoucher = await tx.select().from(stockTransferVouchers).where(eq3(stockTransferVouchers.voucherId, id)).limit(1).then((rows) => rows[0]);
           if (!transferVoucher) {
             const [newTransfer] = await tx.insert(stockTransferVouchers).values({
               voucherId: id,
@@ -12844,16 +15948,16 @@ async function registerRoutes(app2) {
               totalAmount: itemTotal.toFixed(2)
             };
           });
-          const oldTransferItems = await tx.select().from(stockTransferItems).where(eq2(stockTransferItems.transferId, transferVoucher.id));
+          const oldTransferItems = await tx.select().from(stockTransferItems).where(eq3(stockTransferItems.transferId, transferVoucher.id));
           const oldSourceLocationId = transferVoucher.sourceLocationId;
           const oldDestinationLocationId = transferVoucher.destinationLocationId;
           for (const oldItem of oldTransferItems) {
             const quantity = parseFloat(oldItem.quantity);
             const rate = parseFloat(oldItem.rate);
             const [sourceInventory] = await tx.select().from(inventory).where(
-              and2(
-                eq2(inventory.locationId, oldSourceLocationId),
-                eq2(inventory.stockItemId, oldItem.stockItemId)
+              and3(
+                eq3(inventory.locationId, oldSourceLocationId),
+                eq3(inventory.stockItemId, oldItem.stockItemId)
               )
             );
             if (sourceInventory) {
@@ -12864,7 +15968,7 @@ async function registerRoutes(app2) {
                 quantity: newQuantity.toFixed(3),
                 averageRate: newAverageRate.toFixed(2),
                 totalValue: newTotalValue.toFixed(2)
-              }).where(eq2(inventory.id, sourceInventory.id));
+              }).where(eq3(inventory.id, sourceInventory.id));
             } else {
               await tx.insert(inventory).values({
                 companyId: existingVoucher.companyId,
@@ -12876,9 +15980,9 @@ async function registerRoutes(app2) {
               });
             }
             const [destInventory] = await tx.select().from(inventory).where(
-              and2(
-                eq2(inventory.locationId, oldDestinationLocationId),
-                eq2(inventory.stockItemId, oldItem.stockItemId)
+              and3(
+                eq3(inventory.locationId, oldDestinationLocationId),
+                eq3(inventory.stockItemId, oldItem.stockItemId)
               )
             );
             if (destInventory) {
@@ -12895,19 +15999,19 @@ async function registerRoutes(app2) {
                 quantity: newQuantity.toFixed(3),
                 averageRate: newAverageRate.toFixed(2),
                 totalValue: newTotalValue.toFixed(2)
-              }).where(eq2(inventory.id, destInventory.id));
+              }).where(eq3(inventory.id, destInventory.id));
             }
           }
-          await tx.delete(stockTransferItems).where(eq2(stockTransferItems.transferId, transferVoucher.id));
+          await tx.delete(stockTransferItems).where(eq3(stockTransferItems.transferId, transferVoucher.id));
           const newSourceLocationId = parseInt(sourceLocationId);
           const newDestinationLocationId = parseInt(destinationLocationId);
           for (const newItem of transferItemsData) {
             const quantity = parseFloat(newItem.quantity);
             const rate = parseFloat(newItem.rate);
             const [sourceInventory] = await tx.select().from(inventory).where(
-              and2(
-                eq2(inventory.locationId, newSourceLocationId),
-                eq2(inventory.stockItemId, newItem.stockItemId)
+              and3(
+                eq3(inventory.locationId, newSourceLocationId),
+                eq3(inventory.stockItemId, newItem.stockItemId)
               )
             );
             if (sourceInventory) {
@@ -12924,12 +16028,12 @@ async function registerRoutes(app2) {
                 quantity: newQuantity.toFixed(3),
                 averageRate: newAverageRate.toFixed(2),
                 totalValue: newTotalValue.toFixed(2)
-              }).where(eq2(inventory.id, sourceInventory.id));
+              }).where(eq3(inventory.id, sourceInventory.id));
             }
             const [destInventory] = await tx.select().from(inventory).where(
-              and2(
-                eq2(inventory.locationId, newDestinationLocationId),
-                eq2(inventory.stockItemId, newItem.stockItemId)
+              and3(
+                eq3(inventory.locationId, newDestinationLocationId),
+                eq3(inventory.stockItemId, newItem.stockItemId)
               )
             );
             if (destInventory) {
@@ -12940,7 +16044,7 @@ async function registerRoutes(app2) {
                 quantity: newQuantity.toFixed(3),
                 averageRate: newAverageRate.toFixed(2),
                 totalValue: newTotalValue.toFixed(2)
-              }).where(eq2(inventory.id, destInventory.id));
+              }).where(eq3(inventory.id, destInventory.id));
             } else {
               await tx.insert(inventory).values({
                 companyId: existingVoucher.companyId,
@@ -12957,7 +16061,7 @@ async function registerRoutes(app2) {
             sourceLocationId: parseInt(sourceLocationId),
             destinationLocationId: parseInt(destinationLocationId),
             notes: description || ""
-          }).where(eq2(stockTransferVouchers.id, transferVoucher.id));
+          }).where(eq3(stockTransferVouchers.id, transferVoucher.id));
           const parsedSourceLocationId = parseInt(sourceLocationId);
           const voucherUpdates = {
             totalAmount: totalAmount.toFixed(2),
@@ -12972,7 +16076,7 @@ async function registerRoutes(app2) {
             voucherUpdates.voucherDate = voucherDate;
           if (description !== void 0)
             voucherUpdates.description = description;
-          const [updatedVoucher] = await tx.update(vouchers).set(voucherUpdates).where(eq2(vouchers.id, id)).returning();
+          const [updatedVoucher] = await tx.update(vouchers).set(voucherUpdates).where(eq3(vouchers.id, id)).returning();
           return updatedVoucher;
         });
         console.log(`[Stock Transfer Edit] Successfully updated voucher ${id}`);
@@ -13035,7 +16139,7 @@ async function registerRoutes(app2) {
       let createdEntries = [];
       let oldEntries = [];
       try {
-        oldEntries = await db.select().from(voucherEntries).where(eq2(voucherEntries.voucherId, id));
+        oldEntries = await db.select().from(voucherEntries).where(eq3(voucherEntries.voucherId, id));
         const voucherUpdates = {
           voucherType: voucher.voucherType,
           voucherDate: voucher.voucherDate,
@@ -13054,8 +16158,8 @@ async function registerRoutes(app2) {
             voucherUpdates.locationName = null;
           }
         }
-        [updatedVoucher] = await db.update(vouchers).set(voucherUpdates).where(eq2(vouchers.id, id)).returning();
-        await db.delete(voucherEntries).where(eq2(voucherEntries.voucherId, id));
+        [updatedVoucher] = await db.update(vouchers).set(voucherUpdates).where(eq3(vouchers.id, id)).returning();
+        await db.delete(voucherEntries).where(eq3(voucherEntries.voucherId, id));
         for (const entry of entries) {
           const [createdEntry] = await db.insert(voucherEntries).values({
             voucherId: id,
@@ -13138,6 +16242,22 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
+  app2.get("/api/vouchers/:id/linked-container", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid voucher ID" });
+      if (!req.session.currentCompanyId) return res.status(400).json({ message: "No company selected" });
+      const allPOs = await storage.getAllPurchaseOrders(req.session.currentCompanyId);
+      const po = allPOs.find((p) => p.voucherId === id);
+      if (po) {
+        return res.json({ containerId: po.containerId });
+      }
+      return res.json({ containerId: null });
+    } catch (error) {
+      console.error("Error fetching linked container:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
   app2.get("/api/vouchers/:id/view-entries", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -13164,7 +16284,7 @@ async function registerRoutes(app2) {
           totalSales: salesItems.totalSales,
           stockItemName: stockItems.name,
           stockItemCode: stockItems.code
-        }).from(salesItems).leftJoin(stockItems, eq2(salesItems.stockItemId, stockItems.id)).where(eq2(salesItems.voucherId, id));
+        }).from(salesItems).leftJoin(stockItems, eq3(salesItems.stockItemId, stockItems.id)).where(eq3(salesItems.voucherId, id));
         if (salesItemsList.length > 0) {
           const itemsWithDetails = salesItemsList.map((item) => ({
             id: item.id,
@@ -13240,7 +16360,14 @@ async function registerRoutes(app2) {
                 containerNumber,
                 currency: purchaseOrder.currency,
                 itemsTotal: isPOSUser ? null : purchaseOrder.itemsTotal,
-                status: purchaseOrder.status
+                status: purchaseOrder.status,
+                // Include individual charges for display
+                freight: isPOSUser ? null : purchaseOrder.freight,
+                fumigation: isPOSUser ? null : purchaseOrder.fumigation,
+                surcharge: isPOSUser ? null : purchaseOrder.surcharge,
+                documentCharges: isPOSUser ? null : purchaseOrder.documentCharges,
+                otherCharges: isPOSUser ? null : purchaseOrder.otherCharges,
+                discount: isPOSUser ? null : purchaseOrder.discount
               }
             });
           }
@@ -13248,7 +16375,7 @@ async function registerRoutes(app2) {
       }
       if (voucher.voucherType === "Production" || voucher.voucherType === "Consumption" || voucher.voucherType === "Mixed") {
         const adjustmentVoucher = await db.query.stockAdjustmentVouchers.findFirst({
-          where: eq2(stockAdjustmentVouchers.voucherId, id)
+          where: eq3(stockAdjustmentVouchers.voucherId, id)
         });
         if (adjustmentVoucher) {
           const adjustmentItemsList = await db.select({
@@ -13260,7 +16387,7 @@ async function registerRoutes(app2) {
             totalAmount: stockAdjustmentItems.totalAmount,
             stockItemName: stockItems.name,
             stockItemCode: stockItems.code
-          }).from(stockAdjustmentItems).leftJoin(stockItems, eq2(stockAdjustmentItems.stockItemId, stockItems.id)).where(eq2(stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
+          }).from(stockAdjustmentItems).leftJoin(stockItems, eq3(stockAdjustmentItems.stockItemId, stockItems.id)).where(eq3(stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
           if (adjustmentItemsList.length > 0) {
             const itemsWithDetails = adjustmentItemsList.map((item) => {
               const qty = parseFloat(item.quantity || "0");
@@ -13290,7 +16417,7 @@ async function registerRoutes(app2) {
       }
       if (voucher.voucherType === "Stock Transfer" || voucher.voucherType === "StockTransfer") {
         const transferVoucher = await db.query.stockTransferVouchers.findFirst({
-          where: eq2(stockTransferVouchers.voucherId, id)
+          where: eq3(stockTransferVouchers.voucherId, id)
         });
         if (transferVoucher) {
           const transferItemsList = await db.select({
@@ -13302,7 +16429,7 @@ async function registerRoutes(app2) {
             totalAmount: stockTransferItems.totalAmount,
             stockItemName: stockItems.name,
             stockItemCode: stockItems.code
-          }).from(stockTransferItems).leftJoin(stockItems, eq2(stockTransferItems.stockItemId, stockItems.id)).where(eq2(stockTransferItems.transferId, transferVoucher.id));
+          }).from(stockTransferItems).leftJoin(stockItems, eq3(stockTransferItems.stockItemId, stockItems.id)).where(eq3(stockTransferItems.transferId, transferVoucher.id));
           if (transferItemsList.length > 0) {
             const itemsWithDetails = transferItemsList.map((item) => ({
               id: item.id,
@@ -13386,7 +16513,7 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "Invalid voucher entry ID" });
       }
       const existingEntry = await db.query.voucherEntries.findFirst({
-        where: eq2(voucherEntries.id, id)
+        where: eq3(voucherEntries.id, id)
       });
       if (!existingEntry) {
         return res.status(404).json({ message: "Voucher entry not found" });
@@ -13451,16 +16578,16 @@ async function registerRoutes(app2) {
         }
         await db.transaction(async (tx) => {
           if ((voucher.voucherType === "Stock Transfer" || voucher.voucherType === "StockTransfer") && !voucher.optional) {
-            const [transferVoucher] = await tx.select().from(stockTransferVouchers).where(eq2(stockTransferVouchers.voucherId, id)).limit(1);
+            const [transferVoucher] = await tx.select().from(stockTransferVouchers).where(eq3(stockTransferVouchers.voucherId, id)).limit(1);
             if (transferVoucher) {
-              const transferItemsList = await tx.select().from(stockTransferItems).where(eq2(stockTransferItems.transferId, transferVoucher.id));
+              const transferItemsList = await tx.select().from(stockTransferItems).where(eq3(stockTransferItems.transferId, transferVoucher.id));
               for (const item of transferItemsList) {
                 const qty = parseFloat(item.quantity);
                 const transferRate = parseFloat(item.rate);
                 const [sourceInv] = await tx.select().from(inventory).where(
-                  and2(
-                    eq2(inventory.stockItemId, item.stockItemId),
-                    eq2(inventory.locationId, transferVoucher.sourceLocationId)
+                  and3(
+                    eq3(inventory.stockItemId, item.stockItemId),
+                    eq3(inventory.locationId, transferVoucher.sourceLocationId)
                   )
                 ).limit(1);
                 if (sourceInv) {
@@ -13471,7 +16598,7 @@ async function registerRoutes(app2) {
                   await tx.update(inventory).set({
                     quantity: newQty.toString(),
                     totalValue: newValue.toString()
-                  }).where(eq2(inventory.id, sourceInv.id));
+                  }).where(eq3(inventory.id, sourceInv.id));
                 } else {
                   await tx.insert(inventory).values({
                     companyId: req.session.currentCompanyId,
@@ -13483,9 +16610,9 @@ async function registerRoutes(app2) {
                   });
                 }
                 const [destInv] = await tx.select().from(inventory).where(
-                  and2(
-                    eq2(inventory.stockItemId, item.stockItemId),
-                    eq2(inventory.locationId, transferVoucher.destinationLocationId)
+                  and3(
+                    eq3(inventory.stockItemId, item.stockItemId),
+                    eq3(inventory.locationId, transferVoucher.destinationLocationId)
                   )
                 ).limit(1);
                 if (destInv) {
@@ -13493,7 +16620,7 @@ async function registerRoutes(app2) {
                   const existingValue = parseFloat(destInv.totalValue || "0");
                   const newQty = existingQty - qty;
                   if (newQty <= 0) {
-                    await tx.delete(inventory).where(eq2(inventory.id, destInv.id));
+                    await tx.delete(inventory).where(eq3(inventory.id, destInv.id));
                   } else {
                     const valueToRemove = qty * transferRate;
                     let newValue = existingValue - valueToRemove;
@@ -13503,26 +16630,26 @@ async function registerRoutes(app2) {
                       quantity: newQty.toString(),
                       averageRate: newAvgRate.toString(),
                       totalValue: newValue.toString()
-                    }).where(eq2(inventory.id, destInv.id));
+                    }).where(eq3(inventory.id, destInv.id));
                   }
                 }
               }
-              await tx.delete(stockTransferItems).where(eq2(stockTransferItems.transferId, transferVoucher.id));
-              await tx.delete(stockTransferVouchers).where(eq2(stockTransferVouchers.id, transferVoucher.id));
+              await tx.delete(stockTransferItems).where(eq3(stockTransferItems.transferId, transferVoucher.id));
+              await tx.delete(stockTransferVouchers).where(eq3(stockTransferVouchers.id, transferVoucher.id));
             }
           }
           if ((voucher.voucherType === "Production" || voucher.voucherType === "Consumption") && !voucher.optional) {
-            const [adjustmentVoucher] = await tx.select().from(stockAdjustmentVouchers).where(eq2(stockAdjustmentVouchers.voucherId, id)).limit(1);
+            const [adjustmentVoucher] = await tx.select().from(stockAdjustmentVouchers).where(eq3(stockAdjustmentVouchers.voucherId, id)).limit(1);
             if (adjustmentVoucher) {
-              const adjustmentItemsList = await tx.select().from(stockAdjustmentItems).where(eq2(stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
+              const adjustmentItemsList = await tx.select().from(stockAdjustmentItems).where(eq3(stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
               for (const item of adjustmentItemsList) {
                 const qty = parseFloat(item.quantity);
                 const adjustmentRate = parseFloat(item.rate);
                 const adjustmentValue = qty * adjustmentRate;
                 const [inv] = await tx.select().from(inventory).where(
-                  and2(
-                    eq2(inventory.stockItemId, item.stockItemId),
-                    eq2(inventory.locationId, adjustmentVoucher.locationId)
+                  and3(
+                    eq3(inventory.stockItemId, item.stockItemId),
+                    eq3(inventory.locationId, adjustmentVoucher.locationId)
                   )
                 ).limit(1);
                 if (adjustmentVoucher.adjustmentType === "Production") {
@@ -13531,7 +16658,7 @@ async function registerRoutes(app2) {
                     const existingValue = parseFloat(inv.totalValue || "0");
                     const newQty = existingQty - qty;
                     if (newQty <= 0) {
-                      await tx.delete(inventory).where(eq2(inventory.id, inv.id));
+                      await tx.delete(inventory).where(eq3(inventory.id, inv.id));
                     } else {
                       let newValue = existingValue - adjustmentValue;
                       if (newValue < 0) newValue = 0;
@@ -13540,7 +16667,7 @@ async function registerRoutes(app2) {
                         quantity: newQty.toString(),
                         averageRate: newRate.toString(),
                         totalValue: newValue.toString()
-                      }).where(eq2(inventory.id, inv.id));
+                      }).where(eq3(inventory.id, inv.id));
                     }
                   }
                 } else {
@@ -13552,7 +16679,7 @@ async function registerRoutes(app2) {
                     await tx.update(inventory).set({
                       quantity: newQty.toString(),
                       totalValue: newValue.toString()
-                    }).where(eq2(inventory.id, inv.id));
+                    }).where(eq3(inventory.id, inv.id));
                   } else {
                     await tx.insert(inventory).values({
                       companyId: req.session.currentCompanyId,
@@ -13565,12 +16692,12 @@ async function registerRoutes(app2) {
                   }
                 }
               }
-              await tx.delete(stockAdjustmentItems).where(eq2(stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
-              await tx.delete(stockAdjustmentVouchers).where(eq2(stockAdjustmentVouchers.id, adjustmentVoucher.id));
+              await tx.delete(stockAdjustmentItems).where(eq3(stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
+              await tx.delete(stockAdjustmentVouchers).where(eq3(stockAdjustmentVouchers.id, adjustmentVoucher.id));
             }
           }
           if ((voucher.voucherType === "Receipt" || voucher.voucherType === "Sales") && !voucher.optional) {
-            const saleItems = await tx.select().from(salesItems).where(eq2(salesItems.voucherId, id));
+            const saleItems = await tx.select().from(salesItems).where(eq3(salesItems.voucherId, id));
             if (saleItems.length > 0) {
               if (voucher.locationId) {
                 const targetLocationId = voucher.locationId;
@@ -13578,9 +16705,9 @@ async function registerRoutes(app2) {
                   const qty = parseFloat(item.quantity);
                   const costPrice = parseFloat(item.costPrice || "0");
                   const [inv] = await tx.select().from(inventory).where(
-                    and2(
-                      eq2(inventory.stockItemId, item.stockItemId),
-                      eq2(inventory.locationId, targetLocationId)
+                    and3(
+                      eq3(inventory.stockItemId, item.stockItemId),
+                      eq3(inventory.locationId, targetLocationId)
                     )
                   ).limit(1);
                   if (inv) {
@@ -13591,7 +16718,7 @@ async function registerRoutes(app2) {
                     await tx.update(inventory).set({
                       quantity: newQty.toString(),
                       totalValue: newValue.toString()
-                    }).where(eq2(inventory.id, inv.id));
+                    }).where(eq3(inventory.id, inv.id));
                   } else {
                     await tx.insert(inventory).values({
                       companyId: req.session.currentCompanyId,
@@ -13606,11 +16733,11 @@ async function registerRoutes(app2) {
               } else {
                 console.warn(`Voucher ${id} deletion: Cannot reverse inventory - no locationId on voucher`);
               }
-              await tx.delete(salesItems).where(eq2(salesItems.voucherId, id));
+              await tx.delete(salesItems).where(eq3(salesItems.voucherId, id));
             }
           }
           if (!voucher.optional) {
-            const entries = await tx.select().from(voucherEntries).where(eq2(voucherEntries.voucherId, id));
+            const entries = await tx.select().from(voucherEntries).where(eq3(voucherEntries.voucherId, id));
             await syncEmployeeBalancesFromEntries(
               entries.map((e) => ({
                 ledgerAccountId: e.ledgerAccountId,
@@ -13623,8 +16750,8 @@ async function registerRoutes(app2) {
               // reverse
             );
           }
-          await tx.delete(voucherEntries).where(eq2(voucherEntries.voucherId, id));
-          await tx.delete(vouchers).where(eq2(vouchers.id, id));
+          await tx.delete(voucherEntries).where(eq3(voucherEntries.voucherId, id));
+          await tx.delete(vouchers).where(eq3(vouchers.id, id));
         });
         res.json({ message: "Voucher deleted successfully" });
       } catch (error) {
@@ -13719,14 +16846,14 @@ async function registerRoutes(app2) {
       }
       const { startDate, endDate } = req.query;
       const conditions = [
-        eq2(vouchers.companyId, req.session.currentCompanyId),
-        eq2(vouchers.voucherType, "Sales")
+        eq3(vouchers.companyId, req.session.currentCompanyId),
+        eq3(vouchers.voucherType, "Sales")
       ];
       if (startDate) {
-        conditions.push(sql3`${vouchers.voucherDate} >= ${startDate}`);
+        conditions.push(sql4`${vouchers.voucherDate} >= ${startDate}`);
       }
       if (endDate) {
-        conditions.push(sql3`${vouchers.voucherDate} <= ${endDate}`);
+        conditions.push(sql4`${vouchers.voucherDate} <= ${endDate}`);
       }
       const salesVouchers = await db.select({
         voucherId: vouchers.id,
@@ -13735,7 +16862,7 @@ async function registerRoutes(app2) {
         locationCode: locations.code,
         voucherDate: vouchers.voucherDate,
         totalAmount: vouchers.totalAmount
-      }).from(vouchers).leftJoin(locations, eq2(vouchers.locationId, locations.id)).where(and2(...conditions));
+      }).from(vouchers).leftJoin(locations, eq3(vouchers.locationId, locations.id)).where(and3(...conditions));
       const salesByLocation = /* @__PURE__ */ new Map();
       for (const sale of salesVouchers) {
         if (!sale.locationId) continue;
@@ -13774,17 +16901,17 @@ async function registerRoutes(app2) {
         }
         const { startDate, endDate } = req.query;
         const conditions = [
-          eq2(vouchers.companyId, req.session.currentCompanyId),
-          eq2(vouchers.voucherType, "Sales"),
-          eq2(vouchers.locationId, locationId)
+          eq3(vouchers.companyId, req.session.currentCompanyId),
+          eq3(vouchers.voucherType, "Sales"),
+          eq3(vouchers.locationId, locationId)
         ];
         if (startDate) {
-          conditions.push(sql3`${vouchers.voucherDate} >= ${startDate}`);
+          conditions.push(sql4`${vouchers.voucherDate} >= ${startDate}`);
         }
         if (endDate) {
-          conditions.push(sql3`${vouchers.voucherDate} <= ${endDate}`);
+          conditions.push(sql4`${vouchers.voucherDate} <= ${endDate}`);
         }
-        const salesVouchers = await db.select().from(vouchers).where(and2(...conditions));
+        const salesVouchers = await db.select().from(vouchers).where(and3(...conditions));
         let totalQuantity = 0;
         let totalAmount = 0;
         for (const voucher of salesVouchers) {
@@ -13817,17 +16944,17 @@ async function registerRoutes(app2) {
         }
         const { startDate, endDate } = req.query;
         const conditions = [
-          eq2(vouchers.companyId, req.session.currentCompanyId),
-          eq2(vouchers.voucherType, "Sales"),
-          eq2(vouchers.locationId, locationId)
+          eq3(vouchers.companyId, req.session.currentCompanyId),
+          eq3(vouchers.voucherType, "Sales"),
+          eq3(vouchers.locationId, locationId)
         ];
         if (startDate) {
-          conditions.push(sql3`${vouchers.voucherDate} >= ${startDate}`);
+          conditions.push(sql4`${vouchers.voucherDate} >= ${startDate}`);
         }
         if (endDate) {
-          conditions.push(sql3`${vouchers.voucherDate} <= ${endDate}`);
+          conditions.push(sql4`${vouchers.voucherDate} <= ${endDate}`);
         }
-        const salesVouchers = await db.select().from(vouchers).where(and2(...conditions)).orderBy(sql3`${vouchers.voucherDate} DESC, ${vouchers.createdAt} DESC`);
+        const salesVouchers = await db.select().from(vouchers).where(and3(...conditions)).orderBy(sql4`${vouchers.voucherDate} DESC, ${vouchers.createdAt} DESC`);
         const transactions = await Promise.all(
           salesVouchers.map(async (voucher) => {
             const items = await db.select({
@@ -13837,7 +16964,7 @@ async function registerRoutes(app2) {
               quantity: salesItems.quantity,
               sellingPrice: salesItems.sellingPrice,
               totalSales: salesItems.totalSales
-            }).from(salesItems).leftJoin(stockItems, eq2(salesItems.stockItemId, stockItems.id)).where(eq2(salesItems.voucherId, voucher.id));
+            }).from(salesItems).leftJoin(stockItems, eq3(salesItems.stockItemId, stockItems.id)).where(eq3(salesItems.voucherId, voucher.id));
             const totalQty = items.reduce((sum, item) => sum + parseFloat(item.quantity), 0);
             const totalAmt = parseFloat(voucher.totalAmount || "0");
             return {
@@ -13883,9 +17010,9 @@ async function registerRoutes(app2) {
           });
         }
         const [customerAccount2] = await db.select().from(ledgerAccounts).where(
-          and2(
-            eq2(ledgerAccounts.id, paymentAccountId),
-            eq2(ledgerAccounts.companyId, req.session.currentCompanyId)
+          and3(
+            eq3(ledgerAccounts.id, paymentAccountId),
+            eq3(ledgerAccounts.companyId, req.session.currentCompanyId)
           )
         ).limit(1);
         if (!customerAccount2) {
@@ -13902,9 +17029,9 @@ async function registerRoutes(app2) {
         accountId = paymentAccountId;
       } else if (cashAccountId) {
         const [cashLedger] = await db.select().from(ledgerAccounts).where(
-          and2(
-            eq2(ledgerAccounts.id, cashAccountId),
-            eq2(ledgerAccounts.companyId, req.session.currentCompanyId)
+          and3(
+            eq3(ledgerAccounts.id, cashAccountId),
+            eq3(ledgerAccounts.companyId, req.session.currentCompanyId)
           )
         ).limit(1);
         if (!cashLedger) {
@@ -13921,9 +17048,9 @@ async function registerRoutes(app2) {
         accountId = cashAccountId;
       } else if (paymentAccountId) {
         const [ledgerAccount] = await db.select().from(ledgerAccounts).where(
-          and2(
-            eq2(ledgerAccounts.id, paymentAccountId),
-            eq2(ledgerAccounts.companyId, req.session.currentCompanyId)
+          and3(
+            eq3(ledgerAccounts.id, paymentAccountId),
+            eq3(ledgerAccounts.companyId, req.session.currentCompanyId)
           )
         ).limit(1);
         if (ledgerAccount) {
@@ -13941,9 +17068,9 @@ async function registerRoutes(app2) {
           }
         } else {
           const [bankAccount] = await db.select().from(bankAccounts).where(
-            and2(
-              eq2(bankAccounts.id, paymentAccountId),
-              eq2(bankAccounts.companyId, req.session.currentCompanyId)
+            and3(
+              eq3(bankAccounts.id, paymentAccountId),
+              eq3(bankAccounts.companyId, req.session.currentCompanyId)
             )
           ).limit(1);
           if (bankAccount) {
@@ -14011,9 +17138,9 @@ async function registerRoutes(app2) {
       const inventoryValidation = [];
       for (const item of items) {
         const [inventoryRecord] = await db.select().from(inventory).where(
-          and2(
-            eq2(inventory.locationId, locationId),
-            eq2(inventory.stockItemId, item.stockItemId)
+          and3(
+            eq3(inventory.locationId, locationId),
+            eq3(inventory.stockItemId, item.stockItemId)
           )
         );
         if (!inventoryRecord) {
@@ -14083,9 +17210,9 @@ async function registerRoutes(app2) {
             averageRate: currentRate.toFixed(2),
             totalValue: newTotalValue,
             lastUpdated: /* @__PURE__ */ new Date()
-          }).where(eq2(inventory.id, inventoryRecord.id));
+          }).where(eq3(inventory.id, inventoryRecord.id));
           updatedInventoryIds.push(inventoryRecord.id);
-          const [stockItem] = await db.select().from(stockItems).where(eq2(stockItems.id, item.stockItemId));
+          const [stockItem] = await db.select().from(stockItems).where(eq3(stockItems.id, item.stockItemId));
           const qty = parseFloat(item.quantity);
           const configuredPrice = stockItem?.sellingPrice ? parseFloat(stockItem.sellingPrice) : 0;
           const sellingPrice = configuredPrice > 0 ? configuredPrice : parseFloat(item.rate);
@@ -14112,11 +17239,11 @@ async function registerRoutes(app2) {
         }
       } catch (error) {
         if (voucher?.id) {
-          await db.delete(salesItems).where(eq2(salesItems.voucherId, voucher.id)).catch(() => {
+          await db.delete(salesItems).where(eq3(salesItems.voucherId, voucher.id)).catch(() => {
           });
-          await db.delete(voucherEntries).where(eq2(voucherEntries.voucherId, voucher.id)).catch(() => {
+          await db.delete(voucherEntries).where(eq3(voucherEntries.voucherId, voucher.id)).catch(() => {
           });
-          await db.delete(vouchers).where(eq2(vouchers.id, voucher.id)).catch(() => {
+          await db.delete(vouchers).where(eq3(vouchers.id, voucher.id)).catch(() => {
           });
         }
         for (let i = 0; i < updatedInventoryIds.length; i++) {
@@ -14127,7 +17254,7 @@ async function registerRoutes(app2) {
             quantity: originalQty.toString(),
             totalValue: originalTotalValue,
             lastUpdated: /* @__PURE__ */ new Date()
-          }).where(eq2(inventory.id, updatedInventoryIds[i])).catch(() => {
+          }).where(eq3(inventory.id, updatedInventoryIds[i])).catch(() => {
           });
         }
         throw error;
@@ -14185,9 +17312,9 @@ async function registerRoutes(app2) {
         }
       }
       const [existingVoucher] = await db.select().from(vouchers).where(
-        and2(
-          eq2(vouchers.id, voucherId),
-          eq2(vouchers.companyId, req.session.currentCompanyId)
+        and3(
+          eq3(vouchers.id, voucherId),
+          eq3(vouchers.companyId, req.session.currentCompanyId)
         )
       ).limit(1);
       if (!existingVoucher) {
@@ -14196,48 +17323,67 @@ async function registerRoutes(app2) {
       if (existingVoucher.voucherType !== "Sales") {
         return res.status(400).json({ message: "Only Sales vouchers can be updated with this endpoint" });
       }
-      const oldSalesItems = await db.select().from(salesItems).where(eq2(salesItems.voucherId, voucherId));
+      const oldSalesItems = await db.select().from(salesItems).where(eq3(salesItems.voucherId, voucherId));
       const oldItemsMap = new Map(
         oldSalesItems.map((item) => [item.id, item])
       );
-      const oldEntries = await db.select().from(voucherEntries).where(eq2(voucherEntries.voucherId, voucherId));
+      const oldEntries = await db.select().from(voucherEntries).where(eq3(voucherEntries.voucherId, voucherId));
       await db.transaction(async (tx) => {
         for (const oldItem of oldSalesItems) {
           const oldQty = parseFloat(oldItem.quantity);
+          const oldCost = parseFloat(oldItem.costPrice || "0");
           const [existingInventory] = await tx.select().from(inventory).where(
-            and2(
-              eq2(inventory.locationId, existingVoucher.locationId),
-              eq2(inventory.stockItemId, oldItem.stockItemId)
+            and3(
+              eq3(inventory.locationId, existingVoucher.locationId),
+              eq3(inventory.stockItemId, oldItem.stockItemId)
             )
           ).limit(1);
           if (existingInventory) {
             const currentQty = parseFloat(existingInventory.quantity);
             const newQty = currentQty + oldQty;
-            await tx.update(inventory).set({ quantity: newQty.toString() }).where(eq2(inventory.id, existingInventory.id));
+            await tx.update(inventory).set({ quantity: newQty.toString() }).where(eq3(inventory.id, existingInventory.id));
+          } else {
+            await tx.insert(inventory).values({
+              companyId: existingVoucher.companyId,
+              locationId: existingVoucher.locationId,
+              stockItemId: oldItem.stockItemId,
+              quantity: oldQty.toString(),
+              averageRate: oldCost.toString(),
+              lastUpdated: /* @__PURE__ */ new Date()
+            });
           }
         }
-        await tx.delete(salesItems).where(eq2(salesItems.voucherId, voucherId));
-        await tx.delete(voucherEntries).where(eq2(voucherEntries.voucherId, voucherId));
+        await tx.delete(salesItems).where(eq3(salesItems.voucherId, voucherId));
+        await tx.delete(voucherEntries).where(eq3(voucherEntries.voucherId, voucherId));
+        const canSellNegativeStock = req.user?.canSellNegativeStock || false;
         let grandTotal = 0;
         for (const item of items) {
           const { id, stockItemId, quantity, sellingPrice } = item;
-          const [inventoryRecord] = await tx.select().from(inventory).where(
-            and2(
-              eq2(inventory.locationId, existingVoucher.locationId),
-              eq2(inventory.stockItemId, stockItemId)
+          let [inventoryRecord] = await tx.select().from(inventory).where(
+            and3(
+              eq3(inventory.locationId, existingVoucher.locationId),
+              eq3(inventory.stockItemId, stockItemId)
             )
           ).limit(1);
           if (!inventoryRecord) {
-            throw new Error(`Inventory not found for stock item ${stockItemId}`);
+            const [newInvRecord] = await tx.insert(inventory).values({
+              companyId: existingVoucher.companyId,
+              locationId: existingVoucher.locationId,
+              stockItemId,
+              quantity: "0",
+              averageRate: "0",
+              lastUpdated: /* @__PURE__ */ new Date()
+            }).returning();
+            inventoryRecord = newInvRecord;
           }
           const currentQty = parseFloat(inventoryRecord.quantity);
           const sellQty = parseFloat(quantity);
-          if (currentQty < sellQty) {
+          if (currentQty < sellQty && !canSellNegativeStock) {
             throw new Error(`Insufficient stock for item ${stockItemId}. Available: ${currentQty}, Requested: ${sellQty}`);
           }
           const oldItem = id !== void 0 && id > 0 ? oldItemsMap.get(id) : null;
           const costPrice = oldItem ? parseFloat(oldItem.costPrice || "0") : parseFloat(inventoryRecord.averageRate || "0");
-          const [stockItemData] = await tx.select().from(stockItems).where(eq2(stockItems.id, stockItemId)).limit(1);
+          const [stockItemData] = await tx.select().from(stockItems).where(eq3(stockItems.id, stockItemId)).limit(1);
           const configuredPrice = stockItemData?.sellingPrice ? parseFloat(stockItemData.sellingPrice) : 0;
           const effectiveSellingPrice = configuredPrice > 0 ? configuredPrice : parseFloat(sellingPrice);
           const totalSales = sellQty * effectiveSellingPrice;
@@ -14254,13 +17400,13 @@ async function registerRoutes(app2) {
             profit: profit.toFixed(2)
           });
           const newQty = currentQty - sellQty;
-          await tx.update(inventory).set({ quantity: newQty.toString() }).where(eq2(inventory.id, inventoryRecord.id));
+          await tx.update(inventory).set({ quantity: newQty.toString() }).where(eq3(inventory.id, inventoryRecord.id));
           grandTotal += totalSales;
         }
         await tx.update(vouchers).set({
           description: description || null,
           totalAmount: grandTotal.toString()
-        }).where(eq2(vouchers.id, voucherId));
+        }).where(eq3(vouchers.id, voucherId));
         const paymentEntry = oldEntries.find((e) => parseFloat(e.debitAmount || "0") > 0);
         const revenueEntry = oldEntries.find((e) => parseFloat(e.creditAmount || "0") > 0);
         if (!paymentEntry || !revenueEntry) {
@@ -14529,7 +17675,7 @@ async function registerRoutes(app2) {
         }));
         const updated = await storage.updateStockTransfer(id, destinationLocationId, notes || "", itemsForStorage);
         const newTotalAmount = items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
-        await db.update(vouchers).set({ totalAmount: newTotalAmount.toFixed(2) }).where(eq2(vouchers.id, updated.transfer.voucherId));
+        await db.update(vouchers).set({ totalAmount: newTotalAmount.toFixed(2) }).where(eq3(vouchers.id, updated.transfer.voucherId));
         res.json(updated);
       } catch (error) {
         console.error("[Stock Transfer PUT] Error:", error.message);
@@ -14654,7 +17800,7 @@ async function registerRoutes(app2) {
         }));
         const updated = await storage.updateStockAdjustment(id, locationId, adjustmentType, notes || "", itemsForStorage);
         const newTotalAmount = items.reduce((sum, item) => sum + Math.abs(item.quantity) * item.rate, 0);
-        await db.update(vouchers).set({ totalAmount: newTotalAmount.toFixed(2) }).where(eq2(vouchers.id, updated.adjustment.voucherId));
+        await db.update(vouchers).set({ totalAmount: newTotalAmount.toFixed(2) }).where(eq3(vouchers.id, updated.adjustment.voucherId));
         res.json(updated);
       } catch (error) {
         console.error("[Stock Adjustment PUT] Error:", error.message);
@@ -14662,6 +17808,124 @@ async function registerRoutes(app2) {
       }
     }
   );
+  app2.get("/api/stats/sales-expenses-drilldown", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { period = "today", startDate, endDate } = req.query;
+      let fromDate;
+      let toDate = /* @__PURE__ */ new Date();
+      toDate.setHours(23, 59, 59, 999);
+      const today = /* @__PURE__ */ new Date();
+      today.setHours(0, 0, 0, 0);
+      if (startDate && endDate) {
+        fromDate = new Date(startDate);
+        toDate = new Date(endDate);
+        toDate.setHours(23, 59, 59, 999);
+      } else {
+        switch (period) {
+          case "today":
+            fromDate = today;
+            break;
+          case "week":
+            fromDate = new Date(today);
+            fromDate.setDate(fromDate.getDate() - fromDate.getDay());
+            break;
+          case "month":
+            fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            break;
+          case "year":
+            fromDate = new Date(today.getFullYear(), 0, 1);
+            break;
+          default:
+            fromDate = today;
+        }
+      }
+      const fromDateStr = fromDate.toISOString().split("T")[0];
+      const toDateStr = toDate.toISOString().split("T")[0];
+      const salesVouchers = await db.select().from(vouchers).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.voucherType, "Sales"),
+          eq3(vouchers.optional, false),
+          gte(vouchers.voucherDate, fromDateStr),
+          lte(vouchers.voucherDate, toDateStr)
+        )
+      ).execute();
+      let totalSales = 0;
+      const dailySales = /* @__PURE__ */ new Map();
+      for (const v of salesVouchers) {
+        const amount = parseFloat(v.totalAmount || "0");
+        totalSales += amount;
+        const dateKey = v.voucherDate;
+        dailySales.set(dateKey, (dailySales.get(dateKey) || 0) + amount);
+      }
+      const expenseAccountTypes = ["Expense", "Direct Expense", "Indirect Expense"];
+      const expenseAccounts = await db.select().from(ledgerAccounts).where(
+        and3(
+          eq3(ledgerAccounts.companyId, companyId),
+          inArray2(ledgerAccounts.accountType, expenseAccountTypes)
+        )
+      ).execute();
+      const expenseAccountIds = expenseAccounts.map((a) => a.id);
+      const periodVouchers = await db.select().from(vouchers).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.optional, false),
+          gte(vouchers.voucherDate, fromDateStr),
+          lte(vouchers.voucherDate, toDateStr)
+        )
+      ).execute();
+      const voucherIds = periodVouchers.map((v) => v.id);
+      const voucherDateMap = new Map(periodVouchers.map((v) => [v.id, v.voucherDate]));
+      let totalExpenses = 0;
+      const dailyExpenses = /* @__PURE__ */ new Map();
+      const expenseByCategory = /* @__PURE__ */ new Map();
+      if (voucherIds.length > 0 && expenseAccountIds.length > 0) {
+        const entries = await db.select().from(voucherEntries).where(
+          and3(
+            inArray2(voucherEntries.voucherId, voucherIds),
+            inArray2(voucherEntries.ledgerAccountId, expenseAccountIds)
+          )
+        ).execute();
+        for (const entry of entries) {
+          const amount = parseFloat(entry.debitAmount || "0") - parseFloat(entry.creditAmount || "0");
+          if (amount > 0) {
+            totalExpenses += amount;
+            const dateKey = voucherDateMap.get(entry.voucherId) || "";
+            dailyExpenses.set(dateKey, (dailyExpenses.get(dateKey) || 0) + amount);
+            const account = expenseAccounts.find((a) => a.id === entry.ledgerAccountId);
+            if (account) {
+              expenseByCategory.set(
+                account.name,
+                (expenseByCategory.get(account.name) || 0) + amount
+              );
+            }
+          }
+        }
+      }
+      const salesByDay = Array.from(dailySales.entries()).map(([date2, amount]) => ({ date: date2, amount })).sort((a, b) => a.date.localeCompare(b.date));
+      const expensesByDay = Array.from(dailyExpenses.entries()).map(([date2, amount]) => ({ date: date2, amount })).sort((a, b) => a.date.localeCompare(b.date));
+      const expenseCategories = Array.from(expenseByCategory.entries()).map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount).slice(0, 10);
+      res.json({
+        period,
+        fromDate: fromDateStr,
+        toDate: toDateStr,
+        totalSales,
+        totalExpenses,
+        netIncome: totalSales - totalExpenses,
+        salesCount: salesVouchers.length,
+        salesByDay,
+        expensesByDay,
+        expenseCategories
+      });
+    } catch (error) {
+      console.error("[Sales/Expenses Drilldown] Error:", error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
   app2.get("/api/stats/net-profit", requireAuth, async (req, res) => {
     try {
       const companyId = req.session.currentCompanyId;
@@ -14669,53 +17933,347 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "No company selected" });
       }
       const companyAccounts = await storage.getAllLedgerAccounts(companyId);
-      const incomeAccountIds = companyAccounts.filter((acc) => acc.accountType === "Income").map((acc) => acc.id);
-      const excludedExpenseCodes = [
-        "PURCHASES",
-        // Direct inventory purchases (capitalized)
-        "IMPORTCHARGES",
-        // Old consolidated import charges (deprecated, capitalized)
-        "DUTIES",
-        // Container import duties (capitalized)
-        "TRANSPORTCHARGES",
-        // Container transport costs (capitalized)
-        "TRANSPORT",
-        // Alternative transport account name (capitalized)
-        "CONTAINERLICENSES",
-        // Container license fees (capitalized)
-        "LICENSES"
-        // Alternative license account name (capitalized)
-      ];
-      const normalizeCode = (code) => code.toUpperCase().replace(/[\s_-]/g, "");
-      const expenseAccounts = companyAccounts.filter((acc) => {
-        const isExpenseAccount = acc.accountType === "Expense" || acc.accountType === "Indirect Expense" || acc.accountType === "Direct Expense";
-        if (!isExpenseAccount) return false;
-        const normalizedCode = normalizeCode(acc.code);
-        return !excludedExpenseCodes.some(
-          (excluded) => normalizeCode(excluded) === normalizedCode
-        );
-      });
-      const expenseAccountIds = expenseAccounts.map((acc) => acc.id);
-      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and2(eq2(vouchers.companyId, companyId), eq2(vouchers.optional, false))).execute();
+      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false))).execute();
       const companyVoucherIds = companyVouchers.map((v) => v.id);
       const companyEntries = companyVoucherIds.length > 0 ? await db.select().from(voucherEntries).where(inArray2(voucherEntries.voucherId, companyVoucherIds)).execute() : [];
+      const accountBalances = /* @__PURE__ */ new Map();
+      for (const entry of companyEntries) {
+        if (entry.ledgerAccountId) {
+          const debit = parseFloat(entry.debitAmount || "0");
+          const credit = parseFloat(entry.creditAmount || "0");
+          const current = accountBalances.get(entry.ledgerAccountId) || { debit: 0, credit: 0 };
+          accountBalances.set(entry.ledgerAccountId, {
+            debit: current.debit + debit,
+            credit: current.credit + credit
+          });
+        }
+      }
+      const allStockItems = await storage.getAllStockItems(companyId);
+      let openingStockValue = 0;
+      for (const item of allStockItems) {
+        openingStockValue += parseFloat(item.openingValue || "0");
+      }
+      const purchaseAccounts = companyAccounts.filter(
+        (acc) => acc.code === "PURCHASES" || acc.code?.startsWith("PURCHASES-")
+      );
+      let purchaseAccountsTotal = 0;
+      for (const acc of purchaseAccounts) {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        purchaseAccountsTotal += balance.debit - balance.credit;
+      }
+      const directIncomeAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Income" && acc.subType === "Direct Income"
+      );
+      let directIncomesTotal = 0;
+      for (const acc of directIncomeAccounts) {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        directIncomesTotal += balance.credit - balance.debit;
+      }
+      const directExpenseAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Direct Expense"
+      );
+      let directExpensesTotal = 0;
+      for (const acc of directExpenseAccounts) {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        directExpensesTotal += balance.debit - balance.credit;
+      }
+      const salesData = await db.select({
+        total: sql4`COALESCE(SUM(${salesItems.totalSales}), 0)`
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false))).execute();
+      const salesAccountsTotal = parseFloat(salesData[0]?.total || "0");
+      const activeLocationsData = await db.select({ id: locations.id }).from(locations).where(
+        and3(
+          eq3(locations.companyId, companyId),
+          eq3(locations.active, true),
+          isNull3(locations.deletedAt)
+        )
+      ).execute();
+      const activeLocationIds = activeLocationsData.map((l) => l.id);
+      let closingStockValue = 0;
+      if (activeLocationIds.length > 0) {
+        const inventoryData = await db.select({
+          quantity: inventory.quantity,
+          averageRate: inventory.averageRate
+        }).from(inventory).where(inArray2(inventory.locationId, activeLocationIds)).execute();
+        for (const inv of inventoryData) {
+          const qty = parseFloat(inv.quantity || "0");
+          const rate = parseFloat(inv.averageRate || "0");
+          closingStockValue += qty * rate;
+        }
+      }
+      const tradingCreditSide = salesAccountsTotal + closingStockValue + directIncomesTotal;
+      const tradingDebitSide = openingStockValue + purchaseAccountsTotal + directExpensesTotal;
+      const grossProfit = tradingCreditSide - tradingDebitSide;
+      const indirectExpenseAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Indirect Expense"
+      );
+      let indirectExpensesTotal = 0;
+      for (const acc of indirectExpenseAccounts) {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        indirectExpensesTotal += balance.debit - balance.credit;
+      }
+      const indirectIncomeAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Income" && acc.subType === "Indirect Income"
+      );
+      let indirectIncomesTotal = 0;
+      for (const acc of indirectIncomeAccounts) {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        indirectIncomesTotal += balance.credit - balance.debit;
+      }
+      const netProfit = grossProfit + indirectIncomesTotal - indirectExpensesTotal;
+      const incomeAccounts = companyAccounts.filter((acc) => acc.accountType === "Income");
       let totalIncome = 0;
-      for (const entry of companyEntries) {
-        if (entry.ledgerAccountId && incomeAccountIds.includes(entry.ledgerAccountId)) {
-          totalIncome += parseFloat(entry.creditAmount || "0") - parseFloat(entry.debitAmount || "0");
-        }
+      for (const acc of incomeAccounts) {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        totalIncome += balance.credit - balance.debit;
       }
+      const expenseAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Expense" || acc.accountType === "Direct Expense" || acc.accountType === "Indirect Expense" || acc.code === "PURCHASES" || acc.code?.startsWith("PURCHASES-")
+      );
       let totalExpenses = 0;
-      for (const entry of companyEntries) {
-        if (entry.ledgerAccountId && expenseAccountIds.includes(entry.ledgerAccountId)) {
-          totalExpenses += parseFloat(entry.debitAmount || "0") - parseFloat(entry.creditAmount || "0");
-        }
+      for (const acc of expenseAccounts) {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        totalExpenses += balance.debit - balance.credit;
       }
-      const netProfit = totalIncome - totalExpenses;
       res.json({
         totalIncome,
         totalExpenses,
-        netProfit
+        netProfit,
+        // Additional Tally-style breakdown for Dashboard if needed
+        tradingAccount: {
+          openingStock: openingStockValue,
+          purchases: purchaseAccountsTotal,
+          directExpenses: directExpensesTotal,
+          sales: salesAccountsTotal,
+          closingStock: closingStockValue,
+          directIncomes: directIncomesTotal,
+          grossProfit
+        },
+        profitAndLoss: {
+          indirectExpenses: indirectExpensesTotal,
+          indirectIncomes: indirectIncomesTotal,
+          netProfit
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/stats/dashboard-metrics", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { fromDate, toDate, period = "month" } = req.query;
+      if (!fromDate || !toDate) {
+        return res.status(400).json({ message: "fromDate and toDate are required" });
+      }
+      const fromDateStr = fromDate;
+      const toDateStr = toDate;
+      const salesVouchersInPeriod = await db.select({ id: vouchers.id, voucherDate: vouchers.voucherDate }).from(vouchers).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.voucherType, "Sales"),
+          eq3(vouchers.optional, false),
+          gte(vouchers.voucherDate, fromDateStr),
+          lte(vouchers.voucherDate, toDateStr)
+        )
+      ).execute();
+      const salesVoucherIds = salesVouchersInPeriod.map((v) => v.id);
+      const voucherDateMap = /* @__PURE__ */ new Map();
+      for (const v of salesVouchersInPeriod) {
+        voucherDateMap.set(v.id, v.voucherDate);
+      }
+      const salesItemsData = salesVoucherIds.length > 0 ? await db.select({
+        voucherId: salesItems.voucherId,
+        quantity: salesItems.quantity,
+        totalSales: salesItems.totalSales,
+        totalCost: salesItems.totalCost,
+        stockGroupName: stockGroups.name
+      }).from(salesItems).leftJoin(stockItems, eq3(salesItems.stockItemId, stockItems.id)).leftJoin(stockGroups, eq3(stockItems.stockGroupId, stockGroups.id)).where(inArray2(salesItems.voucherId, salesVoucherIds)).execute() : [];
+      let totalSales = 0;
+      let totalCost = 0;
+      let motosSold = 0;
+      let partsSold = 0;
+      for (const item of salesItemsData) {
+        const qty = parseFloat(item.quantity || "0");
+        const sales = parseFloat(item.totalSales || "0");
+        const cost = parseFloat(item.totalCost || "0");
+        totalSales += sales;
+        totalCost += cost;
+        const groupNameLower = (item.stockGroupName || "").toLowerCase();
+        if (groupNameLower.includes("moto") || groupNameLower.includes("bike") || groupNameLower.includes("motorcycle")) {
+          motosSold += qty;
+        } else {
+          partsSold += qty;
+        }
+      }
+      const cogs = totalCost;
+      const grossProfit = totalSales - cogs;
+      const periodVoucherIds = [];
+      if (fromDateStr && toDateStr) {
+        const pv = await db.select({ id: vouchers.id }).from(vouchers).where(
+          and3(
+            eq3(vouchers.companyId, companyId),
+            eq3(vouchers.optional, false),
+            gte(vouchers.voucherDate, fromDateStr),
+            lte(vouchers.voucherDate, toDateStr)
+          )
+        ).execute();
+        periodVoucherIds.push(...pv.map((v) => v.id));
+      }
+      const allAccounts = await storage.getAllLedgerAccounts(companyId);
+      const expenseAccountIds = new Set(
+        allAccounts.filter(
+          (acc) => acc.accountType === "Expense" || acc.accountType === "Direct Expense" || acc.accountType === "Indirect Expense" || acc.accountType === "Operating Expenses"
+        ).map((acc) => acc.id)
+      );
+      const cashAccountIds = allAccounts.filter((acc) => acc.accountType === "Cash").map((acc) => acc.id);
+      let operatingExpenses = 0;
+      if (periodVoucherIds.length > 0) {
+        const expenseEntries = await db.select({
+          ledgerAccountId: voucherEntries.ledgerAccountId,
+          debitAmount: voucherEntries.debitAmount,
+          creditAmount: voucherEntries.creditAmount
+        }).from(voucherEntries).where(inArray2(voucherEntries.voucherId, periodVoucherIds)).execute();
+        for (const entry of expenseEntries) {
+          if (entry.ledgerAccountId && expenseAccountIds.has(entry.ledgerAccountId)) {
+            operatingExpenses += parseFloat(entry.debitAmount || "0") - parseFloat(entry.creditAmount || "0");
+          }
+        }
+      }
+      const netProfit = grossProfit - operatingExpenses;
+      let cashInHand = 0;
+      if (cashAccountIds.length > 0) {
+        const allCompanyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false))).execute();
+        const allCompanyVoucherIds = allCompanyVouchers.map((v) => v.id);
+        if (allCompanyVoucherIds.length > 0) {
+          const cashEntries = await db.select({
+            debitAmount: voucherEntries.debitAmount,
+            creditAmount: voucherEntries.creditAmount
+          }).from(voucherEntries).where(
+            and3(
+              inArray2(voucherEntries.voucherId, allCompanyVoucherIds),
+              inArray2(voucherEntries.ledgerAccountId, cashAccountIds)
+            )
+          ).execute();
+          for (const entry of cashEntries) {
+            cashInHand += parseFloat(entry.debitAmount || "0") - parseFloat(entry.creditAmount || "0");
+          }
+        }
+      }
+      const inventoryRows = await db.select({
+        stockItemId: inventory.stockItemId,
+        quantity: inventory.quantity,
+        averageRate: inventory.averageRate,
+        totalValue: inventory.totalValue
+      }).from(inventory).innerJoin(locations, eq3(inventory.locationId, locations.id)).where(
+        and3(
+          eq3(inventory.companyId, companyId),
+          eq3(locations.active, true),
+          isNull3(locations.deletedAt)
+        )
+      ).execute();
+      const stockItemGroupRows = await db.select({ id: stockItems.id, stockGroupId: stockItems.stockGroupId }).from(stockItems).where(eq3(stockItems.companyId, companyId)).execute();
+      const stockItemGroupMap = /* @__PURE__ */ new Map();
+      for (const item of stockItemGroupRows) {
+        stockItemGroupMap.set(item.id, item.stockGroupId ?? null);
+      }
+      const stockGroupRows = await db.select({ id: stockGroups.id, name: stockGroups.name }).from(stockGroups).where(eq3(stockGroups.companyId, companyId)).execute();
+      const stockGroupNameMap = /* @__PURE__ */ new Map();
+      for (const g of stockGroupRows) {
+        stockGroupNameMap.set(g.id, g.name);
+      }
+      let inventoryValue = 0;
+      let motosInventoryValue = 0;
+      let partsInventoryValue = 0;
+      let totalMotosQty = 0;
+      let totalPartsQty = 0;
+      for (const inv of inventoryRows) {
+        const qty = parseFloat(inv.quantity || "0");
+        if (qty <= 0) continue;
+        const value = parseFloat(inv.totalValue || "0") || qty * parseFloat(inv.averageRate || "0");
+        inventoryValue += value;
+        const groupId = stockItemGroupMap.get(inv.stockItemId);
+        const groupName = groupId != null ? stockGroupNameMap.get(groupId) || "" : "";
+        const groupNameLower = groupName.toLowerCase();
+        if (groupNameLower.includes("moto") || groupNameLower.includes("bike") || groupNameLower.includes("motorcycle")) {
+          motosInventoryValue += value;
+          totalMotosQty += qty;
+        } else {
+          partsInventoryValue += value;
+          totalPartsQty += qty;
+        }
+      }
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const trendMap = /* @__PURE__ */ new Map();
+      if (period === "year") {
+        for (const name of monthNames) {
+          trendMap.set(name, { sales: 0, unitsSold: 0, cost: 0 });
+        }
+      } else if (period === "month") {
+        const [yearStr, monthStr] = fromDateStr.split("-");
+        const daysInMonth = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
+        for (let d = 1; d <= daysInMonth; d++) {
+          trendMap.set(d.toString(), { sales: 0, unitsSold: 0, cost: 0 });
+        }
+      } else {
+        trendMap.set(fromDateStr, { sales: 0, unitsSold: 0, cost: 0 });
+      }
+      for (const item of salesItemsData) {
+        const voucherDate = voucherDateMap.get(item.voucherId);
+        if (!voucherDate) continue;
+        const qty = parseFloat(item.quantity || "0");
+        const sales = parseFloat(item.totalSales || "0");
+        const cost = parseFloat(item.totalCost || "0");
+        let trendKey;
+        if (period === "year") {
+          const monthIdx = parseInt(voucherDate.split("-")[1]) - 1;
+          trendKey = monthNames[monthIdx];
+        } else if (period === "month") {
+          trendKey = parseInt(voucherDate.split("-")[2]).toString();
+        } else {
+          trendKey = voucherDate;
+        }
+        const existing = trendMap.get(trendKey);
+        if (existing) {
+          existing.sales += sales;
+          existing.unitsSold += qty;
+          existing.cost += cost;
+        }
+      }
+      const trendEntries = Array.from(trendMap.entries());
+      const totalPeriodCogs = trendEntries.reduce((sum, [, d]) => sum + d.cost, 0);
+      let runningInventory = inventoryValue + totalPeriodCogs;
+      const trendData = trendEntries.map(([label, data]) => {
+        runningInventory -= data.cost;
+        return {
+          label,
+          sales: data.sales,
+          unitsSold: Math.round(data.unitsSold * 1e3) / 1e3,
+          netProfit: data.sales - data.cost,
+          inventoryValue: Math.max(0, runningInventory)
+        };
+      });
+      res.json({
+        period,
+        fromDate: fromDateStr,
+        toDate: toDateStr,
+        totalSales,
+        grossProfit,
+        netProfit,
+        cogs,
+        operatingExpenses,
+        cashInHand,
+        inventoryValue,
+        motosInventoryValue,
+        partsInventoryValue,
+        motosSold,
+        partsSold,
+        totalMotosQty,
+        totalPartsQty,
+        trendData
       });
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -14728,41 +18286,65 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "No company selected" });
       }
       const salesVouchers = await db.select().from(vouchers).where(
-        and2(
-          eq2(vouchers.companyId, companyId),
-          eq2(vouchers.voucherType, "Sales"),
-          eq2(vouchers.optional, false)
+        and3(
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.voucherType, "Sales"),
+          eq3(vouchers.optional, false)
         )
       ).execute();
       const companyAccounts = await storage.getAllLedgerAccounts(companyId);
       const incomeAccountIds = companyAccounts.filter((acc) => acc.accountType === "Income").map((acc) => acc.id);
       const excludedExpenseCodes = [
-        "PURCHASES",
-        // Direct inventory purchases (capitalized)
         "IMPORTCHARGES",
         // Old consolidated import charges (deprecated, capitalized)
+        "IMPORT_CHARGES",
+        // Alternative format
         "DUTIES",
         // Container import duties (capitalized)
+        "DUT",
+        // Abbreviated duties code
         "TRANSPORTCHARGES",
         // Container transport costs (capitalized)
         "TRANSPORT",
         // Alternative transport account name (capitalized)
+        "TRA",
+        // Abbreviated transport code
+        "TRANSFER_CHARGES",
+        // Transfer charges (capitalized)
         "CONTAINERLICENSES",
         // Container license fees (capitalized)
-        "LICENSES"
+        "CONLIC",
+        // Abbreviated container licenses
+        "LICENSES",
         // Alternative license account name (capitalized)
+        "LIC"
+        // Abbreviated licenses code
+      ];
+      const excludedNamePatterns = [
+        "duties",
+        "transport charges",
+        "container license",
+        "import charge",
+        "transfer charge"
       ];
       const normalizeCode = (code) => code.toUpperCase().replace(/[\s_-]/g, "");
       const expenseAccounts = companyAccounts.filter((acc) => {
+        const isPurchaseAccount = acc.code === "PURCHASES" || acc.code?.startsWith("PURCHASES-");
+        if (isPurchaseAccount) return true;
         const isExpenseAccount = acc.accountType === "Expense" || acc.accountType === "Indirect Expense" || acc.accountType === "Direct Expense";
         if (!isExpenseAccount) return false;
         const normalizedCode = normalizeCode(acc.code);
-        return !excludedExpenseCodes.some(
+        const codeExcluded = excludedExpenseCodes.some(
           (excluded) => normalizeCode(excluded) === normalizedCode
         );
+        const nameLower = (acc.name || "").toLowerCase();
+        const nameExcluded = excludedNamePatterns.some(
+          (pattern) => nameLower.includes(pattern)
+        );
+        return !codeExcluded && !nameExcluded;
       });
       const expenseAccountIds = expenseAccounts.map((acc) => acc.id);
-      const companyVouchers = await db.select({ id: vouchers.id, voucherDate: vouchers.voucherDate }).from(vouchers).where(and2(eq2(vouchers.companyId, companyId), eq2(vouchers.optional, false))).execute();
+      const companyVouchers = await db.select({ id: vouchers.id, voucherDate: vouchers.voucherDate }).from(vouchers).where(and3(eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false))).execute();
       const companyVoucherIds = companyVouchers.map((v) => v.id);
       const voucherDateMap = new Map(
         companyVouchers.map((v) => [v.id, v.voucherDate])
@@ -14857,6 +18439,741 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
+  app2.get("/api/stats/expense-breakdown", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const allAccounts = await storage.getAllLedgerAccounts(companyId);
+      const expenseAccounts = allAccounts.filter(
+        (acc) => acc.accountType === "Expense" || acc.accountType === "Direct Expense" || acc.accountType === "Indirect Expense"
+      );
+      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.optional, false)
+        )
+      ).execute();
+      const companyVoucherIds = companyVouchers.map((v) => v.id);
+      const entries = companyVoucherIds.length > 0 ? await db.select().from(voucherEntries).where(inArray2(voucherEntries.voucherId, companyVoucherIds)).execute() : [];
+      const accountTypeMap = /* @__PURE__ */ new Map();
+      for (const acc of expenseAccounts) {
+        accountTypeMap.set(acc.id, acc.accountType);
+      }
+      const expenseByType = /* @__PURE__ */ new Map();
+      for (const entry of entries) {
+        if (!entry.ledgerAccountId) continue;
+        const accountType = accountTypeMap.get(entry.ledgerAccountId);
+        if (!accountType) continue;
+        const amount = parseFloat(entry.debitAmount || "0") - parseFloat(entry.creditAmount || "0");
+        if (amount <= 0) continue;
+        const current = expenseByType.get(accountType) || 0;
+        expenseByType.set(accountType, current + amount);
+      }
+      const result = Array.from(expenseByType.entries()).filter(([_, value]) => value > 0).map(([name, value]) => ({
+        name: name.replace(" Expense", ""),
+        value: Math.round(value * 100) / 100
+      })).sort((a, b) => b.value - a.value);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/stats/income-statement", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { year, locationId } = req.query;
+      const selectedYear = year ? parseInt(year) : (/* @__PURE__ */ new Date()).getFullYear();
+      const selectedLocationId = locationId && locationId !== "all" ? parseInt(locationId) : null;
+      const months = [
+        { key: "jan", name: "Jan", month: 0 },
+        { key: "feb", name: "Feb", month: 1 },
+        { key: "mar", name: "Mar", month: 2 },
+        { key: "apr", name: "Apr", month: 3 },
+        { key: "may", name: "May", month: 4 },
+        { key: "jun", name: "Jun", month: 5 },
+        { key: "jul", name: "Jul", month: 6 },
+        { key: "aug", name: "Aug", month: 7 },
+        { key: "sep", name: "Sep", month: 8 },
+        { key: "oct", name: "Oct", month: 9 },
+        { key: "nov", name: "Nov", month: 10 },
+        { key: "dec", name: "Dec", month: 11 }
+      ];
+      const allStockGroups = await db.select().from(stockGroups).where(and3(eq3(stockGroups.companyId, companyId), isNull3(stockGroups.deletedAt)));
+      const allStockItems = await storage.getAllStockItems(companyId);
+      const stockItemGroupMap = /* @__PURE__ */ new Map();
+      for (const item of allStockItems) {
+        const group = item.stockGroupId ? allStockGroups.find((g) => g.id === item.stockGroupId) : null;
+        stockItemGroupMap.set(item.id, {
+          groupId: item.stockGroupId || null,
+          groupName: group?.name || "Uncategorized"
+        });
+      }
+      const groupNamesSet = new Set(Array.from(stockItemGroupMap.values()).map((g) => g.groupName));
+      const uniqueGroups = Array.from(groupNamesSet);
+      const yearStart = `${selectedYear}-01-01`;
+      const yearEnd = `${selectedYear}-12-31`;
+      const salesVouchersQuery = db.select().from(vouchers).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.voucherType, "Sales"),
+          eq3(vouchers.optional, false),
+          isNull3(vouchers.deletedAt),
+          gte(vouchers.voucherDate, yearStart),
+          lte(vouchers.voucherDate, yearEnd),
+          selectedLocationId ? eq3(vouchers.locationId, selectedLocationId) : sql4`true`
+        )
+      );
+      const salesVouchers = await salesVouchersQuery.execute();
+      const salesVoucherIds = salesVouchers.map((v) => v.id);
+      const salesItemsData = salesVoucherIds.length > 0 ? await db.select().from(salesItems).where(inArray2(salesItems.voucherId, salesVoucherIds)) : [];
+      const voucherDateMap = new Map(salesVouchers.map((v) => [v.id, v.voucherDate]));
+      const revenueByGroupMonth = /* @__PURE__ */ new Map();
+      const cogsByGroupMonth = /* @__PURE__ */ new Map();
+      for (const groupName of uniqueGroups) {
+        revenueByGroupMonth.set(groupName, /* @__PURE__ */ new Map());
+        cogsByGroupMonth.set(groupName, /* @__PURE__ */ new Map());
+        for (const m of months) {
+          revenueByGroupMonth.get(groupName).set(m.key, 0);
+          cogsByGroupMonth.get(groupName).set(m.key, 0);
+        }
+      }
+      for (const item of salesItemsData) {
+        const voucherDate = voucherDateMap.get(item.voucherId);
+        if (!voucherDate) continue;
+        const date2 = new Date(voucherDate);
+        const monthIndex = date2.getMonth();
+        const monthKey = months[monthIndex]?.key;
+        if (!monthKey) continue;
+        const groupInfo = stockItemGroupMap.get(item.stockItemId);
+        const groupName = groupInfo?.groupName || "Uncategorized";
+        const totalSales = parseFloat(item.totalSales || "0");
+        const totalCost = parseFloat(item.totalCost || "0");
+        if (!revenueByGroupMonth.has(groupName)) {
+          revenueByGroupMonth.set(groupName, /* @__PURE__ */ new Map());
+          for (const m of months) revenueByGroupMonth.get(groupName).set(m.key, 0);
+        }
+        const currentRevenue = revenueByGroupMonth.get(groupName).get(monthKey) || 0;
+        revenueByGroupMonth.get(groupName).set(monthKey, currentRevenue + totalSales);
+        if (!cogsByGroupMonth.has(groupName)) {
+          cogsByGroupMonth.set(groupName, /* @__PURE__ */ new Map());
+          for (const m of months) cogsByGroupMonth.get(groupName).set(m.key, 0);
+        }
+        const currentCogs = cogsByGroupMonth.get(groupName).get(monthKey) || 0;
+        cogsByGroupMonth.get(groupName).set(monthKey, currentCogs + totalCost);
+      }
+      const expenseAccountTypes = ["Expense", "Direct Expense", "Indirect Expense"];
+      const allLedgerAccounts = await storage.getAllLedgerAccounts(companyId);
+      const expenseAccounts = allLedgerAccounts.filter(
+        (acc) => expenseAccountTypes.includes(acc.accountType)
+      );
+      const expenseAccountIds = expenseAccounts.map((a) => a.id);
+      const periodVouchersQuery = db.select().from(vouchers).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.optional, false),
+          isNull3(vouchers.deletedAt),
+          gte(vouchers.voucherDate, yearStart),
+          lte(vouchers.voucherDate, yearEnd),
+          selectedLocationId ? eq3(vouchers.locationId, selectedLocationId) : sql4`true`
+        )
+      );
+      const periodVouchers = await periodVouchersQuery.execute();
+      const periodVoucherIds = periodVouchers.map((v) => v.id);
+      const periodVoucherDateMap = new Map(periodVouchers.map((v) => [v.id, v.voucherDate]));
+      const expenseEntries = periodVoucherIds.length > 0 && expenseAccountIds.length > 0 ? await db.select().from(voucherEntries).where(
+        and3(
+          inArray2(voucherEntries.voucherId, periodVoucherIds),
+          inArray2(voucherEntries.ledgerAccountId, expenseAccountIds)
+        )
+      ) : [];
+      const expenseByAccountMonth = /* @__PURE__ */ new Map();
+      const accountNameMap = new Map(expenseAccounts.map((a) => [a.id, a.name]));
+      for (const entry of expenseEntries) {
+        if (!entry.ledgerAccountId) continue;
+        const voucherDate = periodVoucherDateMap.get(entry.voucherId);
+        if (!voucherDate) continue;
+        const date2 = new Date(voucherDate);
+        const monthIndex = date2.getMonth();
+        const monthKey = months[monthIndex]?.key;
+        if (!monthKey) continue;
+        const accountName = accountNameMap.get(entry.ledgerAccountId) || "Other";
+        const amount = parseFloat(entry.debitAmount || "0") - parseFloat(entry.creditAmount || "0");
+        if (amount <= 0) continue;
+        if (!expenseByAccountMonth.has(accountName)) {
+          expenseByAccountMonth.set(accountName, /* @__PURE__ */ new Map());
+          for (const m of months) expenseByAccountMonth.get(accountName).set(m.key, 0);
+        }
+        const current = expenseByAccountMonth.get(accountName).get(monthKey) || 0;
+        expenseByAccountMonth.get(accountName).set(monthKey, current + amount);
+      }
+      const bankAccounts2 = allLedgerAccounts.filter(
+        (acc) => acc.accountType === "Bank" || acc.accountType === "Cash"
+      );
+      const bankAccountIds = bankAccounts2.map((a) => a.id);
+      const bankMovementsByMonth = /* @__PURE__ */ new Map();
+      for (const m of months) bankMovementsByMonth.set(m.key, 0);
+      if (periodVoucherIds.length > 0 && bankAccountIds.length > 0) {
+        const bankEntries = await db.select().from(voucherEntries).where(
+          and3(
+            inArray2(voucherEntries.voucherId, periodVoucherIds),
+            inArray2(voucherEntries.ledgerAccountId, bankAccountIds)
+          )
+        );
+        for (const entry of bankEntries) {
+          const voucherDate = periodVoucherDateMap.get(entry.voucherId);
+          if (!voucherDate) continue;
+          const date2 = new Date(voucherDate);
+          const monthKey = months[date2.getMonth()]?.key;
+          if (!monthKey) continue;
+          const creditAmount = parseFloat(entry.creditAmount || "0");
+          if (creditAmount > 0) {
+            const current = bankMovementsByMonth.get(monthKey) || 0;
+            bankMovementsByMonth.set(monthKey, current + creditAmount);
+          }
+        }
+      }
+      const loanAccounts = allLedgerAccounts.filter(
+        (acc) => acc.accountType === "Loans" || acc.name.toLowerCase().includes("interest") || acc.name.toLowerCase().includes("soficom")
+      );
+      const loanAccountIds = loanAccounts.map((a) => a.id);
+      const interestByMonth = /* @__PURE__ */ new Map();
+      for (const m of months) interestByMonth.set(m.key, 0);
+      let interestAccountName = "Interest";
+      if (loanAccounts.length > 0) {
+        interestAccountName = loanAccounts[0].name;
+      }
+      if (periodVoucherIds.length > 0 && loanAccountIds.length > 0) {
+        const interestEntries = await db.select().from(voucherEntries).where(
+          and3(
+            inArray2(voucherEntries.voucherId, periodVoucherIds),
+            inArray2(voucherEntries.ledgerAccountId, loanAccountIds)
+          )
+        );
+        for (const entry of interestEntries) {
+          const voucherDate = periodVoucherDateMap.get(entry.voucherId);
+          if (!voucherDate) continue;
+          const date2 = new Date(voucherDate);
+          const monthKey = months[date2.getMonth()]?.key;
+          if (!monthKey) continue;
+          const debitAmount = parseFloat(entry.debitAmount || "0");
+          if (debitAmount > 0) {
+            const current = interestByMonth.get(monthKey) || 0;
+            interestByMonth.set(monthKey, current + debitAmount);
+          }
+        }
+      }
+      const response = {
+        year: selectedYear,
+        locationId: selectedLocationId,
+        months: months.map((m) => ({ key: m.key, name: `${m.name}-${String(selectedYear).slice(-2)}` })),
+        revenue: Array.from(revenueByGroupMonth.entries()).map(([groupName, monthData]) => ({
+          name: `SALES - ${groupName.toUpperCase()}`,
+          data: Object.fromEntries(monthData)
+        })),
+        cogs: Array.from(cogsByGroupMonth.entries()).map(([groupName, monthData]) => ({
+          name: groupName.toUpperCase(),
+          data: Object.fromEntries(monthData)
+        })),
+        operatingExpenses: Array.from(expenseByAccountMonth.entries()).map(([accountName, monthData]) => ({
+          name: accountName,
+          data: Object.fromEntries(monthData)
+        })),
+        moneyOut: Object.fromEntries(bankMovementsByMonth),
+        interestName: interestAccountName,
+        interest: Object.fromEntries(interestByMonth)
+      };
+      res.json(response);
+    } catch (error) {
+      console.error("[Income Statement] Error:", error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/stats/liquidation-history", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const selectedYear = parseInt(req.query.year) || (/* @__PURE__ */ new Date()).getFullYear();
+      const selectedLocationId = req.query.locationId ? parseInt(req.query.locationId) : null;
+      const yearStart = `${selectedYear}-01-01`;
+      const yearEnd = `${selectedYear}-12-31`;
+      const allLedgerAccounts = await db.select().from(ledgerAccounts).where(and3(eq3(ledgerAccounts.companyId, companyId), isNull3(ledgerAccounts.deletedAt)));
+      const supplierAccounts = allLedgerAccounts.filter(
+        (acc) => acc.accountType === "Loans" || acc.accountType === "Duty Agent" || acc.accountType === "Transporter Agent" || acc.accountType === "Accounts Payable" || acc.name.toLowerCase().includes("soficom") || acc.name.toLowerCase().includes("tvs")
+      );
+      const cashBankAccounts = allLedgerAccounts.filter(
+        (acc) => acc.accountType === "Cash" || acc.accountType === "Bank"
+      );
+      const allStockGroups = await db.select().from(stockGroups).where(and3(eq3(stockGroups.companyId, companyId), isNull3(stockGroups.deletedAt)));
+      const yearVouchers = await db.select().from(vouchers).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.optional, false),
+          isNull3(vouchers.deletedAt),
+          gte(vouchers.voucherDate, yearStart),
+          lte(vouchers.voucherDate, yearEnd),
+          selectedLocationId ? eq3(vouchers.locationId, selectedLocationId) : sql4`true`
+        )
+      ).orderBy(vouchers.voucherDate);
+      const voucherIds = yearVouchers.map((v) => v.id);
+      const voucherDateMap = new Map(yearVouchers.map((v) => [v.id, v.voucherDate]));
+      const allEntries = voucherIds.length > 0 ? await db.select().from(voucherEntries).where(inArray2(voucherEntries.voucherId, voucherIds)) : [];
+      const inventoryData = await db.select({
+        stockItemId: inventory.stockItemId,
+        quantity: inventory.quantity,
+        totalValue: inventory.totalValue,
+        stockGroupId: stockItems.stockGroupId,
+        stockGroupName: stockGroups.name
+      }).from(inventory).leftJoin(stockItems, eq3(inventory.stockItemId, stockItems.id)).leftJoin(stockGroups, eq3(stockItems.stockGroupId, stockGroups.id)).where(eq3(inventory.companyId, companyId));
+      const currentStockByGroup = /* @__PURE__ */ new Map();
+      for (const item of inventoryData) {
+        const groupName = item.stockGroupName || "Uncategorized";
+        const value = parseFloat(item.totalValue || "0");
+        const current = currentStockByGroup.get(groupName) || 0;
+        currentStockByGroup.set(groupName, current + value);
+      }
+      const entriesByDate = /* @__PURE__ */ new Map();
+      for (const entry of allEntries) {
+        const date2 = voucherDateMap.get(entry.voucherId);
+        if (!date2) continue;
+        if (!entriesByDate.has(date2)) entriesByDate.set(date2, []);
+        entriesByDate.get(date2).push(entry);
+      }
+      const sortedDates = Array.from(entriesByDate.keys()).sort();
+      const supplierBalances = /* @__PURE__ */ new Map();
+      const cashBalances = /* @__PURE__ */ new Map();
+      let cumulativeMoneyOut = 0;
+      for (const acc of supplierAccounts) {
+        const openingBal = parseFloat(acc.openingBalance || "0");
+        const signedBal = acc.openingBalanceSide === "Cr" ? openingBal : -openingBal;
+        supplierBalances.set(acc.id, signedBal);
+      }
+      for (const acc of cashBankAccounts) {
+        const openingBal = parseFloat(acc.openingBalance || "0");
+        const signedBal = acc.openingBalanceSide === "Dr" ? openingBal : -openingBal;
+        cashBalances.set(acc.id, signedBal);
+      }
+      const entries = [];
+      for (const date2 of sortedDates) {
+        const dateEntries = entriesByDate.get(date2) || [];
+        for (const entry of dateEntries) {
+          if (!entry.ledgerAccountId) continue;
+          const debit = parseFloat(entry.debitAmount || "0");
+          const credit = parseFloat(entry.creditAmount || "0");
+          if (supplierAccounts.some((a) => a.id === entry.ledgerAccountId)) {
+            const current = supplierBalances.get(entry.ledgerAccountId) || 0;
+            supplierBalances.set(entry.ledgerAccountId, current + credit - debit);
+          }
+          if (cashBankAccounts.some((a) => a.id === entry.ledgerAccountId)) {
+            const current = cashBalances.get(entry.ledgerAccountId) || 0;
+            cashBalances.set(entry.ledgerAccountId, current + debit - credit);
+            if (credit > 0) {
+              cumulativeMoneyOut += credit;
+            }
+          }
+        }
+        const supplierBalancesList = supplierAccounts.map((acc) => ({
+          name: acc.name,
+          balance: supplierBalances.get(acc.id) || 0
+        })).filter((s) => s.balance !== 0);
+        const stockValuesList = Array.from(currentStockByGroup.entries()).map(([name, value]) => ({ name, value })).filter((s) => s.value !== 0);
+        const cashPositionsList = cashBankAccounts.map((acc) => ({
+          name: acc.name,
+          amount: cashBalances.get(acc.id) || 0
+        })).filter((c) => c.amount !== 0);
+        const inPocket = cashPositionsList.reduce((sum, c) => sum + c.amount, 0);
+        const totalStockValue = stockValuesList.reduce((sum, s) => sum + s.value, 0);
+        const totalSupplierBalance = supplierBalancesList.reduce((sum, s) => sum + s.balance, 0);
+        const liquidationValue = totalStockValue + inPocket - totalSupplierBalance;
+        entries.push({
+          date: date2,
+          supplierBalances: supplierBalancesList,
+          stockValues: stockValuesList,
+          cashPositions: cashPositionsList,
+          moneyOut: cumulativeMoneyOut,
+          inPocket,
+          liquidationValue
+        });
+      }
+      const supplierNamesSet = /* @__PURE__ */ new Set();
+      const stockGroupNamesSet = /* @__PURE__ */ new Set();
+      const cashAccountNamesSet = /* @__PURE__ */ new Set();
+      for (const entry of entries) {
+        for (const s of entry.supplierBalances) supplierNamesSet.add(s.name);
+        for (const s of entry.stockValues) stockGroupNamesSet.add(s.name);
+        for (const c of entry.cashPositions) cashAccountNamesSet.add(c.name);
+      }
+      res.json({
+        entries,
+        columns: {
+          supplierNames: Array.from(supplierNamesSet),
+          stockGroupNames: Array.from(stockGroupNamesSet),
+          cashAccountNames: Array.from(cashAccountNamesSet)
+        }
+      });
+    } catch (error) {
+      console.error("[Liquidation History] Error:", error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/stats/liquidation-value", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) return res.status(400).json({ message: "No company selected" });
+      const calcAccountBalance = async (accounts, isLiability) => {
+        const results = [];
+        for (const account of accounts) {
+          const entries = await db.select({ credit: voucherEntries.creditAmount, debit: voucherEntries.debitAmount }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(and3(
+            eq3(voucherEntries.ledgerAccountId, account.id),
+            eq3(vouchers.companyId, companyId),
+            isNull3(vouchers.deletedAt),
+            eq3(vouchers.optional, false)
+          ));
+          const openingRaw = parseFloat(account.openingBalance || "0");
+          const openingSide = account.openingBalanceSide || (isLiability ? "Cr" : "Dr");
+          const signedOpening = isLiability ? openingSide === "Cr" ? openingRaw : -openingRaw : openingSide === "Dr" ? openingRaw : -openingRaw;
+          const balance = entries.reduce((sum, e) => {
+            const cr = parseFloat(e.credit || "0");
+            const dr = parseFloat(e.debit || "0");
+            return isLiability ? sum + cr - dr : sum + dr - cr;
+          }, signedOpening);
+          if (balance !== 0) results.push({ name: account.name, balance });
+        }
+        return results;
+      };
+      const inventoryData = await db.select({
+        quantity: inventory.quantity,
+        totalValue: inventory.totalValue,
+        allocateImportCosts: stockGroups.allocateImportCosts
+      }).from(inventory).leftJoin(stockItems, eq3(inventory.stockItemId, stockItems.id)).leftJoin(stockGroups, eq3(stockItems.stockGroupId, stockGroups.id)).where(eq3(inventory.companyId, companyId));
+      let motoValue = 0;
+      let motoQty = 0;
+      let partsValue = 0;
+      let partsQty = 0;
+      for (const row of inventoryData) {
+        const val = parseFloat(row.totalValue || "0");
+        const qty = parseFloat(row.quantity || "0");
+        if (row.allocateImportCosts) {
+          motoValue += val;
+          motoQty += qty;
+        } else {
+          partsValue += val;
+          partsQty += qty;
+        }
+      }
+      const otwContainers = await db.select({ id: containers.id, name: containers.containerNumber, grandTotal: containers.grandTotal }).from(containers).where(and3(eq3(containers.companyId, companyId), eq3(containers.status, "OTW")));
+      const containersOtwItems = otwContainers.map((c) => ({ name: c.name || `Container ${c.id}`, value: parseFloat(c.grandTotal || "0") }));
+      const containersOtwValue = containersOtwItems.reduce((s, c) => s + c.value, 0);
+      const allFixedAssets = await storage.getAllFixedAssets(companyId);
+      const fixedAssetItems = allFixedAssets.filter((a) => a.active).map((a) => ({ name: a.name, balance: parseFloat(a.purchaseAmount || "0") }));
+      const fixedAssetsTotal = fixedAssetItems.reduce((s, a) => s + a.balance, 0);
+      const cashBankAccs = await db.select().from(ledgerAccounts).where(and3(
+        eq3(ledgerAccounts.companyId, companyId),
+        isNull3(ledgerAccounts.deletedAt),
+        sql4`${ledgerAccounts.accountType} IN ('Cash', 'Bank')`
+      ));
+      const cashBankItems = await calcAccountBalance(cashBankAccs, false);
+      const cashBankTotal = cashBankItems.reduce((s, a) => s + a.balance, 0);
+      const supplierEntries = await db.select({ credit: voucherEntries.creditAmount, debit: voucherEntries.debitAmount }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(and3(isNotNull(voucherEntries.supplierId), eq3(vouchers.companyId, companyId), isNull3(vouchers.deletedAt), eq3(vouchers.optional, false)));
+      const suppliersByLedger = await db.select().from(ledgerAccounts).where(and3(
+        eq3(ledgerAccounts.companyId, companyId),
+        isNull3(ledgerAccounts.deletedAt),
+        eq3(ledgerAccounts.accountType, "Accounts Payable")
+      ));
+      const supplierLedgerItems = await calcAccountBalance(suppliersByLedger, true);
+      const supplierRawBalance = supplierEntries.reduce((s, e) => s + parseFloat(e.credit || "0") - parseFloat(e.debit || "0"), 0);
+      const allSupplierItems = supplierLedgerItems.length > 0 ? supplierLedgerItems : supplierRawBalance !== 0 ? [{ name: "Suppliers", balance: supplierRawBalance }] : [];
+      const suppliersTotal = allSupplierItems.reduce((s, a) => s + a.balance, 0);
+      const dutyAgentAccs = await db.select().from(ledgerAccounts).where(and3(
+        eq3(ledgerAccounts.companyId, companyId),
+        isNull3(ledgerAccounts.deletedAt),
+        eq3(ledgerAccounts.accountType, "Duty Agent")
+      ));
+      const dutyAgentItems = await calcAccountBalance(dutyAgentAccs, true);
+      const dutyAgentsTotal = dutyAgentItems.reduce((s, a) => s + a.balance, 0);
+      const transporterAccs = await db.select().from(ledgerAccounts).where(and3(
+        eq3(ledgerAccounts.companyId, companyId),
+        isNull3(ledgerAccounts.deletedAt),
+        eq3(ledgerAccounts.accountType, "Transporter Agent")
+      ));
+      const transporterItems = await calcAccountBalance(transporterAccs, true);
+      const transportersTotal = transporterItems.reduce((s, a) => s + a.balance, 0);
+      const loanAccs = await db.select().from(ledgerAccounts).where(and3(
+        eq3(ledgerAccounts.companyId, companyId),
+        isNull3(ledgerAccounts.deletedAt),
+        eq3(ledgerAccounts.accountType, "Loans")
+      ));
+      const loanItems = await calcAccountBalance(loanAccs, true);
+      const loansTotal = loanItems.reduce((s, a) => s + a.balance, 0);
+      const totalAssets = motoValue + partsValue + containersOtwValue + fixedAssetsTotal + cashBankTotal;
+      const totalLiabilities = suppliersTotal + dutyAgentsTotal + transportersTotal + loansTotal;
+      const liquidationValue = totalAssets - totalLiabilities;
+      res.json({
+        stockMotos: { value: motoValue, quantity: motoQty },
+        stockParts: { value: partsValue, quantity: partsQty },
+        containersOtw: { value: containersOtwValue, items: containersOtwItems },
+        fixedAssets: { total: fixedAssetsTotal, items: fixedAssetItems },
+        cashBank: { total: cashBankTotal, items: cashBankItems },
+        suppliers: { total: suppliersTotal, items: allSupplierItems },
+        dutyAgents: { total: dutyAgentsTotal, items: dutyAgentItems },
+        transporters: { total: transportersTotal, items: transporterItems },
+        loans: { total: loansTotal, items: loanItems },
+        summary: { totalAssets, totalLiabilities, liquidationValue }
+      });
+    } catch (error) {
+      console.error("[Liquidation Value] Error:", error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/stats/import-cycle-balance", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const getAccountTypeBalance = async (accountType, isLiability = false) => {
+        const accounts = await db.select().from(ledgerAccounts).where(
+          and3(
+            eq3(ledgerAccounts.companyId, companyId),
+            eq3(ledgerAccounts.accountType, accountType),
+            isNull3(ledgerAccounts.deletedAt)
+          )
+        );
+        let totalBalance = 0;
+        for (const account of accounts) {
+          const entries = await db.select({
+            creditAmount: voucherEntries.creditAmount,
+            debitAmount: voucherEntries.debitAmount
+          }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+            and3(
+              eq3(voucherEntries.ledgerAccountId, account.id),
+              eq3(vouchers.companyId, companyId),
+              isNull3(vouchers.deletedAt),
+              eq3(vouchers.optional, false)
+            )
+          );
+          const openingBalanceRaw = parseFloat(account.openingBalance || "0");
+          const openingSide = account.openingBalanceSide || "Dr";
+          let signedOpening;
+          if (isLiability) {
+            signedOpening = openingSide === "Cr" ? openingBalanceRaw : -openingBalanceRaw;
+          } else {
+            signedOpening = openingSide === "Dr" ? openingBalanceRaw : -openingBalanceRaw;
+          }
+          const balance = entries.reduce((sum, entry) => {
+            const credit = parseFloat(entry.creditAmount || "0");
+            const debit = parseFloat(entry.debitAmount || "0");
+            if (isLiability) {
+              return sum + credit - debit;
+            } else {
+              return sum + debit - credit;
+            }
+          }, signedOpening);
+          totalBalance += balance;
+        }
+        return totalBalance;
+      };
+      const supplierEntries = await db.select({
+        creditAmount: voucherEntries.creditAmount,
+        debitAmount: voucherEntries.debitAmount
+      }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+        and3(
+          isNotNull(voucherEntries.supplierId),
+          eq3(vouchers.companyId, companyId),
+          isNull3(vouchers.deletedAt),
+          eq3(vouchers.optional, false)
+        )
+      );
+      const supplierBalance = supplierEntries.reduce((sum, entry) => {
+        const credit = parseFloat(entry.creditAmount || "0");
+        const debit = parseFloat(entry.debitAmount || "0");
+        return sum + credit - debit;
+      }, 0);
+      const otwContainers = await db.select().from(containers).where(
+        and3(
+          eq3(containers.companyId, companyId),
+          eq3(containers.status, "OTW")
+        )
+      );
+      const stockOtwValue = otwContainers.reduce((sum, container) => {
+        return sum + parseFloat(container.grandTotal || "0");
+      }, 0);
+      const dutyAgentBalance = await getAccountTypeBalance("Duty Agent", true);
+      const transporterAgentBalance = await getAccountTypeBalance("Transporter Agent", true);
+      const loansBalance = await getAccountTypeBalance("Loans", true);
+      const cashBalance = await getAccountTypeBalance("Cash", false);
+      const bankBalance = await getAccountTypeBalance("Bank", false);
+      const directExpenseBalance = await getAccountTypeBalance("Direct Expense", false);
+      const indirectExpenseBalance = await getAccountTypeBalance("Indirect Expense", false);
+      const incomeBalance = await getAccountTypeBalance("Income", true);
+      const inventoryItems = await db.select({
+        totalValue: inventory.totalValue
+      }).from(inventory).innerJoin(locations, eq3(inventory.locationId, locations.id)).where(
+        and3(
+          eq3(inventory.companyId, companyId),
+          isNull3(locations.deletedAt)
+        )
+      );
+      const stockOnFloorValue = inventoryItems.reduce((sum, item) => {
+        const totalValue = parseFloat(item.totalValue || "0");
+        return sum + totalValue;
+      }, 0);
+      const cogsData = await db.select({
+        totalCost: salesItems.totalCost
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          isNull3(vouchers.deletedAt),
+          eq3(vouchers.optional, false)
+        )
+      );
+      const cogsBalance = cogsData.reduce((sum, item) => {
+        return sum + parseFloat(item.totalCost || "0");
+      }, 0);
+      const payrollExpenseAccounts = await db.select({
+        id: ledgerAccounts.id,
+        openingBalance: ledgerAccounts.openingBalance
+      }).from(ledgerAccounts).where(
+        and3(
+          eq3(ledgerAccounts.companyId, companyId),
+          eq3(ledgerAccounts.accountType, "Expense"),
+          sql4`(${ledgerAccounts.name} ILIKE '%salary%' OR ${ledgerAccounts.name} ILIKE '%payroll%' OR ${ledgerAccounts.name} ILIKE '%wage%')`,
+          isNull3(ledgerAccounts.deletedAt)
+        )
+      );
+      let payrollExpenseBalance = 0;
+      if (payrollExpenseAccounts.length > 0) {
+        const payrollAccountIds = payrollExpenseAccounts.map((a) => a.id);
+        const payrollEntries = await db.select({
+          ledgerAccountId: voucherEntries.ledgerAccountId,
+          creditAmount: voucherEntries.creditAmount,
+          debitAmount: voucherEntries.debitAmount
+        }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+          and3(
+            inArray2(voucherEntries.ledgerAccountId, payrollAccountIds),
+            eq3(vouchers.companyId, companyId),
+            isNull3(vouchers.deletedAt),
+            eq3(vouchers.optional, false)
+          )
+        );
+        const openingTotal = payrollExpenseAccounts.reduce((sum, acc) => {
+          return sum + parseFloat(acc.openingBalance || "0");
+        }, 0);
+        const transactionBalance = payrollEntries.reduce((sum, entry) => {
+          const credit = parseFloat(entry.creditAmount || "0");
+          const debit = parseFloat(entry.debitAmount || "0");
+          return sum + debit - credit;
+        }, 0);
+        payrollExpenseBalance = openingTotal + transactionBalance;
+      }
+      const advancesData = await db.select({
+        remainingBalance: salaryAdvances.remainingBalance
+      }).from(salaryAdvances).where(
+        and3(
+          eq3(salaryAdvances.companyId, companyId),
+          eq3(salaryAdvances.fullyPaid, false)
+        )
+      );
+      const salaryAdvancesBalance = advancesData.reduce((sum, advance) => {
+        return sum + parseFloat(advance.remainingBalance || "0");
+      }, 0);
+      const employeesData = await db.select({
+        currentBalance: employees.currentBalance
+      }).from(employees).where(
+        and3(
+          eq3(employees.companyId, companyId),
+          isNull3(employees.deletedAt)
+        )
+      );
+      const payrollLiabilitiesBalance = employeesData.reduce((sum, emp) => {
+        const balance = parseFloat(emp.currentBalance || "0");
+        return sum + (balance > 0 ? balance : 0);
+      }, 0);
+      const assetBalance = await getAccountTypeBalance("Asset", false);
+      const generalExpenseBalance = await getAccountTypeBalance("Expense", false);
+      const governmentTaxesBalance = await getAccountTypeBalance("Government Taxes", false);
+      const liabilityBalance = await getAccountTypeBalance("Liability", true);
+      const profitBalance = await getAccountTypeBalance("Profit", true);
+      const netImportCycleBalance = stockOtwValue + // Asset (debit) - containers in transit
+      cashBalance + // Asset (debit) - cash on hand
+      bankBalance + // Asset (debit) - bank balances
+      stockOnFloorValue + // Asset - inventory at cost (includes capitalized expenses)
+      assetBalance + // Asset accounts (properties, guarantees, receivables)
+      directExpenseBalance + // Expense (debit) - not capitalized into inventory
+      indirectExpenseBalance + // Expense (debit) - operating expenses
+      governmentTaxesBalance + // Government Taxes (expense)
+      cogsBalance + // COGS expense (debit) - balances inventory reduction on sales
+      salaryAdvancesBalance - // Salary Advances (asset) - recoverable from employees
+      (supplierBalance + // Liability (what we owe to suppliers)
+      dutyAgentBalance + // Liability (what we owe to duty agents)
+      transporterAgentBalance + // Liability (what we owe to transporters)
+      loansBalance + // Liability (loans/borrowings)
+      liabilityBalance + // Other Liability accounts
+      profitBalance + // Profit/Equity (retained earnings)
+      incomeBalance + // Income (sales revenue - credit)
+      payrollLiabilitiesBalance);
+      console.log("Import Cycle Balance Components:", JSON.stringify({
+        assets: {
+          stockOtwValue,
+          cashBalance,
+          bankBalance,
+          stockOnFloorValue,
+          assetBalance,
+          salaryAdvancesBalance
+        },
+        expenses: {
+          directExpenseBalance,
+          indirectExpenseBalance,
+          governmentTaxesBalance,
+          cogsBalance
+        },
+        liabilities: {
+          supplierBalance,
+          dutyAgentBalance,
+          transporterAgentBalance,
+          loansBalance,
+          liabilityBalance,
+          profitBalance,
+          incomeBalance,
+          payrollLiabilitiesBalance
+        },
+        netImportCycleBalance
+      }, null, 2));
+      res.json({
+        netImportCycleBalance,
+        components: {
+          supplierBalance,
+          stockOtwValue,
+          dutyAgentBalance,
+          transporterAgentBalance,
+          loansBalance,
+          cashBalance,
+          bankBalance,
+          assetBalance,
+          directExpenseBalance,
+          indirectExpenseBalance,
+          generalExpenseBalance,
+          governmentTaxesBalance,
+          incomeBalance,
+          liabilityBalance,
+          profitBalance,
+          stockOnFloorValue,
+          cogsBalance,
+          payrollExpenseBalance,
+          salaryAdvancesBalance,
+          payrollLiabilitiesBalance
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   app2.get("/api/sales-report", requireAuth, async (req, res) => {
     try {
       const companyId = req.session.currentCompanyId;
@@ -14864,21 +19181,21 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "No company selected" });
       }
       const { startDate, endDate, locationId, stockItemId } = req.query;
-      const conditions = [eq2(vouchers.companyId, companyId)];
+      const conditions = [eq3(vouchers.companyId, companyId)];
       if (startDate) {
-        conditions.push(sql3`${vouchers.voucherDate} >= ${startDate}`);
+        conditions.push(sql4`${vouchers.voucherDate} >= ${startDate}`);
       }
       if (endDate) {
-        conditions.push(sql3`${vouchers.voucherDate} <= ${endDate}`);
+        conditions.push(sql4`${vouchers.voucherDate} <= ${endDate}`);
       }
       if (locationId) {
         conditions.push(
-          eq2(vouchers.locationId, parseInt(locationId))
+          eq3(vouchers.locationId, parseInt(locationId))
         );
       }
       if (stockItemId) {
         conditions.push(
-          eq2(salesItems.stockItemId, parseInt(stockItemId))
+          eq3(salesItems.stockItemId, parseInt(stockItemId))
         );
       }
       const salesData = await db.select({
@@ -14887,7 +19204,7 @@ async function registerRoutes(app2) {
         voucherNumber: vouchers.voucherNumber,
         voucherDate: vouchers.voucherDate,
         locationId: vouchers.locationId,
-        locationName: sql3`COALESCE(${locations.name}, ${vouchers.locationName})`.as("location_name"),
+        locationName: sql4`COALESCE(${locations.name}, ${vouchers.locationName})`.as("location_name"),
         stockItemId: salesItems.stockItemId,
         stockItemCode: stockItems.code,
         stockItemName: stockItems.name,
@@ -14902,13 +19219,13 @@ async function registerRoutes(app2) {
         costProfit: salesItems.profit,
         // Actual selling price - cost price
         createdAt: salesItems.createdAt
-      }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).innerJoin(stockItems, eq2(salesItems.stockItemId, stockItems.id)).leftJoin(locations, eq2(vouchers.locationId, locations.id)).leftJoin(
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).innerJoin(stockItems, eq3(salesItems.stockItemId, stockItems.id)).leftJoin(locations, eq3(vouchers.locationId, locations.id)).leftJoin(
         stockItemLocationPrices,
-        and2(
-          eq2(stockItemLocationPrices.stockItemId, salesItems.stockItemId),
-          eq2(stockItemLocationPrices.locationId, vouchers.locationId)
+        and3(
+          eq3(stockItemLocationPrices.stockItemId, salesItems.stockItemId),
+          eq3(stockItemLocationPrices.locationId, vouchers.locationId)
         )
-      ).where(and2(...conditions)).orderBy(vouchers.voucherDate);
+      ).where(and3(...conditions)).orderBy(vouchers.voucherDate);
       const enhancedSalesData = salesData.map((item) => {
         const configuredPrice = parseFloat(item.configuredSellingPrice || "0") > 0 ? parseFloat(item.configuredSellingPrice || "0") : parseFloat(item.actualSellingPrice || "0");
         const actualPrice = parseFloat(item.actualSellingPrice || "0");
@@ -14955,18 +19272,18 @@ async function registerRoutes(app2) {
           return res.status(400).json({ message: "No company selected" });
         }
         const { startDate, endDate, stockItemId, locationId } = req.body;
-        const conditions = [eq2(vouchers.companyId, companyId)];
+        const conditions = [eq3(vouchers.companyId, companyId)];
         if (startDate) {
-          conditions.push(sql3`${vouchers.voucherDate} >= ${startDate}`);
+          conditions.push(sql4`${vouchers.voucherDate} >= ${startDate}`);
         }
         if (endDate) {
-          conditions.push(sql3`${vouchers.voucherDate} <= ${endDate}`);
+          conditions.push(sql4`${vouchers.voucherDate} <= ${endDate}`);
         }
         if (stockItemId) {
-          conditions.push(eq2(salesItems.stockItemId, stockItemId));
+          conditions.push(eq3(salesItems.stockItemId, stockItemId));
         }
         if (locationId) {
-          conditions.push(eq2(vouchers.locationId, locationId));
+          conditions.push(eq3(vouchers.locationId, locationId));
         }
         const itemsToUpdate = await db.select({
           salesItemId: salesItems.id,
@@ -14975,7 +19292,7 @@ async function registerRoutes(app2) {
           sellingPrice: salesItems.sellingPrice,
           oldCostPrice: salesItems.costPrice,
           locationId: vouchers.locationId
-        }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(...conditions));
+        }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(...conditions));
         let updatedCount = 0;
         const updates = [];
         for (const item of itemsToUpdate) {
@@ -14984,9 +19301,9 @@ async function registerRoutes(app2) {
             const [invRecord] = await db.select({
               averageRate: inventory.averageRate
             }).from(inventory).where(
-              and2(
-                eq2(inventory.stockItemId, item.stockItemId),
-                eq2(inventory.locationId, item.locationId)
+              and3(
+                eq3(inventory.stockItemId, item.stockItemId),
+                eq3(inventory.locationId, item.locationId)
               )
             ).limit(1);
             if (invRecord) {
@@ -14996,7 +19313,7 @@ async function registerRoutes(app2) {
           if (newCostPrice === 0) {
             const [anyInvRecord] = await db.select({
               averageRate: inventory.averageRate
-            }).from(inventory).where(eq2(inventory.stockItemId, item.stockItemId)).limit(1);
+            }).from(inventory).where(eq3(inventory.stockItemId, item.stockItemId)).limit(1);
             if (anyInvRecord) {
               newCostPrice = parseFloat(anyInvRecord.averageRate || "0");
             }
@@ -15012,8 +19329,8 @@ async function registerRoutes(app2) {
               costPrice: newCostPrice.toFixed(2),
               totalCost: totalCost.toFixed(2),
               profit: profit.toFixed(2)
-            }).where(eq2(salesItems.id, item.salesItemId));
-            const [stockItem] = await db.select({ name: stockItems.name }).from(stockItems).where(eq2(stockItems.id, item.stockItemId)).limit(1);
+            }).where(eq3(salesItems.id, item.salesItemId));
+            const [stockItem] = await db.select({ name: stockItems.name }).from(stockItems).where(eq3(stockItems.id, item.stockItemId)).limit(1);
             updates.push({
               id: item.salesItemId,
               oldCost: oldCostPrice,
@@ -15055,15 +19372,15 @@ async function registerRoutes(app2) {
         );
         const incomeAccountIds = incomeAccounts.map((acc) => acc.id);
         const expenseAccountIds = expenseAccounts.map((acc) => acc.id);
-        let companyVouchersQuery = db.select({ id: vouchers.id, voucherDate: vouchers.voucherDate }).from(vouchers).where(eq2(vouchers.companyId, companyId));
-        const conditions = [eq2(vouchers.companyId, companyId), eq2(vouchers.optional, false)];
+        let companyVouchersQuery = db.select({ id: vouchers.id, voucherDate: vouchers.voucherDate }).from(vouchers).where(eq3(vouchers.companyId, companyId));
+        const conditions = [eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false)];
         if (startDate) {
-          conditions.push(sql3`${vouchers.voucherDate} >= ${startDate}`);
+          conditions.push(sql4`${vouchers.voucherDate} >= ${startDate}`);
         }
         if (endDate) {
-          conditions.push(sql3`${vouchers.voucherDate} <= ${endDate}`);
+          conditions.push(sql4`${vouchers.voucherDate} <= ${endDate}`);
         }
-        const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and2(...conditions)).execute();
+        const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(...conditions)).execute();
         const companyVoucherIds = companyVouchers.map((v) => v.id);
         const companyEntries = companyVoucherIds.length > 0 ? await db.select().from(voucherEntries).where(inArray2(voucherEntries.voucherId, companyVoucherIds)).execute() : [];
         const accountBalances = /* @__PURE__ */ new Map();
@@ -15130,11 +19447,11 @@ async function registerRoutes(app2) {
         const banks = await storage.getAllBankAccounts(companyId);
         const assets = await storage.getAllFixedAssets(companyId);
         const suppliers2 = await storage.getAllSuppliers();
-        const conditions = [eq2(vouchers.companyId, companyId)];
+        const conditions = [eq3(vouchers.companyId, companyId)];
         if (asOfDate) {
-          conditions.push(sql3`${vouchers.voucherDate} <= ${asOfDate}`);
+          conditions.push(sql4`${vouchers.voucherDate} <= ${asOfDate}`);
         }
-        const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and2(...conditions)).execute();
+        const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(...conditions)).execute();
         const companyVoucherIds = companyVouchers.map((v) => v.id);
         const allEntries = companyVoucherIds.length > 0 ? await db.select().from(voucherEntries).where(inArray2(voucherEntries.voucherId, companyVoucherIds)).execute() : [];
         const ledgerBalances = /* @__PURE__ */ new Map();
@@ -15297,16 +19614,16 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "No company selected" });
       }
       const { startDate, endDate, locationId, stockGroupId } = req.query;
-      const conditions = [eq2(vouchers.companyId, companyId)];
+      const conditions = [eq3(vouchers.companyId, companyId)];
       if (startDate) {
-        conditions.push(sql3`${vouchers.voucherDate} >= ${startDate}`);
+        conditions.push(sql4`${vouchers.voucherDate} >= ${startDate}`);
       }
       if (endDate) {
-        conditions.push(sql3`${vouchers.voucherDate} <= ${endDate}`);
+        conditions.push(sql4`${vouchers.voucherDate} <= ${endDate}`);
       }
       if (locationId) {
         conditions.push(
-          eq2(vouchers.locationId, parseInt(locationId))
+          eq3(vouchers.locationId, parseInt(locationId))
         );
       }
       let salesQuery = db.select({
@@ -15323,7 +19640,7 @@ async function registerRoutes(app2) {
         totalSales: salesItems.totalSales,
         totalCost: salesItems.totalCost,
         profit: salesItems.profit
-      }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).innerJoin(stockItems, eq2(salesItems.stockItemId, stockItems.id)).leftJoin(locations, eq2(vouchers.locationId, locations.id)).where(and2(...conditions)).orderBy(vouchers.voucherDate);
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).innerJoin(stockItems, eq3(salesItems.stockItemId, stockItems.id)).leftJoin(locations, eq3(vouchers.locationId, locations.id)).where(and3(...conditions)).orderBy(vouchers.voucherDate);
       let salesData = await salesQuery.execute();
       if (stockGroupId) {
         salesData = salesData.filter(
@@ -15377,10 +19694,10 @@ async function registerRoutes(app2) {
       const stockItemsToReport = stockGroupId ? allStockItems.filter(
         (item) => item.stockGroupId === parseInt(stockGroupId)
       ) : allStockItems;
-      const inventoryConditions = [eq2(locations.companyId, companyId)];
+      const inventoryConditions = [eq3(locations.companyId, companyId)];
       if (locationId) {
         inventoryConditions.push(
-          eq2(inventory.locationId, parseInt(locationId))
+          eq3(inventory.locationId, parseInt(locationId))
         );
       }
       const inventoryRecords = await db.select({
@@ -15390,7 +19707,7 @@ async function registerRoutes(app2) {
         quantity: inventory.quantity,
         averageRate: inventory.averageRate,
         totalValue: inventory.totalValue
-      }).from(inventory).innerJoin(locations, eq2(inventory.locationId, locations.id)).where(and2(...inventoryConditions)).execute();
+      }).from(inventory).innerJoin(locations, eq3(inventory.locationId, locations.id)).where(and3(...inventoryConditions)).execute();
       const movementData = stockItemsToReport.map((item) => {
         const itemInventory = inventoryRecords.filter(
           (inv) => inv.stockItemId === item.id
@@ -15451,20 +19768,20 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "No company selected" });
       }
       const { status, supplierId, startDate, endDate } = req.query;
-      const conditions = [eq2(containers.companyId, companyId)];
+      const conditions = [eq3(containers.companyId, companyId)];
       if (status) {
-        conditions.push(eq2(containers.status, status));
+        conditions.push(eq3(containers.status, status));
       }
       if (supplierId) {
         conditions.push(
-          eq2(containers.supplierId, parseInt(supplierId))
+          eq3(containers.supplierId, parseInt(supplierId))
         );
       }
       if (startDate) {
-        conditions.push(sql3`${containers.importDate} >= ${startDate}`);
+        conditions.push(sql4`${containers.importDate} >= ${startDate}`);
       }
       if (endDate) {
-        conditions.push(sql3`${containers.importDate} <= ${endDate}`);
+        conditions.push(sql4`${containers.importDate} <= ${endDate}`);
       }
       const containerData = await db.select({
         id: containers.id,
@@ -15475,7 +19792,7 @@ async function registerRoutes(app2) {
         itemsTotal: containers.itemsTotal,
         chargesTotal: containers.chargesTotal,
         grandTotal: containers.grandTotal
-      }).from(containers).innerJoin(suppliers, eq2(containers.supplierId, suppliers.id)).where(and2(...conditions)).orderBy(containers.importDate);
+      }).from(containers).innerJoin(suppliers, eq3(containers.supplierId, suppliers.id)).where(and3(...conditions)).orderBy(containers.importDate);
       const totalItemsTotal = containerData.reduce(
         (sum, c) => sum + parseFloat(c.itemsTotal || "0"),
         0
@@ -15519,14 +19836,14 @@ async function registerRoutes(app2) {
       const expenseAccountIds = companyAccounts.filter((acc) => acc.accountType === "Expense").map((acc) => acc.id);
       const assetAccountIds = companyAccounts.filter((acc) => acc.accountType === "Asset").map((acc) => acc.id);
       const liabilityAccountIds = companyAccounts.filter((acc) => acc.accountType === "Liability").map((acc) => acc.id);
-      const conditions = [eq2(vouchers.companyId, companyId)];
+      const conditions = [eq3(vouchers.companyId, companyId)];
       if (startDate) {
-        conditions.push(sql3`${vouchers.voucherDate} >= ${startDate}`);
+        conditions.push(sql4`${vouchers.voucherDate} >= ${startDate}`);
       }
       if (endDate) {
-        conditions.push(sql3`${vouchers.voucherDate} <= ${endDate}`);
+        conditions.push(sql4`${vouchers.voucherDate} <= ${endDate}`);
       }
-      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and2(...conditions)).execute();
+      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(...conditions)).execute();
       const companyVoucherIds = companyVouchers.map((v) => v.id);
       const companyEntries = companyVoucherIds.length > 0 ? await db.select().from(voucherEntries).where(inArray2(voucherEntries.voucherId, companyVoucherIds)).execute() : [];
       let totalIncome = 0;
@@ -15551,17 +19868,17 @@ async function registerRoutes(app2) {
           }
         }
       }
-      const salesConditions = [eq2(vouchers.companyId, companyId)];
+      const salesConditions = [eq3(vouchers.companyId, companyId)];
       if (startDate) {
-        salesConditions.push(sql3`${vouchers.voucherDate} >= ${startDate}`);
+        salesConditions.push(sql4`${vouchers.voucherDate} >= ${startDate}`);
       }
       if (endDate) {
-        salesConditions.push(sql3`${vouchers.voucherDate} <= ${endDate}`);
+        salesConditions.push(sql4`${vouchers.voucherDate} <= ${endDate}`);
       }
       const salesData = await db.select({
         totalSales: salesItems.totalSales,
         totalCost: salesItems.totalCost
-      }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(...salesConditions)).execute();
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(...salesConditions)).execute();
       const totalSales = salesData.reduce(
         (sum, s) => sum + parseFloat(s.totalSales),
         0
@@ -15603,6 +19920,1238 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
+  app2.get("/api/reports/opening-stock-summary", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { locationId, stockGroupId } = req.query;
+      const allStockGroups = await storage.getAllStockGroups(companyId);
+      const allStockItems = await storage.getAllStockItems(companyId);
+      let inventoryData;
+      if (locationId && locationId !== "all") {
+        inventoryData = await db.select({
+          stockItemId: inventory.stockItemId,
+          quantity: inventory.quantity,
+          averageRate: inventory.averageRate,
+          totalValue: inventory.totalValue,
+          locationId: inventory.locationId,
+          locationName: locations.name
+        }).from(inventory).innerJoin(locations, eq3(inventory.locationId, locations.id)).where(
+          and3(
+            eq3(inventory.companyId, companyId),
+            eq3(inventory.locationId, parseInt(locationId)),
+            eq3(locations.active, true)
+          )
+        ).execute();
+      } else {
+        inventoryData = await db.select({
+          stockItemId: inventory.stockItemId,
+          quantity: inventory.quantity,
+          averageRate: inventory.averageRate,
+          totalValue: inventory.totalValue,
+          locationId: inventory.locationId,
+          locationName: locations.name
+        }).from(inventory).innerJoin(locations, eq3(inventory.locationId, locations.id)).where(
+          and3(
+            eq3(inventory.companyId, companyId),
+            eq3(locations.active, true)
+          )
+        ).execute();
+      }
+      const inventoryByItem = /* @__PURE__ */ new Map();
+      for (const inv of inventoryData) {
+        const qty = parseFloat(inv.quantity);
+        const val = parseFloat(inv.totalValue);
+        if (inventoryByItem.has(inv.stockItemId)) {
+          const existing = inventoryByItem.get(inv.stockItemId);
+          existing.quantity += qty;
+          existing.totalValue += val;
+        } else {
+          inventoryByItem.set(inv.stockItemId, {
+            quantity: qty,
+            totalValue: val
+          });
+        }
+      }
+      const stockGroupSummary = allStockGroups.map((group) => {
+        const groupItems = allStockItems.filter((item) => item.stockGroupId === group.id);
+        let openingQty = 0;
+        let openingValue = 0;
+        let closingQty = 0;
+        let closingValue = 0;
+        for (const item of groupItems) {
+          const itemOpeningQty = parseFloat(item.openingQty || "0");
+          const itemOpeningValue = parseFloat(item.openingValue || "0");
+          openingQty += itemOpeningQty;
+          openingValue += itemOpeningValue;
+          const inv = inventoryByItem.get(item.id);
+          if (inv) {
+            closingQty += inv.quantity;
+            closingValue += inv.totalValue;
+          }
+        }
+        return {
+          id: group.id,
+          code: group.code,
+          name: group.name,
+          opening: {
+            quantity: openingQty,
+            rate: openingQty > 0 ? openingValue / openingQty : 0,
+            value: openingValue
+          },
+          closing: {
+            quantity: closingQty,
+            rate: closingQty > 0 ? closingValue / closingQty : 0,
+            value: closingValue
+          },
+          itemCount: groupItems.length
+        };
+      }).filter((g) => g.opening.quantity > 0 || g.closing.quantity > 0);
+      const grandTotal = {
+        opening: {
+          quantity: stockGroupSummary.reduce((sum, g) => sum + g.opening.quantity, 0),
+          value: stockGroupSummary.reduce((sum, g) => sum + g.opening.value, 0)
+        },
+        closing: {
+          quantity: stockGroupSummary.reduce((sum, g) => sum + g.closing.quantity, 0),
+          value: stockGroupSummary.reduce((sum, g) => sum + g.closing.value, 0)
+        }
+      };
+      res.json({
+        stockGroups: stockGroupSummary,
+        grandTotal,
+        filters: {
+          locationId: locationId || null
+        },
+        notes: {
+          opening: "Opening balances are from stock item master data (not location-specific)",
+          closing: locationId && locationId !== "all" ? "Closing balances are filtered by the selected location" : "Closing balances are aggregated across all locations"
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/reports/opening-stock-summary/:stockGroupId/items", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { stockGroupId } = req.params;
+      const { locationId } = req.query;
+      const groupItems = await db.select().from(stockItems).where(
+        and3(
+          eq3(stockItems.companyId, companyId),
+          eq3(stockItems.stockGroupId, parseInt(stockGroupId))
+        )
+      ).execute();
+      const itemIds = groupItems.map((i) => i.id);
+      let inventoryData = [];
+      if (itemIds.length > 0) {
+        const conditions = [
+          eq3(inventory.companyId, companyId),
+          inArray2(inventory.stockItemId, itemIds),
+          eq3(locations.active, true)
+        ];
+        if (locationId && locationId !== "all") {
+          conditions.push(eq3(inventory.locationId, parseInt(locationId)));
+        }
+        inventoryData = await db.select({
+          stockItemId: inventory.stockItemId,
+          quantity: inventory.quantity,
+          averageRate: inventory.averageRate,
+          totalValue: inventory.totalValue
+        }).from(inventory).innerJoin(locations, eq3(inventory.locationId, locations.id)).where(and3(...conditions)).execute();
+      }
+      const inventoryByItem = /* @__PURE__ */ new Map();
+      for (const inv of inventoryData) {
+        const qty = parseFloat(inv.quantity);
+        const val = parseFloat(inv.totalValue);
+        if (inventoryByItem.has(inv.stockItemId)) {
+          const existing = inventoryByItem.get(inv.stockItemId);
+          existing.quantity += qty;
+          existing.totalValue += val;
+        } else {
+          inventoryByItem.set(inv.stockItemId, {
+            quantity: qty,
+            totalValue: val
+          });
+        }
+      }
+      const items = groupItems.map((item) => {
+        const openingQty = parseFloat(item.openingQty || "0");
+        const openingRate = parseFloat(item.openingRate || "0");
+        const openingValue = parseFloat(item.openingValue || "0");
+        const inv = inventoryByItem.get(item.id);
+        const closingQty = inv?.quantity || 0;
+        const closingValue = inv?.totalValue || 0;
+        const closingRate = closingQty > 0 ? closingValue / closingQty : 0;
+        return {
+          id: item.id,
+          code: item.code,
+          name: item.name,
+          uom: item.uom,
+          opening: {
+            quantity: openingQty,
+            rate: openingRate,
+            value: openingValue
+          },
+          closing: {
+            quantity: closingQty,
+            rate: closingRate,
+            value: closingValue
+          }
+        };
+      }).filter((i) => i.opening.quantity > 0 || i.closing.quantity > 0);
+      const grandTotal = {
+        opening: {
+          quantity: items.reduce((sum, i) => sum + i.opening.quantity, 0),
+          value: items.reduce((sum, i) => sum + i.opening.value, 0)
+        },
+        closing: {
+          quantity: items.reduce((sum, i) => sum + i.closing.quantity, 0),
+          value: items.reduce((sum, i) => sum + i.closing.value, 0)
+        }
+      };
+      const stockGroup = await storage.getStockGroupById(parseInt(stockGroupId), companyId);
+      res.json({
+        items,
+        grandTotal,
+        stockGroup: stockGroup ? {
+          id: stockGroup.id,
+          code: stockGroup.code,
+          name: stockGroup.name
+        } : null
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/debug/inventory/:stockItemId", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { stockItemId } = req.params;
+      const stockItem = await db.select().from(stockItems).where(
+        and3(
+          eq3(stockItems.id, parseInt(stockItemId)),
+          eq3(stockItems.companyId, companyId)
+        )
+      ).execute();
+      if (stockItem.length === 0) {
+        return res.status(404).json({ message: "Stock item not found" });
+      }
+      const inventoryRecords = await db.select({
+        id: inventory.id,
+        locationId: inventory.locationId,
+        locationName: locations.name,
+        locationExists: locations.id,
+        locationActive: locations.active,
+        quantity: inventory.quantity,
+        averageRate: inventory.averageRate,
+        totalValue: inventory.totalValue,
+        lastUpdated: inventory.lastUpdated
+      }).from(inventory).leftJoin(locations, eq3(inventory.locationId, locations.id)).where(
+        and3(
+          eq3(inventory.stockItemId, parseInt(stockItemId)),
+          eq3(inventory.companyId, companyId)
+        )
+      ).execute();
+      let totalQty = 0;
+      let totalValue = 0;
+      let activeQty = 0;
+      let activeValue = 0;
+      for (const rec of inventoryRecords) {
+        const qty = parseFloat(rec.quantity);
+        const val = parseFloat(rec.totalValue);
+        totalQty += qty;
+        totalValue += val;
+        if (rec.locationExists !== null && rec.locationActive === true) {
+          activeQty += qty;
+          activeValue += val;
+        }
+      }
+      res.json({
+        stockItem: {
+          id: stockItem[0].id,
+          code: stockItem[0].code,
+          name: stockItem[0].name,
+          stockGroupId: stockItem[0].stockGroupId,
+          openingQty: stockItem[0].openingQty,
+          openingRate: stockItem[0].openingRate,
+          openingValue: stockItem[0].openingValue
+        },
+        inventoryRecords: inventoryRecords.map((r) => {
+          const isDeleted = r.locationExists === null;
+          const isInactive = r.locationActive === false;
+          let status = "Active";
+          let displayName = r.locationName || `Location ${r.locationId}`;
+          if (isDeleted) {
+            status = "DELETED";
+            displayName = `[DELETED] Location ${r.locationId}`;
+          } else if (isInactive) {
+            status = "INACTIVE";
+            displayName = `[INACTIVE] ${r.locationName}`;
+          }
+          return {
+            id: r.id,
+            locationId: r.locationId,
+            locationName: displayName,
+            locationDeleted: isDeleted || isInactive,
+            locationStatus: status,
+            quantity: parseFloat(r.quantity),
+            averageRate: parseFloat(r.averageRate),
+            totalValue: parseFloat(r.totalValue),
+            lastUpdated: r.lastUpdated
+          };
+        }),
+        totals: {
+          recordCount: inventoryRecords.length,
+          totalQuantity: totalQty,
+          activeRecordCount: inventoryRecords.filter((r) => r.locationExists !== null && r.locationActive === true).length,
+          activeQuantity: activeQty,
+          activeValue,
+          totalValue,
+          calculatedRate: totalQty > 0 ? totalValue / totalQty : 0
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/reports/net-profit-statement", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+      const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+      const companyAccounts = await storage.getAllLedgerAccounts(companyId);
+      const voucherConditions = [
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false)
+      ];
+      if (startDate) {
+        voucherConditions.push(gte(vouchers.voucherDate, startDate.toISOString().split("T")[0]));
+      }
+      if (endDate) {
+        voucherConditions.push(lte(vouchers.voucherDate, endDate.toISOString().split("T")[0]));
+      }
+      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(...voucherConditions)).execute();
+      const companyVoucherIds = companyVouchers.map((v) => v.id);
+      const companyEntries = companyVoucherIds.length > 0 ? await db.select().from(voucherEntries).where(inArray2(voucherEntries.voucherId, companyVoucherIds)).execute() : [];
+      const accountBalances = /* @__PURE__ */ new Map();
+      for (const entry of companyEntries) {
+        if (entry.ledgerAccountId) {
+          const debit = parseFloat(entry.debitAmount || "0");
+          const credit = parseFloat(entry.creditAmount || "0");
+          const current = accountBalances.get(entry.ledgerAccountId) || { debit: 0, credit: 0 };
+          accountBalances.set(entry.ledgerAccountId, {
+            debit: current.debit + debit,
+            credit: current.credit + credit
+          });
+        }
+      }
+      const allStockItems = await storage.getAllStockItems(companyId);
+      let openingStockValue = 0;
+      for (const item of allStockItems) {
+        openingStockValue += parseFloat(item.openingValue || "0");
+      }
+      const purchaseAccounts = companyAccounts.filter(
+        (acc) => acc.code === "PURCHASES" || acc.code?.startsWith("PURCHASES-")
+      );
+      let purchaseAccountsTotal = 0;
+      const purchaseAccountsDetails = purchaseAccounts.map((acc) => {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        const netBalance = balance.debit - balance.credit;
+        purchaseAccountsTotal += netBalance;
+        return {
+          id: acc.id,
+          code: acc.code,
+          name: acc.name,
+          debit: balance.debit,
+          credit: balance.credit,
+          balance: netBalance
+        };
+      });
+      const directIncomeAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Income" && acc.subType === "Direct Income"
+      );
+      let directIncomesTotal = 0;
+      const directIncomesDetails = directIncomeAccounts.map((acc) => {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        const netBalance = balance.credit - balance.debit;
+        directIncomesTotal += netBalance;
+        return {
+          id: acc.id,
+          code: acc.code,
+          name: acc.name,
+          debit: balance.debit,
+          credit: balance.credit,
+          balance: netBalance
+        };
+      });
+      const directExpenseAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Direct Expense"
+      );
+      let directExpensesTotal = 0;
+      const directExpensesDetails = directExpenseAccounts.map((acc) => {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        const netBalance = balance.debit - balance.credit;
+        directExpensesTotal += netBalance;
+        return {
+          id: acc.id,
+          code: acc.code,
+          name: acc.name,
+          debit: balance.debit,
+          credit: balance.credit,
+          balance: netBalance
+        };
+      });
+      const salesConditions = [
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false)
+      ];
+      if (startDate) {
+        salesConditions.push(gte(vouchers.voucherDate, startDate.toISOString().split("T")[0]));
+      }
+      if (endDate) {
+        salesConditions.push(lte(vouchers.voucherDate, endDate.toISOString().split("T")[0]));
+      }
+      const salesData = await db.select({
+        total: sql4`COALESCE(SUM(${salesItems.totalSales}), 0)`
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(...salesConditions)).execute();
+      const salesAccountsTotal = parseFloat(salesData[0]?.total || "0");
+      const activeLocationsData = await db.select({ id: locations.id }).from(locations).where(
+        and3(
+          eq3(locations.companyId, companyId),
+          eq3(locations.active, true),
+          isNull3(locations.deletedAt)
+        )
+      ).execute();
+      const activeLocationIds = activeLocationsData.map((l) => l.id);
+      let closingStockValue = 0;
+      if (activeLocationIds.length > 0) {
+        const inventoryData = await db.select({
+          quantity: inventory.quantity,
+          averageRate: inventory.averageRate
+        }).from(inventory).where(inArray2(inventory.locationId, activeLocationIds)).execute();
+        for (const inv of inventoryData) {
+          const qty = parseFloat(inv.quantity || "0");
+          const rate = parseFloat(inv.averageRate || "0");
+          closingStockValue += qty * rate;
+        }
+      }
+      const tradingCreditSide = salesAccountsTotal + closingStockValue + directIncomesTotal;
+      const tradingDebitSide = openingStockValue + purchaseAccountsTotal + directExpensesTotal;
+      const grossProfit = tradingCreditSide - tradingDebitSide;
+      const indirectExpenseAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Indirect Expense"
+      );
+      let indirectExpensesTotal = 0;
+      const indirectExpensesDetails = indirectExpenseAccounts.map((acc) => {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        const netBalance = balance.debit - balance.credit;
+        indirectExpensesTotal += netBalance;
+        return {
+          id: acc.id,
+          code: acc.code,
+          name: acc.name,
+          debit: balance.debit,
+          credit: balance.credit,
+          balance: netBalance
+        };
+      });
+      const indirectIncomeAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Income" && acc.subType === "Indirect Income"
+      );
+      let indirectIncomesTotal = 0;
+      const indirectIncomesDetails = indirectIncomeAccounts.map((acc) => {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        const netBalance = balance.credit - balance.debit;
+        indirectIncomesTotal += netBalance;
+        return {
+          id: acc.id,
+          code: acc.code,
+          name: acc.name,
+          debit: balance.debit,
+          credit: balance.credit,
+          balance: netBalance
+        };
+      });
+      const netProfit = grossProfit + indirectIncomesTotal - indirectExpensesTotal;
+      const leftPaneTotal = tradingDebitSide;
+      const rightTradingTotal = tradingCreditSide;
+      const grossProfitBf = grossProfit;
+      const rightPaneTotal = rightTradingTotal + indirectIncomesTotal;
+      res.json({
+        dateRange: {
+          startDate: startDate ? startDate.toISOString().split("T")[0] : null,
+          endDate: endDate ? endDate.toISOString().split("T")[0] : null
+        },
+        // TALLY PRIME TRADING ACCOUNT STRUCTURE
+        // Left pane (Debit side): Opening Stock + Purchases + Direct Expenses
+        // Right pane (Credit side): Sales + Closing Stock + Direct Incomes
+        leftPane: {
+          // Trading Account - Debit Side
+          openingStock: {
+            value: openingStockValue
+          },
+          purchaseAccounts: {
+            total: purchaseAccountsTotal,
+            accounts: purchaseAccountsDetails,
+            count: purchaseAccounts.length
+          },
+          directExpenses: {
+            total: directExpensesTotal,
+            accounts: directExpensesDetails,
+            count: directExpenseAccounts.length
+          },
+          tradingTotal: leftPaneTotal,
+          // Sum of debit side
+          grossProfit,
+          // Balancing figure (credit - debit)
+          // P&L Section
+          indirectExpenses: {
+            total: indirectExpensesTotal,
+            accounts: indirectExpensesDetails,
+            count: indirectExpenseAccounts.length
+          },
+          netProfit
+        },
+        rightPane: {
+          // Trading Account - Credit Side
+          salesAccounts: {
+            total: salesAccountsTotal
+          },
+          directIncomes: {
+            total: directIncomesTotal,
+            accounts: directIncomesDetails,
+            count: directIncomeAccounts.length
+          },
+          closingStock: {
+            value: closingStockValue
+          },
+          tradingTotal: rightTradingTotal,
+          // Sum of credit side
+          grossProfitBf,
+          // P&L Section
+          indirectIncomes: {
+            total: indirectIncomesTotal,
+            accounts: indirectIncomesDetails,
+            count: indirectIncomeAccounts.length
+          },
+          total: rightPaneTotal
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/reports/closing-stock-summary", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      console.log("[closing-stock-summary] Company ID:", companyId);
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const allStockGroups = await storage.getAllStockGroups(companyId);
+      console.log("[closing-stock-summary] Stock groups found:", allStockGroups.length, allStockGroups.map((g) => ({ id: g.id, name: g.name })));
+      const allStockItems = await storage.getAllStockItems(companyId);
+      console.log("[closing-stock-summary] Stock items found:", allStockItems.length, allStockItems.map((i) => ({ id: i.id, name: i.name, stockGroupId: i.stockGroupId })));
+      const inventoryData = await db.select({
+        stockItemId: inventory.stockItemId,
+        quantity: inventory.quantity,
+        averageRate: inventory.averageRate,
+        totalValue: inventory.totalValue
+      }).from(inventory).innerJoin(locations, eq3(inventory.locationId, locations.id)).where(
+        and3(
+          eq3(inventory.companyId, companyId),
+          eq3(locations.active, true),
+          isNull3(locations.deletedAt)
+        )
+      ).execute();
+      console.log("[closing-stock-summary] Inventory data rows:", inventoryData.length);
+      console.log("[closing-stock-summary] Inventory sample:", inventoryData.slice(0, 5));
+      const inventoryByItem = /* @__PURE__ */ new Map();
+      for (const inv of inventoryData) {
+        const qty = parseFloat(inv.quantity);
+        const val = parseFloat(inv.totalValue);
+        if (inventoryByItem.has(inv.stockItemId)) {
+          const existing = inventoryByItem.get(inv.stockItemId);
+          existing.quantity += qty;
+          existing.totalValue += val;
+        } else {
+          inventoryByItem.set(inv.stockItemId, {
+            quantity: qty,
+            totalValue: val
+          });
+        }
+      }
+      console.log("[closing-stock-summary] Inventory by item map size:", inventoryByItem.size);
+      console.log("[closing-stock-summary] Inventory by item entries:", Array.from(inventoryByItem.entries()));
+      const stockGroupSummary = allStockGroups.map((group) => {
+        const groupItems = allStockItems.filter((item) => item.stockGroupId === group.id);
+        console.log(`[closing-stock-summary] Group ${group.id} (${group.name}): ${groupItems.length} items`, groupItems.map((i) => ({ id: i.id, name: i.name })));
+        let closingQuantity = 0;
+        let closingValue = 0;
+        for (const item of groupItems) {
+          const invData = inventoryByItem.get(item.id);
+          console.log(`[closing-stock-summary] Item ${item.id} (${item.name}) inventory:`, invData);
+          if (invData) {
+            closingQuantity += invData.quantity;
+            closingValue += invData.totalValue;
+          }
+        }
+        const closingRate = closingQuantity > 0 ? closingValue / closingQuantity : 0;
+        console.log(`[closing-stock-summary] Group ${group.name} totals: qty=${closingQuantity}, value=${closingValue}`);
+        return {
+          id: group.id,
+          code: group.code,
+          name: group.name,
+          closing: {
+            quantity: closingQuantity,
+            rate: closingRate,
+            value: closingValue
+          },
+          itemCount: groupItems.length
+        };
+      }).filter((g) => g.closing.quantity > 0 || g.closing.value > 0);
+      console.log("[closing-stock-summary] Final summary (after filter):", stockGroupSummary);
+      const grandTotal = {
+        quantity: stockGroupSummary.reduce((sum, g) => sum + g.closing.quantity, 0),
+        value: stockGroupSummary.reduce((sum, g) => sum + g.closing.value, 0)
+      };
+      const grandTotalRate = grandTotal.quantity > 0 ? grandTotal.value / grandTotal.quantity : 0;
+      res.json({
+        stockGroups: stockGroupSummary,
+        grandTotal: {
+          quantity: grandTotal.quantity,
+          rate: grandTotalRate,
+          value: grandTotal.value
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/reports/closing-stock-summary/:stockGroupId/items", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      console.log("[closing-stock-detail] Company ID:", companyId);
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { stockGroupId } = req.params;
+      console.log("[closing-stock-detail] Stock Group ID param:", stockGroupId, "parsed:", parseInt(stockGroupId));
+      const groupItems = await db.select().from(stockItems).where(
+        and3(
+          eq3(stockItems.companyId, companyId),
+          eq3(stockItems.stockGroupId, parseInt(stockGroupId)),
+          eq3(stockItems.active, true)
+        )
+      ).execute();
+      console.log("[closing-stock-detail] Group items found:", groupItems.length, groupItems.map((i) => ({ id: i.id, name: i.name, stockGroupId: i.stockGroupId })));
+      const itemIds = groupItems.map((i) => i.id);
+      const inventoryData = itemIds.length > 0 ? await db.select({
+        stockItemId: inventory.stockItemId,
+        quantity: inventory.quantity,
+        averageRate: inventory.averageRate,
+        totalValue: inventory.totalValue
+      }).from(inventory).innerJoin(locations, eq3(inventory.locationId, locations.id)).where(
+        and3(
+          eq3(inventory.companyId, companyId),
+          inArray2(inventory.stockItemId, itemIds),
+          eq3(locations.active, true),
+          isNull3(locations.deletedAt)
+        )
+      ).execute() : [];
+      const inventoryByItem = /* @__PURE__ */ new Map();
+      for (const inv of inventoryData) {
+        const qty = parseFloat(inv.quantity);
+        const val = parseFloat(inv.totalValue);
+        if (inventoryByItem.has(inv.stockItemId)) {
+          const existing = inventoryByItem.get(inv.stockItemId);
+          existing.quantity += qty;
+          existing.totalValue += val;
+        } else {
+          inventoryByItem.set(inv.stockItemId, {
+            quantity: qty,
+            totalValue: val
+          });
+        }
+      }
+      console.log("[closing-stock-detail] Inventory data rows:", inventoryData.length);
+      console.log("[closing-stock-detail] Inventory by item entries:", Array.from(inventoryByItem.entries()));
+      const items = groupItems.map((item) => {
+        const invData = inventoryByItem.get(item.id) || { quantity: 0, totalValue: 0 };
+        const rate = invData.quantity > 0 ? invData.totalValue / invData.quantity : 0;
+        console.log(`[closing-stock-detail] Item ${item.id} (${item.name}):`, invData);
+        return {
+          id: item.id,
+          code: item.code,
+          name: item.name,
+          closing: {
+            quantity: invData.quantity,
+            rate,
+            value: invData.totalValue
+          }
+        };
+      }).filter((i) => i.closing.quantity > 0 || i.closing.value > 0);
+      console.log("[closing-stock-detail] Final items (after filter):", items.length, items);
+      const totals = {
+        quantity: items.reduce((sum, i) => sum + i.closing.quantity, 0),
+        value: items.reduce((sum, i) => sum + i.closing.value, 0)
+      };
+      const avgRate = totals.quantity > 0 ? totals.value / totals.quantity : 0;
+      res.json({
+        items,
+        totals: {
+          quantity: totals.quantity,
+          rate: avgRate,
+          value: totals.value
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/reports/net-profit-statement/purchase-accounts", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const companyAccounts = await storage.getAllLedgerAccounts(companyId);
+      const purchaseAccounts = companyAccounts.filter(
+        (acc) => acc.code === "PURCHASES" || acc.code?.startsWith("PURCHASES-")
+      );
+      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false))).execute();
+      const companyVoucherIds = companyVouchers.map((v) => v.id);
+      const accountIds = purchaseAccounts.map((a) => a.id);
+      const entries = companyVoucherIds.length > 0 && accountIds.length > 0 ? await db.select().from(voucherEntries).where(
+        and3(
+          inArray2(voucherEntries.voucherId, companyVoucherIds),
+          inArray2(voucherEntries.ledgerAccountId, accountIds)
+        )
+      ).execute() : [];
+      const accountBalances = /* @__PURE__ */ new Map();
+      for (const entry of entries) {
+        if (entry.ledgerAccountId) {
+          const debit = parseFloat(entry.debitAmount || "0");
+          const credit = parseFloat(entry.creditAmount || "0");
+          const current = accountBalances.get(entry.ledgerAccountId) || { debit: 0, credit: 0 };
+          accountBalances.set(entry.ledgerAccountId, {
+            debit: current.debit + debit,
+            credit: current.credit + credit
+          });
+        }
+      }
+      const accounts = purchaseAccounts.map((acc) => {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        return {
+          id: acc.id,
+          code: acc.code,
+          name: acc.name,
+          debit: balance.debit,
+          credit: balance.credit,
+          balance: balance.debit - balance.credit
+        };
+      }).filter((a) => a.debit > 0 || a.credit > 0);
+      const total = accounts.reduce((sum, a) => sum + a.balance, 0);
+      res.json({ accounts, total });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/reports/net-profit-statement/direct-incomes", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const companyAccounts = await storage.getAllLedgerAccounts(companyId);
+      const directIncomeAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Income" && acc.subType === "Direct Income"
+      );
+      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false))).execute();
+      const companyVoucherIds = companyVouchers.map((v) => v.id);
+      const accountIds = directIncomeAccounts.map((a) => a.id);
+      const entries = companyVoucherIds.length > 0 && accountIds.length > 0 ? await db.select().from(voucherEntries).where(
+        and3(
+          inArray2(voucherEntries.voucherId, companyVoucherIds),
+          inArray2(voucherEntries.ledgerAccountId, accountIds)
+        )
+      ).execute() : [];
+      const accountBalances = /* @__PURE__ */ new Map();
+      for (const entry of entries) {
+        if (entry.ledgerAccountId) {
+          const debit = parseFloat(entry.debitAmount || "0");
+          const credit = parseFloat(entry.creditAmount || "0");
+          const current = accountBalances.get(entry.ledgerAccountId) || { debit: 0, credit: 0 };
+          accountBalances.set(entry.ledgerAccountId, {
+            debit: current.debit + debit,
+            credit: current.credit + credit
+          });
+        }
+      }
+      const accounts = directIncomeAccounts.map((acc) => {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        return {
+          id: acc.id,
+          code: acc.code,
+          name: acc.name,
+          debit: balance.debit,
+          credit: balance.credit,
+          balance: balance.credit - balance.debit
+          // Income is credit
+        };
+      }).filter((a) => a.debit > 0 || a.credit > 0);
+      const total = accounts.reduce((sum, a) => sum + a.balance, 0);
+      res.json({ accounts, total });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/reports/net-profit-statement/direct-expenses", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const companyAccounts = await storage.getAllLedgerAccounts(companyId);
+      const directExpenseAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Direct Expense"
+      );
+      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false))).execute();
+      const companyVoucherIds = companyVouchers.map((v) => v.id);
+      const accountIds = directExpenseAccounts.map((a) => a.id);
+      const entries = companyVoucherIds.length > 0 && accountIds.length > 0 ? await db.select().from(voucherEntries).where(
+        and3(
+          inArray2(voucherEntries.voucherId, companyVoucherIds),
+          inArray2(voucherEntries.ledgerAccountId, accountIds)
+        )
+      ).execute() : [];
+      const accountBalances = /* @__PURE__ */ new Map();
+      for (const entry of entries) {
+        if (entry.ledgerAccountId) {
+          const debit = parseFloat(entry.debitAmount || "0");
+          const credit = parseFloat(entry.creditAmount || "0");
+          const current = accountBalances.get(entry.ledgerAccountId) || { debit: 0, credit: 0 };
+          accountBalances.set(entry.ledgerAccountId, {
+            debit: current.debit + debit,
+            credit: current.credit + credit
+          });
+        }
+      }
+      const accounts = directExpenseAccounts.map((acc) => {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        return {
+          id: acc.id,
+          code: acc.code,
+          name: acc.name,
+          debit: balance.debit,
+          credit: balance.credit,
+          balance: balance.debit - balance.credit
+          // Expense is debit
+        };
+      }).filter((a) => a.debit > 0 || a.credit > 0);
+      const total = accounts.reduce((sum, a) => sum + a.balance, 0);
+      res.json({ accounts, total });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/reports/net-profit-statement/indirect-expenses", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const companyAccounts = await storage.getAllLedgerAccounts(companyId);
+      const indirectExpenseAccounts = companyAccounts.filter(
+        (acc) => acc.accountType === "Indirect Expense"
+      );
+      const companyVouchers = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.companyId, companyId), eq3(vouchers.optional, false))).execute();
+      const companyVoucherIds = companyVouchers.map((v) => v.id);
+      const accountIds = indirectExpenseAccounts.map((a) => a.id);
+      const entries = companyVoucherIds.length > 0 && accountIds.length > 0 ? await db.select().from(voucherEntries).where(
+        and3(
+          inArray2(voucherEntries.voucherId, companyVoucherIds),
+          inArray2(voucherEntries.ledgerAccountId, accountIds)
+        )
+      ).execute() : [];
+      const accountBalances = /* @__PURE__ */ new Map();
+      for (const entry of entries) {
+        if (entry.ledgerAccountId) {
+          const debit = parseFloat(entry.debitAmount || "0");
+          const credit = parseFloat(entry.creditAmount || "0");
+          const current = accountBalances.get(entry.ledgerAccountId) || { debit: 0, credit: 0 };
+          accountBalances.set(entry.ledgerAccountId, {
+            debit: current.debit + debit,
+            credit: current.credit + credit
+          });
+        }
+      }
+      const accounts = indirectExpenseAccounts.map((acc) => {
+        const balance = accountBalances.get(acc.id) || { debit: 0, credit: 0 };
+        return {
+          id: acc.id,
+          code: acc.code,
+          name: acc.name,
+          debit: balance.debit,
+          credit: balance.credit,
+          balance: balance.debit - balance.credit
+          // Expense is debit
+        };
+      }).filter((a) => a.debit > 0 || a.credit > 0);
+      const total = accounts.reduce((sum, a) => sum + a.balance, 0);
+      res.json({ accounts, total });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/reports/ledger-monthly-summary/:accountId", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const accountId = parseInt(req.params.accountId);
+      const { startDate, endDate } = req.query;
+      const account = await db.select().from(ledgerAccounts).where(and3(eq3(ledgerAccounts.id, accountId), eq3(ledgerAccounts.companyId, companyId))).execute().then((rows) => rows[0]);
+      if (!account) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+      const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).getFullYear(), 0, 1);
+      const end = endDate ? new Date(endDate) : new Date((/* @__PURE__ */ new Date()).getFullYear(), 11, 31);
+      const openingEntries = await db.select({
+        debit: voucherEntries.debitAmount,
+        credit: voucherEntries.creditAmount
+      }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+        and3(
+          eq3(voucherEntries.ledgerAccountId, accountId),
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.optional, false),
+          lt2(vouchers.voucherDate, start.toISOString().split("T")[0])
+        )
+      ).execute();
+      let openingBalance = parseFloat(account.openingBalance || "0");
+      for (const entry of openingEntries) {
+        openingBalance += parseFloat(entry.debit || "0") - parseFloat(entry.credit || "0");
+      }
+      const entries = await db.select({
+        voucherId: vouchers.id,
+        date: vouchers.voucherDate,
+        debit: voucherEntries.debitAmount,
+        credit: voucherEntries.creditAmount
+      }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+        and3(
+          eq3(voucherEntries.ledgerAccountId, accountId),
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.optional, false),
+          gte(vouchers.voucherDate, start.toISOString().split("T")[0]),
+          lte(vouchers.voucherDate, end.toISOString().split("T")[0])
+        )
+      ).execute();
+      const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ];
+      const monthlyData = [];
+      let runningBalance = openingBalance;
+      for (let month = 0; month < 12; month++) {
+        const monthEntries = entries.filter((e) => {
+          const d = new Date(e.date);
+          return d.getMonth() === month && d.getFullYear() === start.getFullYear();
+        });
+        let debit = 0;
+        let credit = 0;
+        for (const entry of monthEntries) {
+          debit += parseFloat(entry.debit || "0");
+          credit += parseFloat(entry.credit || "0");
+        }
+        runningBalance += debit - credit;
+        monthlyData.push({
+          month: month + 1,
+          monthName: monthNames[month],
+          debit,
+          credit,
+          closingBalance: runningBalance
+        });
+      }
+      const grandTotal = {
+        debit: monthlyData.reduce((sum, m) => sum + m.debit, 0),
+        credit: monthlyData.reduce((sum, m) => sum + m.credit, 0),
+        closingBalance: runningBalance
+      };
+      res.json({
+        account: {
+          id: account.id,
+          code: account.code,
+          name: account.name
+        },
+        openingBalance,
+        months: monthlyData,
+        grandTotal,
+        dateRange: {
+          startDate: start.toISOString().split("T")[0],
+          endDate: end.toISOString().split("T")[0]
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/reports/ledger-vouchers/:accountId/:year/:month", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const accountId = parseInt(req.params.accountId);
+      const year = parseInt(req.params.year);
+      const month = parseInt(req.params.month);
+      const account = await db.select().from(ledgerAccounts).where(and3(eq3(ledgerAccounts.id, accountId), eq3(ledgerAccounts.companyId, companyId))).execute().then((rows) => rows[0]);
+      if (!account) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+      const monthNames = [
+        "",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ];
+      const startOfMonth = new Date(year, month - 1, 1);
+      const endOfMonth = new Date(year, month, 0);
+      const openingEntries = await db.select({
+        debit: voucherEntries.debitAmount,
+        credit: voucherEntries.creditAmount
+      }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+        and3(
+          eq3(voucherEntries.ledgerAccountId, accountId),
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.optional, false),
+          lt2(vouchers.voucherDate, startOfMonth.toISOString().split("T")[0])
+        )
+      ).execute();
+      let openingBalance = parseFloat(account.openingBalance || "0");
+      for (const entry of openingEntries) {
+        openingBalance += parseFloat(entry.debit || "0") - parseFloat(entry.credit || "0");
+      }
+      const voucherEntriesData = await db.select({
+        entryId: voucherEntries.id,
+        voucherId: vouchers.id,
+        voucherNumber: vouchers.voucherNumber,
+        voucherType: vouchers.voucherType,
+        date: vouchers.voucherDate,
+        debit: voucherEntries.debitAmount,
+        credit: voucherEntries.creditAmount,
+        supplierId: voucherEntries.supplierId,
+        locationId: vouchers.locationId,
+        narration: voucherEntries.narration
+      }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+        and3(
+          eq3(voucherEntries.ledgerAccountId, accountId),
+          eq3(vouchers.companyId, companyId),
+          eq3(vouchers.optional, false),
+          gte(vouchers.voucherDate, startOfMonth.toISOString().split("T")[0]),
+          lte(vouchers.voucherDate, endOfMonth.toISOString().split("T")[0])
+        )
+      ).orderBy(vouchers.voucherDate, vouchers.voucherNumber).execute();
+      const vouchersWithDetails = await Promise.all(
+        voucherEntriesData.map(async (entry) => {
+          let particulars = "";
+          if (entry.supplierId) {
+            const supplierData = await db.select({ legalName: suppliers.legalName }).from(suppliers).where(eq3(suppliers.id, entry.supplierId)).execute().then((rows) => rows[0]);
+            particulars = supplierData?.legalName || "Unknown Supplier";
+          } else if (entry.locationId) {
+            const location = await db.select({ name: locations.name }).from(locations).where(eq3(locations.id, entry.locationId)).execute().then((rows) => rows[0]);
+            particulars = location?.name || "Unknown Location";
+          } else if (entry.narration) {
+            particulars = entry.narration.substring(0, 50);
+          } else {
+            const contraEntries = await db.select({ accountName: ledgerAccounts.name }).from(voucherEntries).innerJoin(ledgerAccounts, eq3(voucherEntries.ledgerAccountId, ledgerAccounts.id)).where(
+              and3(
+                eq3(voucherEntries.voucherId, entry.voucherId),
+                ne2(voucherEntries.ledgerAccountId, accountId)
+              )
+            ).execute();
+            particulars = contraEntries[0]?.accountName || "Multiple Accounts";
+          }
+          return {
+            id: entry.entryId,
+            voucherId: entry.voucherId,
+            date: entry.date,
+            particulars,
+            voucherType: entry.voucherType,
+            voucherNumber: entry.voucherNumber,
+            debit: parseFloat(entry.debit || "0"),
+            credit: parseFloat(entry.credit || "0")
+          };
+        })
+      );
+      const totals = {
+        debit: vouchersWithDetails.reduce((sum, v) => sum + v.debit, 0),
+        credit: vouchersWithDetails.reduce((sum, v) => sum + v.credit, 0)
+      };
+      const closingBalance = openingBalance + totals.debit - totals.credit;
+      res.json({
+        account: {
+          id: account.id,
+          code: account.code,
+          name: account.name
+        },
+        month,
+        monthName: monthNames[month],
+        year,
+        openingBalance,
+        vouchers: vouchersWithDetails,
+        totals,
+        closingBalance
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/voucher-detail/:voucherId", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const voucherId = parseInt(req.params.voucherId);
+      const voucher = await db.select().from(vouchers).where(and3(eq3(vouchers.id, voucherId), eq3(vouchers.companyId, companyId))).execute().then((rows) => rows[0]);
+      if (!voucher) {
+        return res.status(404).json({ message: "Voucher not found" });
+      }
+      let partyName = null;
+      const supplierEntry = await db.select({ supplierId: voucherEntries.supplierId }).from(voucherEntries).where(and3(eq3(voucherEntries.voucherId, voucherId), isNotNull(voucherEntries.supplierId))).execute().then((rows) => rows[0]);
+      if (supplierEntry?.supplierId) {
+        const supplier = await db.select({ legalName: suppliers.legalName }).from(suppliers).where(eq3(suppliers.id, supplierEntry.supplierId)).execute().then((rows) => rows[0]);
+        partyName = supplier?.legalName || null;
+      }
+      const locationName = voucher.locationName || null;
+      let purchaseLedger = null;
+      const purchaseEntry = await db.select({ name: ledgerAccounts.name }).from(voucherEntries).innerJoin(ledgerAccounts, eq3(voucherEntries.ledgerAccountId, ledgerAccounts.id)).where(
+        and3(
+          eq3(voucherEntries.voucherId, voucherId),
+          or2(
+            eq3(ledgerAccounts.code, "PURCHASES"),
+            sql4`${ledgerAccounts.code} LIKE 'PURCHASES-%'`
+          )
+        )
+      ).execute().then((rows) => rows[0]);
+      purchaseLedger = purchaseEntry?.name || null;
+      const salesItemsData = await db.select({
+        id: salesItems.id,
+        stockItemId: salesItems.stockItemId,
+        quantity: salesItems.quantity,
+        rate: salesItems.sellingPrice,
+        total: salesItems.totalSales
+      }).from(salesItems).where(eq3(salesItems.voucherId, voucherId)).execute();
+      const poItemsData = await db.select({
+        id: poLineItems.id,
+        stockItemId: poLineItems.stockItemId,
+        quantity: poLineItems.quantity,
+        rate: poLineItems.rate,
+        total: poLineItems.lineTotal
+      }).from(poLineItems).innerJoin(purchaseOrders, eq3(poLineItems.poId, purchaseOrders.id)).where(eq3(purchaseOrders.voucherId, voucherId)).execute();
+      const allItems = [...salesItemsData, ...poItemsData];
+      const items = await Promise.all(
+        allItems.map(async (item) => {
+          let stockItem = null;
+          if (item.stockItemId) {
+            stockItem = await db.select({ name: stockItems.name, code: stockItems.code, uom: stockItems.uom }).from(stockItems).where(eq3(stockItems.id, item.stockItemId)).execute().then((rows) => rows[0]);
+          }
+          return {
+            id: item.id,
+            stockItemId: item.stockItemId,
+            stockItemName: stockItem?.name || "Unknown Item",
+            stockItemCode: stockItem?.code || "",
+            quantity: parseFloat(item.quantity || "0"),
+            unit: stockItem?.uom || "BL",
+            rate: parseFloat(item.rate || "0"),
+            amount: parseFloat(item.total || "0")
+          };
+        })
+      );
+      const entriesData = await db.select({
+        id: voucherEntries.id,
+        ledgerAccountId: voucherEntries.ledgerAccountId,
+        debitAmount: voucherEntries.debitAmount,
+        creditAmount: voucherEntries.creditAmount,
+        narration: voucherEntries.narration
+      }).from(voucherEntries).where(eq3(voucherEntries.voucherId, voucherId)).execute();
+      const entries = await Promise.all(
+        entriesData.map(async (entry) => {
+          let ledgerName = "Unknown Account";
+          if (entry.ledgerAccountId) {
+            const ledger = await db.select({ name: ledgerAccounts.name }).from(ledgerAccounts).where(eq3(ledgerAccounts.id, entry.ledgerAccountId)).execute().then((rows) => rows[0]);
+            ledgerName = ledger?.name || "Unknown Account";
+          }
+          return {
+            id: entry.id,
+            ledgerAccountId: entry.ledgerAccountId || 0,
+            ledgerAccountName: ledgerName,
+            debitAmount: parseFloat(entry.debitAmount || "0"),
+            creditAmount: parseFloat(entry.creditAmount || "0"),
+            narration: entry.narration
+          };
+        })
+      );
+      const itemsTotalQuantity = items.reduce((sum, i) => sum + i.quantity, 0);
+      const itemsTotalAmount = items.reduce((sum, i) => sum + i.amount, 0);
+      const entriesDebit = entries.reduce((sum, e) => sum + e.debitAmount, 0);
+      const entriesCredit = entries.reduce((sum, e) => sum + e.creditAmount, 0);
+      res.json({
+        id: voucher.id,
+        voucherNumber: voucher.voucherNumber,
+        voucherType: voucher.voucherType,
+        date: voucher.voucherDate,
+        partyName,
+        purchaseLedger,
+        locationName,
+        narration: voucher.description,
+        supplierInvoiceNo: null,
+        items,
+        entries,
+        totals: {
+          quantity: itemsTotalQuantity,
+          amount: itemsTotalAmount,
+          debit: entriesDebit,
+          credit: entriesCredit
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   app2.get("/api/dashboard-cash-accounts", requireAuth, async (req, res) => {
     try {
       const companyId = req.session.currentCompanyId;
@@ -15610,18 +21159,75 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "No company selected" });
       }
       const { dashboardCashAccounts: dashboardCashAccounts2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const accounts = await db.select().from(dashboardCashAccounts2).where(eq2(dashboardCashAccounts2.companyId, companyId)).orderBy(dashboardCashAccounts2.displayOrder).execute();
+      const accounts = await db.select().from(dashboardCashAccounts2).where(eq3(dashboardCashAccounts2.companyId, companyId)).orderBy(dashboardCashAccounts2.displayOrder).execute();
+      const calculateAccountBalance = async (accountId, accountType, openingBalance, openingBalanceSide) => {
+        const { voucherEntries: voucherEntries2, vouchers: vouchersTable } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        let entries = [];
+        if (accountType === "ledger") {
+          entries = await db.select({
+            debitAmount: voucherEntries2.debitAmount,
+            creditAmount: voucherEntries2.creditAmount
+          }).from(voucherEntries2).innerJoin(vouchersTable, eq3(voucherEntries2.voucherId, vouchersTable.id)).where(
+            and3(
+              eq3(voucherEntries2.ledgerAccountId, accountId),
+              eq3(vouchersTable.companyId, companyId),
+              isNull3(vouchersTable.deletedAt),
+              eq3(vouchersTable.optional, false)
+            )
+          ).execute();
+        } else if (accountType === "bank") {
+          entries = await db.select({
+            debitAmount: voucherEntries2.debitAmount,
+            creditAmount: voucherEntries2.creditAmount
+          }).from(voucherEntries2).innerJoin(vouchersTable, eq3(voucherEntries2.voucherId, vouchersTable.id)).where(
+            and3(
+              eq3(voucherEntries2.bankAccountId, accountId),
+              eq3(vouchersTable.companyId, companyId),
+              isNull3(vouchersTable.deletedAt),
+              eq3(vouchersTable.optional, false)
+            )
+          ).execute();
+        } else {
+          entries = [];
+        }
+        let balance = parseFloat(openingBalance || "0");
+        if (openingBalanceSide === "Cr") {
+          balance = -balance;
+        }
+        for (const entry of entries) {
+          const debit = parseFloat(entry.debitAmount || "0");
+          const credit = parseFloat(entry.creditAmount || "0");
+          balance += debit - credit;
+        }
+        return balance;
+      };
       const enrichedAccounts = await Promise.all(
         accounts.map(async (account) => {
           let accountDetails = null;
           if (account.accountType === "ledger") {
             const { ledgerAccounts: ledgerAccounts2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-            const [ledger] = await db.select().from(ledgerAccounts2).where(eq2(ledgerAccounts2.id, account.accountId)).execute();
-            accountDetails = ledger ? { ...ledger, type: "Ledger" } : null;
+            const [ledger] = await db.select().from(ledgerAccounts2).where(eq3(ledgerAccounts2.id, account.accountId)).execute();
+            if (ledger) {
+              const balance = await calculateAccountBalance(
+                ledger.id,
+                "ledger",
+                ledger.openingBalance || "0",
+                ledger.openingBalanceSide
+              );
+              accountDetails = { ...ledger, type: "Ledger", balance, currentBalance: balance };
+            }
           } else if (account.accountType === "bank") {
             const { bankAccounts: bankAccounts2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-            const [bank] = await db.select().from(bankAccounts2).where(eq2(bankAccounts2.id, account.accountId)).execute();
-            accountDetails = bank ? { ...bank, type: "Bank" } : null;
+            const [bank] = await db.select().from(bankAccounts2).where(eq3(bankAccounts2.id, account.accountId)).execute();
+            if (bank) {
+              const balance = await calculateAccountBalance(
+                bank.id,
+                "bank",
+                bank.openingBalance || "0",
+                bank.openingBalanceSide
+              );
+              accountDetails = { ...bank, type: "Bank", balance, currentBalance: balance };
+            }
           }
           return {
             id: account.id,
@@ -15664,9 +21270,9 @@ async function registerRoutes(app2) {
       const { dashboardCashAccounts: dashboardCashAccounts2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const id = parseInt(req.params.id);
       await db.delete(dashboardCashAccounts2).where(
-        and2(
-          eq2(dashboardCashAccounts2.id, id),
-          eq2(dashboardCashAccounts2.companyId, companyId)
+        and3(
+          eq3(dashboardCashAccounts2.id, id),
+          eq3(dashboardCashAccounts2.companyId, companyId)
         )
       ).execute();
       res.json({ success: true });
@@ -15681,27 +21287,41 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "No company selected" });
       }
       const { dashboardPayableAccounts: dashboardPayableAccounts2, ledgerAccounts: ledgerAccounts2, vouchers: vouchersTable, voucherEntries: voucherEntries2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const accounts = await db.select().from(dashboardPayableAccounts2).where(eq2(dashboardPayableAccounts2.companyId, companyId)).orderBy(dashboardPayableAccounts2.displayOrder).execute();
+      const accounts = await db.select().from(dashboardPayableAccounts2).where(eq3(dashboardPayableAccounts2.companyId, companyId)).orderBy(dashboardPayableAccounts2.displayOrder).execute();
+      const calculateAccountBalance = async (accountId, openingBalance, openingBalanceSide) => {
+        const entries = await db.select({
+          debitAmount: voucherEntries2.debitAmount,
+          creditAmount: voucherEntries2.creditAmount
+        }).from(voucherEntries2).innerJoin(vouchersTable, eq3(voucherEntries2.voucherId, vouchersTable.id)).where(
+          and3(
+            eq3(voucherEntries2.ledgerAccountId, accountId),
+            eq3(vouchersTable.companyId, companyId),
+            isNull3(vouchersTable.deletedAt),
+            eq3(vouchersTable.optional, false)
+          )
+        ).execute();
+        let balance = parseFloat(openingBalance || "0");
+        if (openingBalanceSide === "Cr") {
+          balance = -balance;
+        }
+        for (const entry of entries) {
+          const debit = parseFloat(entry.debitAmount || "0");
+          const credit = parseFloat(entry.creditAmount || "0");
+          balance += debit - credit;
+        }
+        return balance;
+      };
       const enrichedAccounts = await Promise.all(
         accounts.map(async (account) => {
-          const [ledgerAccount] = await db.select().from(ledgerAccounts2).where(eq2(ledgerAccounts2.id, account.accountId)).execute();
+          const [ledgerAccount] = await db.select().from(ledgerAccounts2).where(eq3(ledgerAccounts2.id, account.accountId)).execute();
           if (!ledgerAccount) {
             return null;
           }
-          let balance = parseFloat(ledgerAccount?.openingBalance || "0");
-          const entries = await db.select().from(voucherEntries2).leftJoin(vouchersTable, eq2(vouchersTable.id, voucherEntries2.voucherId)).where(and2(
-            eq2(voucherEntries2.ledgerAccountId, account.accountId),
-            eq2(vouchersTable.companyId, companyId)
-          )).execute();
-          entries.forEach((entry) => {
-            const amount = parseFloat(String(entry.voucher_entries.amount || 0));
-            const side = entry.voucher_entries.side;
-            if (side === "Dr") {
-              balance -= amount;
-            } else if (side === "Cr") {
-              balance += amount;
-            }
-          });
+          const balance = await calculateAccountBalance(
+            ledgerAccount.id,
+            ledgerAccount.openingBalance || "0",
+            ledgerAccount.openingBalanceSide
+          );
           return {
             id: account.accountId,
             accountId: account.accountId,
@@ -15743,11 +21363,106 @@ async function registerRoutes(app2) {
       const { dashboardPayableAccounts: dashboardPayableAccounts2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const accountId = parseInt(req.params.id);
       await db.delete(dashboardPayableAccounts2).where(
-        and2(
-          eq2(dashboardPayableAccounts2.accountId, accountId),
-          eq2(dashboardPayableAccounts2.companyId, companyId)
+        and3(
+          eq3(dashboardPayableAccounts2.accountId, accountId),
+          eq3(dashboardPayableAccounts2.companyId, companyId)
         )
       ).execute();
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/dashboard-account-selections/:type", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const selectionType = req.params.type;
+      if (!["availableCash", "cashToPay"].includes(selectionType)) {
+        return res.status(400).json({ message: "Invalid selection type" });
+      }
+      const { dashboardAccountSelections: dashboardAccountSelections2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const [selection] = await db.select().from(dashboardAccountSelections2).where(
+        and3(
+          eq3(dashboardAccountSelections2.companyId, companyId),
+          eq3(dashboardAccountSelections2.selectionType, selectionType)
+        )
+      ).execute();
+      if (!selection) {
+        return res.json({ accountIds: [], accounts: [] });
+      }
+      const accounts = [];
+      if (selection.accountIds && selection.accountIds.length > 0) {
+        const allLedgerAccounts = await storage.getAllLedgerAccounts(companyId);
+        for (const accountId of selection.accountIds) {
+          const account = allLedgerAccounts.find((a) => a.id === accountId);
+          if (account) {
+            const entries = await db.select({
+              debitAmount: voucherEntries.debitAmount,
+              creditAmount: voucherEntries.creditAmount
+            }).from(voucherEntries).innerJoin(vouchers, eq3(voucherEntries.voucherId, vouchers.id)).where(
+              and3(
+                eq3(voucherEntries.ledgerAccountId, accountId),
+                eq3(vouchers.companyId, companyId),
+                or2(eq3(vouchers.optional, false), isNull3(vouchers.optional))
+              )
+            ).execute();
+            let totalDebits = 0;
+            let totalCredits = 0;
+            for (const entry of entries) {
+              totalDebits += parseFloat(entry.debitAmount || "0");
+              totalCredits += parseFloat(entry.creditAmount || "0");
+            }
+            const openingBalance = parseFloat(account.openingBalance || "0");
+            const openingSign = account.openingBalanceSide === "Cr" ? -1 : 1;
+            const balance = openingBalance * openingSign + totalDebits - totalCredits;
+            accounts.push({
+              id: account.id,
+              code: account.code,
+              name: account.name,
+              accountType: account.accountType,
+              balance
+            });
+          }
+        }
+      }
+      res.json({ accountIds: selection.accountIds || [], accounts });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.put("/api/dashboard-account-selections/:type", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const selectionType = req.params.type;
+      if (!["availableCash", "cashToPay"].includes(selectionType)) {
+        return res.status(400).json({ message: "Invalid selection type" });
+      }
+      const { accountIds } = req.body;
+      if (!Array.isArray(accountIds)) {
+        return res.status(400).json({ message: "accountIds must be an array" });
+      }
+      const { dashboardAccountSelections: dashboardAccountSelections2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const [existing] = await db.select().from(dashboardAccountSelections2).where(
+        and3(
+          eq3(dashboardAccountSelections2.companyId, companyId),
+          eq3(dashboardAccountSelections2.selectionType, selectionType)
+        )
+      ).execute();
+      if (existing) {
+        await db.update(dashboardAccountSelections2).set({ accountIds, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(dashboardAccountSelections2.id, existing.id)).execute();
+      } else {
+        await db.insert(dashboardAccountSelections2).values({
+          companyId,
+          selectionType,
+          accountIds
+        }).execute();
+      }
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -15993,10 +21708,10 @@ async function registerRoutes(app2) {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const workbook = await read(req.file.buffer, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet);
+      const rows = utils.sheet_to_json(worksheet);
       const { insertBaleProductSchema: insertBaleProductSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const productsData = rows.map((row) => {
         return insertBaleProductSchema2.parse({
@@ -16220,7 +21935,7 @@ async function registerRoutes(app2) {
         return res.status(404).json({ message: "Mix batch not found" });
       }
       const { baleProducts: baleProducts2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const [product] = await db.select().from(baleProducts2).where(eq2(baleProducts2.id, productId));
+      const [product] = await db.select().from(baleProducts2).where(eq3(baleProducts2.id, productId));
       if (!product || product.companyId !== companyId) {
         return res.status(404).json({ message: "Product not found" });
       }
@@ -16231,14 +21946,14 @@ async function registerRoutes(app2) {
         const createdBales = [];
         const { baleSequences: baleSequences2, productionBales: productionBales2, mixBatches: mixBatches2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         for (let i = 0; i < numBales; i++) {
-          const [sequence] = await tx.select().from(baleSequences2).where(eq2(baleSequences2.companyId, companyId)).for("update");
+          const [sequence] = await tx.select().from(baleSequences2).where(eq3(baleSequences2.companyId, companyId)).for("update");
           let barcode;
           if (!sequence) {
             const [newSeq] = await tx.insert(baleSequences2).values({ companyId, nextNumber: 2 }).returning();
             barcode = `HD${String(newSeq.nextNumber - 1).padStart(5, "0")}`;
           } else {
             barcode = `HD${String(sequence.nextNumber).padStart(5, "0")}`;
-            await tx.update(baleSequences2).set({ nextNumber: sequence.nextNumber + 1 }).where(eq2(baleSequences2.id, sequence.id));
+            await tx.update(baleSequences2).set({ nextNumber: sequence.nextNumber + 1 }).where(eq3(baleSequences2.id, sequence.id));
           }
           const baleData = {
             companyId,
@@ -16258,9 +21973,9 @@ async function registerRoutes(app2) {
           createdBales.push(bale);
         }
         await tx.update(mixBatches2).set({
-          totalActualWeight: sql3`COALESCE(${mixBatches2.totalActualWeight}, 0) + ${totalWeight}`,
-          updatedAt: sql3`now()`
-        }).where(eq2(mixBatches2.id, mixBatchId));
+          totalActualWeight: sql4`COALESCE(${mixBatches2.totalActualWeight}, 0) + ${totalWeight}`,
+          updatedAt: sql4`now()`
+        }).where(eq3(mixBatches2.id, mixBatchId));
         return createdBales;
       });
       res.json({ bales: bales2, success: true, count: bales2.length });
@@ -16384,10 +22099,10 @@ async function registerRoutes(app2) {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const workbook = await read(req.file.buffer, { type: "buffer" });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet);
+      const rows = utils.sheet_to_json(worksheet);
       const { insertProductionBaleSchema: insertProductionBaleSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const mixBatchId = req.body.mixBatchId ? parseInt(req.body.mixBatchId) : void 0;
       const balesData = rows.map((row) => {
@@ -16461,9 +22176,9 @@ async function registerRoutes(app2) {
         destinationLocationId: stockTransferVouchers.destinationLocationId,
         notes: stockTransferVouchers.notes,
         createdAt: stockTransferVouchers.createdAt
-      }).from(stockTransferVouchers).innerJoin(vouchers, eq2(stockTransferVouchers.voucherId, vouchers.id)).where(
-        voucherIdParam ? and2(eq2(vouchers.companyId, companyId), eq2(stockTransferVouchers.voucherId, voucherIdParam)) : eq2(vouchers.companyId, companyId)
-      ).orderBy(sql3`${stockTransferVouchers.createdAt} DESC`);
+      }).from(stockTransferVouchers).innerJoin(vouchers, eq3(stockTransferVouchers.voucherId, vouchers.id)).where(
+        voucherIdParam ? and3(eq3(vouchers.companyId, companyId), eq3(stockTransferVouchers.voucherId, voucherIdParam)) : eq3(vouchers.companyId, companyId)
+      ).orderBy(sql4`${stockTransferVouchers.createdAt} DESC`);
       const transfers = await query;
       if (voucherIdParam && transfers.length > 0) {
         const transfer = transfers[0];
@@ -16475,7 +22190,7 @@ async function registerRoutes(app2) {
           totalAmount: stockTransferItems.totalAmount,
           stockItemName: stockItems.name,
           stockItemCode: stockItems.code
-        }).from(stockTransferItems).innerJoin(stockItems, eq2(stockTransferItems.stockItemId, stockItems.id)).where(eq2(stockTransferItems.transferId, transfer.id));
+        }).from(stockTransferItems).innerJoin(stockItems, eq3(stockTransferItems.stockItemId, stockItems.id)).where(eq3(stockTransferItems.transferId, transfer.id));
         if (isPOS) {
           const sanitizedItems = items.map(({ rate, totalAmount, ...rest }) => rest);
           const { totalAmount: _, ...sanitizedTransfer } = transfer;
@@ -16492,7 +22207,7 @@ async function registerRoutes(app2) {
     try {
       const transferId = parseInt(req.params.id);
       if (isNaN(transferId)) return res.status(400).json({ message: "Invalid transfer ID" });
-      const [transfer] = await db.select().from(stockTransferVouchers).where(eq2(stockTransferVouchers.id, transferId)).limit(1);
+      const [transfer] = await db.select().from(stockTransferVouchers).where(eq3(stockTransferVouchers.id, transferId)).limit(1);
       if (!transfer) return res.status(404).json({ message: "Transfer not found" });
       const items = await db.select({
         id: stockTransferItems.id,
@@ -16502,7 +22217,7 @@ async function registerRoutes(app2) {
         totalAmount: stockTransferItems.totalAmount,
         stockItemName: stockItems.name,
         stockItemCode: stockItems.code
-      }).from(stockTransferItems).innerJoin(stockItems, eq2(stockTransferItems.stockItemId, stockItems.id)).where(eq2(stockTransferItems.transferId, transferId));
+      }).from(stockTransferItems).innerJoin(stockItems, eq3(stockTransferItems.stockItemId, stockItems.id)).where(eq3(stockTransferItems.transferId, transferId));
       res.json({ ...transfer, items });
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -16530,9 +22245,9 @@ async function registerRoutes(app2) {
       for (const item of items) {
         const quantity = parseFloat(item.quantity);
         const [sourceInvForRate] = await db.select({ averageRate: inventory.averageRate }).from(inventory).where(
-          and2(
-            eq2(inventory.locationId, sourceLocationId),
-            eq2(inventory.stockItemId, item.stockItemId)
+          and3(
+            eq3(inventory.locationId, sourceLocationId),
+            eq3(inventory.stockItemId, item.stockItemId)
           )
         ).limit(1);
         const rate = parseFloat(sourceInvForRate?.averageRate || "0");
@@ -16556,16 +22271,16 @@ async function registerRoutes(app2) {
         notes: notes || null
       }).returning();
       for (const item of transferItems) {
-        await db.update(stockTransferItems).set({ transferId: transfer.id }).where(eq2(stockTransferItems.id, item.id));
+        await db.update(stockTransferItems).set({ transferId: transfer.id }).where(eq3(stockTransferItems.id, item.id));
       }
-      await db.update(vouchers).set({ totalAmount: totalAmount.toFixed(2) }).where(eq2(vouchers.id, voucher.id));
+      await db.update(vouchers).set({ totalAmount: totalAmount.toFixed(2) }).where(eq3(vouchers.id, voucher.id));
       for (const item of items) {
         const quantity = parseFloat(item.quantity);
         const rate = parseFloat(item.rate);
         const [sourceInv] = await db.select().from(inventory).where(
-          and2(
-            eq2(inventory.locationId, sourceLocationId),
-            eq2(inventory.stockItemId, item.stockItemId)
+          and3(
+            eq3(inventory.locationId, sourceLocationId),
+            eq3(inventory.stockItemId, item.stockItemId)
           )
         ).limit(1);
         if (sourceInv) {
@@ -16576,12 +22291,12 @@ async function registerRoutes(app2) {
           await db.update(inventory).set({
             quantity: newQty.toString(),
             lastUpdated: /* @__PURE__ */ new Date()
-          }).where(eq2(inventory.id, sourceInv.id));
+          }).where(eq3(inventory.id, sourceInv.id));
         }
         const [destInv] = await db.select().from(inventory).where(
-          and2(
-            eq2(inventory.locationId, destinationLocationId),
-            eq2(inventory.stockItemId, item.stockItemId)
+          and3(
+            eq3(inventory.locationId, destinationLocationId),
+            eq3(inventory.stockItemId, item.stockItemId)
           )
         ).limit(1);
         if (destInv) {
@@ -16593,7 +22308,7 @@ async function registerRoutes(app2) {
             averageRate: newAvgRate.toFixed(2),
             totalValue: (newQty * newAvgRate).toFixed(2),
             lastUpdated: /* @__PURE__ */ new Date()
-          }).where(eq2(inventory.id, destInv.id));
+          }).where(eq3(inventory.id, destInv.id));
         } else {
           await db.insert(inventory).values({
             companyId,
@@ -16625,10 +22340,10 @@ async function registerRoutes(app2) {
         averageRate: inventory.averageRate,
         stockItemName: stockItems.name,
         stockItemCode: stockItems.code
-      }).from(inventory).innerJoin(stockItems, eq2(inventory.stockItemId, stockItems.id)).where(
-        and2(
-          eq2(inventory.locationId, locationId),
-          sql3`CAST(${inventory.quantity} AS NUMERIC) > 0`
+      }).from(inventory).innerJoin(stockItems, eq3(inventory.stockItemId, stockItems.id)).where(
+        and3(
+          eq3(inventory.locationId, locationId),
+          sql4`CAST(${inventory.quantity} AS NUMERIC) > 0`
         )
       );
       const sanitizedItems = isPOS ? items.map(({ averageRate, ...rest }) => rest) : items;
@@ -16752,14 +22467,40 @@ async function registerRoutes(app2) {
         totalAmount: vouchers.totalAmount,
         description: vouchers.description,
         createdAt: vouchers.createdAt
-      }).from(vouchers).leftJoin(locations, eq2(vouchers.locationId, locations.id)).where(
-        and2(
-          eq2(vouchers.companyId, companyId),
-          sql3`${vouchers.locationId} IS NOT NULL`,
-          sql3`${locations.id} IS NULL`
+      }).from(vouchers).leftJoin(locations, eq3(vouchers.locationId, locations.id)).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          sql4`${vouchers.locationId} IS NOT NULL`,
+          or2(
+            sql4`${locations.id} IS NULL`,
+            isNotNull(locations.deletedAt)
+          )
         )
-      ).orderBy(sql3`${vouchers.createdAt} DESC`);
-      res.json(orphanedVouchers);
+      ).orderBy(sql4`${vouchers.createdAt} DESC`);
+      const unbalancedVouchers = await db.select({
+        id: vouchers.id,
+        voucherNumber: vouchers.voucherNumber,
+        voucherType: vouchers.voucherType,
+        voucherDate: vouchers.voucherDate,
+        locationId: vouchers.locationId,
+        locationName: vouchers.locationName,
+        totalAmount: vouchers.totalAmount,
+        description: vouchers.description,
+        createdAt: vouchers.createdAt,
+        totalDebits: sql4`COALESCE(SUM(${voucherEntries.debitAmount}::numeric), 0)::text`,
+        totalCredits: sql4`COALESCE(SUM(${voucherEntries.creditAmount}::numeric), 0)::text`,
+        imbalance: sql4`(COALESCE(SUM(${voucherEntries.debitAmount}::numeric), 0) - COALESCE(SUM(${voucherEntries.creditAmount}::numeric), 0))::text`
+      }).from(vouchers).leftJoin(voucherEntries, eq3(vouchers.id, voucherEntries.voucherId)).where(
+        and3(
+          eq3(vouchers.companyId, companyId),
+          isNull3(vouchers.deletedAt),
+          eq3(vouchers.optional, false)
+        )
+      ).groupBy(vouchers.id).having(sql4`ABS(COALESCE(SUM(${voucherEntries.debitAmount}::numeric), 0) - COALESCE(SUM(${voucherEntries.creditAmount}::numeric), 0)) > 0.01`).orderBy(sql4`${vouchers.createdAt} DESC`);
+      res.json({
+        orphanedVouchers,
+        unbalancedVouchers
+      });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -16780,8 +22521,8 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "Invalid location" });
       }
       const vouchersToUpdate = await db.select().from(vouchers).where(
-        and2(
-          eq2(vouchers.companyId, companyId),
+        and3(
+          eq3(vouchers.companyId, companyId),
           inArray2(vouchers.id, voucherIds)
         )
       );
@@ -16825,53 +22566,53 @@ async function registerRoutes(app2) {
         "December"
       ];
       const poInwards = await db.select({
-        month: sql3`EXTRACT(MONTH FROM ${purchaseOrders.createdAt})`,
+        month: sql4`EXTRACT(MONTH FROM ${purchaseOrders.createdAt})`,
         quantity: poLineItems.quantity,
         rate: poLineItems.rate,
         lineTotal: poLineItems.lineTotal
-      }).from(poLineItems).innerJoin(purchaseOrders, eq2(poLineItems.poId, purchaseOrders.id)).where(and2(
-        eq2(poLineItems.stockItemId, stockItemId),
-        eq2(purchaseOrders.companyId, companyId),
-        sql3`EXTRACT(YEAR FROM ${purchaseOrders.createdAt}) = ${year}`
+      }).from(poLineItems).innerJoin(purchaseOrders, eq3(poLineItems.poId, purchaseOrders.id)).where(and3(
+        eq3(poLineItems.stockItemId, stockItemId),
+        eq3(purchaseOrders.companyId, companyId),
+        sql4`EXTRACT(YEAR FROM ${purchaseOrders.createdAt}) = ${year}`
       ));
       const stockTransfers = await db.select({
-        month: sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
+        month: sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
         quantity: stockTransferItems.quantity,
         rate: stockTransferItems.rate,
         totalAmount: stockTransferItems.totalAmount,
         sourceLocationId: stockTransferItems.sourceLocationId,
         destinationLocationId: stockTransferVouchers.destinationLocationId,
         optional: vouchers.optional
-      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq2(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq2(stockTransferVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockTransferItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`
+      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq3(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq3(stockTransferVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockTransferItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`
       ));
       const stockAdjustments = await db.select({
-        month: sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
+        month: sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
         quantity: stockAdjustmentItems.quantity,
         rate: stockAdjustmentItems.rate,
         totalAmount: stockAdjustmentItems.totalAmount,
         adjustmentType: stockAdjustmentVouchers.adjustmentType,
         optional: vouchers.optional
-      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq2(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq2(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockAdjustmentItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`
+      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq3(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq3(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockAdjustmentItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`
       ));
       const salesData = await db.select({
-        month: sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
+        month: sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
         quantity: salesItems.quantity,
         costPrice: salesItems.costPrice,
         totalCost: salesItems.totalCost,
         optional: vouchers.optional
-      }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(
-        eq2(salesItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(
+        eq3(salesItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`
       ));
       const monthBuckets = {};
       for (let m = 1; m <= 12; m++) {
@@ -16964,10 +22705,10 @@ async function registerRoutes(app2) {
       const priorPOItems = await db.select({
         quantity: poLineItems.quantity,
         lineTotal: poLineItems.lineTotal
-      }).from(poLineItems).innerJoin(purchaseOrders, eq2(poLineItems.poId, purchaseOrders.id)).innerJoin(containers, eq2(purchaseOrders.containerId, containers.id)).where(and2(
-        eq2(poLineItems.stockItemId, stockItemId),
-        eq2(purchaseOrders.companyId, companyId),
-        sql3`${purchaseOrders.createdAt} < ${monthStartStr}::date`
+      }).from(poLineItems).innerJoin(purchaseOrders, eq3(poLineItems.poId, purchaseOrders.id)).innerJoin(containers, eq3(purchaseOrders.containerId, containers.id)).where(and3(
+        eq3(poLineItems.stockItemId, stockItemId),
+        eq3(purchaseOrders.companyId, companyId),
+        sql4`${purchaseOrders.createdAt} < ${monthStartStr}::date`
       ));
       for (const item of priorPOItems) {
         openingQty += parseFloat(item.quantity);
@@ -16978,11 +22719,11 @@ async function registerRoutes(app2) {
         totalAmount: stockTransferItems.totalAmount,
         sourceLocationId: stockTransferItems.sourceLocationId,
         destinationLocationId: stockTransferVouchers.destinationLocationId
-      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq2(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq2(stockTransferVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockTransferItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`${vouchers.voucherDate}::date < ${monthStartStr}::date`
+      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq3(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq3(stockTransferVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockTransferItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`${vouchers.voucherDate}::date < ${monthStartStr}::date`
       ));
       for (const item of priorTransfers) {
         const qty = parseFloat(item.quantity);
@@ -16995,11 +22736,11 @@ async function registerRoutes(app2) {
       const priorAdjustments = await db.select({
         quantity: stockAdjustmentItems.quantity,
         totalAmount: stockAdjustmentItems.totalAmount
-      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq2(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq2(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockAdjustmentItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`${vouchers.voucherDate}::date < ${monthStartStr}::date`
+      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq3(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq3(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockAdjustmentItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`${vouchers.voucherDate}::date < ${monthStartStr}::date`
       ));
       for (const item of priorAdjustments) {
         openingQty += parseFloat(item.quantity);
@@ -17008,11 +22749,11 @@ async function registerRoutes(app2) {
       const priorSales = await db.select({
         quantity: salesItems.quantity,
         totalCost: salesItems.totalCost
-      }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(
-        eq2(salesItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`${vouchers.voucherDate}::date < ${monthStartStr}::date`
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(
+        eq3(salesItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`${vouchers.voucherDate}::date < ${monthStartStr}::date`
       ));
       for (const item of priorSales) {
         openingQty -= parseFloat(item.quantity);
@@ -17028,11 +22769,11 @@ async function registerRoutes(app2) {
         quantity: poLineItems.quantity,
         rate: poLineItems.rate,
         lineTotal: poLineItems.lineTotal
-      }).from(poLineItems).innerJoin(purchaseOrders, eq2(poLineItems.poId, purchaseOrders.id)).innerJoin(containers, eq2(purchaseOrders.containerId, containers.id)).where(and2(
-        eq2(poLineItems.stockItemId, stockItemId),
-        eq2(purchaseOrders.companyId, companyId),
-        sql3`EXTRACT(YEAR FROM ${purchaseOrders.createdAt}) = ${year}`,
-        sql3`EXTRACT(MONTH FROM ${purchaseOrders.createdAt}) = ${month}`
+      }).from(poLineItems).innerJoin(purchaseOrders, eq3(poLineItems.poId, purchaseOrders.id)).innerJoin(containers, eq3(purchaseOrders.containerId, containers.id)).where(and3(
+        eq3(poLineItems.stockItemId, stockItemId),
+        eq3(purchaseOrders.companyId, companyId),
+        sql4`EXTRACT(YEAR FROM ${purchaseOrders.createdAt}) = ${year}`,
+        sql4`EXTRACT(MONTH FROM ${purchaseOrders.createdAt}) = ${month}`
       )).orderBy(purchaseOrders.createdAt);
       for (const item of poItems) {
         transactions.push({
@@ -17059,12 +22800,12 @@ async function registerRoutes(app2) {
         sourceLocationId: stockTransferItems.sourceLocationId,
         destinationLocationId: stockTransferVouchers.destinationLocationId,
         optional: vouchers.optional
-      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq2(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq2(stockTransferVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockTransferItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
-        sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`
+      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq3(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq3(stockTransferVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockTransferItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
+        sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`
       )).orderBy(vouchers.voucherDate);
       const locationIds = /* @__PURE__ */ new Set();
       for (const item of transferItems) {
@@ -17117,12 +22858,12 @@ async function registerRoutes(app2) {
         adjustmentType: stockAdjustmentVouchers.adjustmentType,
         locationId: stockAdjustmentVouchers.locationId,
         optional: vouchers.optional
-      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq2(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq2(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockAdjustmentItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
-        sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`
+      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq3(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq3(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockAdjustmentItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
+        sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`
       )).orderBy(vouchers.voucherDate);
       for (const item of adjustmentItems) {
         const rawQty = parseFloat(item.quantity);
@@ -17159,12 +22900,12 @@ async function registerRoutes(app2) {
         costPrice: salesItems.costPrice,
         totalCost: salesItems.totalCost,
         optional: vouchers.optional
-      }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(
-        eq2(salesItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
-        sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(
+        eq3(salesItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
+        sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`
       )).orderBy(vouchers.voucherDate);
       for (const item of salesData) {
         const locName = item.locationName || (item.locationId ? (await storage.getLocationById(item.locationId))?.name : null) || "Cash";
@@ -17314,19 +23055,19 @@ async function registerRoutes(app2) {
         monthBuckets[m] = { inQty: 0, inVal: 0, outQty: 0, outVal: 0 };
       }
       const stockTransfers = await db.select({
-        month: sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
+        month: sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
         quantity: stockTransferItems.quantity,
         totalAmount: stockTransferItems.totalAmount,
         sourceLocationId: stockTransferItems.sourceLocationId,
         destinationLocationId: stockTransferVouchers.destinationLocationId
-      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq2(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq2(stockTransferVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockTransferItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
+      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq3(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq3(stockTransferVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockTransferItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
         or2(
-          eq2(stockTransferItems.sourceLocationId, locationId),
-          eq2(stockTransferVouchers.destinationLocationId, locationId)
+          eq3(stockTransferItems.sourceLocationId, locationId),
+          eq3(stockTransferVouchers.destinationLocationId, locationId)
         )
       ));
       for (const row of stockTransfers) {
@@ -17343,16 +23084,16 @@ async function registerRoutes(app2) {
         }
       }
       const stockAdjustments = await db.select({
-        month: sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
+        month: sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
         quantity: stockAdjustmentItems.quantity,
         totalAmount: stockAdjustmentItems.totalAmount,
         adjustmentType: stockAdjustmentVouchers.adjustmentType
-      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq2(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq2(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockAdjustmentItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        eq2(stockAdjustmentVouchers.locationId, locationId),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`
+      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq3(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq3(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockAdjustmentItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        eq3(stockAdjustmentVouchers.locationId, locationId),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`
       ));
       for (const row of stockAdjustments) {
         const month = Number(row.month);
@@ -17367,15 +23108,15 @@ async function registerRoutes(app2) {
         }
       }
       const salesData = await db.select({
-        month: sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
+        month: sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate})`,
         quantity: salesItems.quantity,
         totalCost: salesItems.totalCost
-      }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(
-        eq2(salesItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        eq2(vouchers.locationId, locationId),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(
+        eq3(salesItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        eq3(vouchers.locationId, locationId),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`
       ));
       for (const row of salesData) {
         const month = Number(row.month);
@@ -17383,15 +23124,15 @@ async function registerRoutes(app2) {
         monthBuckets[month].outVal += parseFloat(row.totalCost);
       }
       const containerOffloadData = await db.select({
-        month: sql3`EXTRACT(MONTH FROM ${containerOffloads.offloadedAt})`,
+        month: sql4`EXTRACT(MONTH FROM ${containerOffloads.offloadedAt})`,
         quantity: poLineItems.quantity,
         lineTotal: poLineItems.lineTotal,
         additionalCostPerBale: containerOffloads.additionalCostPerBale
-      }).from(containerOffloads).innerJoin(containers, eq2(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq2(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq2(poLineItems.poId, purchaseOrders.id)).where(and2(
-        eq2(poLineItems.stockItemId, stockItemId),
-        eq2(containers.companyId, companyId),
-        eq2(containerOffloads.locationId, locationId),
-        sql3`EXTRACT(YEAR FROM ${containerOffloads.offloadedAt}) = ${year}`
+      }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq3(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq3(poLineItems.poId, purchaseOrders.id)).where(and3(
+        eq3(poLineItems.stockItemId, stockItemId),
+        eq3(containers.companyId, companyId),
+        eq3(containerOffloads.locationId, locationId),
+        sql4`EXTRACT(YEAR FROM ${containerOffloads.offloadedAt}) = ${year}`
       ));
       for (const row of containerOffloadData) {
         const month = Number(row.month);
@@ -17406,9 +23147,9 @@ async function registerRoutes(app2) {
         quantity: inventory.quantity,
         averageRate: inventory.averageRate,
         totalValue: inventory.totalValue
-      }).from(inventory).where(and2(
-        eq2(inventory.stockItemId, stockItemId),
-        eq2(inventory.locationId, locationId)
+      }).from(inventory).where(and3(
+        eq3(inventory.stockItemId, stockItemId),
+        eq3(inventory.locationId, locationId)
       )).limit(1);
       const actualQty = currentInventoryResult.length > 0 ? parseFloat(currentInventoryResult[0].quantity) : 0;
       const actualRate = currentInventoryResult.length > 0 ? parseFloat(currentInventoryResult[0].averageRate) : 0;
@@ -17502,14 +23243,14 @@ async function registerRoutes(app2) {
         totalAmount: stockTransferItems.totalAmount,
         sourceLocationId: stockTransferItems.sourceLocationId,
         destinationLocationId: stockTransferVouchers.destinationLocationId
-      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq2(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq2(stockTransferVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockTransferItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`${vouchers.voucherDate}::date < ${monthStartStr}::date`,
+      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq3(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq3(stockTransferVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockTransferItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`${vouchers.voucherDate}::date < ${monthStartStr}::date`,
         or2(
-          eq2(stockTransferItems.sourceLocationId, locationId),
-          eq2(stockTransferVouchers.destinationLocationId, locationId)
+          eq3(stockTransferItems.sourceLocationId, locationId),
+          eq3(stockTransferVouchers.destinationLocationId, locationId)
         )
       ));
       for (const item of priorTransfers) {
@@ -17527,12 +23268,12 @@ async function registerRoutes(app2) {
       const priorAdjustments = await db.select({
         quantity: stockAdjustmentItems.quantity,
         totalAmount: stockAdjustmentItems.totalAmount
-      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq2(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq2(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockAdjustmentItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        eq2(stockAdjustmentVouchers.locationId, locationId),
-        sql3`${vouchers.voucherDate}::date < ${monthStartStr}::date`
+      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq3(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq3(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockAdjustmentItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        eq3(stockAdjustmentVouchers.locationId, locationId),
+        sql4`${vouchers.voucherDate}::date < ${monthStartStr}::date`
       ));
       for (const item of priorAdjustments) {
         const qty = parseFloat(item.quantity);
@@ -17549,12 +23290,12 @@ async function registerRoutes(app2) {
         quantity: salesItems.quantity,
         costPrice: salesItems.costPrice,
         totalCost: salesItems.totalCost
-      }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(
-        eq2(salesItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        eq2(vouchers.locationId, locationId),
-        sql3`${vouchers.voucherDate}::date < ${monthStartStr}::date`
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(
+        eq3(salesItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        eq3(vouchers.locationId, locationId),
+        sql4`${vouchers.voucherDate}::date < ${monthStartStr}::date`
       ));
       for (const item of priorSales) {
         priorOutwardQty += parseFloat(item.quantity);
@@ -17564,11 +23305,11 @@ async function registerRoutes(app2) {
         quantity: poLineItems.quantity,
         lineTotal: poLineItems.lineTotal,
         additionalCostPerBale: containerOffloads.additionalCostPerBale
-      }).from(containerOffloads).innerJoin(containers, eq2(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq2(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq2(poLineItems.poId, purchaseOrders.id)).where(and2(
-        eq2(poLineItems.stockItemId, stockItemId),
-        eq2(containers.companyId, companyId),
-        eq2(containerOffloads.locationId, locationId),
-        sql3`${containerOffloads.offloadedAt}::date < ${monthStartStr}::date`
+      }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq3(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq3(poLineItems.poId, purchaseOrders.id)).where(and3(
+        eq3(poLineItems.stockItemId, stockItemId),
+        eq3(containers.companyId, companyId),
+        eq3(containerOffloads.locationId, locationId),
+        sql4`${containerOffloads.offloadedAt}::date < ${monthStartStr}::date`
       ));
       for (const item of priorOffloads) {
         const qty = parseFloat(item.quantity);
@@ -17581,9 +23322,9 @@ async function registerRoutes(app2) {
         quantity: inventory.quantity,
         averageRate: inventory.averageRate,
         totalValue: inventory.totalValue
-      }).from(inventory).where(and2(
-        eq2(inventory.locationId, locationId),
-        eq2(inventory.stockItemId, stockItemId)
+      }).from(inventory).where(and3(
+        eq3(inventory.locationId, locationId),
+        eq3(inventory.stockItemId, stockItemId)
       ));
       const currentQty = currentInventory ? parseFloat(currentInventory.quantity) : 0;
       const currentValue = currentInventory ? parseFloat(currentInventory.totalValue) : 0;
@@ -17598,14 +23339,14 @@ async function registerRoutes(app2) {
         totalAmount: stockTransferItems.totalAmount,
         sourceLocationId: stockTransferItems.sourceLocationId,
         destinationLocationId: stockTransferVouchers.destinationLocationId
-      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq2(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq2(stockTransferVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockTransferItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`${vouchers.voucherDate}::date > ${monthEndStr}::date`,
+      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq3(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq3(stockTransferVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockTransferItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`${vouchers.voucherDate}::date > ${monthEndStr}::date`,
         or2(
-          eq2(stockTransferItems.sourceLocationId, locationId),
-          eq2(stockTransferVouchers.destinationLocationId, locationId)
+          eq3(stockTransferItems.sourceLocationId, locationId),
+          eq3(stockTransferVouchers.destinationLocationId, locationId)
         )
       ));
       for (const item of afterTransfers) {
@@ -17623,12 +23364,12 @@ async function registerRoutes(app2) {
       const afterAdjustments = await db.select({
         quantity: stockAdjustmentItems.quantity,
         totalAmount: stockAdjustmentItems.totalAmount
-      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq2(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq2(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockAdjustmentItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        eq2(stockAdjustmentVouchers.locationId, locationId),
-        sql3`${vouchers.voucherDate}::date > ${monthEndStr}::date`
+      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq3(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq3(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockAdjustmentItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        eq3(stockAdjustmentVouchers.locationId, locationId),
+        sql4`${vouchers.voucherDate}::date > ${monthEndStr}::date`
       ));
       for (const item of afterAdjustments) {
         afterMonthNetQty += parseFloat(item.quantity);
@@ -17637,12 +23378,12 @@ async function registerRoutes(app2) {
       const afterSales = await db.select({
         quantity: salesItems.quantity,
         totalCost: salesItems.totalCost
-      }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(
-        eq2(salesItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        eq2(vouchers.locationId, locationId),
-        sql3`${vouchers.voucherDate}::date > ${monthEndStr}::date`
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(
+        eq3(salesItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        eq3(vouchers.locationId, locationId),
+        sql4`${vouchers.voucherDate}::date > ${monthEndStr}::date`
       ));
       for (const item of afterSales) {
         afterMonthNetQty -= parseFloat(item.quantity);
@@ -17652,11 +23393,11 @@ async function registerRoutes(app2) {
         quantity: poLineItems.quantity,
         lineTotal: poLineItems.lineTotal,
         additionalCostPerBale: containerOffloads.additionalCostPerBale
-      }).from(containerOffloads).innerJoin(containers, eq2(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq2(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq2(poLineItems.poId, purchaseOrders.id)).where(and2(
-        eq2(poLineItems.stockItemId, stockItemId),
-        eq2(containers.companyId, companyId),
-        eq2(containerOffloads.locationId, locationId),
-        sql3`${containerOffloads.offloadedAt}::date > ${monthEndStr}::date`
+      }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq3(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq3(poLineItems.poId, purchaseOrders.id)).where(and3(
+        eq3(poLineItems.stockItemId, stockItemId),
+        eq3(containers.companyId, companyId),
+        eq3(containerOffloads.locationId, locationId),
+        sql4`${containerOffloads.offloadedAt}::date > ${monthEndStr}::date`
       ));
       for (const item of afterOffloads) {
         const qty = parseFloat(item.quantity);
@@ -17677,15 +23418,15 @@ async function registerRoutes(app2) {
         totalAmount: stockTransferItems.totalAmount,
         sourceLocationId: stockTransferItems.sourceLocationId,
         destinationLocationId: stockTransferVouchers.destinationLocationId
-      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq2(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq2(stockTransferVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockTransferItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
-        sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`,
+      }).from(stockTransferItems).innerJoin(stockTransferVouchers, eq3(stockTransferItems.transferId, stockTransferVouchers.id)).innerJoin(vouchers, eq3(stockTransferVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockTransferItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
+        sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`,
         or2(
-          eq2(stockTransferItems.sourceLocationId, locationId),
-          eq2(stockTransferVouchers.destinationLocationId, locationId)
+          eq3(stockTransferItems.sourceLocationId, locationId),
+          eq3(stockTransferVouchers.destinationLocationId, locationId)
         )
       )).orderBy(vouchers.voucherDate);
       const locationIds = /* @__PURE__ */ new Set();
@@ -17740,13 +23481,13 @@ async function registerRoutes(app2) {
         rate: stockAdjustmentItems.rate,
         totalAmount: stockAdjustmentItems.totalAmount,
         adjustmentType: stockAdjustmentVouchers.adjustmentType
-      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq2(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq2(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and2(
-        eq2(stockAdjustmentItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        eq2(stockAdjustmentVouchers.locationId, locationId),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
-        sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`
+      }).from(stockAdjustmentItems).innerJoin(stockAdjustmentVouchers, eq3(stockAdjustmentItems.adjustmentId, stockAdjustmentVouchers.id)).innerJoin(vouchers, eq3(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockAdjustmentItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        eq3(stockAdjustmentVouchers.locationId, locationId),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
+        sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`
       )).orderBy(vouchers.voucherDate);
       for (const item of adjustmentItems) {
         const rawQty = parseFloat(item.quantity);
@@ -17776,13 +23517,13 @@ async function registerRoutes(app2) {
         totalSales: salesItems.totalSales,
         costPrice: salesItems.costPrice,
         totalCost: salesItems.totalCost
-      }).from(salesItems).innerJoin(vouchers, eq2(salesItems.voucherId, vouchers.id)).where(and2(
-        eq2(salesItems.stockItemId, stockItemId),
-        eq2(vouchers.companyId, companyId),
-        eq2(vouchers.optional, false),
-        eq2(vouchers.locationId, locationId),
-        sql3`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
-        sql3`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`
+      }).from(salesItems).innerJoin(vouchers, eq3(salesItems.voucherId, vouchers.id)).where(and3(
+        eq3(salesItems.stockItemId, stockItemId),
+        eq3(vouchers.companyId, companyId),
+        eq3(vouchers.optional, false),
+        eq3(vouchers.locationId, locationId),
+        sql4`EXTRACT(YEAR FROM ${vouchers.voucherDate}) = ${year}`,
+        sql4`EXTRACT(MONTH FROM ${vouchers.voucherDate}) = ${month}`
       )).orderBy(vouchers.voucherDate);
       for (const item of salesData) {
         const qty = parseFloat(item.quantity);
@@ -17814,12 +23555,12 @@ async function registerRoutes(app2) {
         rate: poLineItems.rate,
         lineTotal: poLineItems.lineTotal,
         additionalCostPerBale: containerOffloads.additionalCostPerBale
-      }).from(containerOffloads).innerJoin(containers, eq2(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq2(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq2(poLineItems.poId, purchaseOrders.id)).where(and2(
-        eq2(poLineItems.stockItemId, stockItemId),
-        eq2(containers.companyId, companyId),
-        eq2(containerOffloads.locationId, locationId),
-        sql3`EXTRACT(YEAR FROM ${containerOffloads.offloadedAt}) = ${year}`,
-        sql3`EXTRACT(MONTH FROM ${containerOffloads.offloadedAt}) = ${month}`
+      }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq3(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq3(poLineItems.poId, purchaseOrders.id)).where(and3(
+        eq3(poLineItems.stockItemId, stockItemId),
+        eq3(containers.companyId, companyId),
+        eq3(containerOffloads.locationId, locationId),
+        sql4`EXTRACT(YEAR FROM ${containerOffloads.offloadedAt}) = ${year}`,
+        sql4`EXTRACT(MONTH FROM ${containerOffloads.offloadedAt}) = ${month}`
       )).orderBy(containerOffloads.offloadedAt);
       for (const item of offloadData) {
         const qty = parseFloat(item.quantity);
@@ -17978,17 +23719,19 @@ async function registerRoutes(app2) {
       if (locationIds.length === 0) {
         return res.json({ stockGroups: [], grandTotals: {} });
       }
-      const allStockGroups = await db.select().from(stockGroups).where(and2(eq2(stockGroups.companyId, companyId), eq2(stockGroups.active, true))).orderBy(stockGroups.name);
-      const allStockItems = await db.select().from(stockItems).where(and2(eq2(stockItems.companyId, companyId), eq2(stockItems.active, true))).orderBy(stockItems.name);
+      const allStockGroups = await db.select().from(stockGroups).where(and3(eq3(stockGroups.companyId, companyId), eq3(stockGroups.active, true))).orderBy(stockGroups.name);
+      const allStockItems = await db.select().from(stockItems).where(and3(eq3(stockItems.companyId, companyId), eq3(stockItems.active, true))).orderBy(stockItems.name);
       const inventoryData = await db.select({
         locationId: inventory.locationId,
         stockItemId: inventory.stockItemId,
         quantity: inventory.quantity,
         averageRate: inventory.averageRate,
-        totalValue: inventory.totalValue
+        totalValue: inventory.totalValue,
+        color: inventory.color,
+        assignedStatus: inventory.assignedStatus
       }).from(inventory).where(
-        and2(
-          eq2(inventory.companyId, companyId),
+        and3(
+          eq3(inventory.companyId, companyId),
           inArray2(inventory.locationId, locationIds)
         )
       );
@@ -17998,7 +23741,9 @@ async function registerRoutes(app2) {
         inventoryMap.set(key, {
           quantity: parseFloat(inv.quantity || "0"),
           rate: parseFloat(inv.averageRate || "0"),
-          value: parseFloat(inv.totalValue || "0")
+          value: parseFloat(inv.totalValue || "0"),
+          color: inv.color,
+          assignedStatus: inv.assignedStatus
         });
       }
       const result = [];
@@ -18026,7 +23771,7 @@ async function registerRoutes(app2) {
         if (!groupHasInventory) continue;
         const groupLocationData = {};
         for (const locId of locationIds) {
-          groupLocationData[locId] = { quantity: 0, rate: 0, value: 0 };
+          groupLocationData[locId] = { quantity: 0, rate: 0, value: 0, color: null, assignedStatus: null };
         }
         const itemsData = [];
         for (const item of groupItems) {
@@ -18041,7 +23786,7 @@ async function registerRoutes(app2) {
               groupLocationData[locId].quantity += inv.quantity;
               groupLocationData[locId].value += inv.value;
             } else {
-              itemLocationData[locId] = { quantity: 0, rate: 0, value: 0 };
+              itemLocationData[locId] = { quantity: 0, rate: 0, value: 0, color: null, assignedStatus: null };
             }
           }
           if (itemHasInventory) {
@@ -18070,7 +23815,7 @@ async function registerRoutes(app2) {
       if (ungroupedItems.length > 0) {
         const ungroupedLocationData = {};
         for (const locId of locationIds) {
-          ungroupedLocationData[locId] = { quantity: 0, rate: 0, value: 0 };
+          ungroupedLocationData[locId] = { quantity: 0, rate: 0, value: 0, color: null, assignedStatus: null };
         }
         const ungroupedItemsData = [];
         for (const item of ungroupedItems) {
@@ -18085,7 +23830,7 @@ async function registerRoutes(app2) {
               ungroupedLocationData[locId].quantity += inv.quantity;
               ungroupedLocationData[locId].value += inv.value;
             } else {
-              itemLocationData[locId] = { quantity: 0, rate: 0, value: 0 };
+              itemLocationData[locId] = { quantity: 0, rate: 0, value: 0, color: null, assignedStatus: null };
             }
           }
           if (itemHasInventory) {
@@ -18138,16 +23883,52 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: error.message });
     }
   });
+  const updateInventoryFieldsSchema = z2.object({
+    color: z2.string().max(50).transform((v) => v?.trim() || null).optional(),
+    assignedStatus: z2.string().max(100).transform((v) => v?.trim() || null).optional()
+  });
+  app2.patch("/api/inventory/:locationId/:stockItemId", requireAuth, async (req, res) => {
+    try {
+      const locationId = parseInt(req.params.locationId);
+      const stockItemId = parseInt(req.params.stockItemId);
+      if (isNaN(locationId) || isNaN(stockItemId)) {
+        return res.status(400).json({ message: "Invalid location or stock item ID" });
+      }
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const validationResult = updateInventoryFieldsSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ message: "Invalid request body", errors: validationResult.error.errors });
+      }
+      const { color, assignedStatus } = validationResult.data;
+      const updates = {};
+      if (color !== void 0) updates.color = color;
+      if (assignedStatus !== void 0) updates.assignedStatus = assignedStatus;
+      const [updated] = await db.update(inventory).set(updates).where(and3(
+        eq3(inventory.companyId, companyId),
+        eq3(inventory.locationId, locationId),
+        eq3(inventory.stockItemId, stockItemId)
+      )).returning();
+      if (!updated) {
+        return res.status(404).json({ message: "Inventory record not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   app2.post("/api/cleanup/orphaned-charges", async (req, res) => {
     try {
-      const chargeVouchers = await db.select().from(vouchers).where(sql3`${vouchers.voucherNumber} LIKE 'CHARGE-%'`);
+      const chargeVouchers = await db.select().from(vouchers).where(sql4`${vouchers.voucherNumber} LIKE 'CHARGE-%'`);
       let deletedCount = 0;
       for (const chargeVoucher of chargeVouchers) {
         const containerNumber = chargeVoucher.voucherNumber.split("-")[1] + "-" + chargeVoucher.voucherNumber.split("-")[2];
-        const remainingPOs = await db.select().from(purchaseOrders).leftJoin(containers, eq2(purchaseOrders.containerId, containers.id)).where(eq2(containers.containerNumber, containerNumber)).limit(1);
+        const remainingPOs = await db.select().from(purchaseOrders).leftJoin(containers, eq3(purchaseOrders.containerId, containers.id)).where(eq3(containers.containerNumber, containerNumber)).limit(1);
         if (remainingPOs.length === 0) {
-          await db.delete(voucherEntries).where(eq2(voucherEntries.voucherId, chargeVoucher.id));
-          await db.delete(vouchers).where(eq2(vouchers.id, chargeVoucher.id));
+          await db.delete(voucherEntries).where(eq3(voucherEntries.voucherId, chargeVoucher.id));
+          await db.delete(vouchers).where(eq3(vouchers.id, chargeVoucher.id));
           deletedCount++;
         }
       }
@@ -18155,6 +23936,1251 @@ async function registerRoutes(app2) {
         message: `Cleaned up ${deletedCount} orphaned charge vouchers`,
         deletedCount
       });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/deleted-items", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const deletedLocations = await db.select().from(locations).where(and3(
+        eq3(locations.companyId, companyId),
+        isNotNull(locations.deletedAt)
+      )).orderBy(desc3(locations.deletedAt));
+      const deletedStockItems = await db.select().from(stockItems).where(and3(
+        eq3(stockItems.companyId, companyId),
+        isNotNull(stockItems.deletedAt)
+      )).orderBy(desc3(stockItems.deletedAt));
+      const deletedStockGroups = await db.select().from(stockGroups).where(and3(
+        eq3(stockGroups.companyId, companyId),
+        isNotNull(stockGroups.deletedAt)
+      )).orderBy(desc3(stockGroups.deletedAt));
+      const deletedLedgerAccounts = await db.select().from(ledgerAccounts).where(and3(
+        eq3(ledgerAccounts.companyId, companyId),
+        isNotNull(ledgerAccounts.deletedAt)
+      )).orderBy(desc3(ledgerAccounts.deletedAt));
+      const deletedEmployees = await db.select().from(employees).where(and3(
+        eq3(employees.companyId, companyId),
+        isNotNull(employees.deletedAt)
+      )).orderBy(desc3(employees.deletedAt));
+      const deletedCustomers = await db.select().from(customers).where(and3(
+        eq3(customers.companyId, companyId),
+        isNotNull(customers.deletedAt)
+      )).orderBy(desc3(customers.deletedAt));
+      const deletedSuppliers = await db.select().from(suppliers).where(isNotNull(suppliers.deletedAt)).orderBy(desc3(suppliers.deletedAt));
+      const deletedBankAccounts = await db.select().from(bankAccounts).where(and3(
+        eq3(bankAccounts.companyId, companyId),
+        isNotNull(bankAccounts.deletedAt)
+      )).orderBy(desc3(bankAccounts.deletedAt));
+      res.json({
+        locations: deletedLocations.map((l) => ({
+          id: l.id,
+          type: "location",
+          name: l.name,
+          code: l.code,
+          deletedAt: l.deletedAt
+        })),
+        stockItems: deletedStockItems.map((s) => ({
+          id: s.id,
+          type: "stockItem",
+          name: s.name,
+          code: s.code,
+          deletedAt: s.deletedAt
+        })),
+        stockGroups: deletedStockGroups.map((g) => ({
+          id: g.id,
+          type: "stockGroup",
+          name: g.name,
+          code: g.code,
+          deletedAt: g.deletedAt
+        })),
+        ledgerAccounts: deletedLedgerAccounts.map((a) => ({
+          id: a.id,
+          type: "ledgerAccount",
+          name: a.name,
+          code: a.code,
+          accountType: a.accountType,
+          deletedAt: a.deletedAt
+        })),
+        employees: deletedEmployees.map((e) => ({
+          id: e.id,
+          type: "employee",
+          name: `${e.firstName} ${e.lastName}`,
+          code: e.code,
+          deletedAt: e.deletedAt
+        })),
+        customers: deletedCustomers.map((c) => ({
+          id: c.id,
+          type: "customer",
+          name: c.legalName,
+          code: c.code,
+          deletedAt: c.deletedAt
+        })),
+        suppliers: deletedSuppliers.map((s) => ({
+          id: s.id,
+          type: "supplier",
+          name: s.legalName,
+          code: s.code,
+          deletedAt: s.deletedAt
+        })),
+        bankAccounts: deletedBankAccounts.map((b) => ({
+          id: b.id,
+          type: "bankAccount",
+          name: b.name,
+          code: b.code,
+          deletedAt: b.deletedAt
+        })),
+        totalCount: deletedLocations.length + deletedStockItems.length + deletedStockGroups.length + deletedLedgerAccounts.length + deletedEmployees.length + deletedCustomers.length + deletedSuppliers.length + deletedBankAccounts.length
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/deleted-items/:type/:id/restore", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const itemId = parseInt(id);
+      if (isNaN(itemId)) {
+        return res.status(400).json({ message: "Invalid item ID" });
+      }
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      switch (type) {
+        case "location":
+          await db.update(locations).set({ deletedAt: null, active: true }).where(and3(eq3(locations.id, itemId), eq3(locations.companyId, companyId)));
+          break;
+        case "stockItem":
+          await db.update(stockItems).set({ deletedAt: null, active: true }).where(and3(eq3(stockItems.id, itemId), eq3(stockItems.companyId, companyId)));
+          break;
+        case "stockGroup":
+          await db.update(stockGroups).set({ deletedAt: null, active: true }).where(and3(eq3(stockGroups.id, itemId), eq3(stockGroups.companyId, companyId)));
+          break;
+        case "ledgerAccount":
+          await db.update(ledgerAccounts).set({ deletedAt: null, active: true }).where(and3(eq3(ledgerAccounts.id, itemId), eq3(ledgerAccounts.companyId, companyId)));
+          break;
+        case "employee":
+          await db.update(employees).set({ deletedAt: null, active: true }).where(and3(eq3(employees.id, itemId), eq3(employees.companyId, companyId)));
+          break;
+        case "customer":
+          await db.update(customers).set({ deletedAt: null, active: true }).where(and3(eq3(customers.id, itemId), eq3(customers.companyId, companyId)));
+          break;
+        case "supplier":
+          await db.update(suppliers).set({ deletedAt: null, active: true }).where(eq3(suppliers.id, itemId));
+          break;
+        case "bankAccount":
+          await db.update(bankAccounts).set({ deletedAt: null, active: true }).where(and3(eq3(bankAccounts.id, itemId), eq3(bankAccounts.companyId, companyId)));
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid item type" });
+      }
+      res.json({ message: `${type} restored successfully` });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.delete("/api/deleted-items/:type/:id/permanent", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const itemId = parseInt(id);
+      if (isNaN(itemId)) {
+        return res.status(400).json({ message: "Invalid item ID" });
+      }
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      switch (type) {
+        case "location":
+          await db.delete(locations).where(and3(eq3(locations.id, itemId), eq3(locations.companyId, companyId)));
+          break;
+        case "stockItem":
+          await db.delete(stockItemCodeAliases).where(eq3(stockItemCodeAliases.stockItemId, itemId));
+          await db.delete(stockItems).where(and3(eq3(stockItems.id, itemId), eq3(stockItems.companyId, companyId)));
+          break;
+        case "stockGroup":
+          await db.delete(stockGroups).where(and3(eq3(stockGroups.id, itemId), eq3(stockGroups.companyId, companyId)));
+          break;
+        case "ledgerAccount":
+          await db.delete(ledgerAccounts).where(and3(eq3(ledgerAccounts.id, itemId), eq3(ledgerAccounts.companyId, companyId)));
+          break;
+        case "employee":
+          await db.delete(employees).where(and3(eq3(employees.id, itemId), eq3(employees.companyId, companyId)));
+          break;
+        case "customer":
+          await db.delete(customers).where(and3(eq3(customers.id, itemId), eq3(customers.companyId, companyId)));
+          break;
+        case "supplier":
+          await db.delete(suppliers).where(eq3(suppliers.id, itemId));
+          break;
+        case "bankAccount":
+          await db.delete(bankAccounts).where(and3(eq3(bankAccounts.id, itemId), eq3(bankAccounts.companyId, companyId)));
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid item type" });
+      }
+      res.json({ message: `${type} permanently deleted` });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/chatbot/status", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const companyId = req.session.currentCompanyId;
+      const userRole = req.session.currentRole;
+      if (!userId || !companyId) {
+        return res.json({ enabled: false });
+      }
+      const [user] = await db.select({ chatbotEnabled: users.chatbotEnabled }).from(users).where(eq3(users.id, userId));
+      const hasApiKey = !!process.env.GEMINI_API_KEY;
+      res.json({
+        enabled: user?.chatbotEnabled || false,
+        hasApiKey,
+        isAdminOrOwner: userRole === "Admin" || userRole === "Owner"
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/chatbot/message", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const companyId = req.session.currentCompanyId;
+      console.log("[Chatbot] Message request - userId:", userId, "companyId:", companyId);
+      if (!userId || !companyId) {
+        console.log("[Chatbot] Error: No company selected");
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const [user] = await db.select({ chatbotEnabled: users.chatbotEnabled }).from(users).where(eq3(users.id, userId));
+      if (!user?.chatbotEnabled) {
+        console.log("[Chatbot] Error: Chatbot not enabled for user");
+        return res.status(403).json({ message: "Chatbot is not enabled for your account" });
+      }
+      const { message, sessionId } = req.body;
+      if (!message || !sessionId) {
+        console.log("[Chatbot] Error: Missing message or sessionId");
+        return res.status(400).json({ message: "Message and sessionId are required" });
+      }
+      console.log("[Chatbot] Processing message for session:", sessionId);
+      await saveMessage(companyId, userId, "user", message, sessionId);
+      console.log("[Chatbot] User message saved");
+      const history = await getConversationHistoryForAI(sessionId, 10);
+      console.log("[Chatbot] Got history, length:", history.length);
+      console.log("[Chatbot] Calling AI...");
+      const result = await chat(message, companyId, history.slice(0, -1));
+      console.log("[Chatbot] AI response received");
+      await saveMessage(companyId, userId, "assistant", result.response, sessionId);
+      console.log("[Chatbot] Assistant message saved");
+      res.json({ response: result.response, suggestions: result.suggestions });
+    } catch (error) {
+      console.error("[Chatbot] ERROR:", error.message);
+      console.error("[Chatbot] Stack:", error.stack);
+      res.status(500).json({ message: "Chat error: " + error.message });
+    }
+  });
+  app2.get("/api/chatbot/history/:sessionId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      console.log("[Chatbot] History request - userId:", userId, "sessionId:", req.params.sessionId);
+      if (!userId) {
+        console.log("[Chatbot] History error: Not authenticated");
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const [user] = await db.select({ chatbotEnabled: users.chatbotEnabled }).from(users).where(eq3(users.id, userId));
+      if (!user?.chatbotEnabled) {
+        console.log("[Chatbot] History error: Chatbot not enabled");
+        return res.status(403).json({ message: "Chatbot is not enabled for your account" });
+      }
+      const { sessionId } = req.params;
+      const history = await getConversationHistory(sessionId, userId, 50);
+      console.log("[Chatbot] History retrieved, count:", history.length);
+      res.json(history);
+    } catch (error) {
+      console.error("[Chatbot] History ERROR:", error.message);
+      console.error("[Chatbot] History Stack:", error.stack);
+      res.status(500).json({ message: "History error: " + error.message });
+    }
+  });
+  app2.get("/api/chatbot/all-history", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      const userRole = req.session.currentRole;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      if (userRole !== "Admin" && userRole !== "Owner") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const history = await getAllChatHistory(companyId, 200);
+      const userIds = Array.from(new Set(history.map((h) => h.userId)));
+      const usersList = userIds.length > 0 ? await db.select({ id: users.id, username: users.username }).from(users).where(inArray2(users.id, userIds)) : [];
+      const userMap = new Map(usersList.map((u) => [u.id, u.username]));
+      const enrichedHistory = history.map((h) => ({
+        ...h,
+        username: userMap.get(h.userId) || "Unknown"
+      }));
+      res.json(enrichedHistory);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.patch("/api/users/:userId/chatbot", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const userRole = req.session.currentRole;
+      if (userRole !== "Admin" && userRole !== "Owner") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const { userId } = req.params;
+      const { enabled } = req.body;
+      await db.update(users).set({ chatbotEnabled: enabled }).where(eq3(users.id, userId));
+      res.json({ message: `Chatbot ${enabled ? "enabled" : "disabled"} for user` });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/users/chatbot-status", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const userRole = req.session.currentRole;
+      if (userRole !== "Admin" && userRole !== "Owner") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const allUsers = await db.select({
+        id: users.id,
+        username: users.username,
+        chatbotEnabled: users.chatbotEnabled,
+        active: users.active
+      }).from(users).where(eq3(users.active, true));
+      res.json(allUsers);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/admin/legacy-employee-accounts", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const allAccounts = await db.select().from(ledgerAccounts).where(
+        and3(
+          eq3(ledgerAccounts.companyId, companyId),
+          like(ledgerAccounts.code, "EMP-%")
+        )
+      );
+      const accountsWithUsage = await Promise.all(
+        allAccounts.map(async (account) => {
+          const entries = await db.select({ count: sql4`count(*)` }).from(voucherEntries).where(eq3(voucherEntries.ledgerAccountId, account.id));
+          const usageCount = entries[0]?.count || 0;
+          const employeeCode = account.code.replace("EMP-", "");
+          const employee = await storage.getEmployeeByCode(employeeCode);
+          const employeeInSameCompany = employee && employee.companyId === companyId ? employee : null;
+          return {
+            id: account.id,
+            code: account.code,
+            name: account.name,
+            accountType: account.accountType,
+            isDeleted: !!account.deletedAt,
+            deletedAt: account.deletedAt,
+            usageCount,
+            employeeCode,
+            employeeId: employeeInSameCompany?.id || null,
+            employeeName: employeeInSameCompany ? `${employeeInSameCompany.firstName} ${employeeInSameCompany.lastName}` : null,
+            canMigrate: !!employeeInSameCompany && usageCount > 0,
+            canDelete: usageCount === 0
+          };
+        })
+      );
+      res.json({
+        accounts: accountsWithUsage,
+        totalCount: accountsWithUsage.length,
+        activeCount: accountsWithUsage.filter((a) => !a.isDeleted).length,
+        withEntriesCount: accountsWithUsage.filter((a) => a.usageCount > 0).length
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/admin/migrate-employee-account/:accountId", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const accountId = parseInt(req.params.accountId);
+      if (isNaN(accountId)) {
+        return res.status(400).json({ message: "Invalid account ID" });
+      }
+      const account = await storage.getLedgerAccountById(accountId);
+      if (!account) {
+        return res.status(404).json({ message: "Account not found" });
+      }
+      if (!account.code.startsWith("EMP-")) {
+        return res.status(400).json({ message: "Not an EMP-* legacy account" });
+      }
+      if (account.companyId !== companyId) {
+        return res.status(403).json({ message: "Account belongs to a different company" });
+      }
+      const employeeCode = account.code.replace("EMP-", "");
+      const employee = await storage.getEmployeeByCode(employeeCode);
+      if (!employee) {
+        return res.status(400).json({
+          message: `Cannot migrate: No employee found with code "${employeeCode}"`
+        });
+      }
+      if (employee.companyId !== companyId) {
+        return res.status(400).json({
+          message: `Cannot migrate: Employee "${employeeCode}" belongs to a different company`
+        });
+      }
+      const result = await db.update(voucherEntries).set({
+        ledgerAccountId: null,
+        employeeId: employee.id
+      }).where(eq3(voucherEntries.ledgerAccountId, accountId)).returning();
+      await db.update(ledgerAccounts).set({ deletedAt: /* @__PURE__ */ new Date(), active: false }).where(eq3(ledgerAccounts.id, accountId));
+      res.json({
+        message: `Migrated ${result.length} voucher entries from ${account.code} to employee ${employee.code}`,
+        migratedCount: result.length,
+        accountDeleted: true,
+        employeeId: employee.id,
+        employeeCode: employee.code
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/admin/cleanup-legacy-employee-accounts", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const empAccounts = await db.select().from(ledgerAccounts).where(
+        and3(
+          eq3(ledgerAccounts.companyId, companyId),
+          like(ledgerAccounts.code, "EMP-%"),
+          isNull3(ledgerAccounts.deletedAt)
+        )
+      );
+      const results = [];
+      for (const account of empAccounts) {
+        const employeeCode = account.code.replace("EMP-", "");
+        const employeeRaw = await storage.getEmployeeByCode(employeeCode);
+        const employee = employeeRaw && employeeRaw.companyId === companyId ? employeeRaw : null;
+        const entries = await db.select().from(voucherEntries).where(eq3(voucherEntries.ledgerAccountId, account.id));
+        if (entries.length === 0) {
+          await db.update(ledgerAccounts).set({ deletedAt: /* @__PURE__ */ new Date(), active: false }).where(eq3(ledgerAccounts.id, account.id));
+          results.push({
+            accountCode: account.code,
+            accountId: account.id,
+            employeeCode,
+            migratedEntries: 0,
+            status: "deleted",
+            message: "Account had no entries, soft-deleted"
+          });
+        } else if (employee) {
+          await db.update(voucherEntries).set({
+            ledgerAccountId: null,
+            employeeId: employee.id
+          }).where(eq3(voucherEntries.ledgerAccountId, account.id));
+          await db.update(ledgerAccounts).set({ deletedAt: /* @__PURE__ */ new Date(), active: false }).where(eq3(ledgerAccounts.id, account.id));
+          results.push({
+            accountCode: account.code,
+            accountId: account.id,
+            employeeCode,
+            migratedEntries: entries.length,
+            status: "migrated",
+            message: `Migrated ${entries.length} entries to employee ${employee.code}`
+          });
+        } else {
+          results.push({
+            accountCode: account.code,
+            accountId: account.id,
+            employeeCode,
+            migratedEntries: 0,
+            status: "skipped",
+            message: `Skipped: No matching employee found for code "${employeeCode}"`
+          });
+        }
+      }
+      const migrated = results.filter((r) => r.status === "migrated").length;
+      const deleted = results.filter((r) => r.status === "deleted").length;
+      const skipped = results.filter((r) => r.status === "skipped").length;
+      res.json({
+        message: `Cleanup complete: ${migrated} migrated, ${deleted} deleted, ${skipped} skipped`,
+        results,
+        summary: { migrated, deleted, skipped, total: results.length }
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get(
+    "/api/settings/role-permissions",
+    requireAuth,
+    requireRole("Admin"),
+    async (req, res) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const permissions = await storage.getRoleFeaturePermissions(companyId);
+        res.json(permissions);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.put(
+    "/api/settings/role-permissions",
+    requireAuth,
+    requireRole("Admin"),
+    async (req, res) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const { permissions } = req.body;
+        if (!Array.isArray(permissions)) {
+          return res.status(400).json({ message: "permissions must be an array" });
+        }
+        const permissionsWithCompany = permissions.map((p) => ({
+          ...p,
+          companyId
+        }));
+        const results = await storage.bulkUpsertRoleFeaturePermissions(permissionsWithCompany);
+        res.json({ message: "Permissions updated successfully", permissions: results });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get(
+    "/api/my-permissions",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        const role = req.session.currentRole;
+        if (!companyId || !role) {
+          return res.status(400).json({ message: "No company or role selected" });
+        }
+        const allPermissions = await storage.getRoleFeaturePermissions(companyId);
+        const rolePermissions = allPermissions.filter((p) => p.role === role);
+        res.json(rolePermissions);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.get("/api/moto-assemblies", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const statusFilter = req.query.status;
+      const locationId = req.query.locationId ? parseInt(req.query.locationId) : void 0;
+      let assemblies = await db.select().from(motoAssemblies).where(eq3(motoAssemblies.companyId, companyId)).orderBy(desc3(motoAssemblies.createdAt));
+      if (statusFilter) {
+        assemblies = assemblies.filter((a) => a.status === statusFilter);
+      }
+      if (locationId) {
+        assemblies = assemblies.filter((a) => a.locationId === locationId);
+      }
+      res.json(assemblies);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/moto-assemblies/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid assembly ID" });
+      }
+      const [assembly] = await db.select().from(motoAssemblies).where(eq3(motoAssemblies.id, id));
+      if (!assembly) {
+        return res.status(404).json({ message: "Assembly not found" });
+      }
+      if (assembly.companyId !== req.session.currentCompanyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const parts = await db.select({
+        part: motoAssemblyParts,
+        stockItem: stockItems
+      }).from(motoAssemblyParts).leftJoin(stockItems, eq3(motoAssemblyParts.stockItemId, stockItems.id)).where(eq3(motoAssemblyParts.motoAssemblyId, id));
+      res.json({
+        ...assembly,
+        parts: parts.map((p) => ({
+          ...p.part,
+          stockItemName: p.stockItem?.name,
+          stockItemCode: p.stockItem?.code
+        }))
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/moto-assemblies", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const parsed = insertMotoAssemblySchema.parse({
+        ...req.body,
+        companyId
+      });
+      let assemblyCode = parsed.assemblyCode;
+      if (!assemblyCode) {
+        const count = await db.select({ count: sql4`count(*)` }).from(motoAssemblies).where(eq3(motoAssemblies.companyId, companyId));
+        const nextNum = (count[0]?.count || 0) + 1;
+        assemblyCode = `MOTO-${String(nextNum).padStart(4, "0")}`;
+      }
+      const laborCost = parseFloat(parsed.laborCost || "0");
+      const { assemblyCode: _, ...parsedWithoutCode } = parsed;
+      const [assembly] = await db.insert(motoAssemblies).values({
+        ...parsedWithoutCode,
+        assemblyCode,
+        laborCost: laborCost.toFixed(2),
+        totalPartsCost: "0",
+        totalCost: laborCost.toFixed(2)
+      }).returning();
+      res.status(201).json(assembly);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  app2.patch("/api/moto-assemblies/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid assembly ID" });
+      }
+      const [existing] = await db.select().from(motoAssemblies).where(eq3(motoAssemblies.id, id));
+      if (!existing) {
+        return res.status(404).json({ message: "Assembly not found" });
+      }
+      if (existing.companyId !== req.session.currentCompanyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const updates = {};
+      if (req.body.vin !== void 0) updates.vin = req.body.vin;
+      if (req.body.motoModel !== void 0) updates.motoModel = req.body.motoModel;
+      if (req.body.status !== void 0) updates.status = req.body.status;
+      if (req.body.notes !== void 0) updates.notes = req.body.notes;
+      if (req.body.completedDate !== void 0) updates.completedDate = req.body.completedDate;
+      if (req.body.laborCost !== void 0) {
+        const laborCost = parseFloat(req.body.laborCost || "0");
+        updates.laborCost = laborCost.toFixed(2);
+        const totalPartsCost = parseFloat(existing.totalPartsCost || "0");
+        updates.totalCost = (totalPartsCost + laborCost).toFixed(2);
+      }
+      if (req.body.status === "completed" && !existing.completedDate && !updates.completedDate) {
+        updates.completedDate = format(/* @__PURE__ */ new Date(), "yyyy-MM-dd");
+      }
+      const [updated] = await db.update(motoAssemblies).set(updates).where(eq3(motoAssemblies.id, id)).returning();
+      res.json(updated);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  app2.delete("/api/moto-assemblies/:id", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid assembly ID" });
+      }
+      const [existing] = await db.select().from(motoAssemblies).where(eq3(motoAssemblies.id, id));
+      if (!existing) {
+        return res.status(404).json({ message: "Assembly not found" });
+      }
+      if (existing.companyId !== req.session.currentCompanyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      await db.delete(motoAssemblyParts).where(eq3(motoAssemblyParts.motoAssemblyId, id));
+      await db.delete(motoAssemblies).where(eq3(motoAssemblies.id, id));
+      res.json({ message: "Assembly deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/moto-assemblies/:id/parts", requireAuth, async (req, res) => {
+    try {
+      const assemblyId = parseInt(req.params.id);
+      if (isNaN(assemblyId)) {
+        return res.status(400).json({ message: "Invalid assembly ID" });
+      }
+      const [assembly] = await db.select().from(motoAssemblies).where(eq3(motoAssemblies.id, assemblyId));
+      if (!assembly) {
+        return res.status(404).json({ message: "Assembly not found" });
+      }
+      if (assembly.companyId !== req.session.currentCompanyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const parsed = insertMotoAssemblyPartSchema.parse({
+        ...req.body,
+        motoAssemblyId: assemblyId
+      });
+      const quantity = parseFloat(parsed.quantity);
+      const unitCost = parseFloat(parsed.unitCost);
+      const totalCost = quantity * unitCost;
+      const [part] = await db.insert(motoAssemblyParts).values({
+        ...parsed,
+        quantity: quantity.toFixed(3),
+        unitCost: unitCost.toFixed(2),
+        totalCost: totalCost.toFixed(2)
+      }).returning();
+      const currentPartsCost = parseFloat(assembly.totalPartsCost || "0");
+      const newPartsCost = currentPartsCost + totalCost;
+      const laborCost = parseFloat(assembly.laborCost || "0");
+      const newTotalCost = newPartsCost + laborCost;
+      await db.update(motoAssemblies).set({
+        totalPartsCost: newPartsCost.toFixed(2),
+        totalCost: newTotalCost.toFixed(2)
+      }).where(eq3(motoAssemblies.id, assemblyId));
+      res.status(201).json(part);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  app2.delete("/api/moto-assembly-parts/:id", requireAuth, async (req, res) => {
+    try {
+      const partId = parseInt(req.params.id);
+      if (isNaN(partId)) {
+        return res.status(400).json({ message: "Invalid part ID" });
+      }
+      const [part] = await db.select().from(motoAssemblyParts).where(eq3(motoAssemblyParts.id, partId));
+      if (!part) {
+        return res.status(404).json({ message: "Part not found" });
+      }
+      const [assembly] = await db.select().from(motoAssemblies).where(eq3(motoAssemblies.id, part.motoAssemblyId));
+      if (!assembly || assembly.companyId !== req.session.currentCompanyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      await db.delete(motoAssemblyParts).where(eq3(motoAssemblyParts.id, partId));
+      const partCost = parseFloat(part.totalCost || "0");
+      const currentPartsCost = parseFloat(assembly.totalPartsCost || "0");
+      const newPartsCost = Math.max(0, currentPartsCost - partCost);
+      const laborCost = parseFloat(assembly.laborCost || "0");
+      const newTotalCost = newPartsCost + laborCost;
+      await db.update(motoAssemblies).set({
+        totalPartsCost: newPartsCost.toFixed(2),
+        totalCost: newTotalCost.toFixed(2)
+      }).where(eq3(motoAssemblies.id, assembly.id));
+      res.json({ message: "Part removed successfully" });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/assembly-inventory/:locationId", requireAuth, async (req, res) => {
+    try {
+      const locationId = parseInt(req.params.locationId);
+      if (isNaN(locationId)) {
+        return res.status(400).json({ message: "Invalid location ID" });
+      }
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const inventory2 = await db.select({
+        inventory: assemblyInventory,
+        stockItem: stockItems
+      }).from(assemblyInventory).leftJoin(stockItems, eq3(assemblyInventory.stockItemId, stockItems.id)).where(and3(
+        eq3(assemblyInventory.locationId, locationId),
+        eq3(assemblyInventory.companyId, companyId)
+      )).orderBy(asc2(stockItems.name));
+      res.json(inventory2.map((i) => ({
+        ...i.inventory,
+        stockItemName: i.stockItem?.name,
+        stockItemCode: i.stockItem?.code
+      })));
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/assembly-inventory", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { locationId, stockItemId, stage, qty } = req.body;
+      const [existing] = await db.select().from(assemblyInventory).where(and3(
+        eq3(assemblyInventory.locationId, locationId),
+        eq3(assemblyInventory.stockItemId, stockItemId),
+        eq3(assemblyInventory.stage, stage)
+      ));
+      if (existing) {
+        return res.status(400).json({ message: "This item already exists in this stage" });
+      }
+      const [stockItem] = await db.select().from(stockItems).where(eq3(stockItems.id, stockItemId));
+      const [newRecord] = await db.insert(assemblyInventory).values({
+        companyId,
+        locationId,
+        stockItemId,
+        stage,
+        qty: qty || 0
+      }).returning();
+      await db.insert(assemblyHistory).values({
+        companyId,
+        locationId,
+        userId: req.user.id,
+        username: req.user.username,
+        stockItemId,
+        stockItemName: stockItem?.name,
+        actionType: "SAVE",
+        fromStage: stage,
+        toStage: null,
+        qtyChanged: qty || 0,
+        description: `Added ${stockItem?.name} to ${stage} with qty: ${qty || 0}`
+      });
+      res.status(201).json({
+        ...newRecord,
+        stockItemName: stockItem?.name,
+        stockItemCode: stockItem?.code
+      });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  app2.patch("/api/assembly-inventory/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid inventory ID" });
+      }
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { qty } = req.body;
+      const [existing] = await db.select().from(assemblyInventory).where(eq3(assemblyInventory.id, id));
+      if (!existing || existing.companyId !== companyId) {
+        return res.status(404).json({ message: "Inventory record not found" });
+      }
+      const [stockItem] = await db.select().from(stockItems).where(eq3(stockItems.id, existing.stockItemId));
+      const [updated] = await db.update(assemblyInventory).set({ qty, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(assemblyInventory.id, id)).returning();
+      await db.insert(assemblyHistory).values({
+        companyId,
+        locationId: existing.locationId,
+        userId: req.user.id,
+        username: req.user.username,
+        stockItemId: existing.stockItemId,
+        stockItemName: stockItem?.name,
+        actionType: "SAVE",
+        fromStage: existing.stage,
+        toStage: null,
+        qtyChanged: qty,
+        description: `Set ${stockItem?.name} qty to ${qty} in ${existing.stage}`
+      });
+      res.json({
+        ...updated,
+        stockItemName: stockItem?.name,
+        stockItemCode: stockItem?.code
+      });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  app2.post("/api/assembly-inventory/transfer", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { locationId, stockItemId, fromStage, toStage, transferQty } = req.body;
+      const stageOrder = ["Full CKD", "Welded", "Painted", "Final Product"];
+      const fromIndex = stageOrder.indexOf(fromStage);
+      const toIndex = stageOrder.indexOf(toStage);
+      if (fromIndex === -1 || toIndex === -1) {
+        return res.status(400).json({ message: "Invalid stage" });
+      }
+      if (toIndex !== fromIndex + 1) {
+        return res.status(400).json({ message: "Can only transfer to the next stage" });
+      }
+      const [sourceRecord] = await db.select().from(assemblyInventory).where(and3(
+        eq3(assemblyInventory.locationId, locationId),
+        eq3(assemblyInventory.stockItemId, stockItemId),
+        eq3(assemblyInventory.stage, fromStage),
+        eq3(assemblyInventory.companyId, companyId)
+      ));
+      if (!sourceRecord) {
+        return res.status(404).json({ message: "Source inventory not found" });
+      }
+      if (sourceRecord.qty < transferQty) {
+        return res.status(400).json({ message: "Insufficient quantity in source stage" });
+      }
+      const [stockItem] = await db.select().from(stockItems).where(eq3(stockItems.id, stockItemId));
+      await db.update(assemblyInventory).set({ qty: sourceRecord.qty - transferQty, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(assemblyInventory.id, sourceRecord.id));
+      const [destRecord] = await db.select().from(assemblyInventory).where(and3(
+        eq3(assemblyInventory.locationId, locationId),
+        eq3(assemblyInventory.stockItemId, stockItemId),
+        eq3(assemblyInventory.stage, toStage),
+        eq3(assemblyInventory.companyId, companyId)
+      ));
+      if (destRecord) {
+        await db.update(assemblyInventory).set({ qty: destRecord.qty + transferQty, updatedAt: /* @__PURE__ */ new Date() }).where(eq3(assemblyInventory.id, destRecord.id));
+      } else {
+        await db.insert(assemblyInventory).values({
+          companyId,
+          locationId,
+          stockItemId,
+          stage: toStage,
+          qty: transferQty
+        });
+      }
+      await db.insert(assemblyHistory).values({
+        companyId,
+        locationId,
+        userId: req.user.id,
+        username: req.user.username,
+        stockItemId,
+        stockItemName: stockItem?.name,
+        actionType: "TRANSFER",
+        fromStage,
+        toStage,
+        qtyChanged: transferQty,
+        description: `Transferred ${transferQty} ${stockItem?.name} from ${fromStage} to ${toStage}`
+      });
+      res.json({ message: "Transfer successful" });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  app2.delete("/api/assembly-inventory/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid inventory ID" });
+      }
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const [existing] = await db.select().from(assemblyInventory).where(eq3(assemblyInventory.id, id));
+      if (!existing || existing.companyId !== companyId) {
+        return res.status(404).json({ message: "Inventory record not found" });
+      }
+      await db.delete(assemblyInventory).where(eq3(assemblyInventory.id, id));
+      res.json({ message: "Record deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/assembly-history", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const history = await db.select().from(assemblyHistory).where(eq3(assemblyHistory.companyId, companyId)).orderBy(desc3(assemblyHistory.createdAt)).limit(500);
+      res.json(history);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/assembly-history/:locationId", requireAuth, async (req, res) => {
+    try {
+      const locationId = parseInt(req.params.locationId);
+      if (isNaN(locationId)) {
+        return res.status(400).json({ message: "Invalid location ID" });
+      }
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const history = await db.select().from(assemblyHistory).where(and3(
+        eq3(assemblyHistory.locationId, locationId),
+        eq3(assemblyHistory.companyId, companyId)
+      )).orderBy(desc3(assemblyHistory.createdAt)).limit(500);
+      res.json(history);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  const updateAssemblyHistorySchema = z2.object({
+    technician: z2.string().optional(),
+    completed: z2.boolean().optional(),
+    status: z2.enum(["pending", "completed"]).optional()
+  });
+  app2.patch("/api/assembly-history/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const validationResult = updateAssemblyHistorySchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ message: "Invalid request body", errors: validationResult.error.errors });
+      }
+      const { technician, completed, status } = validationResult.data;
+      const updates = {};
+      if (technician !== void 0) updates.technician = technician;
+      if (completed !== void 0) {
+        updates.completed = completed;
+        updates.status = completed ? "completed" : "pending";
+      }
+      if (status !== void 0) updates.status = status;
+      const [updated] = await db.update(assemblyHistory).set(updates).where(and3(
+        eq3(assemblyHistory.id, id),
+        eq3(assemblyHistory.companyId, companyId)
+      )).returning();
+      if (!updated) {
+        return res.status(404).json({ message: "Record not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/assembly-tasks", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const tasks = await db.select().from(assemblyTasks).where(eq3(assemblyTasks.companyId, companyId)).orderBy(desc3(assemblyTasks.createdAt));
+      res.json(tasks);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.post("/api/assembly-tasks", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { stockItemId, technician, user, action, details, qty, date: date2 } = req.body;
+      let stockItemName = null;
+      if (stockItemId) {
+        const [stockItem] = await db.select().from(stockItems).where(eq3(stockItems.id, stockItemId));
+        stockItemName = stockItem?.name;
+      }
+      const [task] = await db.insert(assemblyTasks).values({
+        companyId,
+        stockItemId,
+        stockItemName,
+        technician,
+        user,
+        action,
+        details,
+        qty: qty || 1,
+        status: "pending",
+        // auto-set to pending
+        completed: false,
+        date: date2
+      }).returning();
+      res.json(task);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.patch("/api/assembly-tasks/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid task ID" });
+      }
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const { completed, technician, user, action, details, qty } = req.body;
+      const updates = { updatedAt: /* @__PURE__ */ new Date() };
+      if (completed !== void 0) {
+        updates.completed = completed;
+        updates.status = completed ? "completed" : "pending";
+      }
+      if (technician !== void 0) updates.technician = technician;
+      if (user !== void 0) updates.user = user;
+      if (action !== void 0) updates.action = action;
+      if (details !== void 0) updates.details = details;
+      if (qty !== void 0) updates.qty = qty;
+      const [updated] = await db.update(assemblyTasks).set(updates).where(and3(
+        eq3(assemblyTasks.id, id),
+        eq3(assemblyTasks.companyId, companyId)
+      )).returning();
+      if (!updated) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/admin/active-sessions", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const result = await db.execute(sql4`
+        SELECT sid, sess, expire FROM session WHERE expire > NOW() ORDER BY expire DESC
+      `);
+      const users2 = await db.execute(sql4`SELECT id, username FROM users`);
+      const userMap = new Map(users2.rows.map((u) => [u.id, u.username]));
+      const companies2 = await db.execute(sql4`SELECT id, name FROM companies`);
+      const companyMap = new Map(companies2.rows.map((c) => [c.id, c.name]));
+      const sessions = result.rows.map((row) => {
+        const sess = typeof row.sess === "string" ? JSON.parse(row.sess) : row.sess;
+        if (!sess.userId) return null;
+        return {
+          sid: row.sid,
+          userId: sess.userId,
+          username: userMap.get(sess.userId) || "Unknown",
+          currentCompanyId: sess.currentCompanyId,
+          companyName: companyMap.get(sess.currentCompanyId) || "None",
+          currentRole: sess.currentRole || "None",
+          expire: row.expire,
+          cookieExpires: sess.cookie?.expires
+        };
+      }).filter(Boolean);
+      res.json(sessions);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.delete("/api/admin/sessions/:sid", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const { sid } = req.params;
+      if (sid === req.sessionID) {
+        return res.status(400).json({ message: "Cannot terminate your own session" });
+      }
+      await db.execute(sql4`DELETE FROM session WHERE sid = ${sid}`);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/admin/db-stats", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const tables = await db.execute(sql4`
+        SELECT
+          t.table_name,
+          pg_size_pretty(pg_total_relation_size(quote_ident(t.table_name))) AS size,
+          pg_total_relation_size(quote_ident(t.table_name)) AS size_bytes,
+          GREATEST(c.reltuples::bigint, 0) AS estimated_rows
+        FROM information_schema.tables t
+        LEFT JOIN pg_class c ON c.relname = t.table_name
+        WHERE t.table_schema = 'public'
+          AND t.table_type = 'BASE TABLE'
+        ORDER BY pg_total_relation_size(quote_ident(t.table_name)) DESC
+      `);
+      const total = await db.execute(sql4`
+        SELECT
+          pg_size_pretty(pg_database_size(current_database())) AS total_size,
+          pg_database_size(current_database()) AS total_bytes
+      `);
+      res.json({ tables: tables.rows, total: total.rows[0] });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/offloads", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) return res.status(400).json({ message: "No company selected" });
+      const { startDate, endDate } = req.query;
+      const conditions = [eq3(containers.companyId, companyId)];
+      if (startDate) {
+        conditions.push(gte(containerOffloads.offloadedAt, /* @__PURE__ */ new Date(startDate + "T00:00:00")));
+      }
+      if (endDate) {
+        conditions.push(lte(containerOffloads.offloadedAt, /* @__PURE__ */ new Date(endDate + "T23:59:59")));
+      }
+      const offloadRows = await db.select({
+        id: containerOffloads.id,
+        containerId: containerOffloads.containerId,
+        containerNumber: containers.containerNumber,
+        locationId: containerOffloads.locationId,
+        locationName: locations.name,
+        duties: containerOffloads.duties,
+        officeCharges: containerOffloads.officeCharges,
+        transferCharges: containerOffloads.transferCharges,
+        transportFees: containerOffloads.transportFees,
+        totalCharges: containerOffloads.totalCharges,
+        totalBales: containerOffloads.totalBales,
+        additionalCostPerBale: containerOffloads.additionalCostPerBale,
+        offloadedAt: containerOffloads.offloadedAt
+      }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).leftJoin(locations, eq3(containerOffloads.locationId, locations.id)).where(and3(...conditions)).orderBy(desc3(containerOffloads.offloadedAt)).execute();
+      res.json(offloadRows.map((o) => ({
+        ...o,
+        itemsTotal: o.totalCharges || "0"
+      })));
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/offloads/:id", requireAuth, async (req, res) => {
+    try {
+      const offloadId = parseInt(req.params.id);
+      if (isNaN(offloadId)) return res.status(400).json({ message: "Invalid offload ID" });
+      const [offload] = await db.select({
+        id: containerOffloads.id,
+        containerId: containerOffloads.containerId,
+        containerNumber: containers.containerNumber,
+        grandTotal: containers.grandTotal,
+        locationId: containerOffloads.locationId,
+        locationName: locations.name,
+        duties: containerOffloads.duties,
+        officeCharges: containerOffloads.officeCharges,
+        transferCharges: containerOffloads.transferCharges,
+        transportFees: containerOffloads.transportFees,
+        totalCharges: containerOffloads.totalCharges,
+        totalBales: containerOffloads.totalBales,
+        additionalCostPerBale: containerOffloads.additionalCostPerBale,
+        offloadedAt: containerOffloads.offloadedAt
+      }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).leftJoin(locations, eq3(containerOffloads.locationId, locations.id)).where(eq3(containerOffloads.id, offloadId)).execute();
+      if (!offload) return res.status(404).json({ message: "Offload not found" });
+      const pos = await storage.getPurchaseOrdersByContainer(offload.containerId);
+      const allItems = [];
+      for (const po of pos) {
+        const lineItems = await storage.getLineItemsByPO(po.id);
+        for (const item of lineItems) {
+          allItems.push({
+            id: item.id,
+            itemName: item.itemName,
+            quantity: item.quantity,
+            rate: item.rate,
+            lineTotal: item.lineTotal,
+            stockItemId: item.stockItemId
+          });
+        }
+      }
+      const containerItemsList = await storage.getContainerItems(offload.containerId);
+      for (const item of containerItemsList) {
+        if (!allItems.find((i) => i.stockItemId === item.stockItemId)) {
+          allItems.push({
+            id: item.id,
+            itemName: item.stockItemId ? item.stockItemId.toString() : "Item",
+            quantity: item.quantity,
+            rate: "0",
+            lineTotal: "0",
+            stockItemId: item.stockItemId
+          });
+        }
+      }
+      const itemsTotal = allItems.reduce((sum, i) => sum + parseFloat(i.lineTotal || "0"), 0);
+      res.json({ ...offload, itemsTotal: itemsTotal.toString(), items: allItems });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  app2.get("/api/my-erp-pages", requireAuth, async (req, res) => {
+    try {
+      const role = req.session.currentRole;
+      if (!role) return res.status(400).json({ message: "No role selected" });
+      const { FEATURE_KEYS: FEATURE_KEYS2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      return res.json({ pageKeys: [...FEATURE_KEYS2], fullAccess: true, hiddenErpCostFields: [] });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -18273,10 +25299,16 @@ app.use(express2.json({
 app.use(express2.urlencoded({ extended: false }));
 app.set("trust proxy", 1);
 var PgSession = connectPgSimple(session);
+if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+  throw new Error(
+    "SESSION_SECRET environment variable is required in production. Set it to a long random string (e.g. via `openssl rand -base64 32`)."
+  );
+}
+var SESSION_SECRET = process.env.SESSION_SECRET || "dev-only-insecure-secret-change-me";
 var sessionConfig = {
   name: "erp.session",
   // Explicit cookie name
-  secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -18340,9 +25372,24 @@ app.use((req, res, next) => {
   });
   const server = await registerRoutes(app);
   app.use((err, _req, res, _next) => {
+    if (err?.name === "ZodError" && Array.isArray(err.errors)) {
+      return res.status(400).json({
+        message: "Invalid request",
+        errors: err.errors.map((e) => ({
+          path: Array.isArray(e.path) ? e.path.join(".") : String(e.path ?? ""),
+          message: e.message,
+          code: e.code
+        }))
+      });
+    }
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
+    if (status >= 500) {
+      console.error("[error-middleware]", err);
+    }
+    const payload = { message };
+    if (err.code) payload.code = err.code;
+    res.status(status).json(payload);
   });
   if (app.get("env") === "development") {
     await setupVite(app, server);

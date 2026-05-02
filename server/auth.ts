@@ -13,9 +13,13 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ message: "User not found" });
   }
 
-  // Check if a company is selected
+  // Check if a company is selected.
+  // Use 403 + a distinct code so the frontend can prompt the user to pick a
+  // company instead of treating it as a logout.
   if (!req.session.currentCompanyId) {
-    return res.status(401).json({ message: "No company selected" });
+    return res
+      .status(403)
+      .json({ message: "No company selected", code: "NO_COMPANY_SELECTED" });
   }
 
   // Load the user's role for the current company

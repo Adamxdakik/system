@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/excelHelper";
 
 interface StockItem {
   id: number;
@@ -172,7 +172,7 @@ export default function StockItems() {
   const allFilteredSelected = filteredStockItems.length > 0 && 
     filteredStockItems.every(item => selectedIds.includes(item.id));
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     const data = stockItems.map(item => ({
       Code: item.code,
       Name: item.name,
@@ -185,7 +185,7 @@ export default function StockItems() {
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Items");
-    XLSX.writeFile(workbook, "stock-items.xlsx");
+    await XLSX.writeFile(workbook, "stock-items.xlsx");
   };
 
   return (

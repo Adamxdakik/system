@@ -2298,9 +2298,9 @@ export default function VoucherEdit() {
     const destinationLocation = locations.find(l => l.id === transfer.destinationLocationId);
     
     // Excel export function for Stock Transfer
-    const exportToExcel = () => {
-      const XLSX = require('xlsx');
-      
+    const exportToExcel = async () => {
+      const XLSX = await import("@/lib/excelHelper");
+
       const transferItems = transferForm.watch("items");
       const totalMotos = transferItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
       
@@ -2328,7 +2328,7 @@ export default function VoucherEdit() {
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock Transfer');
       
       const filename = `Stock_Transfer_${voucher.voucherNumber}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
-      XLSX.writeFile(workbook, filename);
+      await XLSX.writeFile(workbook, filename);
       
       toast({
         title: "Export Successful",

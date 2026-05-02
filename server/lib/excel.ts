@@ -9,11 +9,6 @@ export type SheetData =
   | { kind: "json"; data: Record<string, any>[]; headers: string[] }
   | { kind: "aoa"; aoa: any[][] };
 
-export interface ExcelRange {
-  s: { r: number; c: number };
-  e: { r: number; c: number };
-}
-
 export interface CompatWorkbook {
   workbook: ExcelJS.Workbook;
   SheetNames: string[];
@@ -30,37 +25,9 @@ export const utils = {
 
   aoa_to_sheet: (data: any[][]): SheetData => ({ kind: "aoa", aoa: data }),
 
-  decode_range: (range: string): ExcelRange => {
-    const match = range.match(/([A-Z]+)(\d+):([A-Z]+)(\d+)/);
-    if (!match) return { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
-    const colToNum = (col: string) => {
-      let num = 0;
-      for (let i = 0; i < col.length; i++) num = num * 26 + col.charCodeAt(i) - 64;
-      return num - 1;
-    };
-    return {
-      s: { r: parseInt(match[2]) - 1, c: colToNum(match[1]) },
-      e: { r: parseInt(match[4]) - 1, c: colToNum(match[3]) },
-    };
-  },
-
-  encode_cell: (cell: { r: number; c: number }): string => {
-    const numToCol = (num: number): string => {
-      let col = "";
-      num++;
-      while (num > 0) {
-        num--;
-        col = String.fromCharCode(65 + (num % 26)) + col;
-        num = Math.floor(num / 26);
-      }
-      return col;
-    };
-    return numToCol(cell.c) + (cell.r + 1);
-  },
-
   book_append_sheet: (
     workbook: ExcelJS.Workbook,
-    sheetData: SheetData & { "!cols"?: { wch?: number }[] },
+    sheetData: SheetData,
     name: string,
   ): ExcelJS.Worksheet => {
     const worksheet = workbook.addWorksheet(name);
@@ -71,13 +38,6 @@ export const utils = {
       for (const item of sheetData.data) {
         worksheet.addRow(sheetData.headers.map((h) => item[h] ?? ""));
       }
-    }
-    if (sheetData["!cols"]) {
-      sheetData["!cols"].forEach((col, idx) => {
-        if (col?.wch && worksheet.columns[idx]) {
-          worksheet.getColumn(idx + 1).width = col.wch;
-        }
-      });
     }
     return worksheet;
   },
@@ -125,43 +85,21 @@ function unwrapCell(value: ExcelJS.CellValue): unknown {
   return value;
 }
 
-export async function writeFile(workbook: ExcelJS.Workbook, filename: string): Promise<void> {
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-export async function write(
-  workbook: ExcelJS.Workbook,
-  _options?: { type?: "buffer" | "array"; bookType?: "xlsx" },
-): Promise<Uint8Array> {
-  const buf = await workbook.xlsx.writeBuffer();
-  return new Uint8Array(buf);
-}
-
 export async function read(
-  data: ArrayBuffer | Uint8Array | File,
+  data: Buffer | ArrayBuffer | Uint8Array,
   _options?: { type?: "buffer" | "array" | "binary" },
 ): Promise<CompatWorkbook> {
   const workbook = new ExcelJS.Workbook();
-  if (data instanceof File) {
-    await workbook.xlsx.load(await data.arrayBuffer());
-  } else if (data instanceof ArrayBuffer) {
-    await workbook.xlsx.load(data);
+  let buffer: ArrayBuffer;
+  if (data instanceof ArrayBuffer) {
+    buffer = data;
   } else {
-    await workbook.xlsx.load(
-      data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer,
-    );
+    // Buffer and Uint8Array both expose .buffer/.byteOffset/.byteLength
+    const view = data as Uint8Array;
+    buffer = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength) as ArrayBuffer;
   }
+  await workbook.xlsx.load(buffer);
+
   const SheetNames: string[] = [];
   const Sheets: Record<string, ExcelJS.Worksheet> = {};
   workbook.eachSheet((ws) => {
@@ -171,24 +109,13 @@ export async function read(
   return { workbook, SheetNames, Sheets };
 }
 
-export async function readFile(file: File): Promise<ExcelJS.Workbook> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(await file.arrayBuffer());
-  return workbook;
+export async function write(
+  workbook: ExcelJS.Workbook,
+  _options?: { type?: "buffer"; bookType?: "xlsx" },
+): Promise<Buffer> {
+  const buf = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buf);
 }
 
-export async function readFromBuffer(data: ArrayBuffer | Uint8Array): Promise<ExcelJS.Workbook> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(
-    data instanceof ArrayBuffer
-      ? data
-      : (data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer),
-  );
-  return workbook;
-}
-
-export interface WorkbookData extends CompatWorkbook {}
-
-const XLSX = { utils, read, write, writeFile };
+const XLSX = { utils, read, write };
 export default XLSX;
-export { ExcelJS };

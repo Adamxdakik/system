@@ -30,7 +30,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { FileSpreadsheet, FileText, TrendingUp, TrendingDown, ChevronRight, RefreshCw } from "lucide-react";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/excelHelper";
 import { format, parseISO, startOfDay, startOfMonth, startOfYear } from "date-fns";
 import { useDateFormat } from "@/contexts/DateFormatContext";
 import { PeriodPresets, type PresetId } from "@/components/PeriodPresets";
@@ -316,7 +316,7 @@ export default function SalesReport() {
     }
   }, [highlightedIndex]);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const exportData = groupedData.map((group) => ({
       "Date": group.displayDate,
       "Items Sold": group.itemCount,
@@ -343,7 +343,7 @@ export default function SalesReport() {
     XLSX.utils.book_append_sheet(wb, ws, "Sales History");
     
     const fileName = `sales-report-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+    await XLSX.writeFile(wb, fileName);
   };
 
   const handleExportPDF = () => {
