@@ -5055,6 +5055,10 @@ export class DbStorage implements IStorage {
     rates: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }>,
   ): Promise<schema.EmployeeMotoRate[]> {
     return await db.transaction(async (tx) => {
+      // Serialize concurrent PUTs for the same employee to avoid delete-then-insert
+      // races against the UNIQUE(employee_id, location_id) constraint. The lock is
+      // tied to this transaction and released on commit/rollback.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${employeeId}::bigint)`);
       await tx
         .delete(schema.employeeMotoRates)
         .where(eq(schema.employeeMotoRates.employeeId, employeeId));
@@ -5089,6 +5093,8 @@ export class DbStorage implements IStorage {
     rates: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }>,
   ): Promise<schema.EmployeeMotoPctRate[]> {
     return await db.transaction(async (tx) => {
+      // Serialize concurrent PUTs per employee — see replaceEmployeeMotoRates above.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${employeeId}::bigint)`);
       await tx
         .delete(schema.employeeMotoPctRates)
         .where(eq(schema.employeeMotoPctRates.employeeId, employeeId));

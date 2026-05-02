@@ -2099,6 +2099,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return new Set(roles.map((r: any) => r.companyId).filter((id: any): id is number => typeof id === "number"));
   }
 
+  // Helper: build the set of locationIds belonging to the current tenant company.
+  // Used to validate `locationId` on moto-rate PUT bodies — prevents a user in
+  // company A from writing rates that reference locations in company B.
+  async function getCurrentCompanyLocationIds(companyId: number | undefined): Promise<Set<number>> {
+    if (!companyId) return new Set();
+    const locs = await storage.getAllLocations(companyId);
+    return new Set(locs.map((l: any) => l.id));
+  }
+
   app.get("/api/employees/:id/moto-rates", requireAuth, async (req, res) => {
     try {
       const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
@@ -2118,6 +2127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const body = req.body as { rates?: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }> };
       const rates = Array.isArray(body?.rates) ? body.rates : [];
       const accessible = await getAccessibleCompanyIds(req.session.userId);
+      const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
       // Sanitize: only valid rows with locationId + rate > 0
       const clean = rates
         .filter((r) => r && Number.isFinite(Number(r.locationId)) && parseFloat(r.rate) > 0)
@@ -2126,6 +2136,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rate: String(r.rate),
           sourceCompanyId: r.sourceCompanyId != null ? Number(r.sourceCompanyId) : null,
         }));
+      // Validate every locationId belongs to the current tenant company.
+      for (const row of clean) {
+        if (!tenantLocations.has(row.locationId)) {
+          return res.status(403).json({
+            message: `Access denied: locationId ${row.locationId} does not belong to your current company`,
+          });
+        }
+      }
       // Validate sourceCompanyId is one the user has access to (when provided).
       for (const row of clean) {
         if (row.sourceCompanyId != null && !accessible.has(row.sourceCompanyId)) {
@@ -2161,6 +2179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const body = req.body as { rates?: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }> };
       const rates = Array.isArray(body?.rates) ? body.rates : [];
       const accessible = await getAccessibleCompanyIds(req.session.userId);
+      const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
       const clean = rates
         .filter((r) => r && Number.isFinite(Number(r.locationId)) && parseFloat(r.pct) > 0)
         .map((r) => ({
@@ -2168,6 +2187,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pct: String(r.pct),
           sourceCompanyId: r.sourceCompanyId != null ? Number(r.sourceCompanyId) : null,
         }));
+      for (const row of clean) {
+        if (!tenantLocations.has(row.locationId)) {
+          return res.status(403).json({
+            message: `Access denied: locationId ${row.locationId} does not belong to your current company`,
+          });
+        }
+      }
       for (const row of clean) {
         if (row.sourceCompanyId != null && !accessible.has(row.sourceCompanyId)) {
           return res.status(403).json({
