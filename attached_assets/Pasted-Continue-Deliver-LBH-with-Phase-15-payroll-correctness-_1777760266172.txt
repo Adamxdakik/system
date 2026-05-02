@@ -1,0 +1,100 @@
+Continue Deliver LBH with Phase 15: payroll correctness and financial integrity.
+
+Context:
+Pass D audit-round-3.5 is complete. Moto-rate system now has:
+- strict validation (Zod)
+- soft-delete with partial unique indexes
+- audit log table (moto_rate_audit)
+- tenant-safe copy/bulk endpoints
+- CSV export with injection protection
+- full test coverage (29/29 passing)
+
+Goal:
+Ensure payroll calculations are correct, traceable, and safe under real financial usage.
+
+Build:
+
+1. Immutable payroll snapshots
+- Create table: payroll_snapshots
+  - employee_id
+  - period_start
+  - period_end
+  - total_units (motos)
+  - total_sales
+  - total_bonus_amount
+  - total_pct_amount
+  - total_payout
+  - created_at
+- When payroll is “calculated”, store a snapshot.
+- Snapshot must NOT change if rates change later.
+- Link snapshot to rate audit version if possible.
+
+2. Payroll calculation endpoint
+- Add POST /api/payroll/calculate
+- Inputs:
+  - employee_id
+  - period (start/end)
+- Compute:
+  - units-based bonus (moto rates)
+  - percentage-based earnings
+- Return detailed breakdown:
+  - per-location contribution
+  - per-rate contribution
+- Optionally persist snapshot (flag: save=true)
+
+3. Payroll history endpoint
+- GET /api/payroll/:employeeId
+- Return list of snapshots
+- Include totals and period labels
+- Tenant-scoped
+
+4. Payroll export (CSV)
+- Export payroll snapshots
+- Include:
+  - employee
+  - period
+  - totals
+- Reuse CSV injection protection logic
+
+5. Double-calculation guard
+- Prevent duplicate snapshots for same employee + period unless forced
+- Add optional override flag
+
+6. Data integrity checks
+- Ensure:
+  - no negative payouts
+  - no missing rates silently producing 0 without warning
+- Return warnings in API response if data incomplete
+
+7. UI: Payroll summary screen
+- Show:
+  - total payout
+  - breakdown (bonus vs percentage)
+  - per-location contributions
+- Add “Save snapshot” button
+- Add “Export CSV” button
+
+8. Audit trace linkage
+- When snapshot is created:
+  - store reference to moto_rate_audit entries used (or timestamp boundary)
+- Allows reconstruction of “why payout was X”
+
+9. Update replit.md
+- Add Phase 15 summary
+- Include:
+  - how payroll is calculated
+  - how snapshots protect against future rate changes
+  - test checklist
+
+Requirements:
+- Keep TypeScript strict
+- Use Drizzle migrations
+- Preserve tenant isolation
+- Do not mutate historical data
+- Reuse existing audit + validation patterns
+- Keep UI simple and functional
+
+Do not:
+- Introduce external accounting systems
+- Add complex tax logic
+- Add multi-currency support
