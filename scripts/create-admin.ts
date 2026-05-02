@@ -1,12 +1,14 @@
 import { db } from "../server/db";
 import { users, companies, userCompanyRoles } from "../shared/schema";
-import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { writeFileSync, chmodSync } from "fs";
 import { resolve } from "path";
 
-// Simple password hashing function (same as in server/auth.ts)
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+// Match the cost factor used by the live login pipeline (server/routes.ts).
+const BCRYPT_SALT_ROUNDS = 10;
+
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 }
 
 async function createAdmin() {
@@ -22,14 +24,17 @@ async function createAdmin() {
     }).returning();
     console.log(`✅ Company created: ${company.name} (ID: ${company.id})\n`);
 
-    // 2. Create admin user
+    // 2. Create admin user with a salted bcrypt hash so the credential is
+    // never stored as plain SHA-256 (which is unsalted, fast, and rainbow-
+    // table-vulnerable). Login (server/routes.ts) already uses bcrypt with a
+    // legacy SHA-256 fallback, so this is a forward-compatible upgrade.
     console.log('Step 2: Creating admin user...');
     const username = 'admin';
     const password = 'admin'; // Change this after first login!
-    
+
     const [user] = await db.insert(users).values({
       username,
-      password: hashPassword(password),
+      password: await hashPassword(password),
       active: true,
     }).returning();
     console.log(`✅ User created: ${user.username} (ID: ${user.id})\n`);

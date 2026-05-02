@@ -110,6 +110,9 @@ export async function getERPContext(companyId: number): Promise<ERPContext> {
       email: schema.suppliers.email,
     })
       .from(schema.suppliers)
+      // NOTE: suppliers table has no companyId column — it is a globally-
+      // shared list across the org's accounting books by design. No tenant
+      // filter applies here. (Customers, in contrast, are per-company.)
       .where(eq(schema.suppliers.active, true))
       .limit(100),
 
@@ -239,6 +242,10 @@ export async function getERPContext(companyId: number): Promise<ERPContext> {
       openingBalance: schema.suppliers.openingBalance,
     })
     .from(schema.suppliers)
+    // NOTE: suppliers table is global by schema design (no companyId column).
+    // The downstream voucher-entries lookup *is* tenant-scoped (it joins via
+    // vouchers.companyId), so per-tenant balances are still computed
+    // correctly even though the supplier directory itself is shared.
     .where(eq(schema.suppliers.active, true));
 
   // Get voucher entries for each supplier (matching supplier page calculation)
@@ -253,6 +260,9 @@ export async function getERPContext(companyId: number): Promise<ERPContext> {
         .innerJoin(schema.vouchers, eq(schema.voucherEntries.voucherId, schema.vouchers.id))
         .where(and(
           eq(schema.voucherEntries.supplierId, supplier.id),
+          // SECURITY: scope balance computation to current tenant's vouchers
+          // so a shared supplier shows the right balance per accounting book.
+          eq(schema.vouchers.companyId, companyId),
           eq(schema.vouchers.optional, false),
           isNull(schema.vouchers.deletedAt)
         ));
@@ -664,15 +674,24 @@ export async function getConversationHistory(
 
 export async function getConversationHistoryForAI(
   sessionId: string,
-  limit: number = 10
+  userId: string,
+  companyId: number,
+  limit: number = 10,
 ): Promise<{ role: string; content: string }[]> {
+  // SECURITY: scope by sessionId AND the requesting user/tenant. Previously
+  // any authenticated user who knew (or guessed) a sessionId could replay
+  // another user's chat history into their own AI prompt.
   const messages = await db
     .select({
       role: schema.chatMessages.role,
       content: schema.chatMessages.content,
     })
     .from(schema.chatMessages)
-    .where(eq(schema.chatMessages.sessionId, sessionId))
+    .where(and(
+      eq(schema.chatMessages.sessionId, sessionId),
+      eq(schema.chatMessages.userId, userId),
+      eq(schema.chatMessages.companyId, companyId),
+    ))
     .orderBy(desc(schema.chatMessages.createdAt))
     .limit(limit);
 

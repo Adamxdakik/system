@@ -362,17 +362,19 @@ export interface IStorage {
   bulkCreateBaleProducts(products: schema.InsertBaleProduct[]): Promise<schema.BaleProduct[]>;
 
   // Bale Transfers
+  // All ID-keyed reads/writes require companyId so storage enforces tenant isolation.
   getAllBaleTransfers(companyId: number): Promise<schema.BaleTransfer[]>;
-  getBaleTransferById(id: number): Promise<schema.BaleTransfer | undefined>;
+  getBaleTransferById(id: number, companyId: number): Promise<schema.BaleTransfer | undefined>;
   createBaleTransfer(transfer: schema.InsertBaleTransfer): Promise<schema.BaleTransfer>;
-  updateBaleTransfer(id: number, updates: Partial<schema.InsertBaleTransfer>): Promise<schema.BaleTransfer>;
-  deleteBaleTransfer(id: number): Promise<void>;
-  
+  updateBaleTransfer(id: number, companyId: number, updates: Partial<schema.InsertBaleTransfer>): Promise<schema.BaleTransfer | undefined>;
+  deleteBaleTransfer(id: number, companyId: number): Promise<void>;
+
   // Bale Transfer Items
-  getBaleTransferItems(transferId: number): Promise<schema.BaleTransferItem[]>;
-  createBaleTransferItem(item: schema.InsertBaleTransferItem): Promise<schema.BaleTransferItem>;
-  updateBaleTransferItem(id: number, updates: Partial<schema.InsertBaleTransferItem>): Promise<schema.BaleTransferItem>;
-  deleteBaleTransferItem(id: number): Promise<void>;
+  // Item operations are scoped to the parent transfer's companyId via subquery.
+  getBaleTransferItems(transferId: number, companyId: number): Promise<schema.BaleTransferItem[]>;
+  createBaleTransferItem(item: schema.InsertBaleTransferItem, companyId: number): Promise<schema.BaleTransferItem | undefined>;
+  updateBaleTransferItem(id: number, companyId: number, updates: Partial<schema.InsertBaleTransferItem>): Promise<schema.BaleTransferItem | undefined>;
+  deleteBaleTransferItem(id: number, companyId: number): Promise<void>;
   getProductionBalesByLocation(companyId: number, locationId: number): Promise<schema.ProductionBale[]>;
 
   // Role Feature Permissions
@@ -4937,11 +4939,14 @@ export class DbStorage implements IStorage {
       .orderBy(desc(schema.baleTransfers.createdAt));
   }
 
-  async getBaleTransferById(id: number): Promise<schema.BaleTransfer | undefined> {
+  async getBaleTransferById(id: number, companyId: number): Promise<schema.BaleTransfer | undefined> {
     const [transfer] = await db
       .select()
       .from(schema.baleTransfers)
-      .where(eq(schema.baleTransfers.id, id));
+      .where(and(
+        eq(schema.baleTransfers.id, id),
+        eq(schema.baleTransfers.companyId, companyId),
+      ));
     return transfer;
   }
 
@@ -4953,27 +4958,58 @@ export class DbStorage implements IStorage {
     return created;
   }
 
-  async updateBaleTransfer(id: number, updates: Partial<schema.InsertBaleTransfer>): Promise<schema.BaleTransfer> {
+  async updateBaleTransfer(id: number, companyId: number, updates: Partial<schema.InsertBaleTransfer>): Promise<schema.BaleTransfer | undefined> {
+    // Never let callers change tenant ownership through an update payload.
+    const { companyId: _ignored, ...safe } = updates as any;
     const [updated] = await db
       .update(schema.baleTransfers)
-      .set({ ...updates, updatedAt: sql`now()` })
-      .where(eq(schema.baleTransfers.id, id))
+      .set({ ...safe, updatedAt: sql`now()` })
+      .where(and(
+        eq(schema.baleTransfers.id, id),
+        eq(schema.baleTransfers.companyId, companyId),
+      ))
       .returning();
     return updated;
   }
 
-  async deleteBaleTransfer(id: number): Promise<void> {
-    await db.delete(schema.baleTransfers).where(eq(schema.baleTransfers.id, id));
+  async deleteBaleTransfer(id: number, companyId: number): Promise<void> {
+    await db.delete(schema.baleTransfers).where(and(
+      eq(schema.baleTransfers.id, id),
+      eq(schema.baleTransfers.companyId, companyId),
+    ));
   }
 
-  async getBaleTransferItems(transferId: number): Promise<schema.BaleTransferItem[]> {
+  async getBaleTransferItems(transferId: number, companyId: number): Promise<schema.BaleTransferItem[]> {
+    // Join to parent so tenant isolation is enforced at the DB level.
     return await db
-      .select()
+      .select({
+        id: schema.baleTransferItems.id,
+        transferId: schema.baleTransferItems.transferId,
+        productionBaleId: schema.baleTransferItems.productionBaleId,
+        quantity: schema.baleTransferItems.quantity,
+        weightKg: schema.baleTransferItems.weightKg,
+        costPerKg: schema.baleTransferItems.costPerKg,
+        totalCost: schema.baleTransferItems.totalCost,
+        createdAt: schema.baleTransferItems.createdAt,
+      })
       .from(schema.baleTransferItems)
-      .where(eq(schema.baleTransferItems.transferId, transferId));
+      .innerJoin(schema.baleTransfers, eq(schema.baleTransferItems.transferId, schema.baleTransfers.id))
+      .where(and(
+        eq(schema.baleTransferItems.transferId, transferId),
+        eq(schema.baleTransfers.companyId, companyId),
+      ));
   }
 
-  async createBaleTransferItem(item: schema.InsertBaleTransferItem): Promise<schema.BaleTransferItem> {
+  async createBaleTransferItem(item: schema.InsertBaleTransferItem, companyId: number): Promise<schema.BaleTransferItem | undefined> {
+    // Verify the parent transfer belongs to the caller's tenant before insert.
+    const [parent] = await db
+      .select({ id: schema.baleTransfers.id })
+      .from(schema.baleTransfers)
+      .where(and(
+        eq(schema.baleTransfers.id, item.transferId),
+        eq(schema.baleTransfers.companyId, companyId),
+      ));
+    if (!parent) return undefined;
     const [created] = await db
       .insert(schema.baleTransferItems)
       .values(item)
@@ -4981,16 +5017,36 @@ export class DbStorage implements IStorage {
     return created;
   }
 
-  async updateBaleTransferItem(id: number, updates: Partial<schema.InsertBaleTransferItem>): Promise<schema.BaleTransferItem> {
+  async updateBaleTransferItem(id: number, companyId: number, updates: Partial<schema.InsertBaleTransferItem>): Promise<schema.BaleTransferItem | undefined> {
+    // Verify item's parent transfer belongs to the caller's tenant.
+    const [owned] = await db
+      .select({ id: schema.baleTransferItems.id })
+      .from(schema.baleTransferItems)
+      .innerJoin(schema.baleTransfers, eq(schema.baleTransferItems.transferId, schema.baleTransfers.id))
+      .where(and(
+        eq(schema.baleTransferItems.id, id),
+        eq(schema.baleTransfers.companyId, companyId),
+      ));
+    if (!owned) return undefined;
+    const { transferId: _ignored, ...safe } = updates as any;
     const [updated] = await db
       .update(schema.baleTransferItems)
-      .set(updates)
+      .set(safe)
       .where(eq(schema.baleTransferItems.id, id))
       .returning();
     return updated;
   }
 
-  async deleteBaleTransferItem(id: number): Promise<void> {
+  async deleteBaleTransferItem(id: number, companyId: number): Promise<void> {
+    const [owned] = await db
+      .select({ id: schema.baleTransferItems.id })
+      .from(schema.baleTransferItems)
+      .innerJoin(schema.baleTransfers, eq(schema.baleTransferItems.transferId, schema.baleTransfers.id))
+      .where(and(
+        eq(schema.baleTransferItems.id, id),
+        eq(schema.baleTransfers.companyId, companyId),
+      ));
+    if (!owned) return;
     await db.delete(schema.baleTransferItems).where(eq(schema.baleTransferItems.id, id));
   }
 

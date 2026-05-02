@@ -341,6 +341,20 @@ export default function ERPRunPayroll() {
   });
 
   // ── Print ─────────────────────────────────────────────────────────────────
+  // Escape every user-controlled string before interpolating into the print
+  // window's HTML. Without this, an attacker who can store HTML in fields like
+  // employeeName / groupName / notes can execute scripts whenever a payroll
+  // report is printed (stored XSS).
+  function escHtml(v: unknown): string {
+    return String(v ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[c] as string));
+  }
+
   function printRun(run: PayrollRun) {
     const items = run.items || [];
     const dateStr = run.date;
@@ -359,7 +373,7 @@ export default function ERPRunPayroll() {
     const bodyRows = Object.entries(groupMap).map(([grp, members]) => {
       const memberRows = members.map((m, i) => `
         <tr style="background:${i % 2 === 0 ? "#fff" : "#f4f8fc"}">
-          <td style="padding:5px 8px;border-bottom:1px solid #e4e8ed">${m.employeeName}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #e4e8ed">${escHtml(m.employeeName)}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e4e8ed;text-align:right">${parseFloat(m.baseSalary).toFixed(2)}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e4e8ed;text-align:right;color:${parseFloat(m.deduction) > 0 ? "#b45309" : "#999"}">${parseFloat(m.deduction) > 0 ? `-${parseFloat(m.deduction).toFixed(2)}` : "—"}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #e4e8ed;text-align:right;font-weight:600">${parseFloat(m.netPay).toFixed(2)}</td>
@@ -369,10 +383,10 @@ export default function ERPRunPayroll() {
       const gDed = members.reduce((s, m) => s + parseFloat(m.deduction), 0);
       const gNet = members.reduce((s, m) => s + parseFloat(m.netPay), 0);
       return `
-        <tr><td colspan="5" style="padding:6px 8px;background:#1e3a5f;color:#fff;font-weight:700;font-size:11px">${grp}</td></tr>
+        <tr><td colspan="5" style="padding:6px 8px;background:#1e3a5f;color:#fff;font-weight:700;font-size:11px">${escHtml(grp)}</td></tr>
         ${memberRows}
         <tr style="background:#d6e4f0">
-          <td style="padding:5px 8px;font-weight:700;font-size:11px">${grp} — Total</td>
+          <td style="padding:5px 8px;font-weight:700;font-size:11px">${escHtml(grp)} — Total</td>
           <td style="padding:5px 8px;text-align:right;font-weight:700">${gBase.toFixed(2)}</td>
           <td style="padding:5px 8px;text-align:right;font-weight:700">${gDed > 0 ? `-${gDed.toFixed(2)}` : "—"}</td>
           <td style="padding:5px 8px;text-align:right;font-weight:700">${gNet.toFixed(2)}</td>
@@ -384,7 +398,7 @@ export default function ERPRunPayroll() {
       ? `<div style="display:inline-block;background:#16a34a;color:#fff;font-weight:700;padding:3px 10px;border-radius:4px;font-size:11px;margin-bottom:8px">PAID</div>`
       : `<div style="display:inline-block;background:#ca8a04;color:#fff;font-weight:700;padding:3px 10px;border-radius:4px;font-size:11px;margin-bottom:8px">DRAFT</div>`;
 
-    const html = `<!DOCTYPE html><html><head><title>Payroll Report — ${dateStr}</title>
+    const html = `<!DOCTYPE html><html><head><title>Payroll Report — ${escHtml(dateStr)}</title>
       <style>
         body{font-family:Arial,sans-serif;font-size:12px;margin:24px;color:#222}
         h1{color:#1e3a5f;margin:0 0 2px}
@@ -399,10 +413,10 @@ export default function ERPRunPayroll() {
         <div>
           <h1>Payroll Report</h1>
           ${statusLine}
-          ${notes ? `<p style="color:#666;margin:2px 0 0;font-size:11px">${notes}</p>` : ""}
+          ${notes ? `<p style="color:#666;margin:2px 0 0;font-size:11px">${escHtml(notes)}</p>` : ""}
         </div>
         <div style="text-align:right;color:#555;font-size:11px">
-          <div><strong>Date:</strong> ${dateStr}</div>
+          <div><strong>Date:</strong> ${escHtml(dateStr)}</div>
           <div><strong>Workers:</strong> ${items.length}</div>
         </div>
       </div>

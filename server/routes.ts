@@ -750,25 +750,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Locations
   app.get("/api/locations", requireAuth, async (req, res) => {
     try {
-      const companyId = req.query.companyId
-        ? parseInt(req.query.companyId as string)
-        : req.session.currentCompanyId;
-
-      console.log("[/api/locations] Request from user:", req.user?.username);
-      console.log(
-        "[/api/locations] Company ID from query:",
-        req.query.companyId,
-      );
-      console.log(
-        "[/api/locations] Company ID from session:",
-        req.session.currentCompanyId,
-      );
-      console.log("[/api/locations] Final companyId to query:", companyId);
-
+      // SECURITY: Always use the session's company. Previously this route
+      // accepted ?companyId=N, which let any authenticated user read another
+      // tenant's locations by guessing the numeric ID (cross-tenant IDOR).
+      const companyId = req.session.currentCompanyId;
       if (!companyId) {
         return res
           .status(400)
-          .json({ message: "No company selected or specified" });
+          .json({ message: "No company selected" });
       }
 
       const locations = await storage.getAllLocations(companyId);
@@ -16635,6 +16624,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Transfer ID is required" });
         }
 
+        // SECURITY: tenant guard. stockTransferVouchers has no companyId of its
+        // own; the parent vouchers row carries it. Inner-join + filter by the
+        // session's current company so users cannot mutate another tenant's
+        // transfer by guessing IDs. Also, validate that every location in the
+        // payload (destination + each item's source) belongs to the same
+        // company, mirroring the bale-transfer protection.
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+
+        const [ownedTransfer] = await db
+          .select({ id: stockTransferVouchers.id })
+          .from(stockTransferVouchers)
+          .innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id))
+          .where(and(
+            eq(stockTransferVouchers.id, id),
+            eq(vouchers.companyId, companyId),
+          ))
+          .limit(1);
+
+        if (!ownedTransfer) {
+          return res.status(404).json({ message: "Transfer not found" });
+        }
+
         // Validate request body using Zod
         const parseResult = updateStockTransferSchema.safeParse(req.body);
         if (!parseResult.success) {
@@ -16650,6 +16664,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const invalidItem = items.find(item => item.sourceLocationId === destinationLocationId);
         if (invalidItem) {
           return res.status(400).json({ message: "Source and destination locations must be different for each item" });
+        }
+
+        // Cross-tenant location ownership: ensure destination + every source
+        // location belong to the caller's company. Without this an attacker
+        // who owns one location could redirect inventory into another tenant's
+        // location by passing its ID.
+        const referencedLocationIds = Array.from(new Set<number>([
+          destinationLocationId,
+          ...items.map(i => i.sourceLocationId),
+        ]));
+        const ownedLocations = await db
+          .select({ id: locations.id })
+          .from(locations)
+          .where(and(
+            eq(locations.companyId, companyId),
+            inArray(locations.id, referencedLocationIds),
+          ));
+        const ownedLocationIds = new Set(ownedLocations.map(l => l.id));
+        const foreignLocation = referencedLocationIds.find(lid => !ownedLocationIds.has(lid));
+        if (foreignLocation !== undefined) {
+          return res.status(403).json({
+            message: "Location does not belong to current company",
+            code: "WRONG_COMPANY",
+          });
         }
 
         // Convert numbers back to strings with fixed precision for storage layer
@@ -23044,17 +23082,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/stock-transfers/:id", requireAuth, async (req, res) => {
     try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) return res.status(400).json({ message: "No company selected" });
       const transferId = parseInt(req.params.id);
       if (isNaN(transferId)) return res.status(400).json({ message: "Invalid transfer ID" });
-      
-      const [transfer] = await db
-        .select()
+
+      // SECURITY: stockTransferVouchers has no companyId column; the tenant
+      // owner is the parent voucher (vouchers.companyId). Inner-join to scope.
+      const [transferRow] = await db
+        .select({
+          id: stockTransferVouchers.id,
+          voucherId: stockTransferVouchers.voucherId,
+          sourceLocationId: stockTransferVouchers.sourceLocationId,
+          destinationLocationId: stockTransferVouchers.destinationLocationId,
+          notes: stockTransferVouchers.notes,
+          createdAt: stockTransferVouchers.createdAt,
+        })
         .from(stockTransferVouchers)
-        .where(eq(stockTransferVouchers.id, transferId))
+        .innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id))
+        .where(and(
+          eq(stockTransferVouchers.id, transferId),
+          eq(vouchers.companyId, companyId),
+        ))
         .limit(1);
-      
-      if (!transfer) return res.status(404).json({ message: "Transfer not found" });
-      
+
+      if (!transferRow) return res.status(404).json({ message: "Transfer not found" });
+      const transfer = transferRow;
+
       const items = await db
         .select({
           id: stockTransferItems.id,
@@ -23068,7 +23122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(stockTransferItems)
         .innerJoin(stockItems, eq(stockTransferItems.stockItemId, stockItems.id))
         .where(eq(stockTransferItems.transferId, transferId));
-      
+
       res.json({ ...transfer, items });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -23254,6 +23308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const locationId = parseInt(req.params.locationId);
       if (isNaN(locationId)) return res.status(400).json({ message: "Invalid location ID" });
       
+      // SECURITY: enforce companyId on inventory query. Previously the loaded
+      // companyId was unused — only locationId was filtered, allowing any user
+      // to read inventory for another tenant's location IDs.
       const items = await db
         .select({
           id: inventory.id,
@@ -23267,6 +23324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(stockItems, eq(inventory.stockItemId, stockItems.id))
         .where(
           and(
+            eq(inventory.companyId, companyId),
             eq(inventory.locationId, locationId),
             sql`CAST(${inventory.quantity} AS NUMERIC) > 0`
           )
@@ -23295,88 +23353,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/bale-transfers/:id", requireAuth, async (req, res) => {
-    try {
-      const transfer = await storage.getBaleTransferById(parseInt(req.params.id));
-      if (!transfer) return res.status(404).json({ message: "Transfer not found" });
-      const items = await storage.getBaleTransferItems(transfer.id);
-      res.json({ ...transfer, items });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
+  app.get("/api/bale-transfers/:id", requireAuth, asyncHandler(async (req, res) => {
+    const companyId = req.session.currentCompanyId;
+    if (!companyId) return res.status(400).json({ message: "No company selected" });
+    const transferId = parseInt(req.params.id);
+    if (isNaN(transferId)) return res.status(400).json({ message: "Invalid transfer ID" });
+
+    // Storage methods enforce companyId scope; cross-tenant IDs return undefined.
+    const transfer = await storage.getBaleTransferById(transferId, companyId);
+    if (!transfer) return res.status(404).json({ message: "Transfer not found" });
+    const items = await storage.getBaleTransferItems(transfer.id, companyId);
+    res.json({ ...transfer, items });
+  }));
+
+  // Body schema for POST: header fields (companyId injected from session), then
+  // an items[] array with the same fields the row insert needs.
+  const baleTransferItemBody = z.object({
+    id: z.number().optional(),
+    productionBaleId: z.number().min(1),
+    quantity: z.number().min(1),
+    weightKg: z.union([z.string(), z.number()]),
+    costPerKg: z.union([z.string(), z.number()]),
+    totalCost: z.union([z.string(), z.number()]),
+  });
+  const baleTransferCreateBody = z.object({
+    sourceLocationId: z.number().min(1, "Source location is required"),
+    destinationLocationId: z.number().min(1, "Destination location is required"),
+    transferDate: z.string().min(1, "Transfer date is required"),
+    notes: z.string().optional().nullable(),
+    items: z.array(baleTransferItemBody).min(1, "At least one item is required"),
+  }).refine(b => b.sourceLocationId !== b.destinationLocationId, {
+    message: "Source and destination must be different",
+    path: ["destinationLocationId"],
   });
 
-  app.post("/api/bale-transfers", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) return res.status(400).json({ message: "No company selected" });
-      
-      const { sourceLocationId, destinationLocationId, transferDate, notes, items } = req.body;
-      
-      const transfer = await storage.createBaleTransfer({
-        companyId,
-        sourceLocationId,
-        destinationLocationId,
-        transferDate,
-        notes,
-        createdBy: req.session.userId!,
-        status: "PENDING"
-      });
+  app.post("/api/bale-transfers", requireAuth, validate(baleTransferCreateBody), asyncHandler(async (req, res) => {
+    const companyId = req.session.currentCompanyId;
+    if (!companyId) return res.status(400).json({ message: "No company selected" });
 
+    const { sourceLocationId, destinationLocationId, transferDate, notes, items } =
+      req.body as z.infer<typeof baleTransferCreateBody>;
+
+    // Verify both location IDs belong to this tenant before any writes,
+    // otherwise an attacker could move bales into a sibling tenant's location.
+    const tenantLocations = await storage.getAllLocations(companyId);
+    const tenantLocationIds = new Set(tenantLocations.map(l => l.id));
+    if (!tenantLocationIds.has(sourceLocationId) || !tenantLocationIds.has(destinationLocationId)) {
+      return res.status(403).json({ message: "Location does not belong to current company", code: "WRONG_COMPANY" });
+    }
+
+    const transfer = await storage.createBaleTransfer({
+      companyId,
+      sourceLocationId,
+      destinationLocationId,
+      transferDate,
+      notes: notes ?? undefined,
+      createdBy: req.session.userId!,
+      status: "PENDING",
+    });
+
+    for (const item of items) {
+      await storage.createBaleTransferItem({
+        transferId: transfer.id,
+        productionBaleId: item.productionBaleId,
+        quantity: item.quantity,
+        weightKg: String(item.weightKg),
+        costPerKg: String(item.costPerKg),
+        totalCost: String(item.totalCost),
+      }, companyId);
+    }
+
+    res.json({ success: true, transferId: transfer.id });
+  }));
+
+  const baleTransferPatchBody = z.object({
+    status: z.enum(["PENDING", "COMPLETED"]).optional(),
+    notes: z.string().optional().nullable(),
+    items: z.array(baleTransferItemBody).optional(),
+  });
+
+  app.patch("/api/bale-transfers/:id", requireAuth, validate(baleTransferPatchBody), asyncHandler(async (req, res) => {
+    const companyId = req.session.currentCompanyId;
+    if (!companyId) return res.status(400).json({ message: "No company selected" });
+    const transferId = parseInt(req.params.id);
+    if (isNaN(transferId)) return res.status(400).json({ message: "Invalid transfer ID" });
+
+    const { items, status, notes } = req.body as z.infer<typeof baleTransferPatchBody>;
+
+    // Scoped update; returns undefined if the row does not belong to the caller.
+    const updated = await storage.updateBaleTransfer(transferId, companyId, {
+      ...(status !== undefined ? { status } : {}),
+      ...(notes !== undefined ? { notes: notes ?? undefined } : {}),
+      updatedBy: req.session.userId!,
+    });
+    if (!updated) return res.status(404).json({ message: "Transfer not found" });
+
+    if (items) {
       for (const item of items) {
-        await storage.createBaleTransferItem({
-          transferId: transfer.id,
-          productionBaleId: item.productionBaleId,
-          quantity: item.quantity,
-          weightKg: item.weightKg.toString(),
-          costPerKg: item.costPerKg.toString(),
-          totalCost: item.totalCost.toString()
-        });
-      }
-
-      res.json({ success: true, transferId: transfer.id });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.patch("/api/bale-transfers/:id", requireAuth, async (req, res) => {
-    try {
-      const { items, status, notes } = req.body;
-      const transferId = parseInt(req.params.id);
-      
-      await storage.updateBaleTransfer(transferId, {
-        status,
-        notes,
-        updatedBy: req.session.userId!
-      });
-
-      if (items) {
-        for (const item of items) {
-          if (item.id) {
-            await storage.updateBaleTransferItem(item.id, {
-              weightKg: item.weightKg.toString(),
-              costPerKg: item.costPerKg.toString(),
-              totalCost: item.totalCost.toString()
-            });
-          } else {
-            await storage.createBaleTransferItem({
-              transferId,
-              productionBaleId: item.productionBaleId,
-              quantity: item.quantity,
-              weightKg: item.weightKg.toString(),
-              costPerKg: item.costPerKg.toString(),
-              totalCost: item.totalCost.toString()
-            });
-          }
+        if (item.id) {
+          // updateBaleTransferItem verifies the item's parent transfer belongs to companyId.
+          await storage.updateBaleTransferItem(item.id, companyId, {
+            weightKg: String(item.weightKg),
+            costPerKg: String(item.costPerKg),
+            totalCost: String(item.totalCost),
+          });
+        } else {
+          await storage.createBaleTransferItem({
+            transferId,
+            productionBaleId: item.productionBaleId,
+            quantity: item.quantity,
+            weightKg: String(item.weightKg),
+            costPerKg: String(item.costPerKg),
+            totalCost: String(item.totalCost),
+          }, companyId);
         }
       }
-
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
     }
-  });
+
+    res.json({ success: true });
+  }));
 
   app.get("/api/bales-by-location/:locationId", requireAuth, async (req, res) => {
     try {
@@ -25155,12 +25250,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Location Summary - Matrix view of all stock groups/items across selected locations
   app.get("/api/location-summary", requireAuth, async (req, res) => {
     try {
-      const companyId = req.query.companyId ? parseInt(req.query.companyId as string) : req.session.currentCompanyId;
+      // SECURITY: Always use the session's company. Same IDOR class as /api/locations.
+      const companyId = req.session.currentCompanyId;
       const locationIds = req.query.locationIds ? (req.query.locationIds as string).split(',').map(id => parseInt(id)) : [];
       const asOfDate = req.query.asOfDate as string || new Date().toISOString().split('T')[0];
-      
+
       if (!companyId) {
-        return res.status(400).json({ message: "Company ID is required" });
+        return res.status(400).json({ message: "No company selected" });
       }
       
       if (locationIds.length === 0) {
@@ -25853,7 +25949,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("[Chatbot] User message saved");
 
       // Get conversation history for AI context (excluding current message)
-      const history = await getConversationHistoryForAI(sessionId, 10);
+      // Pass userId + companyId so storage scopes the read to this caller
+      // and prevents replaying another user's session by sessionId guess.
+      const history = await getConversationHistoryForAI(sessionId, userId, companyId, 10);
       console.log("[Chatbot] Got history, length:", history.length);
 
       // Get AI response (excluding current message from history context)

@@ -4843,33 +4843,71 @@ var DbStorage = class {
   async getAllBaleTransfers(companyId) {
     return await db.select().from(baleTransfers).where(eq(baleTransfers.companyId, companyId)).orderBy(desc(baleTransfers.createdAt));
   }
-  async getBaleTransferById(id) {
-    const [transfer] = await db.select().from(baleTransfers).where(eq(baleTransfers.id, id));
+  async getBaleTransferById(id, companyId) {
+    const [transfer] = await db.select().from(baleTransfers).where(and(
+      eq(baleTransfers.id, id),
+      eq(baleTransfers.companyId, companyId)
+    ));
     return transfer;
   }
   async createBaleTransfer(transfer) {
     const [created] = await db.insert(baleTransfers).values(transfer).returning();
     return created;
   }
-  async updateBaleTransfer(id, updates) {
-    const [updated] = await db.update(baleTransfers).set({ ...updates, updatedAt: sql2`now()` }).where(eq(baleTransfers.id, id)).returning();
+  async updateBaleTransfer(id, companyId, updates) {
+    const { companyId: _ignored, ...safe } = updates;
+    const [updated] = await db.update(baleTransfers).set({ ...safe, updatedAt: sql2`now()` }).where(and(
+      eq(baleTransfers.id, id),
+      eq(baleTransfers.companyId, companyId)
+    )).returning();
     return updated;
   }
-  async deleteBaleTransfer(id) {
-    await db.delete(baleTransfers).where(eq(baleTransfers.id, id));
+  async deleteBaleTransfer(id, companyId) {
+    await db.delete(baleTransfers).where(and(
+      eq(baleTransfers.id, id),
+      eq(baleTransfers.companyId, companyId)
+    ));
   }
-  async getBaleTransferItems(transferId) {
-    return await db.select().from(baleTransferItems).where(eq(baleTransferItems.transferId, transferId));
+  async getBaleTransferItems(transferId, companyId) {
+    return await db.select({
+      id: baleTransferItems.id,
+      transferId: baleTransferItems.transferId,
+      productionBaleId: baleTransferItems.productionBaleId,
+      quantity: baleTransferItems.quantity,
+      weightKg: baleTransferItems.weightKg,
+      costPerKg: baleTransferItems.costPerKg,
+      totalCost: baleTransferItems.totalCost,
+      createdAt: baleTransferItems.createdAt
+    }).from(baleTransferItems).innerJoin(baleTransfers, eq(baleTransferItems.transferId, baleTransfers.id)).where(and(
+      eq(baleTransferItems.transferId, transferId),
+      eq(baleTransfers.companyId, companyId)
+    ));
   }
-  async createBaleTransferItem(item) {
+  async createBaleTransferItem(item, companyId) {
+    const [parent] = await db.select({ id: baleTransfers.id }).from(baleTransfers).where(and(
+      eq(baleTransfers.id, item.transferId),
+      eq(baleTransfers.companyId, companyId)
+    ));
+    if (!parent) return void 0;
     const [created] = await db.insert(baleTransferItems).values(item).returning();
     return created;
   }
-  async updateBaleTransferItem(id, updates) {
-    const [updated] = await db.update(baleTransferItems).set(updates).where(eq(baleTransferItems.id, id)).returning();
+  async updateBaleTransferItem(id, companyId, updates) {
+    const [owned] = await db.select({ id: baleTransferItems.id }).from(baleTransferItems).innerJoin(baleTransfers, eq(baleTransferItems.transferId, baleTransfers.id)).where(and(
+      eq(baleTransferItems.id, id),
+      eq(baleTransfers.companyId, companyId)
+    ));
+    if (!owned) return void 0;
+    const { transferId: _ignored, ...safe } = updates;
+    const [updated] = await db.update(baleTransferItems).set(safe).where(eq(baleTransferItems.id, id)).returning();
     return updated;
   }
-  async deleteBaleTransferItem(id) {
+  async deleteBaleTransferItem(id, companyId) {
+    const [owned] = await db.select({ id: baleTransferItems.id }).from(baleTransferItems).innerJoin(baleTransfers, eq(baleTransferItems.transferId, baleTransfers.id)).where(and(
+      eq(baleTransferItems.id, id),
+      eq(baleTransfers.companyId, companyId)
+    ));
+    if (!owned) return;
     await db.delete(baleTransferItems).where(eq(baleTransferItems.id, id));
   }
   async getProductionBalesByLocation(companyId, locationId) {
@@ -5324,6 +5362,9 @@ async function getERPContext(companyId) {
         creditAmount: voucherEntries.creditAmount
       }).from(voucherEntries).innerJoin(vouchers, eq2(voucherEntries.voucherId, vouchers.id)).where(and2(
         eq2(voucherEntries.supplierId, supplier.id),
+        // SECURITY: scope balance computation to current tenant's vouchers
+        // so a shared supplier shows the right balance per accounting book.
+        eq2(vouchers.companyId, companyId),
         eq2(vouchers.optional, false),
         isNull2(vouchers.deletedAt)
       ));
@@ -5656,11 +5697,15 @@ async function getConversationHistory(sessionId, userId, limit = 10) {
   }).from(chatMessages).where(whereClause).orderBy(desc2(chatMessages.createdAt)).limit(limit);
   return messages.reverse();
 }
-async function getConversationHistoryForAI(sessionId, limit = 10) {
+async function getConversationHistoryForAI(sessionId, userId, companyId, limit = 10) {
   const messages = await db.select({
     role: chatMessages.role,
     content: chatMessages.content
-  }).from(chatMessages).where(eq2(chatMessages.sessionId, sessionId)).orderBy(desc2(chatMessages.createdAt)).limit(limit);
+  }).from(chatMessages).where(and2(
+    eq2(chatMessages.sessionId, sessionId),
+    eq2(chatMessages.userId, userId),
+    eq2(chatMessages.companyId, companyId)
+  )).orderBy(desc2(chatMessages.createdAt)).limit(limit);
   return messages.reverse();
 }
 async function getAllChatHistory(companyId, limit = 100) {
@@ -6231,19 +6276,9 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/locations", requireAuth, async (req, res) => {
     try {
-      const companyId = req.query.companyId ? parseInt(req.query.companyId) : req.session.currentCompanyId;
-      console.log("[/api/locations] Request from user:", req.user?.username);
-      console.log(
-        "[/api/locations] Company ID from query:",
-        req.query.companyId
-      );
-      console.log(
-        "[/api/locations] Company ID from session:",
-        req.session.currentCompanyId
-      );
-      console.log("[/api/locations] Final companyId to query:", companyId);
+      const companyId = req.session.currentCompanyId;
       if (!companyId) {
-        return res.status(400).json({ message: "No company selected or specified" });
+        return res.status(400).json({ message: "No company selected" });
       }
       const locations2 = await storage.getAllLocations(companyId);
       console.log(
@@ -17658,6 +17693,17 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         if (!id) {
           return res.status(400).json({ message: "Transfer ID is required" });
         }
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const [ownedTransfer] = await db.select({ id: stockTransferVouchers.id }).from(stockTransferVouchers).innerJoin(vouchers, eq3(stockTransferVouchers.voucherId, vouchers.id)).where(and3(
+          eq3(stockTransferVouchers.id, id),
+          eq3(vouchers.companyId, companyId)
+        )).limit(1);
+        if (!ownedTransfer) {
+          return res.status(404).json({ message: "Transfer not found" });
+        }
         const parseResult = updateStockTransferSchema.safeParse(req.body);
         if (!parseResult.success) {
           return res.status(400).json({
@@ -17669,6 +17715,22 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         const invalidItem = items.find((item) => item.sourceLocationId === destinationLocationId);
         if (invalidItem) {
           return res.status(400).json({ message: "Source and destination locations must be different for each item" });
+        }
+        const referencedLocationIds = Array.from(/* @__PURE__ */ new Set([
+          destinationLocationId,
+          ...items.map((i) => i.sourceLocationId)
+        ]));
+        const ownedLocations = await db.select({ id: locations.id }).from(locations).where(and3(
+          eq3(locations.companyId, companyId),
+          inArray2(locations.id, referencedLocationIds)
+        ));
+        const ownedLocationIds = new Set(ownedLocations.map((l) => l.id));
+        const foreignLocation = referencedLocationIds.find((lid) => !ownedLocationIds.has(lid));
+        if (foreignLocation !== void 0) {
+          return res.status(403).json({
+            message: "Location does not belong to current company",
+            code: "WRONG_COMPANY"
+          });
         }
         const itemsForStorage = items.map((item) => ({
           sourceLocationId: item.sourceLocationId,
@@ -22208,10 +22270,23 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
   });
   app2.get("/api/stock-transfers/:id", requireAuth, async (req, res) => {
     try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) return res.status(400).json({ message: "No company selected" });
       const transferId = parseInt(req.params.id);
       if (isNaN(transferId)) return res.status(400).json({ message: "Invalid transfer ID" });
-      const [transfer] = await db.select().from(stockTransferVouchers).where(eq3(stockTransferVouchers.id, transferId)).limit(1);
-      if (!transfer) return res.status(404).json({ message: "Transfer not found" });
+      const [transferRow] = await db.select({
+        id: stockTransferVouchers.id,
+        voucherId: stockTransferVouchers.voucherId,
+        sourceLocationId: stockTransferVouchers.sourceLocationId,
+        destinationLocationId: stockTransferVouchers.destinationLocationId,
+        notes: stockTransferVouchers.notes,
+        createdAt: stockTransferVouchers.createdAt
+      }).from(stockTransferVouchers).innerJoin(vouchers, eq3(stockTransferVouchers.voucherId, vouchers.id)).where(and3(
+        eq3(stockTransferVouchers.id, transferId),
+        eq3(vouchers.companyId, companyId)
+      )).limit(1);
+      if (!transferRow) return res.status(404).json({ message: "Transfer not found" });
+      const transfer = transferRow;
       const items = await db.select({
         id: stockTransferItems.id,
         stockItemId: stockTransferItems.stockItemId,
@@ -22345,6 +22420,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         stockItemCode: stockItems.code
       }).from(inventory).innerJoin(stockItems, eq3(inventory.stockItemId, stockItems.id)).where(
         and3(
+          eq3(inventory.companyId, companyId),
           eq3(inventory.locationId, locationId),
           sql4`CAST(${inventory.quantity} AS NUMERIC) > 0`
         )
@@ -22365,79 +22441,103 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/bale-transfers/:id", requireAuth, async (req, res) => {
-    try {
-      const transfer = await storage.getBaleTransferById(parseInt(req.params.id));
-      if (!transfer) return res.status(404).json({ message: "Transfer not found" });
-      const items = await storage.getBaleTransferItems(transfer.id);
-      res.json({ ...transfer, items });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
+  app2.get("/api/bale-transfers/:id", requireAuth, asyncHandler(async (req, res) => {
+    const companyId = req.session.currentCompanyId;
+    if (!companyId) return res.status(400).json({ message: "No company selected" });
+    const transferId = parseInt(req.params.id);
+    if (isNaN(transferId)) return res.status(400).json({ message: "Invalid transfer ID" });
+    const transfer = await storage.getBaleTransferById(transferId, companyId);
+    if (!transfer) return res.status(404).json({ message: "Transfer not found" });
+    const items = await storage.getBaleTransferItems(transfer.id, companyId);
+    res.json({ ...transfer, items });
+  }));
+  const baleTransferItemBody = z2.object({
+    id: z2.number().optional(),
+    productionBaleId: z2.number().min(1),
+    quantity: z2.number().min(1),
+    weightKg: z2.union([z2.string(), z2.number()]),
+    costPerKg: z2.union([z2.string(), z2.number()]),
+    totalCost: z2.union([z2.string(), z2.number()])
   });
-  app2.post("/api/bale-transfers", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) return res.status(400).json({ message: "No company selected" });
-      const { sourceLocationId, destinationLocationId, transferDate, notes, items } = req.body;
-      const transfer = await storage.createBaleTransfer({
-        companyId,
-        sourceLocationId,
-        destinationLocationId,
-        transferDate,
-        notes,
-        createdBy: req.session.userId,
-        status: "PENDING"
-      });
+  const baleTransferCreateBody = z2.object({
+    sourceLocationId: z2.number().min(1, "Source location is required"),
+    destinationLocationId: z2.number().min(1, "Destination location is required"),
+    transferDate: z2.string().min(1, "Transfer date is required"),
+    notes: z2.string().optional().nullable(),
+    items: z2.array(baleTransferItemBody).min(1, "At least one item is required")
+  }).refine((b) => b.sourceLocationId !== b.destinationLocationId, {
+    message: "Source and destination must be different",
+    path: ["destinationLocationId"]
+  });
+  app2.post("/api/bale-transfers", requireAuth, validate(baleTransferCreateBody), asyncHandler(async (req, res) => {
+    const companyId = req.session.currentCompanyId;
+    if (!companyId) return res.status(400).json({ message: "No company selected" });
+    const { sourceLocationId, destinationLocationId, transferDate, notes, items } = req.body;
+    const tenantLocations = await storage.getAllLocations(companyId);
+    const tenantLocationIds = new Set(tenantLocations.map((l) => l.id));
+    if (!tenantLocationIds.has(sourceLocationId) || !tenantLocationIds.has(destinationLocationId)) {
+      return res.status(403).json({ message: "Location does not belong to current company", code: "WRONG_COMPANY" });
+    }
+    const transfer = await storage.createBaleTransfer({
+      companyId,
+      sourceLocationId,
+      destinationLocationId,
+      transferDate,
+      notes: notes ?? void 0,
+      createdBy: req.session.userId,
+      status: "PENDING"
+    });
+    for (const item of items) {
+      await storage.createBaleTransferItem({
+        transferId: transfer.id,
+        productionBaleId: item.productionBaleId,
+        quantity: item.quantity,
+        weightKg: String(item.weightKg),
+        costPerKg: String(item.costPerKg),
+        totalCost: String(item.totalCost)
+      }, companyId);
+    }
+    res.json({ success: true, transferId: transfer.id });
+  }));
+  const baleTransferPatchBody = z2.object({
+    status: z2.enum(["PENDING", "COMPLETED"]).optional(),
+    notes: z2.string().optional().nullable(),
+    items: z2.array(baleTransferItemBody).optional()
+  });
+  app2.patch("/api/bale-transfers/:id", requireAuth, validate(baleTransferPatchBody), asyncHandler(async (req, res) => {
+    const companyId = req.session.currentCompanyId;
+    if (!companyId) return res.status(400).json({ message: "No company selected" });
+    const transferId = parseInt(req.params.id);
+    if (isNaN(transferId)) return res.status(400).json({ message: "Invalid transfer ID" });
+    const { items, status, notes } = req.body;
+    const updated = await storage.updateBaleTransfer(transferId, companyId, {
+      ...status !== void 0 ? { status } : {},
+      ...notes !== void 0 ? { notes: notes ?? void 0 } : {},
+      updatedBy: req.session.userId
+    });
+    if (!updated) return res.status(404).json({ message: "Transfer not found" });
+    if (items) {
       for (const item of items) {
-        await storage.createBaleTransferItem({
-          transferId: transfer.id,
-          productionBaleId: item.productionBaleId,
-          quantity: item.quantity,
-          weightKg: item.weightKg.toString(),
-          costPerKg: item.costPerKg.toString(),
-          totalCost: item.totalCost.toString()
-        });
-      }
-      res.json({ success: true, transferId: transfer.id });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.patch("/api/bale-transfers/:id", requireAuth, async (req, res) => {
-    try {
-      const { items, status, notes } = req.body;
-      const transferId = parseInt(req.params.id);
-      await storage.updateBaleTransfer(transferId, {
-        status,
-        notes,
-        updatedBy: req.session.userId
-      });
-      if (items) {
-        for (const item of items) {
-          if (item.id) {
-            await storage.updateBaleTransferItem(item.id, {
-              weightKg: item.weightKg.toString(),
-              costPerKg: item.costPerKg.toString(),
-              totalCost: item.totalCost.toString()
-            });
-          } else {
-            await storage.createBaleTransferItem({
-              transferId,
-              productionBaleId: item.productionBaleId,
-              quantity: item.quantity,
-              weightKg: item.weightKg.toString(),
-              costPerKg: item.costPerKg.toString(),
-              totalCost: item.totalCost.toString()
-            });
-          }
+        if (item.id) {
+          await storage.updateBaleTransferItem(item.id, companyId, {
+            weightKg: String(item.weightKg),
+            costPerKg: String(item.costPerKg),
+            totalCost: String(item.totalCost)
+          });
+        } else {
+          await storage.createBaleTransferItem({
+            transferId,
+            productionBaleId: item.productionBaleId,
+            quantity: item.quantity,
+            weightKg: String(item.weightKg),
+            costPerKg: String(item.costPerKg),
+            totalCost: String(item.totalCost)
+          }, companyId);
         }
       }
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
     }
-  });
+    res.json({ success: true });
+  }));
   app2.get("/api/bales-by-location/:locationId", requireAuth, async (req, res) => {
     try {
       const companyId = req.session.currentCompanyId;
@@ -23713,11 +23813,11 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
   });
   app2.get("/api/location-summary", requireAuth, async (req, res) => {
     try {
-      const companyId = req.query.companyId ? parseInt(req.query.companyId) : req.session.currentCompanyId;
+      const companyId = req.session.currentCompanyId;
       const locationIds = req.query.locationIds ? req.query.locationIds.split(",").map((id) => parseInt(id)) : [];
       const asOfDate = req.query.asOfDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
       if (!companyId) {
-        return res.status(400).json({ message: "Company ID is required" });
+        return res.status(400).json({ message: "No company selected" });
       }
       if (locationIds.length === 0) {
         return res.json({ stockGroups: [], grandTotals: {} });
@@ -24172,7 +24272,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       console.log("[Chatbot] Processing message for session:", sessionId);
       await saveMessage(companyId, userId, "user", message, sessionId);
       console.log("[Chatbot] User message saved");
-      const history = await getConversationHistoryForAI(sessionId, 10);
+      const history = await getConversationHistoryForAI(sessionId, userId, companyId, 10);
       console.log("[Chatbot] Got history, length:", history.length);
       console.log("[Chatbot] Calling AI...");
       const result = await chat(message, companyId, history.slice(0, -1));
