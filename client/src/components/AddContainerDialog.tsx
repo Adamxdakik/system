@@ -358,7 +358,7 @@ export function AddContainerDialog({
                                       }
                                       // Move to quantity field
                                       setTimeout(() => {
-                                        document.querySelector(`[data-testid="input-quantity-${index}"]`)?.focus();
+                                        (document.querySelector(`[data-testid="input-quantity-${index}"]`) as HTMLElement | null)?.focus();
                                       }, 0);
                                     }
                                   }}
@@ -398,7 +398,7 @@ export function AddContainerDialog({
                                     e.preventDefault();
                                     // Move to rate field
                                     setTimeout(() => {
-                                      document.querySelector(`[data-testid="input-rate-${index}"]`)?.focus();
+                                      (document.querySelector(`[data-testid="input-rate-${index}"]`) as HTMLElement | null)?.focus();
                                     }, 0);
                                   }
                                 }}
@@ -417,7 +417,7 @@ export function AddContainerDialog({
                                     appendItem({ stockItemId: undefined, itemName: "", quantity: 1, ratePerKg: 0, weightKg: 0 });
                                     // Focus on the new row's item name field
                                     setTimeout(() => {
-                                      document.querySelector(`[data-testid="input-item-name-${index + 1}"]`)?.focus();
+                                      (document.querySelector(`[data-testid="input-item-name-${index + 1}"]`) as HTMLElement | null)?.focus();
                                     }, 50);
                                   }
                                 }}

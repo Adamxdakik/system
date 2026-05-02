@@ -1808,7 +1808,7 @@ export default function Analytics() {
                     </div>
 
                     {/* Direct Incomes - Moved to Right Pane (Credit side) */}
-                    {netProfitData.rightPane?.directIncomes?.count > 0 && (
+                    {netProfitData.rightPane && netProfitData.rightPane.directIncomes.count > 0 && (
                       <div>
                         <div 
                           className="flex justify-between items-center p-3 cursor-pointer hover-elevate"

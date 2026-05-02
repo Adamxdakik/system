@@ -974,7 +974,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const inventory = await storage.getCompanyInventory(req.session.currentCompanyId);
-      const locations = await storage.getLocationsByCompanyId(req.session.currentCompanyId);
+      const locations = await storage.getAllLocations(req.session.currentCompanyId);
       const locationMap = new Map(locations.map((l: any) => [l.id, l.name]));
 
       // Strip cost data and add location names
@@ -1608,6 +1608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           accountName?: string;
           openingBalance?: string;
           openingBalanceSide?: string;
+          previousBalance?: string;
           message: string;
           components?: {
             assets: { name: string; value: number }[];

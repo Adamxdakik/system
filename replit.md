@@ -45,6 +45,33 @@ Preferred communication style: Simple, everyday language.
 - **Schema file**: `shared/schema.ts` (single source of truth for types across the stack)
 - **Key tables**: users, companies, locations, stock_items, stock_groups, vouchers, voucher_items, purchase_orders, containers, ledger_accounts, employees, suppliers, customers, bank_accounts, fixed_assets, assembly_records, service_records, session
 
+## Codebase Cleanup Pass (May 2026)
+
+A full review-and-fix pass was performed. All TypeScript errors resolved (`npx tsc --noEmit` returns 0), security hardened, and dependency vulnerabilities reduced from 24 to 9 (remaining ones require breaking-change upgrades — see Follow-ups).
+
+### Security
+- `server/index.ts` — `SESSION_SECRET` now hard-fails if unset in production (was silently falling back to a hardcoded string).
+- `.gitignore` created (was missing). Excludes `node_modules/`, `dist/`, secrets, build artifacts, and large stray files (`zipFile.zip`, `attached_assets/*.sql`).
+- `npm audit fix` applied (non-breaking).
+
+### TypeScript fixes
+- `tsconfig.json`: added `"target": "ES2022"` (fixes `Map` iteration error), excluded `client/src/pages/archive/**` (those pages are not routed in `App.tsx`).
+- `server/routes.ts:980`: `storage.getLocationsByCompanyId` → `storage.getAllLocations` (real method).
+- `server/routes.ts:1605`: added `previousBalance?: string` to results-array type.
+- `client/src/components/AddContainerDialog.tsx`: cast `document.querySelector(...)` results to `HTMLElement | null` before calling `.focus()` (3 sites).
+- `client/src/pages/Analytics.tsx`: tightened `rightPane` optional-chain narrowing (was `rightPane?.directIncomes?.count > 0` which is `undefined > 0`).
+
+### Removed stray files
+- `ServiceHistory.tsx` (duplicate of `client/src/pages/ServiceHistory.tsx` at repo root)
+- `client/src/test` (empty file)
+
+### Follow-ups (out of scope for this pass)
+- Remaining 9 npm vulns require breaking upgrades: `drizzle-orm` 0.39 → 0.45, `vite` ≤6 → 8, `exceljs` → 3.4, plus `xlsx` (no fix available — consider replacing with `exceljs`).
+- `server/routes.ts` is 27,284 lines and `server/storage.ts` is 5,473 lines — both should be split per domain.
+- ~452 `any` parameters in `server/routes.ts`; storage returns `Promise<any[]>` for inventory queries.
+- `client/src/pages/archive/` contains 13 unused pages — currently excluded from typecheck; should be deleted or moved out of `client/src/`.
+- 107 MB `zipFile.zip` and 88 MB `attached_assets/` at repo root (now gitignored, but still on disk).
+
 ## Recent GitHub Sync (March 2026)
 
 The following files were fully synced to match the GitHub reference repo (`Adamxdakik/test`):

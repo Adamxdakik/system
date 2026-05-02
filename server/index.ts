@@ -63,9 +63,19 @@ app.set("trust proxy", 1);
 // Session middleware
 const PgSession = connectPgSimple(session);
 
+// Require a real SESSION_SECRET in production; allow a dev-only fallback otherwise.
+if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+  throw new Error(
+    "SESSION_SECRET environment variable is required in production. " +
+    "Set it to a long random string (e.g. via `openssl rand -base64 32`).",
+  );
+}
+const SESSION_SECRET =
+  process.env.SESSION_SECRET || "dev-only-insecure-secret-change-me";
+
 const sessionConfig: session.SessionOptions = {
   name: 'erp.session', // Explicit cookie name
-  secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {

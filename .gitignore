@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Replit local data
+.cache/
+.local/state/
+.upm/
+.config/
+.breakpoints
+
+# Project artifacts that should not be committed
+zipFile.zip
+*.zip
+*.tar.gz
+attached_assets/*.sql
+attached_assets/*.gz
+attached_assets/*.tar
+
+# Misc stray files
+ServiceHistory.tsx
+client/src/test
