@@ -1,0 +1,38 @@
+Here's the list:
+
+Performance
+* Lazy loading — pages load on demand instead of all at once on startup
+Stability
+* Error Boundary — catches page crashes and shows "Something went wrong / Try again" instead of a blank screen. Also handles app updates gracefully after deployments.
+UX / Power features
+* Command Palette (Ctrl+K) — press Ctrl+K anywhere to instantly search and jump to any page
+* Offline Banner — detects lost internet connection, queues actions, and replays them automatically when connection is restored
+Filters
+* Period presets — instead of typing two dates, buttons like "Today / Yesterday / This Week / This Month / This Year / Custom" let you switch periods in one click. Yours has raw date pickers.
+* Location filter — filter vouchers by which location they belong to. Yours has no location filter.
+* Sort order toggle — switch between newest-first and oldest-first. Yours always sorts newest-first only.
+Keyboard shortcuts
+* - key → jump back 1 day
+* Shift + + → jump forward 1 day
+* ↑ / ↓ arrows inside the view dialog → navigate between sale items row by row
+* Alt + S inside the view dialog → open the selected stock item's detail page directly
+Inside the view dialog
+* Account balances — when viewing a Payment / Receipt / Journal voucher, each account entry shows its current running balance. Yours shows the amounts but not the live balance.
+* Row highlight on keyboard navigation — selected row highlights as you move through it
+Export
+* Detailed Excel export — exports entry-level detail (each account line per voucher) in addition to the basic summary export. Yours only has the summary export.
+Other
+* Hide/show individual rows — you can hide specific vouchers from the list without deleting them (useful for filtering out noise)
+
+Filters
+* Period presets — same as Daybook: Today / Yesterday / This Week / This Month / This Year / Custom buttons instead of raw date pickers. Yours still uses two manual date inputs.
+* Multi-company mode — a toggle to view sales across all your companies at once, with a company multi-select checkbox to narrow it down. Yours is single-company only.
+Keyboard shortcuts
+* ↑ / ↓ arrows — navigate between rows in the table without touching the mouse
+* Alt + S — jump directly to the stock item's detail page for whichever item is selected in the filter
+Detail view (when you click a row)
+* The other system navigates to a dedicated detail page (with its own URL) instead of opening a dialog. This means you can share/bookmark a specific day's sales link.
+* On that detail page there's a P&L filter — filter rows by Gain vs Loss, and switch the basis between Configured Price or Cost Price
+* Alt + S shortcut on the detail page too — jump to the highlighted item's stock page
+Export
+* Richer Excel export — uses ExcelJS for styled exports: bold headers, colored cells for profit/loss, borders, number formatting. Yours uses the basic xlsx export with no styling.

@@ -1,0 +1,276 @@
+import { useEffect, useRef, useState, KeyboardEvent } from "react";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, Plus, Loader2 } from "lucide-react";
+import { formatNumber } from "@/lib/formatNumber";
+import { useCurrencyContext } from "@/contexts/CurrencyContext";
+
+export interface Account {
+  id: number;
+  type: "bank" | "ledger" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier";
+  name: string;
+  code: string;
+  balance?: number;
+}
+
+export interface VoucherEntry {
+  accountType: string;
+  accountId: number;
+  accountName: string;
+  amount: string;
+}
+
+interface AccountSidebarProps {
+  accounts: Account[];
+  filteredAccounts: Account[];
+  onSelectAccount: (account: Account) => void;
+  searchValue: string;
+  onSearchChange: (value: string) => void;
+  selectedAccountId: number | null;
+  selectedAccountType: string | null;
+  highlightedIndex: number;
+  onHighlightedIndexChange: (index: number) => void;
+  entries?: VoucherEntry[];
+  mode?: "payment" | "receipt";
+  paymentAccountId?: number;
+  paymentAccountType?: string;
+  voucherTotal?: number;
+  onCreateAccount?: () => void;
+  isFactoryCompany?: boolean;
+  onAutoCreateAccount?: (name: string) => Promise<Account | null>;
+  isAutoCreating?: boolean;
+}
+
+export default function AccountSidebar({
+  accounts,
+  filteredAccounts,
+  onSelectAccount,
+  searchValue,
+  onSearchChange,
+  selectedAccountId,
+  selectedAccountType,
+  highlightedIndex,
+  onHighlightedIndexChange,
+  entries = [],
+  mode = "payment",
+  paymentAccountId = 0,
+  paymentAccountType = "",
+  voucherTotal = 0,
+  onCreateAccount,
+  isFactoryCompany = false,
+  onAutoCreateAccount,
+  isAutoCreating = false,
+}: AccountSidebarProps) {
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const { formatAmount } = useCurrencyContext();
+
+  const handleKeyDown = async (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && isFactoryCompany && onAutoCreateAccount) {
+      e.preventDefault();
+      const trimmedName = searchValue.trim();
+      if (!trimmedName) return;
+
+      // Check for EXACT match (case-insensitive) - only select if name matches exactly
+      const exactMatch = filteredAccounts.find(
+        (acc) => acc.name.toLowerCase() === trimmedName.toLowerCase()
+      );
+
+      if (exactMatch) {
+        onSelectAccount(exactMatch);
+        return;
+      }
+
+      // No exact match - auto-create for factory (even if there are partial matches)
+      const newAccount = await onAutoCreateAccount(trimmedName);
+      if (newAccount) {
+        onSelectAccount(newAccount);
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (filteredAccounts.length > 0) {
+        onHighlightedIndexChange(Math.min(highlightedIndex + 1, filteredAccounts.length - 1));
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (filteredAccounts.length > 0) {
+        onHighlightedIndexChange(Math.max(highlightedIndex - 1, 0));
+      }
+    } else if (e.key === "Enter" && !isFactoryCompany) {
+      // For non-factory: select highlighted account on Enter
+      if (filteredAccounts.length > 0 && highlightedIndex >= 0 && highlightedIndex < filteredAccounts.length) {
+        e.preventDefault();
+        onSelectAccount(filteredAccounts[highlightedIndex]);
+      }
+    }
+  };
+
+  // Calculate projected balances based on voucher entries
+  const getProjectedBalance = (account: Account): number => {
+    const currentBalance = account.balance ?? 0;
+    let adjustment = 0;
+
+    const isPaymentAccount =
+      account.id === paymentAccountId && account.type === paymentAccountType;
+
+    // Check if this is the payment/receipt account
+    if (isPaymentAccount && voucherTotal > 0) {
+      // For payment vouchers, the payment account balance decreases
+      // For receipt vouchers, the receipt account balance increases
+      adjustment = mode === "payment" ? -voucherTotal : voucherTotal;
+    }
+
+    // For non-payment accounts, check if they appear in the entries
+    if (!isPaymentAccount) {
+      const entryAmount = entries
+        .filter(
+          (entry) =>
+            entry.accountId === account.id &&
+            entry.accountType === account.type &&
+            entry.amount &&
+            !isNaN(Number(entry.amount)),
+        )
+        .reduce((sum, entry) => sum + Number(entry.amount), 0);
+
+      // Payment: debit entry increases the balance (moves liability toward zero, increases asset/expense).
+      // Receipt: credit entry decreases the balance.
+      // The sign convention on the stored balance handles the visual interpretation.
+      if (entryAmount > 0) {
+        adjustment += mode === "payment" ? entryAmount : -entryAmount;
+      }
+    }
+
+    return currentBalance + adjustment;
+  };
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    const highlightedElement = listRef.current?.querySelector(
+      `[data-index="${highlightedIndex}"]`,
+    );
+    if (highlightedElement) {
+      highlightedElement.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    }
+  }, [highlightedIndex]);
+
+  const formatBalance = (balance: number | undefined) => {
+    if (balance === undefined) return "—";
+    const absBalance = Math.abs(balance);
+    const formatted = formatAmount(absBalance);
+    return balance < 0 ? `(${formatted})` : formatted;
+  };
+
+  const getBalanceColorClass = (
+    balance: number | undefined,
+    _accountType?: string,
+  ) => {
+    if (balance === undefined) return "text-muted-foreground";
+    // All account types use the same sign convention in the sidebar:
+    // negative = credit balance (red), positive = debit balance (green).
+    // Suppliers/employees are stored as negative when we owe them, which naturally turns them red.
+    if (balance < 0) return "text-destructive";
+    if (balance > 0) return "text-chart-2";
+    return "text-muted-foreground";
+  };
+
+  return (
+    <Card className="flex flex-col h-full">
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-semibold">Select Account</h3>
+          {onCreateAccount && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onCreateAccount}
+              data-testid="button-create-new-account"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              New
+            </Button>
+          )}
+        </div>
+
+        <div className="relative">
+          {isAutoCreating ? (
+            <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          )}
+          <Input
+            ref={searchInputRef}
+            placeholder={isFactoryCompany ? "Type expense name & Enter..." : "Search accounts..."}
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="pl-9"
+            data-testid="input-search-account"
+            disabled={isAutoCreating}
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3" ref={listRef}>
+        <div className="space-y-1">
+          {filteredAccounts.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              {isFactoryCompany && searchValue.trim() ? (
+                <span>Press <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Enter</kbd> to create "{searchValue.trim()}"</span>
+              ) : (
+                "No accounts found"
+              )}
+            </div>
+          ) : (
+            filteredAccounts.map((account, idx) => {
+              const isSelected =
+                account.id === selectedAccountId &&
+                account.type === selectedAccountType;
+              const isHighlighted = idx === highlightedIndex;
+              const projectedBalance = getProjectedBalance(account);
+              const hasProjection = projectedBalance !== (account.balance ?? 0);
+
+              return (
+                <button
+                  key={`${account.type}-${account.id}`}
+                  data-index={idx}
+                  onClick={() => onSelectAccount(account)}
+                  className={`w-full text-left px-3 py-2.5 rounded-md hover-elevate active-elevate-2 transition-colors ${
+                    isSelected ? "ring-2 ring-primary" : ""
+                  } ${isHighlighted ? "bg-accent" : ""}`}
+                  data-testid={`account-${idx}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {account.name ||
+                          account.code ||
+                          `${account.type}-${account.id}`}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5">
+                      {hasProjection && (
+                        <div className="text-xs text-muted-foreground font-mono line-through">
+                          {formatBalance(account.balance)}
+                        </div>
+                      )}
+                      <div
+                        className={`text-sm font-mono font-semibold flex-shrink-0 ${getBalanceColorClass(projectedBalance, account.type)}`}
+                      >
+                        {formatBalance(projectedBalance)}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
