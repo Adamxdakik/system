@@ -78,6 +78,7 @@ import { cn } from "@/lib/utils";
 import { ERPWorkerDetail } from "@/components/ERPWorkerDetail";
 import ERPRunPayroll from "@/components/ERPRunPayroll";
 import ERPAdvancesTab from "@/components/ERPAdvancesTab";
+import { RateAuditDialog } from "@/components/RateAuditDialog";
 
 const depositSchema = z.object({
   amount: z.string().min(1, "Amount is required"),
@@ -234,6 +235,7 @@ export default function Payroll() {
   const [statementExpanded, setStatementExpanded] = useState(false);
   const [editEmployeeDialogOpen, setEditEmployeeDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [auditDialogEmployeeId, setAuditDialogEmployeeId] = useState<number | null>(null);
   const [selectedWorkerProfileId, setSelectedWorkerProfileId] = useState<number | null>(null);
   const [workerProfileSearch, setWorkerProfileSearch] = useState("");
   const [workerProfileGroupFilter, setWorkerProfileGroupFilter] = useState<number | null>(null);
@@ -5101,6 +5103,11 @@ export default function Payroll() {
       </Dialog>
 
       {/* Edit Employee Dialog */}
+      <RateAuditDialog
+        employeeId={auditDialogEmployeeId}
+        onClose={() => setAuditDialogEmployeeId(null)}
+      />
+
       <Dialog open={editEmployeeDialogOpen} onOpenChange={(open) => { setEditEmployeeDialogOpen(open); if (!open) setEditingEmployee(null); }}>
         <DialogContent data-testid="dialog-edit-employee">
           <DialogHeader>
@@ -5108,6 +5115,18 @@ export default function Payroll() {
             <DialogDescription>
               Update employee details and monthly salary
             </DialogDescription>
+            {editingEmployee?.id && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 self-start"
+                onClick={() => setAuditDialogEmployeeId(editingEmployee.id)}
+                data-testid="button-view-rate-history"
+              >
+                View Rate History
+              </Button>
+            )}
           </DialogHeader>
 
           <Form {...editEmployeeForm}>

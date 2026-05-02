@@ -2149,6 +2149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put(
     "/api/employees/:id/moto-rates",
     requireAuth,
+    requireNonPOS, // B3: POS roles cannot mutate rates
     validate(motoRatesPutSchema),
     async (req, res) => {
       try {
@@ -2180,6 +2181,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: req.session.userId ?? null,
           action: "replace",
         });
+        // C4: notify other managers
+        if (req.session.currentCompanyId) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, check.employeeId, "replace", req.session.userId ?? null);
+        }
         res.json(saved);
       } catch (err: any) {
         console.error("PUT /api/employees/:id/moto-rates", err);
@@ -2203,6 +2208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put(
     "/api/employees/:id/moto-pct-rates",
     requireAuth,
+    requireNonPOS, // B3
     validate(motoPctRatesPutSchema),
     async (req, res) => {
       try {
@@ -2234,6 +2240,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: req.session.userId ?? null,
           action: "replace",
         });
+        if (req.session.currentCompanyId) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, check.employeeId, "replace", req.session.userId ?? null);
+        }
         res.json(saved);
       } catch (err: any) {
         console.error("PUT /api/employees/:id/moto-pct-rates", err);
@@ -2251,6 +2260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/employees/:id/moto-rates/copy-from/:sourceId",
     requireAuth,
+    requireNonPOS, // B3
     async (req, res) => {
       try {
         const target = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
@@ -2269,6 +2279,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           filtered,
           { userId: req.session.userId ?? null, action: "copy_from", sourceEmployeeId: source.employeeId },
         );
+        if (req.session.currentCompanyId) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, target.employeeId, "copy_from", req.session.userId ?? null);
+        }
         res.json({ copied: saved.length, skipped: sourceRows.length - filtered.length, rates: saved });
       } catch (err: any) {
         console.error("POST /moto-rates/copy-from", err);
@@ -2280,6 +2293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/employees/:id/moto-pct-rates/copy-from/:sourceId",
     requireAuth,
+    requireNonPOS, // B3
     async (req, res) => {
       try {
         const target = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
@@ -2298,6 +2312,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           filtered,
           { userId: req.session.userId ?? null, action: "copy_from", sourceEmployeeId: source.employeeId },
         );
+        if (req.session.currentCompanyId) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, target.employeeId, "copy_from", req.session.userId ?? null);
+        }
         res.json({ copied: saved.length, skipped: sourceRows.length - filtered.length, rates: saved });
       } catch (err: any) {
         console.error("POST /moto-pct-rates/copy-from", err);
@@ -2310,6 +2327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/locations/:id/moto-rates/bulk-set",
     requireAuth,
+    requireNonPOS, // B3
     validate(bulkSetMotoRateSchema),
     async (req, res) => {
       try {
@@ -2342,6 +2360,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           body.sourceCompanyId ?? null,
           req.session.userId ?? null,
         );
+        // C4: notify managers per affected employee (best-effort)
+        for (const empId of body.employeeIds) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, empId, "bulk_set", req.session.userId ?? null);
+        }
         res.json(result);
       } catch (err: any) {
         console.error("POST /locations/:id/moto-rates/bulk-set", err);
@@ -2353,6 +2375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/locations/:id/moto-pct-rates/bulk-set",
     requireAuth,
+    requireNonPOS, // B3
     validate(bulkSetMotoPctRateSchema),
     async (req, res) => {
       try {
@@ -2384,6 +2407,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           body.sourceCompanyId ?? null,
           req.session.userId ?? null,
         );
+        for (const empId of body.employeeIds) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, empId, "bulk_set", req.session.userId ?? null);
+        }
         res.json(result);
       } catch (err: any) {
         console.error("POST /locations/:id/moto-pct-rates/bulk-set", err);
@@ -2392,16 +2418,412 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  // -------- T04: audit log fetch (per-employee, tenant-scoped) --------
+  // -------- T04 + A2: audit log fetch with filters + pagination --------
   app.get("/api/employees/:id/moto-rate-audit", requireAuth, async (req, res) => {
     try {
       const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
       if (!check.ok) return res.status(check.status).json({ message: check.message });
+      const { from, to, action, limit, offset } = req.query as Record<string, string | undefined>;
+      const opts: any = {};
+      if (from) {
+        const d = new Date(from);
+        if (!isNaN(d.getTime())) opts.from = d;
+      }
+      if (to) {
+        const d = new Date(to);
+        if (!isNaN(d.getTime())) opts.to = d;
+      }
+      if (action && /^[a-z_]+$/.test(action)) opts.action = action;
+      if (limit) opts.limit = parseInt(limit, 10);
+      if (offset) opts.offset = parseInt(offset, 10);
+      // Backward compat: if no filter params at all, return raw array (legacy clients).
+      const isFiltered = from || to || action || limit || offset;
+      if (isFiltered) {
+        const result = await storage.getMotoRateAuditFiltered(check.employeeId, opts);
+        return res.json(result);
+      }
       const rows = await storage.getMotoRateAudit(check.employeeId);
       res.json(rows);
     } catch (err: any) {
       console.error("GET /moto-rate-audit", err);
       res.status(500).json({ message: err.message || "Failed to fetch audit log" });
+    }
+  });
+
+  // ===== Round-4 follow-ups =====
+  // A1: deep health check
+  app.get("/api/health/deep", async (_req, res) => {
+    const startedAt = Date.now();
+    const checks: any = { db: "unknown", migrations: "unknown", auditTable: "unknown" };
+    try {
+      const r: any = await db.execute(sql`SELECT 1 AS ok`);
+      checks.db = (r.rows?.[0]?.ok ?? r[0]?.ok) === 1 ? "ok" : "down";
+    } catch (e: any) { checks.db = `error: ${e.message}`; }
+    try {
+      const r: any = await db.execute(sql`SELECT MAX(version)::text AS v FROM drizzle.__drizzle_migrations`);
+      checks.migrations = r.rows?.[0]?.v ?? r[0]?.v ?? null;
+    } catch (e: any) {
+      // Migration runner uses a different table; fall back to file count
+      try {
+        const r2: any = await db.execute(sql`SELECT COUNT(*)::int AS c FROM information_schema.tables WHERE table_schema = 'public'`);
+        checks.migrations = `tables=${r2.rows?.[0]?.c ?? r2[0]?.c}`;
+      } catch { checks.migrations = "unknown"; }
+    }
+    try {
+      const r: any = await db.execute(sql`SELECT COUNT(*)::int AS c FROM moto_rate_audit`);
+      checks.auditTable = `rows=${r.rows?.[0]?.c ?? r[0]?.c}`;
+    } catch (e: any) { checks.auditTable = `error: ${e.message}`; }
+    const allOk = checks.db === "ok" && !String(checks.auditTable).startsWith("error");
+    res.status(allOk ? 200 : 503).json({
+      status: allOk ? "ok" : "degraded",
+      checks,
+      uptimeSeconds: Math.floor(process.uptime()),
+      latencyMs: Date.now() - startedAt,
+      nodeEnv: process.env.NODE_ENV,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // A3: rate stats per location (for outlier warning)
+  app.get("/api/locations/:id/moto-rate-stats", requireAuth, async (req, res) => {
+    try {
+      const locationId = parseInt(req.params.id, 10);
+      if (isNaN(locationId)) return res.status(400).json({ message: "Invalid location ID" });
+      const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+      if (!tenantLocations.has(locationId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const stats = await storage.getLocationMotoRateStats(locationId);
+      res.json(stats);
+    } catch (err: any) {
+      console.error("GET /locations/:id/moto-rate-stats", err);
+      res.status(500).json({ message: err.message || "Failed to fetch rate stats" });
+    }
+  });
+
+  // C2: read rates as-of a specific date
+  app.get("/api/employees/:id/moto-rates-as-of", requireAuth, async (req, res) => {
+    try {
+      const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+      if (!check.ok) return res.status(check.status).json({ message: check.message });
+      const dateStr = String(req.query.date ?? "");
+      const asOf = dateStr ? new Date(dateStr) : new Date();
+      if (isNaN(asOf.getTime())) return res.status(400).json({ message: "Invalid date" });
+      const [rates, pctRates] = await Promise.all([
+        storage.getEmployeeMotoRatesAsOf(check.employeeId, asOf),
+        storage.getEmployeeMotoPctRatesAsOf(check.employeeId, asOf),
+      ]);
+      res.json({ asOf: asOf.toISOString(), rates, pctRates });
+    } catch (err: any) {
+      console.error("GET /moto-rates-as-of", err);
+      res.status(500).json({ message: err.message || "Failed to fetch as-of rates" });
+    }
+  });
+
+  // C3: payroll calc preview with rate-source attribution
+  app.post("/api/payroll/calc-preview", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const body = req.body as { employeeId: number; locationId: number; date?: string; quantity?: number; salesAmount?: number };
+      if (!body || typeof body.employeeId !== "number" || typeof body.locationId !== "number") {
+        return res.status(400).json({ message: "employeeId and locationId required" });
+      }
+      const empCheck = await verifyEmployeeForCurrentCompany(String(body.employeeId), req.session.currentCompanyId);
+      if (!empCheck.ok) return res.status(empCheck.status).json({ message: empCheck.message });
+      const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+      if (!tenantLocations.has(body.locationId)) {
+        return res.status(403).json({ message: "Access denied: locationId not in your tenant" });
+      }
+      const asOf = body.date ? new Date(body.date) : new Date();
+      const [rates, pctRates] = await Promise.all([
+        storage.getEmployeeMotoRatesAsOf(empCheck.employeeId, asOf),
+        storage.getEmployeeMotoPctRatesAsOf(empCheck.employeeId, asOf),
+      ]);
+      const rateRow = rates.find((r) => r.locationId === body.locationId);
+      const pctRow = pctRates.find((r) => r.locationId === body.locationId);
+      const employees = await storage.getAllEmployees(req.session.currentCompanyId!);
+      const emp: any = employees.find((e: any) => e.id === empCheck.employeeId);
+      const lines: any[] = [];
+      if (body.quantity != null && body.quantity > 0) {
+        if (rateRow) {
+          lines.push({
+            type: "per_unit",
+            quantity: body.quantity,
+            rate: rateRow.rate,
+            amount: (Number(body.quantity) * Number(rateRow.rate)).toFixed(2),
+            rateSource: "per_location_effective_dated",
+            asOf: asOf.toISOString(),
+          });
+        } else if (emp?.motosBonusRate) {
+          lines.push({
+            type: "per_unit",
+            quantity: body.quantity,
+            rate: emp.motosBonusRate,
+            amount: (Number(body.quantity) * Number(emp.motosBonusRate)).toFixed(2),
+            rateSource: "fallback_scalar_employee",
+          });
+        } else {
+          lines.push({ type: "per_unit", quantity: body.quantity, rate: null, amount: "0.00", rateSource: "none" });
+        }
+      }
+      if (body.salesAmount != null && body.salesAmount > 0) {
+        if (pctRow) {
+          lines.push({
+            type: "pct_of_sales",
+            salesAmount: body.salesAmount,
+            pct: pctRow.pct,
+            amount: ((Number(body.salesAmount) * Number(pctRow.pct)) / 100).toFixed(2),
+            rateSource: "per_location_effective_dated",
+            asOf: asOf.toISOString(),
+          });
+        } else if (emp?.salesBonusPct) {
+          lines.push({
+            type: "pct_of_sales",
+            salesAmount: body.salesAmount,
+            pct: emp.salesBonusPct,
+            amount: ((Number(body.salesAmount) * Number(emp.salesBonusPct)) / 100).toFixed(2),
+            rateSource: "fallback_scalar_employee",
+          });
+        } else {
+          lines.push({ type: "pct_of_sales", salesAmount: body.salesAmount, pct: null, amount: "0.00", rateSource: "none" });
+        }
+      }
+      const total = lines.reduce((s, l) => s + Number(l.amount || 0), 0);
+      res.json({ employeeId: empCheck.employeeId, locationId: body.locationId, lines, total: total.toFixed(2) });
+    } catch (err: any) {
+      console.error("POST /api/payroll/calc-preview", err);
+      res.status(500).json({ message: err.message || "Failed to calculate preview" });
+    }
+  });
+
+  // B2: CSV import (replace per-employee, per-location)
+  app.post(
+    "/api/companies/:id/moto-rates/import.csv",
+    requireAuth,
+    requireNonPOS,
+    upload.single("file"),
+    async (req, res) => {
+      try {
+        const companyId = parseInt(req.params.id, 10);
+        if (isNaN(companyId)) return res.status(400).json({ message: "Invalid company ID" });
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        if (!accessible.has(companyId)) return res.status(403).json({ message: "Access denied" });
+        if (!req.file) return res.status(400).json({ message: "Missing 'file' upload" });
+        const text = req.file.buffer.toString("utf-8");
+        const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+        if (lines.length < 2) return res.status(400).json({ message: "CSV must have header + ≥1 row" });
+        const header = lines[0].split(",").map((h) => h.trim().toLowerCase());
+        const idx = (name: string) => header.indexOf(name);
+        const ec = idx("employee_code"), lc = idx("location_code"), rc = idx("rate"), pc = idx("pct");
+        if (ec < 0 || lc < 0 || (rc < 0 && pc < 0)) {
+          return res.status(400).json({ message: "Header must include employee_code, location_code, and at least one of rate/pct" });
+        }
+        // Resolve codes → ids (strictly within target company; defense in depth
+        // against cross-tenant code collisions even though Map is scoped already).
+        const employees = await storage.getAllEmployees(companyId);
+        const empByCode = new Map(
+          employees.filter((e: any) => e.companyId === companyId).map((e: any) => [e.code, e])
+        );
+        const locations = await storage.getAllLocations(companyId);
+        const locByCode = new Map(
+          locations.filter((l: any) => l.companyId === companyId).map((l: any) => [l.code, l])
+        );
+        // Parse + validate
+        const errors: Array<{ line: number; message: string }> = [];
+        const ratesByEmp = new Map<number, Array<{ locationId: number; rate: string }>>();
+        const pctByEmp = new Map<number, Array<{ locationId: number; pct: string }>>();
+        const STRICT = /^-?(?:\d+(?:\.\d+)?|\.\d+)$/;
+        for (let i = 1; i < lines.length; i++) {
+          const row = lines[i].split(",");
+          const empCode = row[ec]?.trim();
+          const locCode = row[lc]?.trim();
+          const emp = empByCode.get(empCode);
+          const loc = locByCode.get(locCode);
+          if (!emp) { errors.push({ line: i + 1, message: `unknown employee_code '${empCode}'` }); continue; }
+          if (!loc) { errors.push({ line: i + 1, message: `unknown location_code '${locCode}'` }); continue; }
+          const rateStr = rc >= 0 ? (row[rc] ?? "").trim() : "";
+          const pctStr = pc >= 0 ? (row[pc] ?? "").trim() : "";
+          if (rateStr) {
+            if (!STRICT.test(rateStr) || Number(rateStr) < 0.01 || Number(rateStr) > 1000) {
+              errors.push({ line: i + 1, message: `invalid rate '${rateStr}'` });
+            } else {
+              const arr = ratesByEmp.get(emp.id) ?? [];
+              arr.push({ locationId: loc.id, rate: rateStr });
+              ratesByEmp.set(emp.id, arr);
+            }
+          }
+          if (pctStr) {
+            if (!STRICT.test(pctStr) || Number(pctStr) < 0.01 || Number(pctStr) > 100) {
+              errors.push({ line: i + 1, message: `invalid pct '${pctStr}'` });
+            } else {
+              const arr = pctByEmp.get(emp.id) ?? [];
+              arr.push({ locationId: loc.id, pct: pctStr });
+              pctByEmp.set(emp.id, arr);
+            }
+          }
+        }
+        if (errors.length > 0) {
+          return res.status(400).json({ message: `${errors.length} row error(s)`, errors });
+        }
+        let employeesUpdated = 0;
+        for (const [empId, rates] of ratesByEmp) {
+          await storage.replaceEmployeeMotoRates(empId, rates, { userId: req.session.userId ?? null, action: "csv_import" });
+          employeesUpdated++;
+        }
+        for (const [empId, pcts] of pctByEmp) {
+          await storage.replaceEmployeeMotoPctRates(empId, pcts, { userId: req.session.userId ?? null, action: "csv_import" });
+        }
+        res.json({ employeesUpdated, ratesUpserted: Array.from(ratesByEmp.values()).reduce((s, a) => s + a.length, 0), pctUpserted: Array.from(pctByEmp.values()).reduce((s, a) => s + a.length, 0) });
+      } catch (err: any) {
+        console.error("POST /moto-rates/import.csv", err);
+        res.status(500).json({ message: err.message || "Failed to import CSV" });
+      }
+    },
+  );
+
+  // C1: rate templates (CRUD + apply)
+  app.get("/api/companies/:id/rate-templates", requireAuth, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.id, 10);
+      const accessible = await getAccessibleCompanyIds(req.session.userId);
+      if (!accessible.has(companyId)) return res.status(403).json({ message: "Access denied" });
+      const tpls = await storage.getRateTemplates(companyId);
+      res.json(tpls);
+    } catch (err: any) {
+      console.error("GET /rate-templates", err);
+      res.status(500).json({ message: err.message || "Failed to list templates" });
+    }
+  });
+
+  app.post(
+    "/api/companies/:id/rate-templates",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const companyId = parseInt(req.params.id, 10);
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        if (!accessible.has(companyId)) return res.status(403).json({ message: "Access denied" });
+        const { rateTemplateCreateSchema } = await import("@shared/validation");
+        const parsed = rateTemplateCreateSchema.safeParse(req.body);
+        if (!parsed.success) return res.status(400).json({ message: "Invalid request", errors: parsed.error.errors });
+        // Tenant-scope each item's locationId
+        const tenantLocations = await getCurrentCompanyLocationIds(companyId);
+        for (const item of parsed.data.items) {
+          if (!tenantLocations.has(item.locationId)) {
+            return res.status(403).json({ message: `locationId ${item.locationId} not in company ${companyId}` });
+          }
+          if (item.sourceCompanyId != null && !accessible.has(item.sourceCompanyId)) {
+            return res.status(403).json({ message: `sourceCompanyId ${item.sourceCompanyId} not accessible` });
+          }
+        }
+        const tpl = await storage.createRateTemplate(
+          companyId,
+          parsed.data.name,
+          parsed.data.description ?? null,
+          parsed.data.items.map((i) => ({
+            locationId: i.locationId,
+            rate: i.rate ?? null,
+            pct: i.pct ?? null,
+            sourceCompanyId: i.sourceCompanyId ?? null,
+          })),
+          req.session.userId ?? null,
+        );
+        res.json(tpl);
+      } catch (err: any) {
+        console.error("POST /rate-templates", err);
+        res.status(500).json({ message: err.message || "Failed to create template" });
+      }
+    },
+  );
+
+  app.delete("/api/rate-templates/:id", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const tpl = await storage.getRateTemplate(id);
+      if (!tpl) return res.status(404).json({ message: "Template not found" });
+      const accessible = await getAccessibleCompanyIds(req.session.userId);
+      if (!accessible.has(tpl.companyId)) return res.status(403).json({ message: "Access denied" });
+      await storage.deleteRateTemplate(id);
+      res.json({ deleted: true });
+    } catch (err: any) {
+      console.error("DELETE /rate-templates/:id", err);
+      res.status(500).json({ message: err.message || "Failed to delete template" });
+    }
+  });
+
+  app.post(
+    "/api/rate-templates/:id/apply",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id, 10);
+        const tpl = await storage.getRateTemplate(id);
+        if (!tpl || tpl.deletedAt) return res.status(404).json({ message: "Template not found" });
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        if (!accessible.has(tpl.companyId)) return res.status(403).json({ message: "Access denied" });
+        const { rateTemplateApplySchema } = await import("@shared/validation");
+        const parsed = rateTemplateApplySchema.safeParse(req.body);
+        if (!parsed.success) return res.status(400).json({ message: "Invalid request", errors: parsed.error.errors });
+        // All target employees must be in the template's company
+        const employees = await storage.getAllEmployees(tpl.companyId);
+        const tenantEmpIds = new Set(employees.map((e: any) => e.id));
+        for (const empId of parsed.data.employeeIds) {
+          if (!tenantEmpIds.has(empId)) {
+            return res.status(403).json({ message: `employee ${empId} not in template company` });
+          }
+        }
+        // Apply: replace per-unit + pct rates for each employee
+        const rateItems = tpl.items.filter((i: any) => i.rate != null).map((i: any) => ({
+          locationId: i.locationId, rate: String(i.rate), sourceCompanyId: i.sourceCompanyId,
+        }));
+        const pctItems = tpl.items.filter((i: any) => i.pct != null).map((i: any) => ({
+          locationId: i.locationId, pct: String(i.pct), sourceCompanyId: i.sourceCompanyId,
+        }));
+        let applied = 0;
+        for (const empId of parsed.data.employeeIds) {
+          if (rateItems.length > 0) {
+            await storage.replaceEmployeeMotoRates(empId, rateItems, { userId: req.session.userId ?? null, action: "template_apply", context: { templateId: id, templateName: tpl.name } });
+          }
+          if (pctItems.length > 0) {
+            await storage.replaceEmployeeMotoPctRates(empId, pctItems, { userId: req.session.userId ?? null, action: "template_apply", context: { templateId: id, templateName: tpl.name } });
+          }
+          await storage.notifyCompanyManagersOfRateChange(tpl.companyId, empId, "template_apply", req.session.userId ?? null);
+          applied++;
+        }
+        res.json({ applied, templateName: tpl.name });
+      } catch (err: any) {
+        console.error("POST /rate-templates/:id/apply", err);
+        res.status(500).json({ message: err.message || "Failed to apply template" });
+      }
+    },
+  );
+
+  // C4: notifications inbox
+  app.get("/api/notifications", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const unreadOnly = req.query.unreadOnly === "true";
+      const limit = req.query.limit ? Math.min(parseInt(String(req.query.limit), 10) || 50, 200) : 50;
+      const rows = await storage.getNotifications(userId, { unreadOnly, limit });
+      res.json(rows);
+    } catch (err: any) {
+      console.error("GET /notifications", err);
+      res.status(500).json({ message: err.message || "Failed to fetch notifications" });
+    }
+  });
+
+  app.post("/api/notifications/mark-read", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number).filter(Number.isFinite) : undefined;
+      const result = await storage.markNotificationsRead(userId, ids);
+      res.json(result);
+    } catch (err: any) {
+      console.error("POST /notifications/mark-read", err);
+      res.status(500).json({ message: err.message || "Failed to mark notifications" });
     }
   });
 

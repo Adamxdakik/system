@@ -197,6 +197,8 @@ export const employeeMotoRates = pgTable("employee_moto_rates", {
   sourceCompanyId: integer("source_company_id"),
   rate: decimal("rate", { precision: 15, scale: 4 }).notNull(),
   deletedAt: timestamp("deleted_at"),
+  effectiveFrom: timestamp("effective_from"),
+  effectiveTo: timestamp("effective_to"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -211,6 +213,8 @@ export const employeeMotoPctRates = pgTable("employee_moto_pct_rates", {
   sourceCompanyId: integer("source_company_id"),
   pct: decimal("pct", { precision: 15, scale: 4 }).notNull(),
   deletedAt: timestamp("deleted_at"),
+  effectiveFrom: timestamp("effective_from"),
+  effectiveTo: timestamp("effective_to"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -233,6 +237,47 @@ export const motoRateAudit = pgTable("moto_rate_audit", {
 });
 export type MotoRateAudit = typeof motoRateAudit.$inferSelect;
 export type InsertMotoRateAudit = typeof motoRateAudit.$inferInsert;
+
+// C1 — rate templates (named bundles applied to N employees in one click)
+export const rateTemplates = pgTable("rate_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+});
+export type RateTemplate = typeof rateTemplates.$inferSelect;
+export type InsertRateTemplate = typeof rateTemplates.$inferInsert;
+
+export const rateTemplateItems = pgTable("rate_template_items", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  rate: decimal("rate", { precision: 15, scale: 4 }),
+  pct: decimal("pct", { precision: 15, scale: 4 }),
+  sourceCompanyId: integer("source_company_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type RateTemplateItem = typeof rateTemplateItems.$inferSelect;
+export type InsertRateTemplateItem = typeof rateTemplateItems.$inferInsert;
+
+// C4 — in-app notifications inbox
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  companyId: integer("company_id"),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body"),
+  payload: jsonb("payload"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
 
 export const employeeGroups = pgTable("employee_groups", {
   id: serial("id").primaryKey(),

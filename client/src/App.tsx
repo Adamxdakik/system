@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CompanySelector } from "@/components/CompanySelector";
 import { AppSidebar } from "@/components/AppSidebar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { LocationProvider } from "@/contexts/LocationContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { DateFormatProvider } from "@/contexts/DateFormatContext";
@@ -323,6 +324,7 @@ function AuthenticatedApp() {
                   <span className="text-xs">⌘</span>K
                 </kbd>
               </Button>
+              <NotificationBell />
               <span className="text-sm text-muted-foreground">{user.username} ({user.role})</span>
               <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">
                 <LogOut className="h-4 w-4" />

@@ -367,6 +367,18 @@ export interface IStorage {
   bulkSetMotoRateAtLocation(locationId: number, employeeIds: number[], rate: string, sourceCompanyId: number | null, userId?: string | null): Promise<{ updated: number }>;
   bulkSetMotoPctRateAtLocation(locationId: number, employeeIds: number[], pct: string, sourceCompanyId: number | null, userId?: string | null): Promise<{ updated: number }>;
   getMotoRateAudit(employeeId: number, limit?: number): Promise<schema.MotoRateAudit[]>;
+  getMotoRateAuditFiltered(employeeId: number, opts?: { from?: Date; to?: Date; action?: string; limit?: number; offset?: number }): Promise<{ rows: schema.MotoRateAudit[]; total: number }>;
+  getLocationMotoRateStats(locationId: number): Promise<{ count: number; median: string | null; max: string | null; min: string | null }>;
+  getEmployeeMotoRatesAsOf(employeeId: number, asOf: Date): Promise<schema.EmployeeMotoRate[]>;
+  getEmployeeMotoPctRatesAsOf(employeeId: number, asOf: Date): Promise<schema.EmployeeMotoPctRate[]>;
+  getRateTemplates(companyId: number): Promise<Array<schema.RateTemplate & { items: schema.RateTemplateItem[] }>>;
+  createRateTemplate(companyId: number, name: string, description: string | null, items: Array<{ locationId: number; rate?: string | null; pct?: string | null; sourceCompanyId?: number | null }>, createdBy?: string | null): Promise<schema.RateTemplate & { items: schema.RateTemplateItem[] }>;
+  deleteRateTemplate(templateId: number): Promise<void>;
+  getRateTemplate(templateId: number): Promise<(schema.RateTemplate & { items: schema.RateTemplateItem[] }) | null>;
+  createNotification(n: { userId: string; companyId?: number | null; type: string; title: string; body?: string | null; payload?: any }): Promise<schema.Notification>;
+  getNotifications(userId: string, opts?: { unreadOnly?: boolean; limit?: number }): Promise<schema.Notification[]>;
+  markNotificationsRead(userId: string, ids?: number[]): Promise<{ updated: number }>;
+  notifyCompanyManagersOfRateChange(companyId: number, employeeId: number, action: string, actorUserId?: string | null): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -5071,6 +5083,7 @@ export class DbStorage implements IStorage {
     return await db.transaction(async (tx) => {
       // Serialize concurrent PUTs for the same employee. Lock is tx-scoped.
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${employeeId}::bigint)`);
+      const now = new Date();
       // Snapshot live rows for audit BEFORE soft-deleting them.
       const before = await tx
         .select()
@@ -5081,10 +5094,10 @@ export class DbStorage implements IStorage {
             isNull(schema.employeeMotoRates.deletedAt),
           ),
         );
-      // Soft-delete current live rows (preserves history).
+      // Soft-delete current live rows AND close their effective window (C2).
       await tx
         .update(schema.employeeMotoRates)
-        .set({ deletedAt: new Date() })
+        .set({ deletedAt: now, effectiveTo: now })
         .where(
           and(
             eq(schema.employeeMotoRates.employeeId, employeeId),
@@ -5102,6 +5115,7 @@ export class DbStorage implements IStorage {
               locationId: r.locationId,
               rate: r.rate,
               sourceCompanyId: r.sourceCompanyId ?? null,
+              effectiveFrom: now,
             })),
           )
           .returning();
@@ -5142,6 +5156,7 @@ export class DbStorage implements IStorage {
   ): Promise<schema.EmployeeMotoPctRate[]> {
     return await db.transaction(async (tx) => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${employeeId}::bigint)`);
+      const now = new Date();
       const before = await tx
         .select()
         .from(schema.employeeMotoPctRates)
@@ -5153,7 +5168,7 @@ export class DbStorage implements IStorage {
         );
       await tx
         .update(schema.employeeMotoPctRates)
-        .set({ deletedAt: new Date() })
+        .set({ deletedAt: now, effectiveTo: now })
         .where(
           and(
             eq(schema.employeeMotoPctRates.employeeId, employeeId),
@@ -5171,6 +5186,7 @@ export class DbStorage implements IStorage {
               locationId: r.locationId,
               pct: r.pct,
               sourceCompanyId: r.sourceCompanyId ?? null,
+              effectiveFrom: now,
             })),
           )
           .returning();
@@ -5231,6 +5247,7 @@ export class DbStorage implements IStorage {
     for (const empId of employeeIds) {
       await db.transaction(async (tx) => {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${empId}::bigint)`);
+        const now = new Date();
         // Snapshot before for audit
         const before = await tx
           .select()
@@ -5244,7 +5261,7 @@ export class DbStorage implements IStorage {
         // Soft-delete only the row at this location (if any)
         await tx
           .update(schema.employeeMotoRates)
-          .set({ deletedAt: new Date() })
+          .set({ deletedAt: now, effectiveTo: now })
           .where(
             and(
               eq(schema.employeeMotoRates.employeeId, empId),
@@ -5254,7 +5271,7 @@ export class DbStorage implements IStorage {
           );
         const [inserted] = await tx
           .insert(schema.employeeMotoRates)
-          .values({ employeeId: empId, locationId, rate, sourceCompanyId })
+          .values({ employeeId: empId, locationId, rate, sourceCompanyId, effectiveFrom: now })
           .returning();
         await tx.insert(schema.motoRateAudit).values({
           employeeId: empId,
@@ -5283,6 +5300,7 @@ export class DbStorage implements IStorage {
     for (const empId of employeeIds) {
       await db.transaction(async (tx) => {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${empId}::bigint)`);
+        const now = new Date();
         const before = await tx
           .select()
           .from(schema.employeeMotoPctRates)
@@ -5294,7 +5312,7 @@ export class DbStorage implements IStorage {
           );
         await tx
           .update(schema.employeeMotoPctRates)
-          .set({ deletedAt: new Date() })
+          .set({ deletedAt: now, effectiveTo: now })
           .where(
             and(
               eq(schema.employeeMotoPctRates.employeeId, empId),
@@ -5304,7 +5322,7 @@ export class DbStorage implements IStorage {
           );
         const [inserted] = await tx
           .insert(schema.employeeMotoPctRates)
-          .values({ employeeId: empId, locationId, pct, sourceCompanyId })
+          .values({ employeeId: empId, locationId, pct, sourceCompanyId, effectiveFrom: now })
           .returning();
         await tx.insert(schema.motoRateAudit).values({
           employeeId: empId,
@@ -5329,6 +5347,203 @@ export class DbStorage implements IStorage {
       .where(eq(schema.motoRateAudit.employeeId, employeeId))
       .orderBy(desc(schema.motoRateAudit.createdAt))
       .limit(limit);
+  }
+
+  // A2: filtered + paginated audit reader
+  async getMotoRateAuditFiltered(
+    employeeId: number,
+    opts: { from?: Date; to?: Date; action?: string; limit?: number; offset?: number } = {},
+  ): Promise<{ rows: schema.MotoRateAudit[]; total: number }> {
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 500);
+    const offset = Math.max(opts.offset ?? 0, 0);
+    const conds = [eq(schema.motoRateAudit.employeeId, employeeId)];
+    if (opts.from) conds.push(sql`${schema.motoRateAudit.createdAt} >= ${opts.from}` as any);
+    if (opts.to) conds.push(sql`${schema.motoRateAudit.createdAt} <= ${opts.to}` as any);
+    if (opts.action) conds.push(eq(schema.motoRateAudit.action, opts.action));
+    const where = and(...conds);
+    const [rows, totalRow] = await Promise.all([
+      db.select().from(schema.motoRateAudit).where(where).orderBy(desc(schema.motoRateAudit.createdAt)).limit(limit).offset(offset),
+      db.select({ c: sql<number>`count(*)::int` }).from(schema.motoRateAudit).where(where),
+    ]);
+    return { rows, total: totalRow[0]?.c ?? 0 };
+  }
+
+  // A3: location-wide rate stats (for soft outlier warning)
+  async getLocationMotoRateStats(locationId: number): Promise<{ count: number; median: string | null; max: string | null; min: string | null }> {
+    const result: any = await db.execute(sql`
+      SELECT
+        COUNT(*)::int AS count,
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY rate)::text AS median,
+        MIN(rate)::text AS min,
+        MAX(rate)::text AS max
+      FROM employee_moto_rates
+      WHERE location_id = ${locationId} AND deleted_at IS NULL
+    `);
+    const row = (result.rows ?? result)[0] ?? {};
+    return { count: row.count ?? 0, median: row.median, max: row.max, min: row.min };
+  }
+
+  // C2: read live rates as-of a specific date (for retroactive payroll runs)
+  async getEmployeeMotoRatesAsOf(employeeId: number, asOf: Date): Promise<schema.EmployeeMotoRate[]> {
+    // Active means: effective_from <= asOf AND (effective_to IS NULL OR effective_to > asOf)
+    // Use COALESCE so backfilled rows (effective_from NULL) fall back to created_at.
+    // Eliminates the overlap edge-case where a NULL-from row co-exists with a dated row.
+    const result: any = await db.execute(sql`
+      SELECT * FROM employee_moto_rates
+      WHERE employee_id = ${employeeId}
+        AND COALESCE(effective_from, created_at) <= ${asOf}
+        AND (effective_to IS NULL OR effective_to > ${asOf})
+    `);
+    return (result.rows ?? result) as schema.EmployeeMotoRate[];
+  }
+
+  async getEmployeeMotoPctRatesAsOf(employeeId: number, asOf: Date): Promise<schema.EmployeeMotoPctRate[]> {
+    const result: any = await db.execute(sql`
+      SELECT * FROM employee_moto_pct_rates
+      WHERE employee_id = ${employeeId}
+        AND COALESCE(effective_from, created_at) <= ${asOf}
+        AND (effective_to IS NULL OR effective_to > ${asOf})
+    `);
+    return (result.rows ?? result) as schema.EmployeeMotoPctRate[];
+  }
+
+  // C1: rate templates
+  async getRateTemplates(companyId: number): Promise<Array<schema.RateTemplate & { items: schema.RateTemplateItem[] }>> {
+    const tpls = await db
+      .select()
+      .from(schema.rateTemplates)
+      .where(and(eq(schema.rateTemplates.companyId, companyId), isNull(schema.rateTemplates.deletedAt)))
+      .orderBy(desc(schema.rateTemplates.updatedAt));
+    if (tpls.length === 0) return [];
+    const items = await db
+      .select()
+      .from(schema.rateTemplateItems)
+      .where(inArray(schema.rateTemplateItems.templateId, tpls.map((t) => t.id)));
+    return tpls.map((t) => ({ ...t, items: items.filter((i) => i.templateId === t.id) }));
+  }
+
+  async createRateTemplate(
+    companyId: number,
+    name: string,
+    description: string | null,
+    items: Array<{ locationId: number; rate?: string | null; pct?: string | null; sourceCompanyId?: number | null }>,
+    createdBy?: string | null,
+  ): Promise<schema.RateTemplate & { items: schema.RateTemplateItem[] }> {
+    return await db.transaction(async (tx) => {
+      const [tpl] = await tx
+        .insert(schema.rateTemplates)
+        .values({ companyId, name, description, createdBy: createdBy ?? null })
+        .returning();
+      let inserted: schema.RateTemplateItem[] = [];
+      if (items.length > 0) {
+        inserted = await tx
+          .insert(schema.rateTemplateItems)
+          .values(
+            items.map((i) => ({
+              templateId: tpl.id,
+              locationId: i.locationId,
+              rate: i.rate ?? null,
+              pct: i.pct ?? null,
+              sourceCompanyId: i.sourceCompanyId ?? null,
+            })),
+          )
+          .returning();
+      }
+      return { ...tpl, items: inserted };
+    });
+  }
+
+  async deleteRateTemplate(templateId: number): Promise<void> {
+    await db
+      .update(schema.rateTemplates)
+      .set({ deletedAt: new Date() })
+      .where(eq(schema.rateTemplates.id, templateId));
+  }
+
+  async getRateTemplate(templateId: number): Promise<(schema.RateTemplate & { items: schema.RateTemplateItem[] }) | null> {
+    const [tpl] = await db.select().from(schema.rateTemplates).where(eq(schema.rateTemplates.id, templateId));
+    if (!tpl) return null;
+    const items = await db.select().from(schema.rateTemplateItems).where(eq(schema.rateTemplateItems.templateId, templateId));
+    return { ...tpl, items };
+  }
+
+  // C4: notifications
+  async createNotification(n: {
+    userId: string;
+    companyId?: number | null;
+    type: string;
+    title: string;
+    body?: string | null;
+    payload?: any;
+  }): Promise<schema.Notification> {
+    const [row] = await db.insert(schema.notifications).values({
+      userId: n.userId,
+      companyId: n.companyId ?? null,
+      type: n.type,
+      title: n.title,
+      body: n.body ?? null,
+      payload: n.payload ?? null,
+    }).returning();
+    return row;
+  }
+
+  async getNotifications(userId: string, opts: { unreadOnly?: boolean; limit?: number } = {}): Promise<schema.Notification[]> {
+    const limit = Math.min(opts.limit ?? 50, 200);
+    const conds = [eq(schema.notifications.userId, userId)];
+    if (opts.unreadOnly) conds.push(isNull(schema.notifications.readAt));
+    return await db
+      .select()
+      .from(schema.notifications)
+      .where(and(...conds))
+      .orderBy(desc(schema.notifications.createdAt))
+      .limit(limit);
+  }
+
+  async markNotificationsRead(userId: string, ids?: number[]): Promise<{ updated: number }> {
+    const conds = [eq(schema.notifications.userId, userId), isNull(schema.notifications.readAt)];
+    if (ids && ids.length > 0) conds.push(inArray(schema.notifications.id, ids));
+    const result = await db
+      .update(schema.notifications)
+      .set({ readAt: new Date() })
+      .where(and(...conds))
+      .returning({ id: schema.notifications.id });
+    return { updated: result.length };
+  }
+
+  // Helper: enqueue rate-change notifications to all Admin/Owner/Manager users of a company.
+  async notifyCompanyManagersOfRateChange(
+    companyId: number,
+    employeeId: number,
+    action: string,
+    actorUserId?: string | null,
+  ): Promise<void> {
+    try {
+      const recipients = await db
+        .select({ userId: schema.userCompanyRoles.userId })
+        .from(schema.userCompanyRoles)
+        .where(
+          and(
+            eq(schema.userCompanyRoles.companyId, companyId),
+            inArray(schema.userCompanyRoles.role, ["Admin", "Owner", "Manager"] as any),
+          ),
+        );
+      if (recipients.length === 0) return;
+      const rows = recipients
+        .filter((r) => r.userId !== actorUserId) // don't notify the actor about their own change
+        .map((r) => ({
+          userId: r.userId,
+          companyId,
+          type: "rate_change",
+          title: `Moto rate ${action}`,
+          body: `Employee #${employeeId} rates were updated (${action}).`,
+          payload: { employeeId, action } as any,
+        }));
+      if (rows.length === 0) return;
+      await db.insert(schema.notifications).values(rows);
+    } catch (err) {
+      // Notifications are best-effort; never fail the underlying mutation.
+      console.warn("notifyCompanyManagersOfRateChange failed:", err);
+    }
   }
 }
 

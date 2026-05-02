@@ -73,3 +73,23 @@ export type MotoRatesPut = z.infer<typeof motoRatesPutSchema>;
 export type MotoPctRatesPut = z.infer<typeof motoPctRatesPutSchema>;
 export type BulkSetMotoRate = z.infer<typeof bulkSetMotoRateSchema>;
 export type BulkSetMotoPctRate = z.infer<typeof bulkSetMotoPctRateSchema>;
+
+// C1: rate templates
+export const rateTemplateItemSchema = z.object({
+  locationId: z.coerce.number().int().positive(),
+  rate: decimalString(0.01, 1000, "rate").optional(),
+  pct: decimalString(0.01, 100, "pct").optional(),
+  sourceCompanyId: z.coerce.number().int().positive().nullable().optional(),
+}).refine((v) => v.rate != null || v.pct != null, { message: "rate or pct required" });
+
+export const rateTemplateCreateSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  description: z.string().max(500).nullable().optional(),
+  items: z.array(rateTemplateItemSchema).min(1).max(500),
+});
+export type RateTemplateCreate = z.infer<typeof rateTemplateCreateSchema>;
+
+export const rateTemplateApplySchema = z.object({
+  employeeIds: z.array(z.coerce.number().int().positive()).min(1).max(500),
+});
+export type RateTemplateApply = z.infer<typeof rateTemplateApplySchema>;
