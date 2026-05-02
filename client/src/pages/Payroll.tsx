@@ -154,7 +154,7 @@ const employeeFormSchema = insertEmployeeSchema.omit({ companyId: true, employee
   salesBonusPct: z.string().optional(),
   salesBonusPctSourceCompanyId: z.string().optional(),
   salesBonusPctLocationId: z.string().optional(),
-  balesBonusRate: z.string().optional(),
+  motosBonusRate: z.string().optional(),
 });
 
 type EmployeeFormData = z.infer<typeof employeeFormSchema>;
@@ -380,20 +380,20 @@ export default function Payroll() {
   });
 
   const { data: editingBaleRates } = useQuery<Array<{ id: number; locationId: number; rate: string }>>({
-    queryKey: ["/api/employees", editingEmployee?.id, "bale-rates"],
+    queryKey: ["/api/employees", editingEmployee?.id, "moto-rates"],
     queryFn: async () => {
       if (!editingEmployee?.id) return [];
-      const res = await modeApiRequest("GET", `/api/employees/${editingEmployee.id}/bale-rates`);
+      const res = await modeApiRequest("GET", `/api/employees/${editingEmployee.id}/moto-rates`);
       return res.json();
     },
     enabled: !!editingEmployee && editEmployeeDialogOpen,
   });
 
   const { data: editingBalePctRates } = useQuery<Array<{ id: number; locationId: number; pct: string; sourceCompanyId?: number | null }>>({
-    queryKey: ["/api/employees", editingEmployee?.id, "bale-pct-rates"],
+    queryKey: ["/api/employees", editingEmployee?.id, "moto-pct-rates"],
     queryFn: async () => {
       if (!editingEmployee?.id) return [];
-      const res = await modeApiRequest("GET", `/api/employees/${editingEmployee.id}/bale-pct-rates`);
+      const res = await modeApiRequest("GET", `/api/employees/${editingEmployee.id}/moto-pct-rates`);
       return res.json();
     },
     enabled: !!editingEmployee && editEmployeeDialogOpen,
@@ -806,7 +806,7 @@ export default function Payroll() {
       openingBalance: "",
       active: true,
       salesBonusPct: "",
-      balesBonusRate: "",
+      motosBonusRate: "",
     },
   });
 
@@ -821,7 +821,7 @@ export default function Payroll() {
       joinDate: new Date().toISOString().split('T')[0],
       active: true,
       salesBonusPct: "",
-      balesBonusRate: "",
+      motosBonusRate: "",
     },
   });
 
@@ -1264,17 +1264,17 @@ export default function Payroll() {
       await modeApiRequest("PATCH", `/api/employees/${editingEmployee.id}`, payload);
       // Save per-location bale rates
       const validRates = editBaleRates.filter(r => r.locationId && parseFloat(r.rate) > 0);
-      await modeApiRequest("PUT", `/api/employees/${editingEmployee.id}/bale-rates`, { rates: validRates });
+      await modeApiRequest("PUT", `/api/employees/${editingEmployee.id}/moto-rates`, { rates: validRates });
       // Save per-location bale pct rates
       const validPctRates = editBalePctRates.filter(r => r.locationId && parseFloat(r.pct) > 0);
-      await modeApiRequest("PUT", `/api/employees/${editingEmployee.id}/bale-pct-rates`, { rates: validPctRates });
+      await modeApiRequest("PUT", `/api/employees/${editingEmployee.id}/moto-pct-rates`, { rates: validPctRates });
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Employee updated successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
       queryClient.invalidateQueries({ queryKey: ["/api/employee-groups", selectedCompany?.id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/employees", editingEmployee?.id, "bale-rates"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/employees", editingEmployee?.id, "bale-pct-rates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees", editingEmployee?.id, "moto-rates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/employees", editingEmployee?.id, "moto-pct-rates"] });
       setEditEmployeeDialogOpen(false);
       setEditingEmployee(null);
       editEmployeeForm.reset();
@@ -1299,7 +1299,7 @@ export default function Payroll() {
         salesBonusPct: editingEmployee.salesBonusPct != null ? String(editingEmployee.salesBonusPct) : "",
         salesBonusPctSourceCompanyId: (editingEmployee as any).salesBonusPctSourceCompanyId != null ? String((editingEmployee as any).salesBonusPctSourceCompanyId) : "",
         salesBonusPctLocationId: (editingEmployee as any).salesBonusPctLocationId != null ? String((editingEmployee as any).salesBonusPctLocationId) : "",
-        balesBonusRate: editingEmployee.balesBonusRate != null ? String(editingEmployee.balesBonusRate) : "",
+        motosBonusRate: editingEmployee.motosBonusRate != null ? String(editingEmployee.motosBonusRate) : "",
       });
     }
     if (!editEmployeeDialogOpen) { setEditBaleRates([]); setEditBalePctRates([]); }
@@ -1371,7 +1371,7 @@ export default function Payroll() {
     setBonusSalesCustomPct(employee.salesBonusPct != null ? String(employee.salesBonusPct) : "");
     setBonusDate(new Date().toISOString().split("T")[0]);
     setBonusNotes("");
-    setBalesRows([{ locationId: "", qty: "", rate: employee.balesBonusRate != null ? String(employee.balesBonusRate) : "", preview: null, loading: false }]);
+    setBalesRows([{ locationId: "", qty: "", rate: employee.motosBonusRate != null ? String(employee.motosBonusRate) : "", preview: null, loading: false }]);
     setBalesPeriod("thisMonth");
     setBalesStart(range.start);
     setBalesEnd(range.end);
@@ -1458,11 +1458,11 @@ export default function Payroll() {
         const pct = parseFloat(emp.salesBonusPct || "0");
         const hasPct = pct > 0;
 
-        const ratesRes = await modeApiRequest("GET", `/api/employees/${emp.id}/bale-rates`);
+        const ratesRes = await modeApiRequest("GET", `/api/employees/${emp.id}/moto-rates`);
         const rates: Array<{ locationId: number; rate: string; sourceCompanyId?: number }> = await ratesRes.json();
         const hasBaleRates = rates && rates.length > 0;
 
-        const pctRatesRes = await modeApiRequest("GET", `/api/employees/${emp.id}/bale-pct-rates`);
+        const pctRatesRes = await modeApiRequest("GET", `/api/employees/${emp.id}/moto-pct-rates`);
         const pctRates: Array<{ locationId: number; pct: string; sourceCompanyId?: number }> = await pctRatesRes.json();
         const hasPerLocationPct = pctRates && pctRates.length > 0;
 
@@ -3031,7 +3031,7 @@ export default function Payroll() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setBalesRows(prev => [...prev, { locationId: "", qty: "", rate: selectedEmployee?.balesBonusRate != null ? String(selectedEmployee.balesBonusRate) : "", preview: null, loading: false }])}
+                onClick={() => setBalesRows(prev => [...prev, { locationId: "", qty: "", rate: selectedEmployee?.motosBonusRate != null ? String(selectedEmployee.motosBonusRate) : "", preview: null, loading: false }])}
                 data-testid="button-add-bales-row"
               >
                 <Plus className="h-4 w-4 mr-1" />
@@ -4213,7 +4213,7 @@ export default function Payroll() {
                   />
                   <FormField
                     control={createEmployeeForm.control}
-                    name="balesBonusRate"
+                    name="motosBonusRate"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Motos Rate ($/unit)</FormLabel>

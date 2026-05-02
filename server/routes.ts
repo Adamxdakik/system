@@ -2073,6 +2073,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }),
   );
 
+  // ===== Per-employee per-location moto bonus rates =====
+  // Helper: verify the employee belongs to the current tenant company.
+  async function verifyEmployeeForCurrentCompany(
+    employeeIdRaw: string,
+    companyId: number | undefined,
+  ): Promise<{ ok: true; employeeId: number } | { ok: false; status: number; message: string }> {
+    if (!companyId) return { ok: false, status: 400, message: "No company selected" };
+    const employeeId = parseInt(employeeIdRaw, 10);
+    if (isNaN(employeeId)) return { ok: false, status: 400, message: "Invalid employee ID" };
+    const all = await storage.getAllEmployees(companyId);
+    const found = all.find((e) => e.id === employeeId);
+    if (!found) return { ok: false, status: 404, message: "Employee not found" };
+    if (found.companyId !== companyId) {
+      return { ok: false, status: 403, message: "Access denied: employee belongs to a different company" };
+    }
+    return { ok: true, employeeId };
+  }
+
+  app.get("/api/employees/:id/moto-rates", requireAuth, async (req, res) => {
+    try {
+      const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+      if (!check.ok) return res.status(check.status).json({ message: check.message });
+      const rows = await storage.getEmployeeMotoRates(check.employeeId);
+      res.json(rows);
+    } catch (err: any) {
+      console.error("GET /api/employees/:id/moto-rates", err);
+      res.status(500).json({ message: err.message || "Failed to fetch moto rates" });
+    }
+  });
+
+  app.put("/api/employees/:id/moto-rates", requireAuth, async (req, res) => {
+    try {
+      const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+      if (!check.ok) return res.status(check.status).json({ message: check.message });
+      const body = req.body as { rates?: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }> };
+      const rates = Array.isArray(body?.rates) ? body.rates : [];
+      // Sanitize: only valid rows with locationId + rate > 0
+      const clean = rates
+        .filter((r) => r && Number.isFinite(Number(r.locationId)) && parseFloat(r.rate) > 0)
+        .map((r) => ({
+          locationId: Number(r.locationId),
+          rate: String(r.rate),
+          sourceCompanyId: r.sourceCompanyId != null ? Number(r.sourceCompanyId) : null,
+        }));
+      const saved = await storage.replaceEmployeeMotoRates(check.employeeId, clean);
+      res.json(saved);
+    } catch (err: any) {
+      console.error("PUT /api/employees/:id/moto-rates", err);
+      res.status(500).json({ message: err.message || "Failed to save moto rates" });
+    }
+  });
+
+  app.get("/api/employees/:id/moto-pct-rates", requireAuth, async (req, res) => {
+    try {
+      const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+      if (!check.ok) return res.status(check.status).json({ message: check.message });
+      const rows = await storage.getEmployeeMotoPctRates(check.employeeId);
+      res.json(rows);
+    } catch (err: any) {
+      console.error("GET /api/employees/:id/moto-pct-rates", err);
+      res.status(500).json({ message: err.message || "Failed to fetch moto pct rates" });
+    }
+  });
+
+  app.put("/api/employees/:id/moto-pct-rates", requireAuth, async (req, res) => {
+    try {
+      const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+      if (!check.ok) return res.status(check.status).json({ message: check.message });
+      const body = req.body as { rates?: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }> };
+      const rates = Array.isArray(body?.rates) ? body.rates : [];
+      const clean = rates
+        .filter((r) => r && Number.isFinite(Number(r.locationId)) && parseFloat(r.pct) > 0)
+        .map((r) => ({
+          locationId: Number(r.locationId),
+          pct: String(r.pct),
+          sourceCompanyId: r.sourceCompanyId != null ? Number(r.sourceCompanyId) : null,
+        }));
+      const saved = await storage.replaceEmployeeMotoPctRates(check.employeeId, clean);
+      res.json(saved);
+    } catch (err: any) {
+      console.error("PUT /api/employees/:id/moto-pct-rates", err);
+      res.status(500).json({ message: err.message || "Failed to save moto pct rates" });
+    }
+  });
+
   app.delete("/api/employees/:id", requireAuth, async (req, res) => {
     try {
       // Only Admin can delete employees
@@ -9477,8 +9562,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             parseFloat(transportFees || "0") +
             additionalChargesTotal;
 
-          const totalBales = parseFloat(currentOffload.totalBales);
-          const additionalCostPerBale = totalBales > 0 ? totalCharges / totalBales : 0;
+          const totalMotos = parseFloat(currentOffload.totalMotos);
+          const additionalCostPerMoto = totalMotos > 0 ? totalCharges / totalMotos : 0;
 
           // Update offload record
           await tx
@@ -9490,7 +9575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               transferCharges: "0",
               transportFees: transportFees || "0",
               totalCharges: totalCharges.toString(),
-              additionalCostPerBale: additionalCostPerBale.toString(),
+              additionalCostPerMoto: additionalCostPerMoto.toString(),
               offloadedAt: offloadDate ? new Date(offloadDate) : currentOffload.offloadedAt,
             })
             .where(eq(containerOffloads.id, currentOffload.id));
@@ -24020,7 +24105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           month: sql<number>`EXTRACT(MONTH FROM ${containerOffloads.offloadedAt})`,
           quantity: poLineItems.quantity,
           lineTotal: poLineItems.lineTotal,
-          additionalCostPerBale: containerOffloads.additionalCostPerBale,
+          additionalCostPerMoto: containerOffloads.additionalCostPerMoto,
         })
         .from(containerOffloads)
         .innerJoin(containers, eq(containerOffloads.containerId, containers.id))
@@ -24037,7 +24122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const month = Number(row.month);
         const qty = parseFloat(row.quantity);
         const baseValue = parseFloat(row.lineTotal);
-        const additionalCost = parseFloat(row.additionalCostPerBale) * qty;
+        const additionalCost = parseFloat(row.additionalCostPerMoto) * qty;
         const landedValue = baseValue + additionalCost;
         
         monthBuckets[month].inQty += qty;
@@ -24276,7 +24361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({
           quantity: poLineItems.quantity,
           lineTotal: poLineItems.lineTotal,
-          additionalCostPerBale: containerOffloads.additionalCostPerBale,
+          additionalCostPerMoto: containerOffloads.additionalCostPerMoto,
         })
         .from(containerOffloads)
         .innerJoin(containers, eq(containerOffloads.containerId, containers.id))
@@ -24292,7 +24377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const item of priorOffloads) {
         const qty = parseFloat(item.quantity);
         const baseValue = parseFloat(item.lineTotal);
-        const additionalCost = parseFloat(item.additionalCostPerBale) * qty;
+        const additionalCost = parseFloat(item.additionalCostPerMoto) * qty;
         priorInwardQty += qty;
         priorInwardValue += baseValue + additionalCost;
       }
@@ -24407,7 +24492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({
           quantity: poLineItems.quantity,
           lineTotal: poLineItems.lineTotal,
-          additionalCostPerBale: containerOffloads.additionalCostPerBale,
+          additionalCostPerMoto: containerOffloads.additionalCostPerMoto,
         })
         .from(containerOffloads)
         .innerJoin(containers, eq(containerOffloads.containerId, containers.id))
@@ -24423,7 +24508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const item of afterOffloads) {
         const qty = parseFloat(item.quantity);
         const baseValue = parseFloat(item.lineTotal);
-        const additionalCost = parseFloat(item.additionalCostPerBale) * qty;
+        const additionalCost = parseFloat(item.additionalCostPerMoto) * qty;
         afterMonthNetQty += qty;
         afterMonthNetValue += baseValue + additionalCost;
       }
@@ -24632,7 +24717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity: poLineItems.quantity,
           rate: poLineItems.rate,
           lineTotal: poLineItems.lineTotal,
-          additionalCostPerBale: containerOffloads.additionalCostPerBale,
+          additionalCostPerMoto: containerOffloads.additionalCostPerMoto,
         })
         .from(containerOffloads)
         .innerJoin(containers, eq(containerOffloads.containerId, containers.id))
@@ -24651,8 +24736,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const qty = parseFloat(item.quantity);
         const baseRate = parseFloat(item.rate);
         const baseValue = parseFloat(item.lineTotal);
-        const additionalCostPerBale = parseFloat(item.additionalCostPerBale);
-        const additionalCost = additionalCostPerBale * qty;
+        const additionalCostPerMoto = parseFloat(item.additionalCostPerMoto);
+        const additionalCost = additionalCostPerMoto * qty;
         const landedValue = baseValue + additionalCost;
         const landedRate = landedValue / qty;
         
@@ -26932,8 +27017,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transferCharges: containerOffloads.transferCharges,
           transportFees: containerOffloads.transportFees,
           totalCharges: containerOffloads.totalCharges,
-          totalBales: containerOffloads.totalBales,
-          additionalCostPerBale: containerOffloads.additionalCostPerBale,
+          totalMotos: containerOffloads.totalMotos,
+          additionalCostPerMoto: containerOffloads.additionalCostPerMoto,
           offloadedAt: containerOffloads.offloadedAt,
         })
         .from(containerOffloads)
@@ -26980,8 +27065,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transferCharges: containerOffloads.transferCharges,
           transportFees: containerOffloads.transportFees,
           totalCharges: containerOffloads.totalCharges,
-          totalBales: containerOffloads.totalBales,
-          additionalCostPerBale: containerOffloads.additionalCostPerBale,
+          totalMotos: containerOffloads.totalMotos,
+          additionalCostPerMoto: containerOffloads.additionalCostPerMoto,
           offloadedAt: containerOffloads.offloadedAt,
         })
         .from(containerOffloads)

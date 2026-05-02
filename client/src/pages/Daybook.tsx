@@ -225,8 +225,8 @@ interface OffloadListItem {
   transferCharges: string;
   transportFees: string;
   totalCharges: string;
-  totalBales: string;
-  additionalCostPerBale: string;
+  totalMotos: string;
+  additionalCostPerMoto: string;
   offloadedAt: string;
   itemsTotal: string;
 }

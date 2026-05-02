@@ -36,8 +36,8 @@ interface OffloadDetail {
   transferCharges: string;
   transportFees: string;
   totalCharges: string;
-  totalBales: string;
-  additionalCostPerBale: string;
+  totalMotos: string;
+  additionalCostPerMoto: string;
   offloadedAt: string;
   itemsTotal: string;
   items: OffloadItem[];
@@ -180,11 +180,11 @@ export default function OffloadDetail() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
             <div>
               <p className="text-sm text-muted-foreground">Total Motos</p>
-              <p className="font-mono font-medium">{parseFloat(offload.totalBales || "0").toLocaleString()}</p>
+              <p className="font-mono font-medium">{parseFloat(offload.totalMotos || "0").toLocaleString()}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Additional Cost / Moto</p>
-              <p className="font-mono font-medium">{fmt(offload.additionalCostPerBale)}</p>
+              <p className="font-mono font-medium">{fmt(offload.additionalCostPerMoto)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground font-semibold">Total Charges</p>

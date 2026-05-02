@@ -348,6 +348,18 @@ export interface IStorage {
   getRoleFeaturePermission(companyId: number, role: string, featureKey: string): Promise<schema.RoleFeaturePermission | undefined>;
   upsertRoleFeaturePermission(permission: schema.InsertRoleFeaturePermission): Promise<schema.RoleFeaturePermission>;
   bulkUpsertRoleFeaturePermissions(permissions: schema.InsertRoleFeaturePermission[]): Promise<schema.RoleFeaturePermission[]>;
+
+  // Per-employee per-location moto bonus rates
+  getEmployeeMotoRates(employeeId: number): Promise<schema.EmployeeMotoRate[]>;
+  replaceEmployeeMotoRates(
+    employeeId: number,
+    rates: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }>,
+  ): Promise<schema.EmployeeMotoRate[]>;
+  getEmployeeMotoPctRates(employeeId: number): Promise<schema.EmployeeMotoPctRate[]>;
+  replaceEmployeeMotoPctRates(
+    employeeId: number,
+    rates: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }>,
+  ): Promise<schema.EmployeeMotoPctRate[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -1871,7 +1883,7 @@ export class DbStorage implements IStorage {
 
     // Calculate total bales - if groups are marked, only count those; otherwise count all
     // Include both PO line items and manual container items
-    let totalBales = 0;
+    let totalMotos = 0;
     
     // Count from PO line items
     for (const item of allLineItems) {
@@ -1880,7 +1892,7 @@ export class DbStorage implements IStorage {
       // Validate quantity - default to 1 if NaN/zero
       let qty = parseFloat(item.quantity);
       if (!isFinite(qty) || qty <= 0) qty = 1;
-      totalBales += qty;
+      totalMotos += qty;
     }
     
     // Count from manual container items
@@ -1890,7 +1902,7 @@ export class DbStorage implements IStorage {
       // Validate quantity - default to 1 if missing/zero
       let qty = parseFloat(item.quantity);
       if (!isFinite(qty) || qty <= 0) qty = 1;
-      totalBales += qty;
+      totalMotos += qty;
     }
 
     // Calculate total charges including additional charges AND PO charges (freight + otherCharges)
@@ -1903,7 +1915,7 @@ export class DbStorage implements IStorage {
       poCharges; // Include PO freight/charges in inventory cost
 
     // Calculate additional cost per bale
-    const additionalCostPerBale = totalBales > 0 ? totalCharges / totalBales : 0;
+    const additionalCostPerMoto = totalMotos > 0 ? totalCharges / totalMotos : 0;
 
     // Group line items by stock item and calculate new rates
     const itemsMap = new Map<number, { 
@@ -2026,12 +2038,12 @@ export class DbStorage implements IStorage {
       
       const averageOriginalRate = data.weightedRateSum / data.totalQuantity;
       // Only add import costs to items in groups marked for cost allocation (motos)
-      const itemCostAddition = shouldAllocateCosts(stockItemId) ? additionalCostPerBale : 0;
+      const itemCostAddition = shouldAllocateCosts(stockItemId) ? additionalCostPerMoto : 0;
       const newRate = averageOriginalRate + itemCostAddition;
       
       // Safety check for infinity
       if (!isFinite(newRate)) {
-        throw new Error(`Calculated rate is infinite for stock item ${stockItemId}. averageRate=${averageOriginalRate}, additionalCost=${additionalCostPerBale}`);
+        throw new Error(`Calculated rate is infinite for stock item ${stockItemId}. averageRate=${averageOriginalRate}, additionalCost=${additionalCostPerMoto}`);
       }
       
       // Check if inventory exists
@@ -2303,8 +2315,8 @@ export class DbStorage implements IStorage {
       transferCharges: "0",
       transportFees: transportFees || "0",
       totalCharges: totalCharges.toFixed(2),
-      totalBales: totalBales.toFixed(3),
-      additionalCostPerBale: additionalCostPerBale.toFixed(2),
+      totalMotos: totalMotos.toFixed(3),
+      additionalCostPerMoto: additionalCostPerMoto.toFixed(2),
       offloadedAt: offloadDate ? new Date(offloadDate) : new Date(),
     }).returning();
 
@@ -5028,6 +5040,74 @@ export class DbStorage implements IStorage {
       results.push(result);
     }
     return results;
+  }
+
+  // Per-employee per-location moto bonus rates ($/unit)
+  async getEmployeeMotoRates(employeeId: number): Promise<schema.EmployeeMotoRate[]> {
+    return await db
+      .select()
+      .from(schema.employeeMotoRates)
+      .where(eq(schema.employeeMotoRates.employeeId, employeeId));
+  }
+
+  async replaceEmployeeMotoRates(
+    employeeId: number,
+    rates: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }>,
+  ): Promise<schema.EmployeeMotoRate[]> {
+    return await db.transaction(async (tx) => {
+      await tx
+        .delete(schema.employeeMotoRates)
+        .where(eq(schema.employeeMotoRates.employeeId, employeeId));
+
+      if (rates.length === 0) return [];
+
+      const inserted = await tx
+        .insert(schema.employeeMotoRates)
+        .values(
+          rates.map((r) => ({
+            employeeId,
+            locationId: r.locationId,
+            rate: r.rate,
+            sourceCompanyId: r.sourceCompanyId ?? null,
+          })),
+        )
+        .returning();
+      return inserted;
+    });
+  }
+
+  // Per-employee per-location moto bonus % (% of sales amount)
+  async getEmployeeMotoPctRates(employeeId: number): Promise<schema.EmployeeMotoPctRate[]> {
+    return await db
+      .select()
+      .from(schema.employeeMotoPctRates)
+      .where(eq(schema.employeeMotoPctRates.employeeId, employeeId));
+  }
+
+  async replaceEmployeeMotoPctRates(
+    employeeId: number,
+    rates: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }>,
+  ): Promise<schema.EmployeeMotoPctRate[]> {
+    return await db.transaction(async (tx) => {
+      await tx
+        .delete(schema.employeeMotoPctRates)
+        .where(eq(schema.employeeMotoPctRates.employeeId, employeeId));
+
+      if (rates.length === 0) return [];
+
+      const inserted = await tx
+        .insert(schema.employeeMotoPctRates)
+        .values(
+          rates.map((r) => ({
+            employeeId,
+            locationId: r.locationId,
+            pct: r.pct,
+            sourceCompanyId: r.sourceCompanyId ?? null,
+          })),
+        )
+        .returning();
+      return inserted;
+    });
   }
 }
 

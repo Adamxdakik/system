@@ -157,7 +157,7 @@ export const employees = pgTable("employees", {
   salesBonusPct: decimal("sales_bonus_pct", { precision: 10, scale: 4 }),
   salesBonusPctSourceCompanyId: integer("sales_bonus_pct_source_company_id"),
   salesBonusPctLocationId: integer("sales_bonus_pct_location_id"),
-  balesBonusRate: decimal("bales_bonus_rate", { precision: 10, scale: 4 }),
+  motosBonusRate: decimal("motos_bonus_rate", { precision: 10, scale: 4 }),
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -188,6 +188,32 @@ export const insertEmployeeSchema = createInsertSchema(employees).omit({
 
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
+
+// Per-employee per-location moto bonus rate (per-unit dollar rate)
+export const employeeMotoRates = pgTable("employee_moto_rates", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  sourceCompanyId: integer("source_company_id"),
+  rate: decimal("rate", { precision: 15, scale: 4 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type EmployeeMotoRate = typeof employeeMotoRates.$inferSelect;
+export type InsertEmployeeMotoRate = typeof employeeMotoRates.$inferInsert;
+
+// Per-employee per-location moto bonus % (% of sales amount)
+export const employeeMotoPctRates = pgTable("employee_moto_pct_rates", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  sourceCompanyId: integer("source_company_id"),
+  pct: decimal("pct", { precision: 15, scale: 4 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type EmployeeMotoPctRate = typeof employeeMotoPctRates.$inferSelect;
+export type InsertEmployeeMotoPctRate = typeof employeeMotoPctRates.$inferInsert;
 
 export const employeeGroups = pgTable("employee_groups", {
   id: serial("id").primaryKey(),
@@ -624,8 +650,8 @@ export const containerOffloads = pgTable("container_offloads", {
   transferCharges: decimal("transfer_charges", { precision: 20, scale: 2 }).notNull().default("0"),
   transportFees: decimal("transport_fees", { precision: 20, scale: 2 }).notNull().default("0"),
   totalCharges: decimal("total_charges", { precision: 20, scale: 2 }).notNull().default("0"),
-  totalBales: decimal("total_bales", { precision: 15, scale: 3 }).notNull(),
-  additionalCostPerBale: decimal("additional_cost_per_bale", { precision: 20, scale: 2 }).notNull(),
+  totalMotos: decimal("total_motos", { precision: 15, scale: 3 }).notNull(),
+  additionalCostPerMoto: decimal("additional_cost_per_moto", { precision: 20, scale: 2 }).notNull(),
   offloadedAt: timestamp("offloaded_at").notNull().defaultNow(),
 });
 
@@ -633,8 +659,8 @@ export const insertContainerOffloadSchema = createInsertSchema(containerOffloads
   id: true,
   offloadedAt: true,
   totalCharges: true,
-  totalBales: true,
-  additionalCostPerBale: true,
+  totalMotos: true,
+  additionalCostPerMoto: true,
   officeCharges: true,
   transferCharges: true,
 }).extend({
