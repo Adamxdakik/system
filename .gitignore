@@ -45,3 +45,4 @@ attached_assets/*.tar
 # Misc stray files
 ServiceHistory.tsx
 client/src/test
+_trash/

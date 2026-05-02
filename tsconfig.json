@@ -5,8 +5,7 @@
     "build",
     "dist",
     "**/*.test.ts",
-    "client/src/pages/archive/**"
-  ],
+      ],
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
