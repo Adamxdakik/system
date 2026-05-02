@@ -3561,14 +3561,18 @@ export class DbStorage implements IStorage {
 
         // Only update inventory if voucher is NOT optional
         if (!isOptional) {
-          // Get current inventory at location
+          // CONCURRENCY: SELECT ... FOR UPDATE pins the inventory row for the
+          // duration of this transaction so concurrent adjustments to the
+          // same (location, stock_item) cannot both pass the negative-stock
+          // guard and double-spend (lost update / overdraw to negative).
           const [currentInventory] = await tx
             .select()
             .from(schema.inventory)
             .where(and(
               eq(schema.inventory.locationId, locationId),
               eq(schema.inventory.stockItemId, item.stockItemId)
-            ));
+            ))
+            .for('update');
 
           if (currentInventory) {
             // Adjust quantity at location
@@ -3591,6 +3595,12 @@ export class DbStorage implements IStorage {
             } else {
               // Consumption - subtract from inventory (use absolute value to ensure reduction)
               newQty = currentQty - Math.abs(quantity);
+              // Guard against negative inventory — a Consumption adjustment
+              // larger than what's on hand would silently drive stock to a
+              // negative balance. Fail the transaction instead.
+              if (newQty < 0) {
+                throw new Error(`Insufficient inventory at location ${locationId} for stock item ${item.stockItemId}`);
+              }
               newValue = newQty > 0 ? newQty * currentRate : 0;
               newRate = currentRate;
             }
@@ -3604,6 +3614,13 @@ export class DbStorage implements IStorage {
                 lastUpdated: new Date(),
               })
               .where(eq(schema.inventory.id, currentInventory.id));
+          } else if (adjustmentType === "Consumption") {
+            // FAIL-CLOSED: a Consumption adjustment with NO existing inventory
+            // row means there's nothing to consume. Without this branch the
+            // method silently no-ops, which is misleading (the user thinks
+            // their consumption posted but stock totals don't move). Mirror
+            // the same fail-closed contract createStockTransfer uses.
+            throw new Error(`Insufficient inventory at location ${locationId} for stock item ${item.stockItemId}`);
           } else if (adjustmentType === "Production") {
             // Create new inventory record for production
             await tx.insert(schema.inventory).values({

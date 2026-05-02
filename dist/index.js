@@ -3981,7 +3981,7 @@ var DbStorage = class {
           const [currentInventory] = await tx.select().from(inventory).where(and(
             eq(inventory.locationId, locationId),
             eq(inventory.stockItemId, item.stockItemId)
-          ));
+          )).for("update");
           if (currentInventory) {
             const currentQty = parseFloat(currentInventory.quantity);
             const currentValue = parseFloat(currentInventory.totalValue);
@@ -3995,6 +3995,9 @@ var DbStorage = class {
               newValue = newQty * newRate;
             } else {
               newQty = currentQty - Math.abs(quantity);
+              if (newQty < 0) {
+                throw new Error(`Insufficient inventory at location ${locationId} for stock item ${item.stockItemId}`);
+              }
               newValue = newQty > 0 ? newQty * currentRate : 0;
               newRate = currentRate;
             }
@@ -4004,6 +4007,8 @@ var DbStorage = class {
               totalValue: newValue.toFixed(2),
               lastUpdated: /* @__PURE__ */ new Date()
             }).where(eq(inventory.id, currentInventory.id));
+          } else if (adjustmentType === "Consumption") {
+            throw new Error(`Insufficient inventory at location ${locationId} for stock item ${item.stockItemId}`);
           } else if (adjustmentType === "Production") {
             await tx.insert(inventory).values({
               companyId: location.companyId,
@@ -10549,9 +10554,13 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.post("/api/fixed-assets", async (req, res) => {
+  app2.post("/api/fixed-assets", requireAuth, requireNonPOS, async (req, res) => {
     try {
-      const parsed = insertFixedAssetSchema.parse(req.body);
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const parsed = insertFixedAssetSchema.parse({ ...req.body, companyId });
       const existing = await storage.getFixedAssetByCode(parsed.code);
       if (existing) {
         return res.status(400).json({ message: "Fixed asset code already exists" });
@@ -13959,13 +13968,17 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/accounts/ledger/:id/balance", async (req, res) => {
+  app2.get("/api/accounts/ledger/:id/balance", requireAuth, async (req, res) => {
     try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
       const ledgerAccountId = parseInt(req.params.id);
       if (isNaN(ledgerAccountId)) {
         return res.status(400).json({ message: "Invalid ledger account ID" });
       }
-      const account = await storage.getLedgerAccountById(ledgerAccountId);
+      const [account] = await db.select().from(ledgerAccounts).where(and3(eq3(ledgerAccounts.id, ledgerAccountId), eq3(ledgerAccounts.companyId, companyId))).limit(1);
       if (!account) {
         return res.status(404).json({ message: "Account not found" });
       }
@@ -13982,11 +13995,19 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/accounts/ledger/:id/transactions", async (req, res) => {
+  app2.get("/api/accounts/ledger/:id/transactions", requireAuth, async (req, res) => {
     try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
       const ledgerAccountId = parseInt(req.params.id);
       if (isNaN(ledgerAccountId)) {
         return res.status(400).json({ message: "Invalid ledger account ID" });
+      }
+      const [account] = await db.select({ id: ledgerAccounts.id }).from(ledgerAccounts).where(and3(eq3(ledgerAccounts.id, ledgerAccountId), eq3(ledgerAccounts.companyId, companyId))).limit(1);
+      if (!account) {
+        return res.status(404).json({ message: "Account not found" });
       }
       const { startDate, endDate } = req.query;
       const transactions = await storage.getVoucherEntriesByLedger(
@@ -13999,11 +14020,19 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/accounts/bank/:id/transactions", async (req, res) => {
+  app2.get("/api/accounts/bank/:id/transactions", requireAuth, async (req, res) => {
     try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
       const bankAccountId = parseInt(req.params.id);
       if (isNaN(bankAccountId)) {
         return res.status(400).json({ message: "Invalid bank account ID" });
+      }
+      const [account] = await db.select({ id: bankAccounts.id }).from(bankAccounts).where(and3(eq3(bankAccounts.id, bankAccountId), eq3(bankAccounts.companyId, companyId))).limit(1);
+      if (!account) {
+        return res.status(404).json({ message: "Bank account not found" });
       }
       const { startDate, endDate } = req.query;
       const transactions = await storage.getVoucherEntriesByBankAccount(
@@ -14016,11 +14045,19 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/accounts/fixed-asset/:id/transactions", async (req, res) => {
+  app2.get("/api/accounts/fixed-asset/:id/transactions", requireAuth, async (req, res) => {
     try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
       const fixedAssetId = parseInt(req.params.id);
       if (isNaN(fixedAssetId)) {
         return res.status(400).json({ message: "Invalid fixed asset ID" });
+      }
+      const [asset] = await db.select({ id: fixedAssets.id }).from(fixedAssets).where(and3(eq3(fixedAssets.id, fixedAssetId), eq3(fixedAssets.companyId, companyId))).limit(1);
+      if (!asset) {
+        return res.status(404).json({ message: "Fixed asset not found" });
       }
       const { startDate, endDate } = req.query;
       const transactions = await storage.getVoucherEntriesByFixedAsset(
@@ -17173,7 +17210,11 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           active: true
         });
       }
-      const location = await storage.getLocationById(locationId);
+      const sessionCompanyId = req.session.currentCompanyId;
+      if (!sessionCompanyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const [location] = await db.select().from(locations).where(and3(eq3(locations.id, locationId), eq3(locations.companyId, sessionCompanyId))).limit(1);
       if (!location) {
         return res.status(404).json({ message: "Location not found" });
       }
@@ -17183,6 +17224,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       for (const item of items) {
         const [inventoryRecord] = await db.select().from(inventory).where(
           and3(
+            eq3(inventory.companyId, sessionCompanyId),
             eq3(inventory.locationId, locationId),
             eq3(inventory.stockItemId, item.stockItemId)
           )
@@ -17769,9 +17811,17 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
     requireNonPOS,
     async (req, res) => {
       try {
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
         const voucherId = req.query.voucherId ? parseInt(req.query.voucherId) : null;
         if (!voucherId) {
           return res.status(400).json({ message: "voucherId query parameter is required" });
+        }
+        const [voucher] = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.id, voucherId), eq3(vouchers.companyId, companyId))).limit(1);
+        if (!voucher) {
+          return res.status(404).json({ message: "Voucher not found" });
         }
         const adjustment = await storage.getStockAdjustmentByVoucherId(voucherId);
         res.json(adjustment);
@@ -17805,11 +17855,15 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         if (!items || !Array.isArray(items) || items.length === 0) {
           return res.status(400).json({ message: "Items are required" });
         }
-        const location = await storage.getLocationById(locationId);
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const [location] = await db.select({ id: locations.id }).from(locations).where(and3(eq3(locations.id, locationId), eq3(locations.companyId, companyId))).limit(1);
         if (!location) {
           return res.status(404).json({ message: "Location not found" });
         }
-        const voucher = await storage.getVoucherById(voucherId);
+        const [voucher] = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.id, voucherId), eq3(vouchers.companyId, companyId))).limit(1);
         if (!voucher) {
           return res.status(404).json({ message: "Voucher not found" });
         }
@@ -17822,6 +17876,10 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           }
           if (!item.rate || parseFloat(item.rate) < 0) {
             return res.status(400).json({ message: "Rate must be non-negative for all items" });
+          }
+          const [stockItem] = await db.select({ id: stockItems.id }).from(stockItems).where(and3(eq3(stockItems.id, item.stockItemId), eq3(stockItems.companyId, companyId))).limit(1);
+          if (!stockItem) {
+            return res.status(404).json({ message: `Stock item with ID ${item.stockItemId} not found` });
           }
         }
         console.log("[Stock Adjustment] Creating adjustment:", {
@@ -17870,6 +17928,31 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           });
         }
         const { locationId, adjustmentType, notes, items } = parseResult.data;
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const [ownership] = await db.select({ adjId: stockAdjustmentVouchers.id }).from(stockAdjustmentVouchers).innerJoin(vouchers, eq3(stockAdjustmentVouchers.voucherId, vouchers.id)).where(and3(
+          eq3(stockAdjustmentVouchers.id, id),
+          eq3(vouchers.companyId, companyId)
+        )).limit(1);
+        if (!ownership) {
+          return res.status(404).json({ message: "Adjustment not found" });
+        }
+        const [newLoc] = await db.select({ id: locations.id }).from(locations).where(and3(eq3(locations.id, locationId), eq3(locations.companyId, companyId))).limit(1);
+        if (!newLoc) {
+          return res.status(404).json({ message: "Location not found" });
+        }
+        const requestedItemIds = items.map((i) => i.stockItemId);
+        if (requestedItemIds.length > 0) {
+          const ownedItems = await db.select({ id: stockItems.id }).from(stockItems).where(and3(
+            inArray2(stockItems.id, requestedItemIds),
+            eq3(stockItems.companyId, companyId)
+          ));
+          if (ownedItems.length !== new Set(requestedItemIds).size) {
+            return res.status(404).json({ message: "One or more stock items not found" });
+          }
+        }
         const itemsForStorage = items.map((item) => ({
           stockItemId: item.stockItemId,
           quantity: item.quantity.toFixed(3),
@@ -23931,27 +24014,42 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.post("/api/cleanup/orphaned-charges", async (req, res) => {
-    try {
-      const chargeVouchers = await db.select().from(vouchers).where(sql4`${vouchers.voucherNumber} LIKE 'CHARGE-%'`);
-      let deletedCount = 0;
-      for (const chargeVoucher of chargeVouchers) {
-        const containerNumber = chargeVoucher.voucherNumber.split("-")[1] + "-" + chargeVoucher.voucherNumber.split("-")[2];
-        const remainingPOs = await db.select().from(purchaseOrders).leftJoin(containers, eq3(purchaseOrders.containerId, containers.id)).where(eq3(containers.containerNumber, containerNumber)).limit(1);
-        if (remainingPOs.length === 0) {
-          await db.delete(voucherEntries).where(eq3(voucherEntries.voucherId, chargeVoucher.id));
-          await db.delete(vouchers).where(eq3(vouchers.id, chargeVoucher.id));
-          deletedCount++;
+  app2.post(
+    "/api/cleanup/orphaned-charges",
+    requireAuth,
+    requireRole("Owner"),
+    async (req, res) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
         }
+        const chargeVouchers = await db.select().from(vouchers).where(and3(
+          eq3(vouchers.companyId, companyId),
+          sql4`${vouchers.voucherNumber} LIKE 'CHARGE-%'`
+        ));
+        let deletedCount = 0;
+        for (const chargeVoucher of chargeVouchers) {
+          const containerNumber = chargeVoucher.voucherNumber.split("-")[1] + "-" + chargeVoucher.voucherNumber.split("-")[2];
+          const remainingPOs = await db.select().from(purchaseOrders).leftJoin(containers, eq3(purchaseOrders.containerId, containers.id)).where(and3(
+            eq3(containers.companyId, companyId),
+            eq3(containers.containerNumber, containerNumber)
+          )).limit(1);
+          if (remainingPOs.length === 0) {
+            await db.delete(voucherEntries).where(eq3(voucherEntries.voucherId, chargeVoucher.id));
+            await db.delete(vouchers).where(eq3(vouchers.id, chargeVoucher.id));
+            deletedCount++;
+          }
+        }
+        res.json({
+          message: `Cleaned up ${deletedCount} orphaned charge vouchers`,
+          deletedCount
+        });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
       }
-      res.json({
-        message: `Cleaned up ${deletedCount} orphaned charge vouchers`,
-        deletedCount
-      });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
     }
-  });
+  );
   app2.get("/api/deleted-items", requireAuth, requireNonPOS, async (req, res) => {
     try {
       const companyId = req.session.currentCompanyId;
@@ -25146,6 +25244,10 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
   });
   app2.get("/api/offloads/:id", requireAuth, async (req, res) => {
     try {
+      const sessionCompanyId = req.session.currentCompanyId;
+      if (!sessionCompanyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
       const offloadId = parseInt(req.params.id);
       if (isNaN(offloadId)) return res.status(400).json({ message: "Invalid offload ID" });
       const [offload] = await db.select({
@@ -25163,7 +25265,10 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         totalBales: containerOffloads.totalBales,
         additionalCostPerBale: containerOffloads.additionalCostPerBale,
         offloadedAt: containerOffloads.offloadedAt
-      }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).leftJoin(locations, eq3(containerOffloads.locationId, locations.id)).where(eq3(containerOffloads.id, offloadId)).execute();
+      }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).leftJoin(locations, eq3(containerOffloads.locationId, locations.id)).where(and3(
+        eq3(containerOffloads.id, offloadId),
+        eq3(containers.companyId, sessionCompanyId)
+      )).execute();
       if (!offload) return res.status(404).json({ message: "Offload not found" });
       const pos = await storage.getPurchaseOrdersByContainer(offload.containerId);
       const allItems = [];

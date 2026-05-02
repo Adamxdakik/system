@@ -84,6 +84,7 @@ import {
   assemblyHistory,
   loginHistory,
   userCompanyRoles,
+  fixedAssets,
 } from "@shared/schema";
 import { eq, and, inArray, sql, like, ne, desc, asc, or, isNotNull, lt, gte, lte, isNull } from "drizzle-orm";
 import { format } from "date-fns";
@@ -6394,9 +6395,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/fixed-assets", async (req, res) => {
+  app.post("/api/fixed-assets", requireAuth, requireNonPOS, async (req, res) => {
     try {
-      const parsed = insertFixedAssetSchema.parse(req.body);
+      // SECURITY: this endpoint previously had NO auth middleware AND blindly
+      // trusted whatever companyId the client put in the body. Anyone on the
+      // internet could create fixed assets in any company's books. Now we
+      // require auth and force the companyId from the active session so the
+      // payload's companyId field cannot be used for cross-tenant writes.
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const parsed = insertFixedAssetSchema.parse({ ...req.body, companyId });
 
       // Check for duplicate code
       const existing = await storage.getFixedAssetByCode(parsed.code);
@@ -11059,15 +11069,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get balance for a specific ledger account
-  app.get("/api/accounts/ledger/:id/balance", async (req, res) => {
+  app.get("/api/accounts/ledger/:id/balance", requireAuth, async (req, res) => {
     try {
-      const ledgerAccountId = parseInt(req.params.id);
+      // SECURITY (auth + IDOR): previously this endpoint was completely
+      // unauthenticated and only filtered by the path :id. Any unauthenticated
+      // user could enumerate ledger account balances across every tenant by
+      // incrementing the id. We now require auth AND verify the ledger
+      // account belongs to the caller's currently-selected company.
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
 
+      const ledgerAccountId = parseInt(req.params.id);
       if (isNaN(ledgerAccountId)) {
         return res.status(400).json({ message: "Invalid ledger account ID" });
       }
 
-      const account = await storage.getLedgerAccountById(ledgerAccountId);
+      const [account] = await db
+        .select()
+        .from(ledgerAccounts)
+        .where(and(eq(ledgerAccounts.id, ledgerAccountId), eq(ledgerAccounts.companyId, companyId)))
+        .limit(1);
       if (!account) {
         return res.status(404).json({ message: "Account not found" });
       }
@@ -11091,12 +11114,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get transactions for a specific ledger account with optional date filtering
-  app.get("/api/accounts/ledger/:id/transactions", async (req, res) => {
+  app.get("/api/accounts/ledger/:id/transactions", requireAuth, async (req, res) => {
     try {
-      const ledgerAccountId = parseInt(req.params.id);
+      // SECURITY (auth + IDOR): same fix as the balance endpoint above.
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
 
+      const ledgerAccountId = parseInt(req.params.id);
       if (isNaN(ledgerAccountId)) {
         return res.status(400).json({ message: "Invalid ledger account ID" });
+      }
+
+      // Verify ownership before exposing transaction history.
+      const [account] = await db
+        .select({ id: ledgerAccounts.id })
+        .from(ledgerAccounts)
+        .where(and(eq(ledgerAccounts.id, ledgerAccountId), eq(ledgerAccounts.companyId, companyId)))
+        .limit(1);
+      if (!account) {
+        return res.status(404).json({ message: "Account not found" });
       }
 
       const { startDate, endDate } = req.query;
@@ -11114,12 +11152,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get transactions for a specific bank account with optional date filtering
-  app.get("/api/accounts/bank/:id/transactions", async (req, res) => {
+  app.get("/api/accounts/bank/:id/transactions", requireAuth, async (req, res) => {
     try {
-      const bankAccountId = parseInt(req.params.id);
+      // SECURITY (auth + IDOR): same pattern — require auth AND verify the
+      // bank account belongs to the caller's company before returning any
+      // transaction history.
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
 
+      const bankAccountId = parseInt(req.params.id);
       if (isNaN(bankAccountId)) {
         return res.status(400).json({ message: "Invalid bank account ID" });
+      }
+
+      const [account] = await db
+        .select({ id: bankAccounts.id })
+        .from(bankAccounts)
+        .where(and(eq(bankAccounts.id, bankAccountId), eq(bankAccounts.companyId, companyId)))
+        .limit(1);
+      if (!account) {
+        return res.status(404).json({ message: "Bank account not found" });
       }
 
       const { startDate, endDate } = req.query;
@@ -11137,12 +11191,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get transactions for a specific fixed asset with optional date filtering
-  app.get("/api/accounts/fixed-asset/:id/transactions", async (req, res) => {
+  app.get("/api/accounts/fixed-asset/:id/transactions", requireAuth, async (req, res) => {
     try {
-      const fixedAssetId = parseInt(req.params.id);
+      // SECURITY (auth + IDOR): same pattern.
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
 
+      const fixedAssetId = parseInt(req.params.id);
       if (isNaN(fixedAssetId)) {
         return res.status(400).json({ message: "Invalid fixed asset ID" });
+      }
+
+      const [asset] = await db
+        .select({ id: fixedAssets.id })
+        .from(fixedAssets)
+        .where(and(eq(fixedAssets.id, fixedAssetId), eq(fixedAssets.companyId, companyId)))
+        .limit(1);
+      if (!asset) {
+        return res.status(404).json({ message: "Fixed asset not found" });
       }
 
       const { startDate, endDate } = req.query;
@@ -15835,8 +15903,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get location details
-      const location = await storage.getLocationById(locationId);
+      // SECURITY (cross-tenant IDOR): verify the locationId belongs to the
+      // caller's currently-selected company. Without this, a POS user who
+      // knows another tenant's locationId could post sales there (and the
+      // inventory writes below would also target that tenant's rows).
+      const sessionCompanyId = req.session.currentCompanyId;
+      if (!sessionCompanyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const [location] = await db
+        .select()
+        .from(locations)
+        .where(and(eq(locations.id, locationId), eq(locations.companyId, sessionCompanyId)))
+        .limit(1);
       if (!location) {
         return res.status(404).json({ message: "Location not found" });
       }
@@ -15856,11 +15935,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }> = [];
 
       for (const item of items) {
+        // SECURITY: scope inventory lookup by companyId so a sale cannot read
+        // (and below: decrement) inventory rows that belong to a different
+        // tenant which happens to share the same numeric stockItemId.
         const [inventoryRecord] = await db
           .select()
           .from(inventory)
           .where(
             and(
+              eq(inventory.companyId, sessionCompanyId),
               eq(inventory.locationId, locationId),
               eq(inventory.stockItemId, item.stockItemId),
             ),
@@ -16765,10 +16848,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireNonPOS,
     async (req, res) => {
       try {
+        // SECURITY (cross-tenant IDOR): the storage method is keyed by
+        // voucherId only, with no tenant filter. Without this gate any
+        // authenticated user could enumerate stock adjustments across every
+        // company by guessing voucherId values. Verify the parent voucher
+        // belongs to the caller's company before returning the adjustment.
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+
         const voucherId = req.query.voucherId ? parseInt(req.query.voucherId as string) : null;
-        
         if (!voucherId) {
           return res.status(400).json({ message: "voucherId query parameter is required" });
+        }
+
+        const [voucher] = await db
+          .select({ id: vouchers.id })
+          .from(vouchers)
+          .where(and(eq(vouchers.id, voucherId), eq(vouchers.companyId, companyId)))
+          .limit(1);
+        if (!voucher) {
+          return res.status(404).json({ message: "Voucher not found" });
         }
 
         const adjustment = await storage.getStockAdjustmentByVoucherId(voucherId);
@@ -16817,14 +16918,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Items are required" });
         }
 
-        // Validate that location exists
-        const location = await storage.getLocationById(locationId);
+        // SECURITY (cross-tenant IDOR): pin every ID in this request to the
+        // caller's currently-selected company before invoking storage. The
+        // storage method downstream is not tenant-aware, so the route is the
+        // single chokepoint. Without these guards an authenticated user from
+        // company A could adjust inventory for company B's locations + stock
+        // items just by knowing their numeric IDs.
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+
+        // Verify location belongs to caller's company.
+        const [location] = await db
+          .select({ id: locations.id })
+          .from(locations)
+          .where(and(eq(locations.id, locationId), eq(locations.companyId, companyId)))
+          .limit(1);
         if (!location) {
           return res.status(404).json({ message: "Location not found" });
         }
 
-        // Validate that voucher exists
-        const voucher = await storage.getVoucherById(voucherId);
+        // Verify voucher belongs to caller's company.
+        const [voucher] = await db
+          .select({ id: vouchers.id })
+          .from(vouchers)
+          .where(and(eq(vouchers.id, voucherId), eq(vouchers.companyId, companyId)))
+          .limit(1);
         if (!voucher) {
           return res.status(404).json({ message: "Voucher not found" });
         }
@@ -16846,6 +16966,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res
               .status(400)
               .json({ message: "Rate must be non-negative for all items" });
+          }
+
+          // SECURITY: each stockItem must also be tenant-owned.
+          const [stockItem] = await db
+            .select({ id: stockItems.id })
+            .from(stockItems)
+            .where(and(eq(stockItems.id, item.stockItemId), eq(stockItems.companyId, companyId)))
+            .limit(1);
+          if (!stockItem) {
+            return res
+              .status(404)
+              .json({ message: `Stock item with ID ${item.stockItemId} not found` });
           }
         }
 
@@ -16902,6 +17034,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const { locationId, adjustmentType, notes, items } = parseResult.data;
+
+        // SECURITY (cross-tenant IDOR): the storage method updates by raw
+        // adjustment ID with no tenant filter. Verify (1) the adjustment's
+        // parent voucher belongs to the caller's company, (2) the NEW
+        // locationId being moved to belongs to the same company, and (3)
+        // every stockItem referenced is also tenant-owned. Without these
+        // checks an authenticated user from company A could rewrite an
+        // adjustment in company B's books and reroute inventory mutations
+        // through it.
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const [ownership] = await db
+          .select({ adjId: stockAdjustmentVouchers.id })
+          .from(stockAdjustmentVouchers)
+          .innerJoin(vouchers, eq(stockAdjustmentVouchers.voucherId, vouchers.id))
+          .where(and(
+            eq(stockAdjustmentVouchers.id, id),
+            eq(vouchers.companyId, companyId),
+          ))
+          .limit(1);
+        if (!ownership) {
+          return res.status(404).json({ message: "Adjustment not found" });
+        }
+        const [newLoc] = await db
+          .select({ id: locations.id })
+          .from(locations)
+          .where(and(eq(locations.id, locationId), eq(locations.companyId, companyId)))
+          .limit(1);
+        if (!newLoc) {
+          return res.status(404).json({ message: "Location not found" });
+        }
+        const requestedItemIds = items.map(i => i.stockItemId);
+        if (requestedItemIds.length > 0) {
+          const ownedItems = await db
+            .select({ id: stockItems.id })
+            .from(stockItems)
+            .where(and(
+              inArray(stockItems.id, requestedItemIds),
+              eq(stockItems.companyId, companyId),
+            ));
+          if (ownedItems.length !== new Set(requestedItemIds).size) {
+            return res.status(404).json({ message: "One or more stock items not found" });
+          }
+        }
 
         // Convert numbers back to strings with fixed precision for storage layer
         const itemsForStorage = items.map(item => ({
@@ -25432,45 +25610,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cleanup endpoint to remove orphaned charge vouchers (no auth required for cleanup operations)
-  app.post("/api/cleanup/orphaned-charges", async (req, res) => {
-    try {
-      // Find all CHARGE vouchers
-      const chargeVouchers = await db
-        .select()
-        .from(vouchers)
-        .where(sql`${vouchers.voucherNumber} LIKE 'CHARGE-%'`);
-
-      let deletedCount = 0;
-
-      for (const chargeVoucher of chargeVouchers) {
-        // Extract container number from voucher number (format: CHARGE-CONT-XXXX-YYYY-...)
-        const containerNumber = chargeVoucher.voucherNumber.split('-')[1] + '-' + chargeVoucher.voucherNumber.split('-')[2];
-        
-        // Check if any POs exist for this container
-        const remainingPOs = await db
-          .select()
-          .from(purchaseOrders)
-          .leftJoin(containers, eq(purchaseOrders.containerId, containers.id))
-          .where(eq(containers.containerNumber, containerNumber))
-          .limit(1);
-
-        // If no POs for this container, delete the charge voucher
-        if (remainingPOs.length === 0) {
-          await db.delete(voucherEntries).where(eq(voucherEntries.voucherId, chargeVoucher.id));
-          await db.delete(vouchers).where(eq(vouchers.id, chargeVoucher.id));
-          deletedCount++;
+  // Cleanup endpoint to remove orphaned charge vouchers
+  app.post(
+    "/api/cleanup/orphaned-charges",
+    requireAuth,
+    requireRole("Owner"),
+    async (req, res) => {
+      try {
+        // SECURITY: this endpoint previously had NO auth and ran a global
+        // DELETE across vouchers + voucher_entries for EVERY tenant. Any
+        // unauthenticated caller could wipe charge vouchers from any
+        // company's books. Now restricted to the active session's company
+        // and Owner role only.
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
         }
-      }
 
-      res.json({
-        message: `Cleaned up ${deletedCount} orphaned charge vouchers`,
-        deletedCount,
-      });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+        // Find CHARGE vouchers ONLY within the caller's company.
+        const chargeVouchers = await db
+          .select()
+          .from(vouchers)
+          .where(and(
+            eq(vouchers.companyId, companyId),
+            sql`${vouchers.voucherNumber} LIKE 'CHARGE-%'`,
+          ));
+
+        let deletedCount = 0;
+
+        for (const chargeVoucher of chargeVouchers) {
+          // Extract container number from voucher number (format: CHARGE-CONT-XXXX-YYYY-...)
+          const containerNumber = chargeVoucher.voucherNumber.split('-')[1] + '-' + chargeVoucher.voucherNumber.split('-')[2];
+
+          // Check if any POs exist for this container WITHIN this company.
+          const remainingPOs = await db
+            .select()
+            .from(purchaseOrders)
+            .leftJoin(containers, eq(purchaseOrders.containerId, containers.id))
+            .where(and(
+              eq(containers.companyId, companyId),
+              eq(containers.containerNumber, containerNumber),
+            ))
+            .limit(1);
+
+          // If no POs for this container, delete the charge voucher
+          if (remainingPOs.length === 0) {
+            await db.delete(voucherEntries).where(eq(voucherEntries.voucherId, chargeVoucher.id));
+            await db.delete(vouchers).where(eq(vouchers.id, chargeVoucher.id));
+            deletedCount++;
+          }
+        }
+
+        res.json({
+          message: `Cleaned up ${deletedCount} orphaned charge vouchers`,
+          deletedCount,
+        });
+      } catch (error: any) {
+        res.status(500).json({ message: error.message });
+      }
+    },
+  );
 
   // ============================================================
   // DELETED ITEMS MANAGEMENT (Trash/Recycle Bin)
@@ -27213,6 +27412,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get offload detail for daybook view
   app.get("/api/offloads/:id", requireAuth, async (req, res) => {
     try {
+      // SECURITY (cross-tenant IDOR): containerOffloads has no companyId of
+      // its own, but the parent container does. Filter through the
+      // innerJoined containers.companyId so a caller cannot enumerate
+      // offloads from other tenants by guessing the offloadId.
+      const sessionCompanyId = req.session.currentCompanyId;
+      if (!sessionCompanyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+
       const offloadId = parseInt(req.params.id);
       if (isNaN(offloadId)) return res.status(400).json({ message: "Invalid offload ID" });
 
@@ -27236,7 +27444,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(containerOffloads)
         .innerJoin(containers, eq(containerOffloads.containerId, containers.id))
         .leftJoin(locations, eq(containerOffloads.locationId, locations.id))
-        .where(eq(containerOffloads.id, offloadId))
+        .where(and(
+          eq(containerOffloads.id, offloadId),
+          eq(containers.companyId, sessionCompanyId),
+        ))
         .execute();
 
       if (!offload) return res.status(404).json({ message: "Offload not found" });
