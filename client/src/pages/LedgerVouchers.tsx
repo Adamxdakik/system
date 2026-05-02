@@ -4,7 +4,6 @@ import { format, parseISO } from "date-fns";
 import {
   ArrowLeft,
   ChevronRight,
-  Loader2,
   FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

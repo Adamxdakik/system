@@ -1,6 +1,8 @@
 import { db } from "../server/db";
 import { users, companies, userCompanyRoles } from "../shared/schema";
 import crypto from "crypto";
+import { writeFileSync, chmodSync } from "fs";
+import { resolve } from "path";
 
 // Simple password hashing function (same as in server/auth.ts)
 function hashPassword(password: string): string {
@@ -41,13 +43,32 @@ async function createAdmin() {
     }).returning();
     console.log(`✅ Admin role assigned\n`);
 
+    // Write the initial credentials to a local, gitignored file with 0600
+    // permissions instead of printing the secret to stdout (avoids leaking
+    // the password into terminal scrollback / CI logs / shared screens).
+    const credPath = resolve(process.cwd(), ".admin-credentials.txt");
+    const credBody = [
+      "MotoTrack — initial admin credentials",
+      "Generated: " + new Date().toISOString(),
+      "",
+      "Username: " + username,
+      "Secret:   " + password,
+      "",
+      "IMPORTANT: change this on first login, then delete this file.",
+      "",
+    ].join("\n");
+    // Set 0600 at write time to avoid a brief world-readable window on POSIX.
+    writeFileSync(credPath, credBody, { encoding: "utf8", mode: 0o600 });
+    // Belt-and-suspenders: re-chmod in case umask or pre-existing file relaxed it.
+    try { chmodSync(credPath, 0o600); } catch { /* non-POSIX FS */ }
+
     console.log('════════════════════════════════════════');
     console.log('🎉 Setup Complete!');
     console.log('════════════════════════════════════════');
-    console.log('\nYou can now login with:');
-    console.log(`  Username: ${username}`);
-    console.log(`  Password: ${password}`);
-    console.log('\n⚠️  IMPORTANT: Change this password after first login!\n');
+    console.log('\nLogin username: ' + username);
+    console.log('Initial credential written (chmod 0600) to:');
+    console.log('  ' + credPath);
+    console.log('\n⚠️  IMPORTANT: change it on first login, then delete that file.\n');
     console.log('Your company details:');
     console.log(`  Company: ${company.name}`);
     console.log(`  Code: ${company.code}`);

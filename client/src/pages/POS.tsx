@@ -1,15 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation as useLocationContext } from "@/contexts/LocationContext";
-import { useLocation, Redirect, Link } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
-import { MapPin, Wallet, Printer, AlertCircle, Search, Check, Trash2, User, Upload } from "lucide-react";
+import { MapPin, Wallet, Printer, AlertCircle, Search, Check, Trash2, Upload } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useReactToPrint } from "react-to-print";

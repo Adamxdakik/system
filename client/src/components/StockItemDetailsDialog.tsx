@@ -21,7 +21,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Edit, Save, X, Package, Plus, Trash2, ExternalLink, BarChart3 } from "lucide-react";
-import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import type { Location as LocationType } from "@shared/schema";
 

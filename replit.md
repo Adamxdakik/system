@@ -53,14 +53,18 @@ Preferred communication style: Simple, everyday language.
 - **Centralized error handling**: New `server/lib/asyncHandler.ts` wrapper forwards rejected promises to Express's error pipeline. The error middleware in `server/index.ts` now handles `ZodError` → `400` with structured field errors, logs `5xx` responses, and includes optional `code` field on the JSON payload.
 - **Zod input validation**: New `server/lib/validate.ts` middleware (`validate(schema, source)`) validates `body`/`query`/`params` and forwards `ZodError`s to the error middleware. Now applied to:
   - `POST /api/auth/login` (`loginSchema`)
-  - `POST /api/suppliers` (`insertSupplierSchema`)
-  - `PATCH /api/suppliers/:id` (`insertSupplierSchema.partial()`)
+  - `POST /api/suppliers` (`insertSupplierSchema`) + `PATCH /api/suppliers/:id` (`.partial()`)
   - `POST /api/employees` (`insertEmployeeSchema`)
-  All validated routes now also use `asyncHandler` and surface duplicate-code errors with `code: "DUPLICATE_CODE"` for clients that want to handle them programmatically.
-- **xlsx → exceljs migration**: The unmaintained `xlsx` package (prototype-pollution + ReDoS CVEs, no fix) and `xlsx-js-style` follow-on have been swapped for an exceljs-backed shim exposed through `server/lib/excel.ts` and `client/src/lib/excelHelper.ts`. The shims preserve the SheetJS namespace API (`XLSX.utils.book_new`, `json_to_sheet`, `aoa_to_sheet`, `book_append_sheet`, `sheet_to_json`, `XLSX.read`, `XLSX.write`, `XLSX.writeFile`); only difference is that read/write are async (call sites now `await`).
-  - Note: `xlsx-js-style` is retained for `ERPRunPayroll.tsx` styled exports.
-- **Tooling**: Added `eslint.config.js` (flat config: typescript-eslint + react-hooks + react-refresh), `.prettierrc.json`, `vitest.config.ts`. New scripts: `lint`, `lint:fix`, `format`, `format:check`, `test`, `test:watch`. Vitest tests cover `asyncHandler`, `validate()` (success / ZodError forwarding / query+params sources), and excel-shim parity (json_to_sheet/aoa_to_sheet round-trip + multi-sheet preservation). All hand-fixable ESLint errors resolved (39 → 0); 301 unused-var warnings remain (deferred, cosmetic).
-- **Dependency cleanup**: Removed unused `passport`, `passport-local`, `memorystore`, `tw-animate-css` and the deprecated `xlsx` package itself.
+  - `POST /api/customers` (`insertCustomerSchema.omit({companyId:true})` — companyId injected from session post-validate) + `PUT /api/customers/:id` (`.partial()`)
+  - `POST /api/stock-items` (`insertStockItemSchema.omit({companyId:true})`)
+  All validated routes now also use `asyncHandler` and surface structured error codes (`DUPLICATE_CODE`, `NO_COMPANY_SELECTED`, `WRONG_COMPANY`) for clients that want to handle them programmatically.
+- **xlsx → exceljs migration (complete)**: The unmaintained `xlsx` package (prototype-pollution + ReDoS CVEs, no fix) and the `xlsx-js-style` follow-on have **both** been replaced. Most call sites use the SheetJS-shaped shims in `server/lib/excel.ts` and `client/src/lib/excelHelper.ts` (`XLSX.utils.book_new`, `json_to_sheet`, `aoa_to_sheet`, `book_append_sheet`, `sheet_to_json`, `XLSX.read`, `XLSX.write`, `XLSX.writeFile`); only difference is that read/write are async (call sites now `await`). `client/src/components/ERPRunPayroll.tsx` `exportRunExcel()` was rewritten to use the native `exceljs` API directly (column widths, merged title row, bold header, currency `numFmt`, blob download). Result: zero `xlsx`-family packages remain in the dependency tree.
+- **Tooling**: Added `eslint.config.js` (flat config: typescript-eslint + react-hooks + react-refresh + `eslint-plugin-unused-imports` for autofixable dead imports), `.prettierrc.json`, `vitest.config.ts`. New scripts: `lint`, `lint:fix`, `format`, `format:check`, `test`, `test:watch`. Vitest tests cover `asyncHandler`, `validate()` (success / ZodError forwarding / query+params sources), and excel-shim parity (json_to_sheet/aoa_to_sheet round-trip + multi-sheet preservation). 0 ESLint errors. Unused-var warnings: 301 → 178 after `eslint --fix` (-41%); remaining are mostly unused arguments + intentionally-unused destructure targets that need human review.
+- **Dependency cleanup**: Removed unused `passport`, `passport-local`, `memorystore`, `tw-animate-css`, the deprecated `xlsx` package itself, and `xlsx-js-style` (replaced by exceljs in payroll export).
+- **Security scan baseline (post-hardening)**:
+  - Dependency audit: 0 critical / 0 high / 4 moderate (dev-only: esbuild GHSA-67mh-4wv8-2f99 in transitive vite/drizzle-kit chains; uuid 8.x via exceljs). All require dev server to be reachable to exploit.
+  - SAST: 0 critical / 0 high (7 medium, 2 low).
+  - HoundDog: 0 critical / 0 high (2 medium, 4 low). The previous CRITICAL "Password sent to Standard Output" in `scripts/create-admin.ts` was fixed by writing the initial admin credential to a chmod-0600, gitignored file (`.admin-credentials.txt`) instead of stdout.
 - **House cleaning**: Deleted `_trash/` (~112MB).
 
 ## External Dependencies

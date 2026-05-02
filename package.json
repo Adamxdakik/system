@@ -86,7 +86,6 @@
     "vaul": "^1.1.2",
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
-    "xlsx-js-style": "^1.2.0",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0"
   },
@@ -111,6 +110,7 @@
     "eslint": "^9.13.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "postcss": "^8.4.47",
     "prettier": "^3.3.3",
     "tailwindcss": "^3.4.17",

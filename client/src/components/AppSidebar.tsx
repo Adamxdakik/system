@@ -5,17 +5,13 @@ import {
   Package,
   Settings,
   Container,
-  BarChart3,
   FolderPlus,
   MapPin,
   Wallet,
   Users,
-  Receipt,
   Book,
   UserCheck,
   Search,
-  PieChart,
-  Ship,
   Grid3X3,
   Wrench,
   FileSpreadsheet,
@@ -50,7 +46,7 @@ import {
 import { useLocation } from "wouter";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
-import { ROUTE_TO_FEATURE, type FeatureKey } from "@shared/schema";
+import { ROUTE_TO_FEATURE } from "@shared/schema";
 import mototrackLogo from "@assets/generated_images/mototrack_motorcycle_business_logo.png";
 
 const menuItems = [

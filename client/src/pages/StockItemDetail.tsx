@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Package, TrendingUp, MapPin } from "lucide-react";
-import { format, parseISO } from "date-fns";
 import { useDateFormat } from "@/contexts/DateFormatContext";
 import { Skeleton } from "@/components/ui/skeleton";
 

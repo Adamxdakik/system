@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { db } from "./db";
 import * as schema from "@shared/schema";
-import { eq, and, desc, sql, lt, gt, isNull, asc } from "drizzle-orm";
+import { eq, and, desc, sql, isNull } from "drizzle-orm";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 

@@ -4,7 +4,6 @@ import { ArrowLeft, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
 import { useDateFormat } from "@/contexts/DateFormatContext";
 import { useState, useEffect, useRef } from "react";
 

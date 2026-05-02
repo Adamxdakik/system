@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import {
@@ -72,12 +72,11 @@ import { useAppMode } from "@/contexts/AppModeContext";
 import { getApiRequest } from "@/lib/factoryApi";
 import type { Employee } from "@shared/schema";
 import { insertEmployeeSchema } from "@shared/schema";
-import { DollarSign, TrendingDown, TrendingUp, Users, AlertCircle, CalendarIcon, Plus, Pencil, Trash2, ChevronDown, ExternalLink, User, HardHat, Banknote, ArrowDownCircle, ArrowUpCircle, Gift, Receipt, PlayCircle, X, Loader2, RefreshCw, Percent, Package, Save, ChevronRight } from "lucide-react";
+import { DollarSign, TrendingDown, TrendingUp, Users, AlertCircle, CalendarIcon, Plus, Pencil, Trash2, ChevronDown, User, HardHat, Banknote, ArrowDownCircle, ArrowUpCircle, Gift, Receipt, PlayCircle, X, Loader2, RefreshCw, Percent, Package, Save, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useDateFormat } from "@/contexts/DateFormatContext";
 import { cn } from "@/lib/utils";
-import { formatNumber } from "@/lib/formatNumber";
 import { ERPWorkerDetail } from "@/components/ERPWorkerDetail";
 import ERPRunPayroll from "@/components/ERPRunPayroll";
 import ERPAdvancesTab from "@/components/ERPAdvancesTab";

@@ -10,11 +10,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Save, Bike, Package, X, Undo2, Check, ChevronsUpDown } from "lucide-react";
-import { format } from "date-fns";
+import { Plus, Save, Bike, Package, X, Check, ChevronsUpDown } from "lucide-react";
 import type { Location, StockItem, AssemblyInventory } from "@shared/schema";
 
 const STAGES = ["Full CKD", "Welded", "Painted", "Final Product"] as const;

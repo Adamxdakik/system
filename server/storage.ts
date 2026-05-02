@@ -35,14 +35,11 @@ import type {
   ImportLog,
   InsertImportLog,
   ContainerOffload,
-  InsertContainerOffload,
   Voucher,
   InsertVoucher,
   VoucherEntry,
   InsertVoucherEntry,
-  StockTransferVoucher,
   StockTransferItem,
-  StockAdjustmentVoucher,
   StockAdjustmentItem,
 } from "@shared/schema";
 

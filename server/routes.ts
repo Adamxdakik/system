@@ -31,8 +31,6 @@ import {
   insertFixedAssetSchema,
   insertContainerSchema,
   offloadRequestSchema,
-  insertStockTransferVoucherSchema,
-  insertStockAdjustmentVoucherSchema,
   updateStockTransferSchema,
   updateStockAdjustmentSchema,
   insertUserSchema,
@@ -48,7 +46,6 @@ import {
   insertInterCompanyTransferSchema,
   insertSalaryAdvanceSchema,
   insertSalaryAdvanceDeductionSchema,
-  insertDraftPosSaleSchema,
   InsertDraftPosSale,
   inventory,
   stockItems,
@@ -68,20 +65,16 @@ import {
   containerOffloads,
   containerCharges,
   suppliers,
-  fixedAssets,
   ledgerAccounts,
   bankAccounts,
   customers,
   containerSales,
-  interCompanyTransfers,
   salaryAdvances,
   salaryAdvanceDeductions,
   stockItemLocationPrices,
   userPreferences,
-  insertUserPreferencesSchema,
   stockItemCodeAliases,
   users,
-  chatMessages,
   motoAssemblies,
   motoAssemblyParts,
   insertMotoAssemblySchema,
@@ -91,7 +84,7 @@ import {
   assemblyHistory,
   loginHistory,
 } from "@shared/schema";
-import { eq, and, inArray, sql, like, ne, desc, asc, or, isNotNull, lt, gte, lte, not, isNull } from "drizzle-orm";
+import { eq, and, inArray, sql, like, ne, desc, asc, or, isNotNull, lt, gte, lte, isNull } from "drizzle-orm";
 import { format } from "date-fns";
 
 // Configure multer with file size limit (10MB) to prevent memory exhaustion
@@ -3838,19 +3831,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.post("/api/customers", requireAuth, requireNonPOS, async (req, res) => {
-    try {
+  app.post(
+    "/api/customers",
+    requireAuth,
+    requireNonPOS,
+    validate(insertCustomerSchema.omit({ companyId: true })),
+    asyncHandler(async (req, res) => {
       if (!req.session.currentCompanyId) {
-        return res.status(400).json({ message: "No company selected" });
+        return res.status(400).json({
+          message: "No company selected",
+          code: "NO_COMPANY_SELECTED",
+        });
       }
 
-      // Inject companyId before schema validation
-      const dataWithCompany = {
-        ...req.body,
+      const parsed = {
+        ...(req.body as Omit<z.infer<typeof insertCustomerSchema>, "companyId">),
         companyId: req.session.currentCompanyId,
       };
-
-      const parsed = insertCustomerSchema.parse(dataWithCompany);
 
       // Auto-generate customer code
       let code = "CUST001";
@@ -3908,66 +3905,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.status(201).json(customer);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+    }),
+  );
 
   app.put(
     "/api/customers/:id",
     requireAuth,
     requireNonPOS,
-    async (req, res) => {
-      try {
-        const customerId = parseInt(req.params.id);
-        if (isNaN(customerId)) {
-          return res.status(400).json({ message: "Invalid customer ID" });
-        }
-
-        if (!req.session.currentCompanyId) {
-          return res.status(400).json({ message: "No company selected" });
-        }
-
-        const existingCustomer = await storage.getCustomerById(customerId);
-        if (!existingCustomer) {
-          return res.status(404).json({ message: "Customer not found" });
-        }
-
-        // Verify customer belongs to current company
-        if (existingCustomer.companyId !== req.session.currentCompanyId) {
-          return res
-            .status(403)
-            .json({
-              message: "Access denied: Customer belongs to a different company",
-            });
-        }
-
-        // If code is being changed, check for duplicates
-        if (req.body.code && req.body.code !== existingCustomer.code) {
-          const duplicate = await storage.getCustomerByCode(
-            req.body.code,
-            req.session.currentCompanyId,
-          );
-          if (duplicate) {
-            return res
-              .status(400)
-              .json({
-                message: "Customer code already exists in this company",
-              });
-          }
-        }
-
-        const parsed = insertCustomerSchema.partial().parse(req.body);
-        const updatedCustomer = await storage.updateCustomer(
-          customerId,
-          parsed,
-        );
-
-        res.json(updatedCustomer);
-      } catch (error: any) {
-        res.status(400).json({ message: error.message });
+    validate(insertCustomerSchema.partial()),
+    asyncHandler(async (req, res) => {
+      const customerId = parseInt(req.params.id);
+      if (isNaN(customerId)) {
+        return res.status(400).json({ message: "Invalid customer ID" });
       }
-    },
+
+      if (!req.session.currentCompanyId) {
+        return res.status(400).json({
+          message: "No company selected",
+          code: "NO_COMPANY_SELECTED",
+        });
+      }
+
+      const existingCustomer = await storage.getCustomerById(customerId);
+      if (!existingCustomer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Verify customer belongs to current company
+      if (existingCustomer.companyId !== req.session.currentCompanyId) {
+        return res.status(403).json({
+          message: "Access denied: Customer belongs to a different company",
+          code: "WRONG_COMPANY",
+        });
+      }
+
+      // NOTE: `code` is currently omitted from insertCustomerSchema (it's
+      // auto-generated on create), so Zod strips it from req.body and this
+      // guard is effectively a no-op today. It's intentionally retained as
+      // forward-compat: if/when the schema is extended to allow editing
+      // customer codes, this duplicate-check fires automatically without
+      // additional changes to this handler.
+      const parsed = req.body as Partial<z.infer<typeof insertCustomerSchema>> & { code?: string };
+      if (parsed.code && parsed.code !== existingCustomer.code) {
+        const duplicate = await storage.getCustomerByCode(
+          parsed.code,
+          req.session.currentCompanyId,
+        );
+        if (duplicate) {
+          return res.status(400).json({
+            message: "Customer code already exists in this company",
+            code: "DUPLICATE_CODE",
+          });
+        }
+      }
+
+      const updatedCustomer = await storage.updateCustomer(
+        customerId,
+        parsed,
+      );
+
+      res.json(updatedCustomer);
+    }),
   );
 
   app.delete(
@@ -5260,19 +5258,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/stock-items", requireAuth, requireNonPOS, async (req, res) => {
-    try {
+  app.post(
+    "/api/stock-items",
+    requireAuth,
+    requireNonPOS,
+    validate(insertStockItemSchema.omit({ companyId: true })),
+    asyncHandler(async (req, res) => {
       if (!req.session.currentCompanyId) {
-        return res.status(400).json({ message: "No company selected" });
+        return res.status(400).json({
+          message: "No company selected",
+          code: "NO_COMPANY_SELECTED",
+        });
       }
 
-      // Inject companyId before schema validation
-      const dataWithCompany = {
-        ...req.body,
+      const parsed = {
+        ...(req.body as Omit<z.infer<typeof insertStockItemSchema>, "companyId">),
         companyId: req.session.currentCompanyId,
       };
-
-      const parsed = insertStockItemSchema.parse(dataWithCompany);
 
       // Check for duplicate code within the same company
       const existing = await storage.getStockItemByCode(
@@ -5280,9 +5282,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.currentCompanyId,
       );
       if (existing) {
-        return res
-          .status(400)
-          .json({ message: "Stock item code already exists in this company" });
+        return res.status(400).json({
+          message: "Stock item code already exists in this company",
+          code: "DUPLICATE_CODE",
+        });
       }
 
       // Calculate opening value if qty and rate provided
@@ -5294,10 +5297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const item = await storage.createStockItem(parsed);
       res.status(201).json(item);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
-    }
-  });
+    }),
+  );
 
   // Bulk delete stock items
   app.post("/api/stock-items/bulk-delete", requireAuth, requireNonPOS, async (req, res) => {

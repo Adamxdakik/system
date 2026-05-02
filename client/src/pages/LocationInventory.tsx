@@ -2,21 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@/contexts/LocationContext";
 import { useLocation as useRoute } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Package, MapPin, Layers, ShoppingCart, List, Printer, Upload, Download, Trash2, Search, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ChevronRight, MapPin, Layers, ShoppingCart, List, Printer, Trash2, Search } from "lucide-react";
 import { LocationCreateDialog } from "@/components/LocationCreateDialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useReactToPrint } from "react-to-print";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,11 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import * as XLSX from "@/lib/excelHelper";
 
 interface Location {
   id: number;

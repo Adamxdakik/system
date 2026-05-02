@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Calendar,
   ChevronRight,
-  Loader2,
   TrendingUp,
   TrendingDown,
 } from "lucide-react";

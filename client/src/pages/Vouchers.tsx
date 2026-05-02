@@ -12,13 +12,8 @@ import { useReactToPrint } from "react-to-print";
 import { useLocation } from "wouter";
 import { useCompany } from "@/contexts/CompanyContext";
 import { VoucherEditDialog } from "@/components/VoucherEditDialog";
-import { AccountAutocomplete } from "@/components/AccountAutocomplete";
 import type { CombinedAccount } from "@/components/AccountAutocomplete";
-import { LocationAutocomplete } from "@/components/LocationAutocomplete";
-import { StockItemAutocomplete } from "@/components/StockItemAutocomplete";
-import AccountSidebar, { Account } from "@/components/AccountSidebar";
-import { useVoucherEntries } from "@/hooks/useVoucherEntries";
-import { VoucherEntriesTable } from "@/components/vouchers/VoucherEntriesTable";
+import { Account } from "@/components/AccountSidebar";
 import { PaymentVoucherTab } from "@/components/vouchers/PaymentVoucherTab";
 import { ReceiptVoucherTab } from "@/components/vouchers/ReceiptVoucherTab";
 import { CreditNoteTab } from "@/components/vouchers/CreditNoteTab";
@@ -68,18 +63,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useAppMode } from "@/contexts/AppModeContext";
 import { getApiRequest } from "@/lib/factoryApi";
-import { CalendarIcon, Printer, Plus, Check, ChevronsUpDown, Pencil, Upload, FileSpreadsheet, Download, CheckCircle, XCircle, X, Search, ChevronDown, FileDown, Loader2, ArrowDownCircle, ArrowUpCircle, BookOpen, ArrowLeftRight, SlidersHorizontal, FileText, LayoutGrid, ClipboardList } from "lucide-react";
+import { Plus, Check, ChevronsUpDown, Upload, FileSpreadsheet, Download, CheckCircle, XCircle, X, Search, ChevronDown, FileDown, Loader2, ArrowDownCircle, ArrowLeftRight, SlidersHorizontal, LayoutGrid } from "lucide-react";
 import { utils, writeFile } from "@/lib/excelHelper";
 import {
   DropdownMenu,

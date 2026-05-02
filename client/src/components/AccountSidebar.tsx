@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, KeyboardEvent } from "react";
+import { useEffect, useRef, KeyboardEvent } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Plus, Loader2 } from "lucide-react";
-import { formatNumber } from "@/lib/formatNumber";
 import { useCurrencyContext } from "@/contexts/CurrencyContext";
 
 export interface Account {

@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Users, Search, ChevronDown, ChevronRight, DollarSign, Loader2,
-  PlayCircle, Banknote, FileSpreadsheet, FileText, Printer,
+  PlayCircle, Banknote, FileSpreadsheet, Printer,
   CheckCircle2, History, ArrowLeft, Trash2, ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -434,31 +433,72 @@ export default function ERPRunPayroll() {
     if (w) { w.document.write(html); w.document.close(); }
   }
 
-  // ── Excel export for a run ─────────────────────────────────────────────────
+  // ── Excel export for a run (exceljs-backed; was xlsx-js-style) ────────────
   async function exportRunExcel(run: PayrollRun) {
-    const XLSXStyle = await import("xlsx-js-style");
-    const XLSX = XLSXStyle.default || XLSXStyle;
+    const ExcelJS = (await import("exceljs")).default;
     const items = run.items || [];
-    const wsData: any[][] = [
-      ["Payroll Report", "", "", "", run.date],
-      [],
-      ["Group", "Worker", "Base Salary", "Deduction", "Net Pay"],
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Payroll");
+
+    ws.columns = [
+      { width: 18 },
+      { width: 28 },
+      { width: 16 },
+      { width: 16 },
+      { width: 16 },
     ];
+
+    // Title row (merged across cols A:D, date in E)
+    const titleRow = ws.addRow(["Payroll Report", "", "", "", run.date]);
+    ws.mergeCells(titleRow.number, 1, titleRow.number, 4);
+    titleRow.font = { bold: true, size: 14 };
+    titleRow.alignment = { vertical: "middle", horizontal: "left" };
+
+    ws.addRow([]); // spacer
+
+    // Header row
+    const headerRow = ws.addRow(["Group", "Worker", "Base Salary", "Deduction", "Net Pay"]);
+    headerRow.font = { bold: true };
+    headerRow.alignment = { horizontal: "center" };
+
+    // Data rows
     for (const it of items) {
-      wsData.push([it.groupName || "Ungrouped", it.employeeName, parseFloat(it.baseSalary), parseFloat(it.deduction), parseFloat(it.netPay)]);
+      ws.addRow([
+        it.groupName || "Ungrouped",
+        it.employeeName,
+        parseFloat(it.baseSalary),
+        parseFloat(it.deduction),
+        parseFloat(it.netPay),
+      ]);
     }
+
     const totalBase = items.reduce((s, i) => s + parseFloat(i.baseSalary), 0);
     const totalDed = items.reduce((s, i) => s + parseFloat(i.deduction), 0);
     const totalNet = items.reduce((s, i) => s + parseFloat(i.netPay), 0);
-    wsData.push(["", "GRAND TOTAL", totalBase, totalDed, totalNet]);
+    const totalRow = ws.addRow(["", "GRAND TOTAL", totalBase, totalDed, totalNet]);
+    totalRow.font = { bold: true };
 
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws["!cols"] = [{ wch: 18 }, { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
-    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
-    ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: wsData.length - 1, c: 4 } });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Payroll");
-    XLSX.writeFile(wb, `payroll-run-${run.id}-${run.date}.xlsx`);
+    // Number format for currency columns (C, D, E) on data + total rows
+    for (let r = 4; r <= totalRow.number; r++) {
+      for (const col of [3, 4, 5]) {
+        ws.getCell(r, col).numFmt = "#,##0.00";
+      }
+    }
+
+    // Trigger download
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `payroll-run-${run.id}-${run.date}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   const isLoading = empLoading || groupsLoading;

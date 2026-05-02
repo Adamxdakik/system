@@ -37,7 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState, useEffect, useRef } from "react";
 import { format, parseISO } from "date-fns";
-import { X, Plus, Package, ArrowRight, Eye, Trash2, Upload, Search, AlertCircle, FileDown, ChevronDown } from "lucide-react";
+import { X, Plus, Package, ArrowRight, Eye, Upload, Search, AlertCircle, FileDown, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
