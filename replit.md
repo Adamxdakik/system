@@ -67,6 +67,20 @@ Preferred communication style: Simple, everyday language.
   - HoundDog: 0 critical / 0 high (2 medium, 4 low). The previous CRITICAL "Password sent to Standard Output" in `scripts/create-admin.ts` was fixed by writing the initial admin credential to a chmod-0600, gitignored file (`.admin-credentials.txt`) instead of stdout.
 - **House cleaning**: Deleted `_trash/` (~112MB).
 
+### Bale-trading dead-code cleanup (Pass A + B)
+- **Pass A — deleted** all unused bale-trading infrastructure inherited from the prior project:
+  - Routes: `/api/bales`, `/api/bale-products`, `/api/production-bales`, `/api/bale-transfers`, `/api/bales-by-location` (3 blocks ≈ 820 lines from `server/routes.ts`).
+  - Storage methods + interface entries for bales/bale-products/bale-transfers/production-bales (~490 lines from `server/storage.ts`), including the `deleteCompany` cleanup blocks that referenced those tables.
+  - Schema tables: `bales`, `baleProducts`, `baleSequences`, `productionBales`, `baleTransfers`, `baleTransferItems` (~130 lines from `shared/schema.ts`). `mixBatches` / `mixBatchSources` retained.
+  - Files removed: `client/src/lib/factoryApi.ts`, `client/src/contexts/AppModeContext.tsx`. `<AppModeProvider>` wrapper removed from `App.tsx`.
+  - In `Accounts.tsx` / `Payroll.tsx` / `Vouchers.tsx`: replaced `useAppMode()` + `getApiRequest(appMode)` with hardcoded `appMode: string = "erp"` + direct `apiRequest`. Existing `appMode === "factory"` conditionals left as harmless dead branches.
+- **Pass B — renamed** live UI labels from "Bale" → "Moto" / "Unit":
+  - `OffloadDetail.tsx`: "Total Bales" → "Total Motos", "Additional Cost / Bale" → "Additional Cost / Moto".
+  - `StockTransferOrder.tsx`: "X bales" → "X units", "Total Bales:" → "Total Units:".
+  - `Payroll.tsx` bonus tab: "Bales / Units" → "Motos / Units", "Bales Rate ($/unit)" → "Motos Rate ($/unit)", "Bale Bonus Rates by Location" → "Moto Bonus Rates by Location", "Bales % by Location" → "Motos % by Location".
+- **Out of scope** (not done — schema-level renames would require a migration): db columns `employees.balesBonusRate`, `container_offloads.totalBales`, `container_offloads.additionalCostPerBale`. Internal-only, never user-visible.
+- **Pre-existing 404s flagged for follow-up**: `Payroll.tsx` calls `/api/employees/:id/bale-rates` and `/api/employees/:id/bale-pct-rates` — those endpoints do not exist in `server/routes.ts` (they were never present this session). Per-location bale-bonus-rate save will silently 404. User to decide whether to add the backend or remove the UI.
+
 ### Simplified accounting UX (no debit/credit jargon)
 - **New endpoints** (in `server/routes.ts`): `POST /api/accounts/transfer` writes a balanced 2-line `Payment` voucher (Debit destination, Credit source). `POST /api/accounts/adjust` writes a balanced 2-line `Journal` voucher with the opposite leg routed to a per-tenant `MANUAL_ADJ` "Manual Adjustments" suspense ledger (Equity, lazily auto-created via `getOrCreateManualAdjustmentsAccount`, race-safe via 23505 retry). Both endpoints `requireAuth` + `requireNonPOS`, are tenant-scoped (`verifyAccountOwnership`), wrap voucher header + both legs in a single `db.transaction(...)` for atomic balance integrity, and keep employee `currentBalance` cache in sync.
 - **Daybook hides system entries by default**: `GET /api/vouchers` accepts `?includeSystem=false` which filters out auto-generated voucher types (Sales, Purchase, Stock Transfer, Closing, Production, Consumption). `client/src/pages/Daybook.tsx` ships this filter on by default with a "Show automatic entries" toggle (`<Switch>`). Trial Balance / Balance Sheet / Income Statement still consume the full voucher set so they keep balancing.

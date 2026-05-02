@@ -69,9 +69,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
-import { useAppMode } from "@/contexts/AppModeContext";
-import { getApiRequest } from "@/lib/factoryApi";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Check, ChevronsUpDown, Upload, FileSpreadsheet, Download, CheckCircle, XCircle, X, Search, ChevronDown, FileDown, Loader2, ArrowDownCircle, ArrowLeftRight, SlidersHorizontal, LayoutGrid } from "lucide-react";
 import { utils, writeFile } from "@/lib/excelHelper";
 import {
@@ -579,8 +577,8 @@ function parseDateLocal(dateStr: string): Date {
 export default function Vouchers({ posUser }: VouchersProps = {}) {
   const { toast } = useToast();
   const { selectedCompany } = useCompany();
-  const appMode = useAppMode();
-  const modeApiRequest = getApiRequest(appMode);
+  const appMode: string = "erp";
+  const modeApiRequest = apiRequest;
   const isFactoryCompany = selectedCompany?.companyType === "factory";
   const { data: myErpPages } = useQuery<{ hiddenErpCostFields?: string[] }>({ queryKey: ["/api/my-erp-pages"] });
   const hideVoucherAmounts = (myErpPages?.hiddenErpCostFields ?? []).includes("voucher_amounts");

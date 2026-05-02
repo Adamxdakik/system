@@ -1065,7 +1065,7 @@ export default function StockTransferOrder() {
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{orderItems.length} items</Badge>
                   <Badge variant="default" className="font-mono">
-                    {formatNumber(totalBales, 0)} bales
+                    {formatNumber(totalBales, 0)} units
                   </Badge>
                 </div>
               </div>
@@ -1107,7 +1107,7 @@ export default function StockTransferOrder() {
                   
                   <div className="pt-2 border-t space-y-3">
                     <div className="flex justify-between text-sm font-medium">
-                      <span>Total Bales:</span>
+                      <span>Total Units:</span>
                       <span className="font-mono text-lg">{formatNumber(totalBales, 0)}</span>
                     </div>
                     

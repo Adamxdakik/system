@@ -13,7 +13,6 @@ import { LocationProvider } from "@/contexts/LocationContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { DateFormatProvider } from "@/contexts/DateFormatContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
-import { AppModeProvider } from "@/contexts/AppModeContext";
 import { CursorNavProvider } from "@/contexts/CursorNavContext";
 import { Button } from "@/components/ui/button";
 import { LogOut, ShoppingCart, MapPin, BookOpen, Package } from "lucide-react";
@@ -354,8 +353,7 @@ export default function App() {
             <LocationProvider>
               <DateFormatProvider>
                 <CurrencyProvider>
-                  <AppModeProvider mode="erp">
-                    <CursorNavProvider>
+                  <CursorNavProvider>
                       <Suspense fallback={<PageLoader />}>
                         <Switch>
                           <Route path="/login" component={Login} />
@@ -366,8 +364,7 @@ export default function App() {
                         </Switch>
                       </Suspense>
                       <Toaster />
-                    </CursorNavProvider>
-                  </AppModeProvider>
+                  </CursorNavProvider>
                 </CurrencyProvider>
               </DateFormatProvider>
             </LocationProvider>

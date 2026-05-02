@@ -67,9 +67,7 @@ import { useCurrencyContext } from "@/contexts/CurrencyContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { queryClient } from "@/lib/queryClient";
-import { useAppMode } from "@/contexts/AppModeContext";
-import { getApiRequest } from "@/lib/factoryApi";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Employee } from "@shared/schema";
 import { insertEmployeeSchema } from "@shared/schema";
 import { DollarSign, TrendingDown, TrendingUp, Users, AlertCircle, CalendarIcon, Plus, Pencil, Trash2, ChevronDown, User, HardHat, Banknote, ArrowDownCircle, ArrowUpCircle, Gift, Receipt, PlayCircle, X, Loader2, RefreshCw, Percent, Package, Save, ChevronRight } from "lucide-react";
@@ -191,8 +189,8 @@ function getThisMonthRange() {
 }
 
 export default function Payroll() {
-  const appMode = useAppMode();
-  const modeApiRequest = getApiRequest(appMode);
+  const appMode: string = "erp";
+  const modeApiRequest = apiRequest;
   const { formatDisplayDate } = useDateFormat();
   const { formatAmount } = useCurrencyContext();
   const cleanTxnDesc = (text: string): string => {
@@ -2815,7 +2813,7 @@ export default function Payroll() {
               </TabsTrigger>
               <TabsTrigger value="bales" className="flex-1" data-testid="tab-bales-bonus">
                 <Package className="h-4 w-4 mr-1" />
-                Bales / Units
+                Motos / Units
               </TabsTrigger>
             </TabsList>
 
@@ -4218,7 +4216,7 @@ export default function Payroll() {
                     name="balesBonusRate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Bales Rate ($/unit)</FormLabel>
+                        <FormLabel>Motos Rate ($/unit)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -4726,7 +4724,7 @@ export default function Payroll() {
                     <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setBulkBonusAutoPctLocationId("")}>Clear</Button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">Per-unit bale rates use their configured locations. Sales % bonus uses the location selected above (leave blank to skip % calculation).</p>
+                <p className="text-xs text-muted-foreground">Per-unit moto rates use their configured locations. Sales % bonus uses the location selected above (leave blank to skip % calculation).</p>
               </div>
 
               <div className="border rounded-md flex-1 overflow-hidden">
@@ -5272,7 +5270,7 @@ export default function Payroll() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm">Bale Bonus Rates by Location</Label>
+                    <Label className="text-sm">Moto Bonus Rates by Location</Label>
                     <Button
                       type="button"
                       size="sm"
@@ -5350,7 +5348,7 @@ export default function Payroll() {
               {/* Bales % by Location */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between flex-wrap gap-1">
-                  <Label className="text-sm">Bales % by Location</Label>
+                  <Label className="text-sm">Motos % by Location</Label>
                   <Button
                     type="button"
                     size="sm"

@@ -179,11 +179,11 @@ export default function OffloadDetail() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
             <div>
-              <p className="text-sm text-muted-foreground">Total Bales</p>
+              <p className="text-sm text-muted-foreground">Total Motos</p>
               <p className="font-mono font-medium">{parseFloat(offload.totalBales || "0").toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Additional Cost / Bale</p>
+              <p className="text-sm text-muted-foreground">Additional Cost / Moto</p>
               <p className="font-mono font-medium">{fmt(offload.additionalCostPerBale)}</p>
             </div>
             <div>
