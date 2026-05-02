@@ -89,6 +89,9 @@ import { useCurrencyContext } from "@/contexts/CurrencyContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PeriodFilter, PeriodFilterValue, getDefaultPeriodValue } from "@/components/ui/period-filter";
 import { useEscapeBack } from "@/hooks/use-escape-back";
+import { QuickTransferDialog } from "@/components/QuickTransferDialog";
+import { QuickAdjustDialog } from "@/components/QuickAdjustDialog";
+import { ArrowLeftRight, SlidersHorizontal } from "lucide-react";
 
 interface Account {
   id: string;
@@ -153,6 +156,8 @@ export default function Accounts() {
   const urlYear = urlParams.get("year") || "";
 
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
 
   useEscapeBack(selectedAccount ? () => setSelectedAccount(null) : null);
 
@@ -1285,15 +1290,44 @@ export default function Accounts() {
             View all accounts, balances, and transaction history
           </p>
         </div>
-        <Button
-          data-testid="button-create-account"
-          disabled={!selectedCompany}
-          onClick={() => navigate(appMode === "factory" ? "/factory/create" : "/create")}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Create
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            data-testid="button-quick-adjust"
+            disabled={!selectedCompany}
+            onClick={() => setAdjustDialogOpen(true)}
+          >
+            <SlidersHorizontal className="w-4 h-4 mr-2" />
+            Adjust Balance
+          </Button>
+          <Button
+            variant="outline"
+            data-testid="button-quick-transfer"
+            disabled={!selectedCompany}
+            onClick={() => setTransferDialogOpen(true)}
+          >
+            <ArrowLeftRight className="w-4 h-4 mr-2" />
+            Pay / Receive
+          </Button>
+          <Button
+            data-testid="button-create-account"
+            disabled={!selectedCompany}
+            onClick={() => navigate(appMode === "factory" ? "/factory/create" : "/create")}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create
+          </Button>
+        </div>
       </div>
+
+      <QuickTransferDialog
+        open={transferDialogOpen}
+        onOpenChange={setTransferDialogOpen}
+      />
+      <QuickAdjustDialog
+        open={adjustDialogOpen}
+        onOpenChange={setAdjustDialogOpen}
+      />
 
       {/* Bank Account Edit Dialog */}
       <Dialog

@@ -67,6 +67,12 @@ Preferred communication style: Simple, everyday language.
   - HoundDog: 0 critical / 0 high (2 medium, 4 low). The previous CRITICAL "Password sent to Standard Output" in `scripts/create-admin.ts` was fixed by writing the initial admin credential to a chmod-0600, gitignored file (`.admin-credentials.txt`) instead of stdout.
 - **House cleaning**: Deleted `_trash/` (~112MB).
 
+### Simplified accounting UX (no debit/credit jargon)
+- **New endpoints** (in `server/routes.ts`): `POST /api/accounts/transfer` writes a balanced 2-line `Payment` voucher (Debit destination, Credit source). `POST /api/accounts/adjust` writes a balanced 2-line `Journal` voucher with the opposite leg routed to a per-tenant `MANUAL_ADJ` "Manual Adjustments" suspense ledger (Equity, lazily auto-created via `getOrCreateManualAdjustmentsAccount`, race-safe via 23505 retry). Both endpoints `requireAuth` + `requireNonPOS`, are tenant-scoped (`verifyAccountOwnership`), wrap voucher header + both legs in a single `db.transaction(...)` for atomic balance integrity, and keep employee `currentBalance` cache in sync.
+- **Daybook hides system entries by default**: `GET /api/vouchers` accepts `?includeSystem=false` which filters out auto-generated voucher types (Sales, Purchase, Stock Transfer, Closing, Production, Consumption). `client/src/pages/Daybook.tsx` ships this filter on by default with a "Show automatic entries" toggle (`<Switch>`). Trial Balance / Balance Sheet / Income Statement still consume the full voucher set so they keep balancing.
+- **Tenant-isolation fix (drive-by)**: `storage.getVouchersByDateRange` now accepts an optional `companyId` and the `/api/vouchers` route always passes the session companyId — closes a cross-tenant date-range data leak that pre-existed before this work.
+- **Frontend**: `client/src/components/QuickTransferDialog.tsx` (From/To/Amount/Date/Notes, grouped Select with plain "have/owe" labels) and `QuickAdjustDialog.tsx` (Account/Increase|Decrease/Amount/Date/Reason). Wired into `client/src/pages/Accounts.tsx` header as `Adjust Balance` + `Pay / Receive` buttons next to the existing Create button. Customers (no `customer_id` column on `voucher_entries`) and factory accounts are intentionally excluded from the quick dialogs; existing flows handle them.
+
 ## External Dependencies
 
 - **UI Libraries**: Radix UI, Tailwind CSS, shadcn/ui, `cmdk`.

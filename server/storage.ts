@@ -213,7 +213,7 @@ export interface IStorage {
   // Vouchers and Journal Entries
   getAllVouchers(companyId: number): Promise<Voucher[]>;
   getVoucherById(id: number): Promise<Voucher | undefined>;
-  getVouchersByDateRange(startDate: string, endDate: string): Promise<any[]>;
+  getVouchersByDateRange(startDate: string, endDate: string, companyId?: number): Promise<any[]>;
   getVoucherEntriesByLedger(ledgerAccountId: number, startDate?: string, endDate?: string): Promise<any[]>;
   getVoucherEntriesByBankAccount(bankAccountId: number, startDate?: string, endDate?: string): Promise<any[]>;
   getVoucherEntriesByFixedAsset(fixedAssetId: number, startDate?: string, endDate?: string): Promise<any[]>;
@@ -2405,16 +2405,18 @@ export class DbStorage implements IStorage {
     return voucher;
   }
 
-  async getVouchersByDateRange(startDate: string, endDate: string): Promise<any[]> {
+  async getVouchersByDateRange(startDate: string, endDate: string, companyId?: number): Promise<any[]> {
+    const conditions = [
+      sql`${schema.vouchers.voucherDate} >= ${startDate}`,
+      sql`${schema.vouchers.voucherDate} <= ${endDate}`,
+    ];
+    if (companyId !== undefined) {
+      conditions.push(eq(schema.vouchers.companyId, companyId));
+    }
     const vouchers = await db
       .select()
       .from(schema.vouchers)
-      .where(
-        and(
-          sql`${schema.vouchers.voucherDate} >= ${startDate}`,
-          sql`${schema.vouchers.voucherDate} <= ${endDate}`
-        )
-      );
+      .where(and(...conditions));
     return vouchers;
   }
 

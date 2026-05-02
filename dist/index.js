@@ -3264,13 +3264,15 @@ var DbStorage = class {
     const [voucher] = await db.select().from(vouchers).where(eq(vouchers.id, id));
     return voucher;
   }
-  async getVouchersByDateRange(startDate, endDate) {
-    const vouchers2 = await db.select().from(vouchers).where(
-      and(
-        sql2`${vouchers.voucherDate} >= ${startDate}`,
-        sql2`${vouchers.voucherDate} <= ${endDate}`
-      )
-    );
+  async getVouchersByDateRange(startDate, endDate, companyId) {
+    const conditions = [
+      sql2`${vouchers.voucherDate} >= ${startDate}`,
+      sql2`${vouchers.voucherDate} <= ${endDate}`
+    ];
+    if (companyId !== void 0) {
+      conditions.push(eq(vouchers.companyId, companyId));
+    }
+    const vouchers2 = await db.select().from(vouchers).where(and(...conditions));
     return vouchers2;
   }
   async getVoucherEntriesByLedger(ledgerAccountId, startDate, endDate) {
@@ -14121,13 +14123,14 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       if (!req.session.currentCompanyId) {
         return res.status(400).json({ message: "No company selected" });
       }
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, includeSystem } = req.query;
       const isPOS = req.session.currentRole?.startsWith("POS");
       let vouchers2;
       if (startDate && endDate) {
         vouchers2 = await storage.getVouchersByDateRange(
           startDate,
-          endDate
+          endDate,
+          req.session.currentCompanyId
         );
       } else {
         vouchers2 = await storage.getAllVouchers(req.session.currentCompanyId);
@@ -14140,7 +14143,19 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         }
         return v;
       }) : vouchers2;
-      res.json(sanitizedVouchers);
+      const SYSTEM_VOUCHER_TYPES = /* @__PURE__ */ new Set([
+        "Sales",
+        "Purchase",
+        "Stock Transfer",
+        "StockTransfer",
+        "Closing",
+        "Production",
+        "Consumption"
+      ]);
+      const finalVouchers = includeSystem === "false" ? sanitizedVouchers.filter(
+        (v) => !SYSTEM_VOUCHER_TYPES.has(v.voucherType)
+      ) : sanitizedVouchers;
+      res.json(finalVouchers);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -14323,6 +14338,246 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         const result = { voucher: createdVoucher, entries: createdEntries };
         res.json(result);
       } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  function naturalSideFor(kind, accountType) {
+    if (kind === "bank" || kind === "fixedAsset") return "Dr";
+    if (kind === "supplier" || kind === "employee") return "Cr";
+    const debitNatural = /* @__PURE__ */ new Set([
+      "Asset",
+      "Bank",
+      "Cash",
+      "Expense",
+      "Direct Expense",
+      "Indirect Expense",
+      "Government Taxes",
+      "Fixed Asset",
+      "Accounts Receivable",
+      "Duty Agent",
+      "Transporter Agent"
+    ]);
+    return debitNatural.has(accountType ?? "") ? "Dr" : "Cr";
+  }
+  async function getOrCreateManualAdjustmentsAccount(companyId) {
+    const existing = await storage.getLedgerAccountByCode(
+      "MANUAL_ADJ",
+      companyId
+    );
+    if (existing) return existing;
+    try {
+      const [created] = await db.insert(ledgerAccounts).values({
+        companyId,
+        code: "MANUAL_ADJ",
+        name: "Manual Adjustments",
+        accountType: "Equity",
+        openingBalance: "0",
+        openingBalanceSide: "Cr",
+        active: true
+      }).returning();
+      return created;
+    } catch (err) {
+      if (err?.code === "23505" || /unique/i.test(err?.message ?? "")) {
+        const row = await storage.getLedgerAccountByCode("MANUAL_ADJ", companyId);
+        if (row) return row;
+      }
+      throw err;
+    }
+  }
+  function entryFieldsFor(kind, accountId) {
+    return {
+      ledgerAccountId: kind === "ledger" ? accountId : null,
+      bankAccountId: kind === "bank" ? accountId : null,
+      fixedAssetId: kind === "fixedAsset" ? accountId : null,
+      supplierId: kind === "supplier" ? accountId : null,
+      employeeId: kind === "employee" ? accountId : null
+    };
+  }
+  async function verifyAccountOwnership(kind, accountId, companyId) {
+    if (kind === "ledger") {
+      const [row2] = await db.select({ id: ledgerAccounts.id, accountType: ledgerAccounts.accountType }).from(ledgerAccounts).where(and3(eq3(ledgerAccounts.id, accountId), eq3(ledgerAccounts.companyId, companyId))).limit(1);
+      return row2 ? { ok: true, accountType: row2.accountType } : { ok: false, message: "Ledger account not found" };
+    }
+    if (kind === "bank") {
+      const [row2] = await db.select({ id: bankAccounts.id }).from(bankAccounts).where(and3(eq3(bankAccounts.id, accountId), eq3(bankAccounts.companyId, companyId))).limit(1);
+      return row2 ? { ok: true } : { ok: false, message: "Bank account not found" };
+    }
+    if (kind === "fixedAsset") {
+      const [row2] = await db.select({ id: fixedAssets.id }).from(fixedAssets).where(and3(eq3(fixedAssets.id, accountId), eq3(fixedAssets.companyId, companyId))).limit(1);
+      return row2 ? { ok: true } : { ok: false, message: "Fixed asset not found" };
+    }
+    if (kind === "supplier") {
+      const [row2] = await db.select({ id: suppliers.id }).from(suppliers).where(eq3(suppliers.id, accountId)).limit(1);
+      return row2 ? { ok: true } : { ok: false, message: "Supplier not found" };
+    }
+    const [row] = await db.select({ id: employees.id }).from(employees).where(and3(eq3(employees.id, accountId), eq3(employees.companyId, companyId))).limit(1);
+    return row ? { ok: true } : { ok: false, message: "Employee not found" };
+  }
+  app2.post(
+    "/api/accounts/transfer",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) return res.status(400).json({ message: "No company selected" });
+        const { fromKind, fromId, toKind, toId, amount, date: date2, notes } = req.body ?? {};
+        const validKinds = ["ledger", "bank", "fixedAsset", "supplier", "employee"];
+        if (!validKinds.includes(fromKind) || !validKinds.includes(toKind)) {
+          return res.status(400).json({ message: "Invalid account type" });
+        }
+        const fromIdNum = Number(fromId);
+        const toIdNum = Number(toId);
+        const amt = Number(amount);
+        if (!Number.isFinite(fromIdNum) || !Number.isFinite(toIdNum)) {
+          return res.status(400).json({ message: "Invalid account ID" });
+        }
+        if (!Number.isFinite(amt) || amt <= 0) {
+          return res.status(400).json({ message: "Amount must be positive" });
+        }
+        if (!date2 || typeof date2 !== "string") {
+          return res.status(400).json({ message: "Date is required" });
+        }
+        if (fromKind === toKind && fromIdNum === toIdNum) {
+          return res.status(400).json({ message: "Source and destination must differ" });
+        }
+        const fromCheck = await verifyAccountOwnership(fromKind, fromIdNum, companyId);
+        if (!fromCheck.ok) return res.status(404).json({ message: `From: ${fromCheck.message}` });
+        const toCheck = await verifyAccountOwnership(toKind, toIdNum, companyId);
+        if (!toCheck.ok) return res.status(404).json({ message: `To: ${toCheck.message}` });
+        const voucherNumber = `TRF-${Date.now()}`;
+        const amountStr = amt.toFixed(2);
+        const createdVoucher = await db.transaction(async (tx) => {
+          const [v] = await tx.insert(vouchers).values({
+            companyId,
+            voucherNumber,
+            voucherType: "Payment",
+            voucherDate: date2,
+            description: notes || "Transfer between accounts",
+            totalAmount: amountStr,
+            optional: false
+          }).returning();
+          await tx.insert(voucherEntries).values({
+            voucherId: v.id,
+            ...entryFieldsFor(toKind, toIdNum),
+            debitAmount: amountStr,
+            creditAmount: "0",
+            narration: notes || null
+          });
+          await tx.insert(voucherEntries).values({
+            voucherId: v.id,
+            ...entryFieldsFor(fromKind, fromIdNum),
+            debitAmount: "0",
+            creditAmount: amountStr,
+            narration: notes || null
+          });
+          return v;
+        });
+        if (fromKind === "employee" || toKind === "employee") {
+          await syncEmployeeBalancesFromEntries(
+            [
+              {
+                ledgerAccountId: null,
+                employeeId: toKind === "employee" ? toIdNum : null,
+                debitAmount: toKind === "employee" ? amountStr : "0",
+                creditAmount: "0"
+              },
+              {
+                ledgerAccountId: null,
+                employeeId: fromKind === "employee" ? fromIdNum : null,
+                debitAmount: "0",
+                creditAmount: fromKind === "employee" ? amountStr : "0"
+              }
+            ],
+            companyId
+          );
+        }
+        res.json({ voucher: createdVoucher });
+      } catch (error) {
+        console.error("[accounts/transfer] error:", error.message);
+        res.status(500).json({ message: error.message });
+      }
+    }
+  );
+  app2.post(
+    "/api/accounts/adjust",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) return res.status(400).json({ message: "No company selected" });
+        const { kind, accountId, direction, amount, date: date2, notes } = req.body ?? {};
+        const validKinds = ["ledger", "bank", "fixedAsset", "supplier", "employee"];
+        if (!validKinds.includes(kind)) {
+          return res.status(400).json({ message: "Invalid account type" });
+        }
+        if (direction !== "increase" && direction !== "decrease") {
+          return res.status(400).json({ message: "Direction must be increase or decrease" });
+        }
+        const idNum = Number(accountId);
+        const amt = Number(amount);
+        if (!Number.isFinite(idNum)) return res.status(400).json({ message: "Invalid account ID" });
+        if (!Number.isFinite(amt) || amt <= 0) {
+          return res.status(400).json({ message: "Amount must be positive" });
+        }
+        if (!date2 || typeof date2 !== "string") {
+          return res.status(400).json({ message: "Date is required" });
+        }
+        const ownership = await verifyAccountOwnership(kind, idNum, companyId);
+        if (!ownership.ok) return res.status(404).json({ message: ownership.message });
+        const naturalSide = naturalSideFor(kind, ownership.accountType);
+        const sideForTarget = direction === "increase" ? naturalSide : naturalSide === "Dr" ? "Cr" : "Dr";
+        const adjAccount = await getOrCreateManualAdjustmentsAccount(companyId);
+        const voucherNumber = `ADJ-${Date.now()}`;
+        const amountStr = amt.toFixed(2);
+        const createdVoucher = await db.transaction(async (tx) => {
+          const [v] = await tx.insert(vouchers).values({
+            companyId,
+            voucherNumber,
+            voucherType: "Journal",
+            voucherDate: date2,
+            description: notes || "Account adjustment",
+            totalAmount: amountStr,
+            optional: false
+          }).returning();
+          await tx.insert(voucherEntries).values({
+            voucherId: v.id,
+            ...entryFieldsFor(kind, idNum),
+            debitAmount: sideForTarget === "Dr" ? amountStr : "0",
+            creditAmount: sideForTarget === "Cr" ? amountStr : "0",
+            narration: notes || null
+          });
+          await tx.insert(voucherEntries).values({
+            voucherId: v.id,
+            ledgerAccountId: adjAccount.id,
+            bankAccountId: null,
+            fixedAssetId: null,
+            supplierId: null,
+            employeeId: null,
+            debitAmount: sideForTarget === "Cr" ? amountStr : "0",
+            creditAmount: sideForTarget === "Dr" ? amountStr : "0",
+            narration: notes || "Manual adjustment offset"
+          });
+          return v;
+        });
+        if (kind === "employee") {
+          await syncEmployeeBalancesFromEntries(
+            [
+              {
+                ledgerAccountId: null,
+                employeeId: idNum,
+                debitAmount: sideForTarget === "Dr" ? amountStr : "0",
+                creditAmount: sideForTarget === "Cr" ? amountStr : "0"
+              }
+            ],
+            companyId
+          );
+        }
+        res.json({ voucher: createdVoucher });
+      } catch (error) {
+        console.error("[accounts/adjust] error:", error.message);
         res.status(500).json({ message: error.message });
       }
     }
