@@ -3379,14 +3379,18 @@ export class DbStorage implements IStorage {
 
         // Only update inventory if voucher is NOT optional
         if (!isOptional) {
-          // Get current inventory at THIS ITEM's source location
+          // CONCURRENCY: SELECT ... FOR UPDATE pins the source row for the
+          // duration of this transaction so two concurrent transfers from the
+          // same (location, stock_item) cannot both pass the negative-stock
+          // guard and double-spend (lost update / overdraw to negative).
           const [sourceInventory] = await tx
             .select()
             .from(schema.inventory)
             .where(and(
               eq(schema.inventory.locationId, item.sourceLocationId),
               eq(schema.inventory.stockItemId, item.stockItemId)
-            ));
+            ))
+            .for('update');
 
           if (sourceInventory) {
             // Decrease quantity at this item's source location
@@ -3395,6 +3399,12 @@ export class DbStorage implements IStorage {
             const currentRate = parseFloat(sourceInventory.averageRate);
             
             const newQty = currentQty - quantity;
+            // Guard against negative inventory — without this, applying a
+            // larger transfer than the source holds would silently corrupt
+            // stock to a negative balance instead of failing the transaction.
+            if (newQty < 0) {
+              throw new Error(`Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`);
+            }
             const newValue = newQty > 0 ? newQty * currentRate : 0;
             
             // Get location's companyId
@@ -3417,16 +3427,27 @@ export class DbStorage implements IStorage {
                 lastUpdated: new Date(),
               })
               .where(eq(schema.inventory.id, sourceInventory.id));
+          } else {
+            // FAIL-CLOSED: if there's no inventory row at the source at all,
+            // the requested stock cannot exist there. Without this branch the
+            // method silently SKIPS the source decrement and STILL credits
+            // destination inventory below — effectively minting stock from
+            // thin air (a data-integrity break, since totals across the
+            // company would no longer reconcile).
+            throw new Error(`Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`);
           }
 
-          // Get current inventory at destination location
+          // CONCURRENCY: lock destination row too so concurrent transfers
+          // into the same bucket compose their weighted-average rate without
+          // clobbering each other's read-modify-write cycle.
           const [destInventory] = await tx
             .select()
             .from(schema.inventory)
             .where(and(
               eq(schema.inventory.locationId, destinationLocationId),
               eq(schema.inventory.stockItemId, item.stockItemId)
-            ));
+            ))
+            .for('update');
 
           if (destInventory) {
             // Increase quantity at destination location using weighted average
@@ -3832,24 +3853,33 @@ export class DbStorage implements IStorage {
 
         // Only update inventory if voucher is NOT optional
         if (!isOptional) {
-          // Get current inventory at THIS ITEM's source location
+          // CONCURRENCY: lock the source inventory row for the duration of
+          // this transaction so concurrent updates to the same (location,
+          // stock_item) cannot both pass the stock check and overdraw.
           const [sourceInventory] = await tx
           .select()
           .from(schema.inventory)
           .where(and(
             eq(schema.inventory.locationId, item.sourceLocationId),
             eq(schema.inventory.stockItemId, item.stockItemId)
-          ));
+          ))
+          .for('update');
 
         if (sourceInventory) {
           // Decrease quantity at this item's source location
           const currentQty = parseFloat(sourceInventory.quantity);
           const currentValue = parseFloat(sourceInventory.totalValue);
           const currentRate = parseFloat(sourceInventory.averageRate);
-          
+
           const newQty = currentQty - quantity;
+          // Guard against negative inventory — without this, applying a
+          // larger transfer than the source holds would silently corrupt
+          // stock to a negative balance instead of failing the transaction.
+          if (newQty < 0) {
+            throw new Error(`Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`);
+          }
           const newValue = newQty > 0 ? newQty * currentRate : 0;
-          
+
           await tx
             .update(schema.inventory)
             .set({
@@ -5018,36 +5048,39 @@ export class DbStorage implements IStorage {
   }
 
   async updateBaleTransferItem(id: number, companyId: number, updates: Partial<schema.InsertBaleTransferItem>): Promise<schema.BaleTransferItem | undefined> {
-    // Verify item's parent transfer belongs to the caller's tenant.
-    const [owned] = await db
-      .select({ id: schema.baleTransferItems.id })
-      .from(schema.baleTransferItems)
-      .innerJoin(schema.baleTransfers, eq(schema.baleTransferItems.transferId, schema.baleTransfers.id))
-      .where(and(
-        eq(schema.baleTransferItems.id, id),
-        eq(schema.baleTransfers.companyId, companyId),
-      ));
-    if (!owned) return undefined;
+    // Tenant scoping is enforced AT THE DML statement (not via a separate
+    // precheck) by constraining transferId to the set of bale_transfers rows
+    // owned by the caller's company. This eliminates the precheck-then-
+    // unscoped-write race where another connection could re-parent the row
+    // between the two statements.
     const { transferId: _ignored, ...safe } = updates as any;
+    const ownedTransferIds = db
+      .select({ id: schema.baleTransfers.id })
+      .from(schema.baleTransfers)
+      .where(eq(schema.baleTransfers.companyId, companyId));
     const [updated] = await db
       .update(schema.baleTransferItems)
       .set(safe)
-      .where(eq(schema.baleTransferItems.id, id))
+      .where(and(
+        eq(schema.baleTransferItems.id, id),
+        inArray(schema.baleTransferItems.transferId, ownedTransferIds),
+      ))
       .returning();
     return updated;
   }
 
   async deleteBaleTransferItem(id: number, companyId: number): Promise<void> {
-    const [owned] = await db
-      .select({ id: schema.baleTransferItems.id })
-      .from(schema.baleTransferItems)
-      .innerJoin(schema.baleTransfers, eq(schema.baleTransferItems.transferId, schema.baleTransfers.id))
+    // Same single-statement scoped DML pattern as updateBaleTransferItem.
+    const ownedTransferIds = db
+      .select({ id: schema.baleTransfers.id })
+      .from(schema.baleTransfers)
+      .where(eq(schema.baleTransfers.companyId, companyId));
+    await db
+      .delete(schema.baleTransferItems)
       .where(and(
         eq(schema.baleTransferItems.id, id),
-        eq(schema.baleTransfers.companyId, companyId),
+        inArray(schema.baleTransferItems.transferId, ownedTransferIds),
       ));
-    if (!owned) return;
-    await db.delete(schema.baleTransferItems).where(eq(schema.baleTransferItems.id, id));
   }
 
   async getProductionBalesByLocation(companyId: number, locationId: number): Promise<schema.ProductionBale[]> {

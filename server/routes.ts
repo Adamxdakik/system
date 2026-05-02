@@ -83,6 +83,7 @@ import {
   assemblyTasks,
   assemblyHistory,
   loginHistory,
+  userCompanyRoles,
 } from "@shared/schema";
 import { eq, and, inArray, sql, like, ne, desc, asc, or, isNotNull, lt, gte, lte, isNull } from "drizzle-orm";
 import { format } from "date-fns";
@@ -16521,18 +16522,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Items are required" });
         }
 
-        // Validate that destination location exists
-        const destLocation = await storage.getLocationById(
-          destinationLocationId,
-        );
+        // SECURITY (cross-tenant IDOR): pin every ID in this request to the
+        // caller's currently-selected company before invoking storage. The
+        // storage layer downstream is not tenant-aware for stock-transfer
+        // creation, so the route is the single chokepoint for ownership
+        // checks. Without these guards an authenticated user from one
+        // company could move stock between locations belonging to other
+        // companies just by knowing their numeric IDs.
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+
+        // Verify destination belongs to caller's company.
+        const [destLocation] = await db
+          .select({ id: locations.id })
+          .from(locations)
+          .where(and(eq(locations.id, destinationLocationId), eq(locations.companyId, companyId)))
+          .limit(1);
         if (!destLocation) {
           return res
             .status(404)
             .json({ message: "Destination location not found" });
         }
 
-        // Validate that voucher exists
-        const voucher = await storage.getVoucherById(voucherId);
+        // Verify the voucher belongs to caller's company.
+        const [voucher] = await db
+          .select({ id: vouchers.id })
+          .from(vouchers)
+          .where(and(eq(vouchers.id, voucherId), eq(vouchers.companyId, companyId)))
+          .limit(1);
         if (!voucher) {
           return res.status(404).json({ message: "Voucher not found" });
         }
@@ -16570,15 +16589,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
           }
 
-          // Validate that source location exists
-          const sourceLocation = await storage.getLocationById(
-            item.sourceLocationId,
-          );
+          // SECURITY: source location must also belong to caller's company.
+          const [sourceLocation] = await db
+            .select({ id: locations.id })
+            .from(locations)
+            .where(and(eq(locations.id, item.sourceLocationId), eq(locations.companyId, companyId)))
+            .limit(1);
           if (!sourceLocation) {
             return res
               .status(404)
               .json({
                 message: `Source location with ID ${item.sourceLocationId} not found`,
+              });
+          }
+
+          // SECURITY: each stockItem must also be tenant-owned, otherwise
+          // a caller could move arbitrary global-id items into their own
+          // location.
+          const [stockItem] = await db
+            .select({ id: stockItems.id })
+            .from(stockItems)
+            .where(and(eq(stockItems.id, item.stockItemId), eq(stockItems.companyId, companyId)))
+            .limit(1);
+          if (!stockItem) {
+            return res
+              .status(404)
+              .json({
+                message: `Stock item with ID ${item.stockItemId} not found`,
               });
           }
         }
@@ -23129,173 +23166,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/stock-transfers", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) return res.status(400).json({ message: "No company selected" });
-      
-      const { sourceLocationId, destinationLocationId, items, notes } = req.body;
-      
-      if (!sourceLocationId || !destinationLocationId || !items || items.length === 0) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      
-      // Create Stock Transfer voucher
-      const voucherNumber = `ST-${Date.now()}`;
-      const [voucher] = await db
-        .insert(vouchers)
-        .values({
-          companyId,
-          voucherType: "Stock Transfer",
-          voucherNumber,
-          voucherDate: format(new Date(), "yyyy-MM-dd"),
-          description: notes || null,
-          totalAmount: "0",
-        })
-        .returning();
-      
-      // Create Stock Transfer voucher link
-      let totalAmount = 0;
-      const transferItems = [];
-      
-      for (const item of items) {
-        const quantity = parseFloat(item.quantity);
-        
-        // Always lookup rate from source inventory - never trust client-provided rates
-        const [sourceInvForRate] = await db
-          .select({ averageRate: inventory.averageRate })
-          .from(inventory)
-          .where(
-            and(
-              eq(inventory.locationId, sourceLocationId),
-              eq(inventory.stockItemId, item.stockItemId)
-            )
-          )
-          .limit(1);
-        
-        const rate = parseFloat(sourceInvForRate?.averageRate || "0");
-        const totalItemAmount = quantity * rate;
-        totalAmount += totalItemAmount;
-        
-        const [insertedItem] = await db
-          .insert(stockTransferItems)
-          .values({
-            transferId: 0, // Will set after creating transfer record
-            stockItemId: item.stockItemId,
-            sourceLocationId: sourceLocationId,
-            quantity: quantity.toString(),
-            rate: rate.toFixed(2),
-            totalAmount: totalItemAmount.toFixed(2),
-          })
-          .returning();
-        
-        transferItems.push(insertedItem);
-      }
-      
-      // Create the stock transfer record
-      const [transfer] = await db
-        .insert(stockTransferVouchers)
-        .values({
-          voucherId: voucher.id,
-          sourceLocationId,
-          destinationLocationId,
-          notes: notes || null,
-        })
-        .returning();
-      
-      // Update transfer_id for all items
-      for (const item of transferItems) {
-        await db
-          .update(stockTransferItems)
-          .set({ transferId: transfer.id })
-          .where(eq(stockTransferItems.id, item.id));
-      }
-      
-      // Update voucher total amount
-      await db
-        .update(vouchers)
-        .set({ totalAmount: totalAmount.toFixed(2) })
-        .where(eq(vouchers.id, voucher.id));
-      
-      // Deduct from source inventory and add to destination
-      for (const item of items) {
-        const quantity = parseFloat(item.quantity);
-        const rate = parseFloat(item.rate);
-        
-        // Deduct from source
-        const [sourceInv] = await db
-          .select()
-          .from(inventory)
-          .where(
-            and(
-              eq(inventory.locationId, sourceLocationId),
-              eq(inventory.stockItemId, item.stockItemId)
-            )
-          )
-          .limit(1);
-        
-        if (sourceInv) {
-          const newQty = parseFloat(sourceInv.quantity) - quantity;
-          if (newQty < 0) {
-            throw new Error(`Insufficient stock for item ${item.stockItemId}`);
-          }
-          
-          await db
-            .update(inventory)
-            .set({
-              quantity: newQty.toString(),
-              lastUpdated: new Date(),
-            })
-            .where(eq(inventory.id, sourceInv.id));
-        }
-        
-        // Add to destination
-        const [destInv] = await db
-          .select()
-          .from(inventory)
-          .where(
-            and(
-              eq(inventory.locationId, destinationLocationId),
-              eq(inventory.stockItemId, item.stockItemId)
-            )
-          )
-          .limit(1);
-        
-        if (destInv) {
-          const currentQty = parseFloat(destInv.quantity);
-          const newQty = currentQty + quantity;
-          const newAvgRate = (parseFloat(destInv.averageRate || "0") * currentQty + rate * quantity) / newQty;
-          
-          await db
-            .update(inventory)
-            .set({
-              quantity: newQty.toString(),
-              averageRate: newAvgRate.toFixed(2),
-              totalValue: (newQty * newAvgRate).toFixed(2),
-              lastUpdated: new Date(),
-            })
-            .where(eq(inventory.id, destInv.id));
-        } else {
-          // Create new inventory record if it doesn't exist
-          await db
-            .insert(inventory)
-            .values({
-              companyId,
-              locationId: destinationLocationId,
-              stockItemId: item.stockItemId,
-              quantity: quantity.toString(),
-              averageRate: rate.toFixed(2),
-              totalValue: (quantity * rate).toFixed(2),
-              lastUpdated: new Date(),
-            });
-        }
-      }
-      
-      res.json({ success: true, transferId: transfer.id });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  // NOTE: POST /api/stock-transfers is registered earlier (line ~16503).
+  // A second POST handler at this location was removed because Express
+  // dispatches POST /api/stock-transfers to the first registered handler
+  // and any later registration is dead code that drifts out of sync.
 
   app.get("/api/inventory-by-location/:locationId", requireAuth, async (req, res) => {
     try {
@@ -26046,14 +25920,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/users/:userId/chatbot", requireAuth, requireNonPOS, async (req, res) => {
     try {
       const userRole = req.session.currentRole;
-      
+      const companyId = req.session.currentCompanyId;
+
       // Only Admin/Owner can toggle chatbot
       if (userRole !== "Admin" && userRole !== "Owner") {
         return res.status(403).json({ message: "Access denied" });
       }
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
 
       const { userId } = req.params;
       const { enabled } = req.body;
+
+      // SECURITY (cross-tenant IDOR): verify the target user is actually a
+      // member of the caller's currently-selected company. Without this,
+      // an Admin/Owner of company A could toggle the chatbot flag for any
+      // user in any company just by knowing their userId.
+      const [link] = await db
+        .select({ uid: userCompanyRoles.userId })
+        .from(userCompanyRoles)
+        .where(and(eq(userCompanyRoles.userId, userId), eq(userCompanyRoles.companyId, companyId)))
+        .limit(1);
+      if (!link) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
       await db.update(users)
         .set({ chatbotEnabled: enabled })
@@ -26069,19 +25960,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/chatbot-status", requireAuth, requireNonPOS, async (req, res) => {
     try {
       const userRole = req.session.currentRole;
-      
+      const companyId = req.session.currentCompanyId;
+
       if (userRole !== "Admin" && userRole !== "Owner") {
         return res.status(403).json({ message: "Access denied" });
       }
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
 
-      const allUsers = await db.select({
+      // SECURITY (cross-tenant data leak): restrict the listing to users who
+      // belong to the caller's currently-selected company via the
+      // user_company_roles membership table. Previously this returned every
+      // active user globally, leaking usernames + chatbot config across
+      // tenants.
+      const allUsers = await db.selectDistinct({
         id: users.id,
         username: users.username,
         chatbotEnabled: users.chatbotEnabled,
         active: users.active,
       })
         .from(users)
-        .where(eq(users.active, true));
+        .innerJoin(userCompanyRoles, eq(userCompanyRoles.userId, users.id))
+        .where(and(eq(userCompanyRoles.companyId, companyId), eq(users.active, true)));
 
       res.json(allUsers);
     } catch (error: any) {

@@ -3884,12 +3884,15 @@ var DbStorage = class {
           const [sourceInventory] = await tx.select().from(inventory).where(and(
             eq(inventory.locationId, item.sourceLocationId),
             eq(inventory.stockItemId, item.stockItemId)
-          ));
+          )).for("update");
           if (sourceInventory) {
             const currentQty = parseFloat(sourceInventory.quantity);
             const currentValue = parseFloat(sourceInventory.totalValue);
             const currentRate = parseFloat(sourceInventory.averageRate);
             const newQty = currentQty - quantity;
+            if (newQty < 0) {
+              throw new Error(`Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`);
+            }
             const newValue = newQty > 0 ? newQty * currentRate : 0;
             const [location] = await tx.select().from(locations).where(eq(locations.id, item.sourceLocationId));
             if (!location) {
@@ -3901,11 +3904,13 @@ var DbStorage = class {
               totalValue: newValue.toFixed(2),
               lastUpdated: /* @__PURE__ */ new Date()
             }).where(eq(inventory.id, sourceInventory.id));
+          } else {
+            throw new Error(`Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`);
           }
           const [destInventory] = await tx.select().from(inventory).where(and(
             eq(inventory.locationId, destinationLocationId),
             eq(inventory.stockItemId, item.stockItemId)
-          ));
+          )).for("update");
           if (destInventory) {
             const currentQty = parseFloat(destInventory.quantity);
             const currentRate = parseFloat(destInventory.averageRate || "0");
@@ -4144,12 +4149,15 @@ var DbStorage = class {
           const [sourceInventory] = await tx.select().from(inventory).where(and(
             eq(inventory.locationId, item.sourceLocationId),
             eq(inventory.stockItemId, item.stockItemId)
-          ));
+          )).for("update");
           if (sourceInventory) {
             const currentQty = parseFloat(sourceInventory.quantity);
             const currentValue = parseFloat(sourceInventory.totalValue);
             const currentRate = parseFloat(sourceInventory.averageRate);
             const newQty = currentQty - quantity;
+            if (newQty < 0) {
+              throw new Error(`Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`);
+            }
             const newValue = newQty > 0 ? newQty * currentRate : 0;
             await tx.update(inventory).set({
               quantity: newQty.toFixed(3),
@@ -4893,22 +4901,20 @@ var DbStorage = class {
     return created;
   }
   async updateBaleTransferItem(id, companyId, updates) {
-    const [owned] = await db.select({ id: baleTransferItems.id }).from(baleTransferItems).innerJoin(baleTransfers, eq(baleTransferItems.transferId, baleTransfers.id)).where(and(
-      eq(baleTransferItems.id, id),
-      eq(baleTransfers.companyId, companyId)
-    ));
-    if (!owned) return void 0;
     const { transferId: _ignored, ...safe } = updates;
-    const [updated] = await db.update(baleTransferItems).set(safe).where(eq(baleTransferItems.id, id)).returning();
+    const ownedTransferIds = db.select({ id: baleTransfers.id }).from(baleTransfers).where(eq(baleTransfers.companyId, companyId));
+    const [updated] = await db.update(baleTransferItems).set(safe).where(and(
+      eq(baleTransferItems.id, id),
+      inArray(baleTransferItems.transferId, ownedTransferIds)
+    )).returning();
     return updated;
   }
   async deleteBaleTransferItem(id, companyId) {
-    const [owned] = await db.select({ id: baleTransferItems.id }).from(baleTransferItems).innerJoin(baleTransfers, eq(baleTransferItems.transferId, baleTransfers.id)).where(and(
+    const ownedTransferIds = db.select({ id: baleTransfers.id }).from(baleTransfers).where(eq(baleTransfers.companyId, companyId));
+    await db.delete(baleTransferItems).where(and(
       eq(baleTransferItems.id, id),
-      eq(baleTransfers.companyId, companyId)
+      inArray(baleTransferItems.transferId, ownedTransferIds)
     ));
-    if (!owned) return;
-    await db.delete(baleTransferItems).where(eq(baleTransferItems.id, id));
   }
   async getProductionBalesByLocation(companyId, locationId) {
     return await db.select().from(productionBales).where(and(
@@ -17620,13 +17626,15 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         if (!items || !Array.isArray(items) || items.length === 0) {
           return res.status(400).json({ message: "Items are required" });
         }
-        const destLocation = await storage.getLocationById(
-          destinationLocationId
-        );
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const [destLocation] = await db.select({ id: locations.id }).from(locations).where(and3(eq3(locations.id, destinationLocationId), eq3(locations.companyId, companyId))).limit(1);
         if (!destLocation) {
           return res.status(404).json({ message: "Destination location not found" });
         }
-        const voucher = await storage.getVoucherById(voucherId);
+        const [voucher] = await db.select({ id: vouchers.id }).from(vouchers).where(and3(eq3(vouchers.id, voucherId), eq3(vouchers.companyId, companyId))).limit(1);
         if (!voucher) {
           return res.status(404).json({ message: "Voucher not found" });
         }
@@ -17648,12 +17656,16 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
               message: "Source and destination locations must be different for each item"
             });
           }
-          const sourceLocation = await storage.getLocationById(
-            item.sourceLocationId
-          );
+          const [sourceLocation] = await db.select({ id: locations.id }).from(locations).where(and3(eq3(locations.id, item.sourceLocationId), eq3(locations.companyId, companyId))).limit(1);
           if (!sourceLocation) {
             return res.status(404).json({
               message: `Source location with ID ${item.sourceLocationId} not found`
+            });
+          }
+          const [stockItem] = await db.select({ id: stockItems.id }).from(stockItems).where(and3(eq3(stockItems.id, item.stockItemId), eq3(stockItems.companyId, companyId))).limit(1);
+          if (!stockItem) {
+            return res.status(404).json({
+              message: `Stock item with ID ${item.stockItemId} not found`
             });
           }
         }
@@ -22301,109 +22313,6 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.post("/api/stock-transfers", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) return res.status(400).json({ message: "No company selected" });
-      const { sourceLocationId, destinationLocationId, items, notes } = req.body;
-      if (!sourceLocationId || !destinationLocationId || !items || items.length === 0) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      const voucherNumber = `ST-${Date.now()}`;
-      const [voucher] = await db.insert(vouchers).values({
-        companyId,
-        voucherType: "Stock Transfer",
-        voucherNumber,
-        voucherDate: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
-        description: notes || null,
-        totalAmount: "0"
-      }).returning();
-      let totalAmount = 0;
-      const transferItems = [];
-      for (const item of items) {
-        const quantity = parseFloat(item.quantity);
-        const [sourceInvForRate] = await db.select({ averageRate: inventory.averageRate }).from(inventory).where(
-          and3(
-            eq3(inventory.locationId, sourceLocationId),
-            eq3(inventory.stockItemId, item.stockItemId)
-          )
-        ).limit(1);
-        const rate = parseFloat(sourceInvForRate?.averageRate || "0");
-        const totalItemAmount = quantity * rate;
-        totalAmount += totalItemAmount;
-        const [insertedItem] = await db.insert(stockTransferItems).values({
-          transferId: 0,
-          // Will set after creating transfer record
-          stockItemId: item.stockItemId,
-          sourceLocationId,
-          quantity: quantity.toString(),
-          rate: rate.toFixed(2),
-          totalAmount: totalItemAmount.toFixed(2)
-        }).returning();
-        transferItems.push(insertedItem);
-      }
-      const [transfer] = await db.insert(stockTransferVouchers).values({
-        voucherId: voucher.id,
-        sourceLocationId,
-        destinationLocationId,
-        notes: notes || null
-      }).returning();
-      for (const item of transferItems) {
-        await db.update(stockTransferItems).set({ transferId: transfer.id }).where(eq3(stockTransferItems.id, item.id));
-      }
-      await db.update(vouchers).set({ totalAmount: totalAmount.toFixed(2) }).where(eq3(vouchers.id, voucher.id));
-      for (const item of items) {
-        const quantity = parseFloat(item.quantity);
-        const rate = parseFloat(item.rate);
-        const [sourceInv] = await db.select().from(inventory).where(
-          and3(
-            eq3(inventory.locationId, sourceLocationId),
-            eq3(inventory.stockItemId, item.stockItemId)
-          )
-        ).limit(1);
-        if (sourceInv) {
-          const newQty = parseFloat(sourceInv.quantity) - quantity;
-          if (newQty < 0) {
-            throw new Error(`Insufficient stock for item ${item.stockItemId}`);
-          }
-          await db.update(inventory).set({
-            quantity: newQty.toString(),
-            lastUpdated: /* @__PURE__ */ new Date()
-          }).where(eq3(inventory.id, sourceInv.id));
-        }
-        const [destInv] = await db.select().from(inventory).where(
-          and3(
-            eq3(inventory.locationId, destinationLocationId),
-            eq3(inventory.stockItemId, item.stockItemId)
-          )
-        ).limit(1);
-        if (destInv) {
-          const currentQty = parseFloat(destInv.quantity);
-          const newQty = currentQty + quantity;
-          const newAvgRate = (parseFloat(destInv.averageRate || "0") * currentQty + rate * quantity) / newQty;
-          await db.update(inventory).set({
-            quantity: newQty.toString(),
-            averageRate: newAvgRate.toFixed(2),
-            totalValue: (newQty * newAvgRate).toFixed(2),
-            lastUpdated: /* @__PURE__ */ new Date()
-          }).where(eq3(inventory.id, destInv.id));
-        } else {
-          await db.insert(inventory).values({
-            companyId,
-            locationId: destinationLocationId,
-            stockItemId: item.stockItemId,
-            quantity: quantity.toString(),
-            averageRate: rate.toFixed(2),
-            totalValue: (quantity * rate).toFixed(2),
-            lastUpdated: /* @__PURE__ */ new Date()
-          });
-        }
-      }
-      res.json({ success: true, transferId: transfer.id });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  });
   app2.get("/api/inventory-by-location/:locationId", requireAuth, async (req, res) => {
     try {
       const companyId = req.session.currentCompanyId;
@@ -24335,11 +24244,19 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
   app2.patch("/api/users/:userId/chatbot", requireAuth, requireNonPOS, async (req, res) => {
     try {
       const userRole = req.session.currentRole;
+      const companyId = req.session.currentCompanyId;
       if (userRole !== "Admin" && userRole !== "Owner") {
         return res.status(403).json({ message: "Access denied" });
       }
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
       const { userId } = req.params;
       const { enabled } = req.body;
+      const [link] = await db.select({ uid: userCompanyRoles.userId }).from(userCompanyRoles).where(and3(eq3(userCompanyRoles.userId, userId), eq3(userCompanyRoles.companyId, companyId))).limit(1);
+      if (!link) {
+        return res.status(404).json({ message: "User not found" });
+      }
       await db.update(users).set({ chatbotEnabled: enabled }).where(eq3(users.id, userId));
       res.json({ message: `Chatbot ${enabled ? "enabled" : "disabled"} for user` });
     } catch (error) {
@@ -24349,15 +24266,19 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
   app2.get("/api/users/chatbot-status", requireAuth, requireNonPOS, async (req, res) => {
     try {
       const userRole = req.session.currentRole;
+      const companyId = req.session.currentCompanyId;
       if (userRole !== "Admin" && userRole !== "Owner") {
         return res.status(403).json({ message: "Access denied" });
       }
-      const allUsers = await db.select({
+      if (!companyId) {
+        return res.status(400).json({ message: "No company selected" });
+      }
+      const allUsers = await db.selectDistinct({
         id: users.id,
         username: users.username,
         chatbotEnabled: users.chatbotEnabled,
         active: users.active
-      }).from(users).where(eq3(users.active, true));
+      }).from(users).innerJoin(userCompanyRoles, eq3(userCompanyRoles.userId, users.id)).where(and3(eq3(userCompanyRoles.companyId, companyId), eq3(users.active, true)));
       res.json(allUsers);
     } catch (error) {
       res.status(500).json({ message: error.message });

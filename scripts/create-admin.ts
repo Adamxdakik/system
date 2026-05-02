@@ -5,7 +5,7 @@ import { writeFileSync, chmodSync } from "fs";
 import { resolve } from "path";
 
 // Match the cost factor used by the live login pipeline (server/routes.ts).
-const BCRYPT_SALT_ROUNDS = 10;
+const BCRYPT_SALT_ROUNDS = 12;
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
