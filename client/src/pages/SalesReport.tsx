@@ -204,13 +204,18 @@ export default function SalesReport() {
     const costProfit = parseFloat(item.costProfit);
     const configuredProfit = item.configuredProfit;
 
+    // itemCount represents the number of units (e.g. bikes) sold, not the
+    // number of invoice line rows. A single sale line can carry quantity > 1,
+    // so sum item.quantity instead of incrementing by 1.
+    const qty = parseFloat(item.quantity) || 0;
+
     if (existing) {
       existing.totalSales += totalSales;
       existing.totalCost += totalCost;
       existing.totalConfiguredCost += totalConfiguredCost;
       existing.costProfit += costProfit;
       existing.configuredProfit += configuredProfit;
-      existing.itemCount += 1;
+      existing.itemCount += qty;
       existing.items.push(item);
     } else {
       acc.push({
@@ -221,7 +226,7 @@ export default function SalesReport() {
         totalConfiguredCost,
         costProfit,
         configuredProfit,
-        itemCount: 1,
+        itemCount: qty,
         items: [item],
       });
     }
@@ -248,8 +253,9 @@ export default function SalesReport() {
       totalConfiguredCost: acc.totalConfiguredCost + group.totalConfiguredCost,
       costProfit: acc.costProfit + group.costProfit,
       configuredProfit: acc.configuredProfit + group.configuredProfit,
+      itemCount: acc.itemCount + group.itemCount,
     }),
-    { totalSales: 0, totalCost: 0, totalConfiguredCost: 0, costProfit: 0, configuredProfit: 0 }
+    { totalSales: 0, totalCost: 0, totalConfiguredCost: 0, costProfit: 0, configuredProfit: 0, itemCount: 0 }
   );
 
   const handleClearFilters = () => {
@@ -327,10 +333,10 @@ export default function SalesReport() {
       "Configured Profit": group.configuredProfit.toFixed(2),
     }));
 
-    // Add totals row
+    // Add totals row (Items Sold = sum of quantities, not invoice line count)
     exportData.push({
       "Date": "TOTAL",
-      "Items Sold": salesData.length,
+      "Items Sold": totals.itemCount,
       "Total Sales": totals.totalSales.toFixed(2),
       "Total Cost": totals.totalCost.toFixed(2),
       "Cost Profit": totals.costProfit.toFixed(2),
@@ -603,7 +609,7 @@ export default function SalesReport() {
                   <TableRow className="font-bold bg-muted/50">
                     <TableCell>TOTAL</TableCell>
                     <TableCell className="text-right font-mono">
-                      {formatNumber(salesData.length)}
+                      {formatNumber(totals.itemCount)}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {formatCurrency(totals.totalSales)}
