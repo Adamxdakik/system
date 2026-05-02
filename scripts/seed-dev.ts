@@ -1,8 +1,10 @@
 /**
  * Idempotent dev-seed script.
  *
- * Creates an admin user (if missing), one company, two locations, and two employees
- * so the Payroll moto-rates UI can be exercised end-to-end on the local dev DB.
+ * Creates an admin user (if missing), one company, two locations, two employees,
+ * AND a second isolated tenant ("Other Company") with its own location/employee
+ * that admin does NOT have access to — used by the authed regression tests to
+ * exercise cross-tenant 403 paths.
  *
  * Run with: npm run seed:dev
  *
@@ -53,6 +55,19 @@ const SEED_EMPLOYEES = [
     monthlySalary: "55000",
   },
 ];
+
+// Second tenant — admin has NO access. Used by authed cross-tenant tests.
+const OTHER_COMPANY_CODE = "OTHER";
+const OTHER_COMPANY_NAME = "Other Company";
+const OTHER_LOCATION = { code: "OTH-LOC", name: "Other HQ", city: "Islamabad" };
+const OTHER_EMPLOYEE = {
+  code: "EMP-OTH",
+  firstName: "Other",
+  lastName: "Person",
+  joinDate: "2024-03-01",
+  department: "Sales",
+  monthlySalary: "40000",
+};
 
 async function main() {
   console.log("seed-dev: starting (idempotent)\n");
@@ -140,7 +155,51 @@ async function main() {
     }
   }
 
-  // 6. Write credentials file (only if we just created the user, to avoid silently
+  // 6. Second tenant ("Other Company") — admin must NOT be assigned a role here.
+  let [otherCompany] = await db.select().from(companies).where(eq(companies.code, OTHER_COMPANY_CODE));
+  if (!otherCompany) {
+    [otherCompany] = await db.insert(companies).values({
+      code: OTHER_COMPANY_CODE,
+      name: OTHER_COMPANY_NAME,
+      active: true,
+    }).returning();
+    console.log(`  ✓ created cross-tenant company '${OTHER_COMPANY_NAME}' (id=${otherCompany.id})`);
+  } else {
+    console.log(`  · cross-tenant company '${OTHER_COMPANY_NAME}' already exists (id=${otherCompany.id})`);
+  }
+
+  const [existingOtherLoc] = await db.select().from(locations).where(eq(locations.code, OTHER_LOCATION.code));
+  if (!existingOtherLoc) {
+    const [created] = await db.insert(locations).values({
+      companyId: otherCompany.id,
+      code: OTHER_LOCATION.code,
+      name: OTHER_LOCATION.name,
+      city: OTHER_LOCATION.city,
+      active: true,
+    }).returning();
+    console.log(`  ✓ created cross-tenant location '${OTHER_LOCATION.name}' (id=${created.id})`);
+  } else {
+    console.log(`  · cross-tenant location '${OTHER_LOCATION.name}' already exists (id=${existingOtherLoc.id})`);
+  }
+
+  const [existingOtherEmp] = await db.select().from(employees).where(eq(employees.code, OTHER_EMPLOYEE.code));
+  if (!existingOtherEmp) {
+    const [created] = await db.insert(employees).values({
+      code: OTHER_EMPLOYEE.code,
+      firstName: OTHER_EMPLOYEE.firstName,
+      lastName: OTHER_EMPLOYEE.lastName,
+      joinDate: OTHER_EMPLOYEE.joinDate,
+      department: OTHER_EMPLOYEE.department,
+      monthlySalary: OTHER_EMPLOYEE.monthlySalary,
+      companyId: otherCompany.id,
+      employeeType: "Employee",
+    } as any).returning();
+    console.log(`  ✓ created cross-tenant employee '${OTHER_EMPLOYEE.firstName} ${OTHER_EMPLOYEE.lastName}' (id=${created.id})`);
+  } else {
+    console.log(`  · cross-tenant employee already exists (id=${existingOtherEmp.id})`);
+  }
+
+  // 7. Write credentials file (only if we just created the user, to avoid silently
   //    overwriting a pre-existing credentials file with a stale password).
   if (createdUser) {
     const credPath = resolve(process.cwd(), ".admin-credentials.txt");
