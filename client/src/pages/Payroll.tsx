@@ -5283,7 +5283,7 @@ export default function Payroll() {
                     </Button>
                   </div>
                   {editBaleRates.length === 0 && (
-                    <p className="text-xs text-muted-foreground">No per-location rates configured. Add locations to enable auto-calculation.</p>
+                    <p className="text-xs text-muted-foreground">No moto rates configured yet. Add locations to enable auto-calculation.</p>
                   )}
                   {editBaleRates.map((row, idx) => {
                     const rowCompanyId = row.sourceCompanyId || "";
@@ -5361,7 +5361,7 @@ export default function Payroll() {
                   </Button>
                 </div>
                 {editBalePctRates.length === 0 && (
-                  <p className="text-xs text-muted-foreground">No per-location % rates configured. Add locations to enable % auto-calculation.</p>
+                  <p className="text-xs text-muted-foreground">No moto % rates configured yet. Add locations to enable % auto-calculation.</p>
                 )}
                 {editBalePctRates.map((row, idx) => {
                   const rowCompanyId = row.sourceCompanyId || "";
