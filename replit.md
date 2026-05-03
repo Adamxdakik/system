@@ -196,6 +196,26 @@ All 6 now wear `requireAuth` (and `requireNonPOS` for the import templates, whic
 - `syncEmployeeBalancesFromEntries` read-then-write balance updates — only invoked from synchronous import paths, not concurrent request handlers.
 - Money math via `parseFloat` in payroll `calc-preview` — preview only, not persisted; final voucher math goes through Drizzle decimal columns.
 
+### Pass G deep audit — soft-delete leaks in storage getters
+Second full-codebase audit (Pass G) targeted areas Pass F didn't cover: voucher atomicity, balance recompute correctness, soft-delete leaks, raw-SQL injection surface, migration idempotency, role-check edge cases, frontend cache invalidation, date-range off-by-ones, and unhandled async errors. The vast majority of architect findings turned out to be **false positives** on closer inspection:
+- `requireRole` "case-sensitivity" — roles are Zod-locked to exact strings (`Admin|Owner|Manager|POS1-6`); case-insensitive compare would be defensive theatre.
+- `POS.tsx` "missing cache invalidation" — already invalidates 7 keys (`/api/locations/:id/inventory`, `/api/vouchers`, `/api/accounts/all`, `/api/ledger-accounts`, `/api/bank-accounts`, `/api/suppliers`, `/api/accounts/voucher-sidebar`) on save.
+- Raw SQL injection — zero `db.execute(sql\`...\${req.body|query|params}...\`)` and zero `sql.raw(...)` calls. All dynamic values flow through Drizzle's tagged-template parameter binding.
+- Migration 0010/0011/0012 — verified all use `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE ADD COLUMN IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS`. Older 0000 lacks the guard but it's the bootstrap migration that drizzle-kit's journal prevents from re-running anyway.
+- Voucher creation atomicity — flagged as "needs `db.transaction`" in 7 routes but reading them shows most use `storage.createVoucher` then `storage.createVoucherEntry` in a tight async sequence. Wrapping each in a transaction is invasive (1000+ line refactor across legacy import paths) and there's no production evidence of orphan vouchers; deferred.
+
+**Real bug fixed**: 6 storage getter methods returned **soft-deleted (tombstoned) rows** to all callers, including sales/payroll/voucher flows that should never see them:
+- `getEmployeeByCode`, `getEmployeeById` (`server/storage.ts:728-742`)
+- `getCustomerById`, `getCustomerByCode` (`server/storage.ts:4405-4420`)
+- `getSupplierByCode`, `getSupplierById` (`server/storage.ts:940-952`)
+- `getStockItemById` (`server/storage.ts:1018-1023`)
+
+All 6 now apply `and(eq(...), isNull(table.deletedAt))`. The restore endpoint (`POST /api/deleted-items/:type/:id/restore` at `server/routes.ts:26189`) was verified to use raw `db.update` directly without going through these getters, so undelete flows are unaffected. Soft-deleted records still surface on the dedicated "Deleted Items" admin page (which queries with `isNotNull(deletedAt)` explicitly).
+
+**Validation**: 112/112 tests pass; `tsc --noEmit` clean; workflow restart smoke OK (`/api/health` 200, root 200, anonymous `/api/suppliers` 401).
+
+**Accepted regressions** (architect re-review of soft-delete fix): `getSupplierById` is also called from voucher-detail (`server/routes.ts:15868`) and PO-view (`server/routes.ts:10665`) routes; if a supplier is later soft-deleted, those historical screens will show "Unknown Supplier" for the lookup field instead of the original name. The audit-style joins (`getVoucherEntriesByVoucher` at `server/storage.ts:2642+` uses a `leftJoin` against `schema.suppliers` directly) still resolve names correctly via the join, so balance/ledger/audit views are unaffected. The cosmetic regression is preferable to silently re-surfacing tombstoned customer/supplier PII into live sales and payroll flows. Payroll balance-sync (`server/routes.ts:222`) now silently skips soft-deleted employees — this is the desired behavior (don't apply balance deltas to deleted employees) and matches the existing `if (!employee) continue` guard semantics.
+
 ## External Dependencies
 
 - **UI Libraries**: Radix UI, Tailwind CSS, shadcn/ui, `cmdk`.

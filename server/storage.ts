@@ -723,12 +723,18 @@ export class DbStorage implements IStorage {
   }
 
   async getEmployeeByCode(code: string): Promise<Employee | undefined> {
-    const [employee] = await db.select().from(schema.employees).where(eq(schema.employees.code, code));
+    // Filter soft-deleted: tombstoned employees should not surface to live callers
+    // (sales, payroll, balance sync, etc.). Restore flow uses raw db.update directly.
+    const [employee] = await db.select().from(schema.employees).where(
+      and(eq(schema.employees.code, code), isNull(schema.employees.deletedAt))
+    );
     return employee;
   }
 
   async getEmployeeById(id: number): Promise<Employee | undefined> {
-    const [employee] = await db.select().from(schema.employees).where(eq(schema.employees.id, id));
+    const [employee] = await db.select().from(schema.employees).where(
+      and(eq(schema.employees.id, id), isNull(schema.employees.deletedAt))
+    );
     return employee;
   }
 
@@ -929,12 +935,16 @@ export class DbStorage implements IStorage {
   }
 
   async getSupplierByCode(code: string): Promise<Supplier | undefined> {
-    const [supplier] = await db.select().from(schema.suppliers).where(eq(schema.suppliers.code, code));
+    const [supplier] = await db.select().from(schema.suppliers).where(
+      and(eq(schema.suppliers.code, code), isNull(schema.suppliers.deletedAt))
+    );
     return supplier;
   }
 
   async getSupplierById(id: number): Promise<Supplier | undefined> {
-    const [supplier] = await db.select().from(schema.suppliers).where(eq(schema.suppliers.id, id));
+    const [supplier] = await db.select().from(schema.suppliers).where(
+      and(eq(schema.suppliers.id, id), isNull(schema.suppliers.deletedAt))
+    );
     return supplier;
   }
 
@@ -1003,7 +1013,9 @@ export class DbStorage implements IStorage {
   }
 
   async getStockItemById(id: number): Promise<StockItem | undefined> {
-    const [item] = await db.select().from(schema.stockItems).where(eq(schema.stockItems.id, id));
+    const [item] = await db.select().from(schema.stockItems).where(
+      and(eq(schema.stockItems.id, id), isNull(schema.stockItems.deletedAt))
+    );
     return item;
   }
 
@@ -4394,13 +4406,19 @@ export class DbStorage implements IStorage {
   }
 
   async getCustomerById(id: number): Promise<schema.Customer | undefined> {
-    const [customer] = await db.select().from(schema.customers).where(eq(schema.customers.id, id));
+    const [customer] = await db.select().from(schema.customers).where(
+      and(eq(schema.customers.id, id), isNull(schema.customers.deletedAt))
+    );
     return customer;
   }
 
   async getCustomerByCode(code: string, companyId: number): Promise<schema.Customer | undefined> {
     const [customer] = await db.select().from(schema.customers)
-      .where(and(eq(schema.customers.code, code), eq(schema.customers.companyId, companyId)));
+      .where(and(
+        eq(schema.customers.code, code),
+        eq(schema.customers.companyId, companyId),
+        isNull(schema.customers.deletedAt),
+      ));
     return customer;
   }
 
