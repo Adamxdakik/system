@@ -1090,9 +1090,9 @@
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user: any) => (
-                      <>
-                        <TableRow key={user.id}>
+                    {users.flatMap((user: any) => [
+                      (
+                        <TableRow key={`${user.id}-main`}>
                           <TableCell>
                             <Button
                               variant="ghost"
@@ -1161,8 +1161,9 @@
                             </div>
                           </TableCell>
                         </TableRow>
-                        {expandedUserId === user.id && (
-                          <TableRow>
+                      ),
+                        expandedUserId === user.id && (
+                          <TableRow key={`${user.id}-detail`}>
                             <TableCell colSpan={6} className="bg-muted/50">
                               <div className="p-4 space-y-3">
                                 <div className="flex items-center justify-between">
@@ -1251,9 +1252,8 @@
                               </div>
                             </TableCell>
                           </TableRow>
-                        )}
-                      </>
-                    ))}
+                        ),
+                    ].filter(Boolean))}
                   </TableBody>
                 </Table>
               </div>

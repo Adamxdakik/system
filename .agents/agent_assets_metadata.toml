@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "CcZ8kNY71qOnT_oDeL9j6"
+uri = "file://USAGE_GUIDE.md"
+type = "text"
+title = "MotoTrack Usage Guide"

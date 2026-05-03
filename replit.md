@@ -2,7 +2,7 @@
 
 ## Overview
 
-MotoTrack is a comprehensive ERP and POS system designed for HuangHe Motors (HHM), a motorcycle import and distribution company in the DRC. Its primary purpose is to manage multi-location inventory, streamline container-based purchasing, handle full double-entry financial accounting, process payroll, and manage supplier and customer relationships. Key capabilities include tracking motorcycle assembly and maintaining after-sales service records. The system supports multiple companies with isolated data, role-based access control, and a dedicated administration panel for system management.
+MotoTrack is a comprehensive ERP and POS system for HuangHe Motors (HHM), a motorcycle import and distribution company. Its main purpose is to manage multi-location inventory, streamline container-based purchasing, handle full double-entry financial accounting, process payroll, and manage supplier and customer relationships. Key capabilities include tracking motorcycle assembly, maintaining after-sales service records, supporting multiple companies with isolated data, role-based access control, and a dedicated administration panel. The business vision is to provide a robust system for efficient operations and growth in the DRC market.
 
 ## User Preferences
 
@@ -16,205 +16,39 @@ Preferred communication style: Simple, everyday language.
 - **Routing**: Client-side routing using `wouter`.
 - **State Management**: TanStack Query for server state and React hooks/context for local UI state.
 - **Forms**: `react-hook-form` integrated with Zod and `drizzle-zod` for validation.
-- **UI/UX**: Utilizes shadcn/ui (New York style) built on Radix UI primitives, styled with Tailwind CSS. Fonts include Inter and JetBrains Mono.
-- **Theming**: Supports light and dark modes via `ThemeProvider`.
-- **Performance**: Pages are lazy-loaded using `React.lazy()` with `<Suspense>` for fallback spinners.
-- **Error Handling**: A class-based `<ErrorBoundary>` component wraps the router for robust error management.
+- **UI/UX**: Uses shadcn/ui (New York style) built on Radix UI primitives, styled with Tailwind CSS, with Inter and JetBrains Mono fonts. Supports light and dark modes.
+- **Performance**: Pages are lazy-loaded with `<Suspense>` for fallbacks.
+- **Error Handling**: Class-based `<ErrorBoundary>` for robust error management.
 - **User Experience**: Includes an `<OfflineBanner>` for network status and a `<CommandPalette>` (Ctrl+K / Cmd+K) for quick navigation.
 
 ### Backend
 
-- **Server**: Developed with Express.js and TypeScript.
-- **API**: Provides RESTful endpoints, secured with `requireAuth` middleware and validated using Zod.
-- **Sessions**: PostgreSQL-backed session management via `connect-pg-simple`, using the cookie name `erp.session`.
-- **Build**: Vite is used for the client build, and `esbuild` for the server, with custom Vite/HMR dev integration.
+- **Server**: Express.js with TypeScript.
+- **API**: RESTful endpoints, secured with `requireAuth` middleware and validated using Zod.
+- **Sessions**: PostgreSQL-backed session management via `connect-pg-simple`.
+- **Build**: Vite for client build, `esbuild` for server, with custom Vite/HMR dev integration.
+- **Error Handling**: Centralized error handling via `asyncHandler` and ZodError handling for 400 responses.
 
 ### Database
 
-- **Engine**: PostgreSQL, accessed via a `DATABASE_URL` environment variable.
+- **Engine**: PostgreSQL, accessed via `DATABASE_URL`.
 - **ORM**: Drizzle ORM with `drizzle-kit` for schema migrations.
-- **Schema**: A single `shared/schema.ts` file acts as the source of truth for types across the stack.
-- **Core Tables**: Key tables include `users`, `companies`, `locations`, `stock_items`, `vouchers`, `purchase_orders`, `ledger_accounts`, `employees`, `suppliers`, `customers`, and `session`.
+- **Schema**: A single `shared/schema.ts` file for type consistency.
+- **Core Tables**: `users`, `companies`, `locations`, `stock_items`, `vouchers`, `purchase_orders`, `ledger_accounts`, `employees`, `suppliers`, `customers`, `session`, `employee_moto_rates`, `employee_moto_pct_rates`, `moto_rate_audit`, `rate_templates`, `rate_template_items`, `notifications`.
 
 ### Key Features
 
-- **Inventory**: Multi-location stock tracking with weighted average cost, container-based purchase orders, stock transfers, and production/consumption vouchers.
-- **Financial Accounting**: Full double-entry voucher system (Sales, Purchase, Payment, Receipt, Journal, Contra, Stock Transfer, Production, Consumption), auto-generated vouchers for PO container offloads, ledger account hierarchy, and financial reports (Income Statement, Daybook, Opening/Closing Stock).
-- **Point of Sale (POS)**: Restricted interface for POS roles, location-authenticated sessions, and barcode scanning support.
-- **Partners & Service**: Management of suppliers and customers, including service history, warranty tracking, and communication logs.
-- **Assembly**: Records for motorcycle assembly from component stock items.
-- **Payroll**: Employee management and payroll voucher creation.
-- **Settings (Admin-only)**: Comprehensive admin panel for managing companies, users, fiscal periods, system preferences, role permissions, active sessions, and database statistics.
-
-## Recent Changes (2026-05-02)
-
-### Hardening pass
-- **Auth session bug fix**: `requireAuth` now returns `403 NO_COMPANY_SELECTED` (was `401`) when the user is logged in but has no company yet — this prevents the frontend from logging the user out. The `/api/auth/login` route now explicitly persists the session via `req.session.save()` before responding so the `Set-Cookie` header is guaranteed to land on the response.
-- **Centralized error handling**: New `server/lib/asyncHandler.ts` wrapper forwards rejected promises to Express's error pipeline. The error middleware in `server/index.ts` now handles `ZodError` → `400` with structured field errors, logs `5xx` responses, and includes optional `code` field on the JSON payload.
-- **Zod input validation**: New `server/lib/validate.ts` middleware (`validate(schema, source)`) validates `body`/`query`/`params` and forwards `ZodError`s to the error middleware. Now applied to:
-  - `POST /api/auth/login` (`loginSchema`)
-  - `POST /api/suppliers` (`insertSupplierSchema`) + `PATCH /api/suppliers/:id` (`.partial()`)
-  - `POST /api/employees` (`insertEmployeeSchema`)
-  - `POST /api/customers` (`insertCustomerSchema.omit({companyId:true})` — companyId injected from session post-validate) + `PUT /api/customers/:id` (`.partial()`)
-  - `POST /api/stock-items` (`insertStockItemSchema.omit({companyId:true})`)
-  All validated routes now also use `asyncHandler` and surface structured error codes (`DUPLICATE_CODE`, `NO_COMPANY_SELECTED`, `WRONG_COMPANY`) for clients that want to handle them programmatically.
-- **xlsx → exceljs migration (complete)**: The unmaintained `xlsx` package (prototype-pollution + ReDoS CVEs, no fix) and the `xlsx-js-style` follow-on have **both** been replaced. Most call sites use the SheetJS-shaped shims in `server/lib/excel.ts` and `client/src/lib/excelHelper.ts` (`XLSX.utils.book_new`, `json_to_sheet`, `aoa_to_sheet`, `book_append_sheet`, `sheet_to_json`, `XLSX.read`, `XLSX.write`, `XLSX.writeFile`); only difference is that read/write are async (call sites now `await`). `client/src/components/ERPRunPayroll.tsx` `exportRunExcel()` was rewritten to use the native `exceljs` API directly (column widths, merged title row, bold header, currency `numFmt`, blob download). Result: zero `xlsx`-family packages remain in the dependency tree.
-- **Tooling**: Added `eslint.config.js` (flat config: typescript-eslint + react-hooks + react-refresh + `eslint-plugin-unused-imports` for autofixable dead imports), `.prettierrc.json`, `vitest.config.ts`. New scripts: `lint`, `lint:fix`, `format`, `format:check`, `test`, `test:watch`. Vitest tests cover `asyncHandler`, `validate()` (success / ZodError forwarding / query+params sources), and excel-shim parity (json_to_sheet/aoa_to_sheet round-trip + multi-sheet preservation). 0 ESLint errors. Unused-var warnings: 301 → 178 after `eslint --fix` (-41%); remaining are mostly unused arguments + intentionally-unused destructure targets that need human review.
-- **Dependency cleanup**: Removed unused `passport`, `passport-local`, `memorystore`, `tw-animate-css`, the deprecated `xlsx` package itself, and `xlsx-js-style` (replaced by exceljs in payroll export).
-- **Security scan baseline (post-hardening)**:
-  - Dependency audit: 0 critical / 0 high / 4 moderate (dev-only: esbuild GHSA-67mh-4wv8-2f99 in transitive vite/drizzle-kit chains; uuid 8.x via exceljs). All require dev server to be reachable to exploit.
-  - SAST: 0 critical / 0 high (7 medium, 2 low).
-  - HoundDog: 0 critical / 0 high (2 medium, 4 low). The previous CRITICAL "Password sent to Standard Output" in `scripts/create-admin.ts` was fixed by writing the initial admin credential to a chmod-0600, gitignored file (`.admin-credentials.txt`) instead of stdout.
-- **House cleaning**: Deleted `_trash/` (~112MB).
-
-### Bale-trading dead-code cleanup (Pass A + B)
-- **Pass A — deleted** all unused bale-trading infrastructure inherited from the prior project:
-  - Routes: `/api/bales`, `/api/bale-products`, `/api/production-bales`, `/api/bale-transfers`, `/api/bales-by-location` (3 blocks ≈ 820 lines from `server/routes.ts`).
-  - Storage methods + interface entries for bales/bale-products/bale-transfers/production-bales (~490 lines from `server/storage.ts`), including the `deleteCompany` cleanup blocks that referenced those tables.
-  - Schema tables: `bales`, `baleProducts`, `baleSequences`, `productionBales`, `baleTransfers`, `baleTransferItems` (~130 lines from `shared/schema.ts`). `mixBatches` / `mixBatchSources` retained.
-  - Files removed: `client/src/lib/factoryApi.ts`, `client/src/contexts/AppModeContext.tsx`. `<AppModeProvider>` wrapper removed from `App.tsx`.
-  - In `Accounts.tsx` / `Payroll.tsx` / `Vouchers.tsx`: replaced `useAppMode()` + `getApiRequest(appMode)` with hardcoded `appMode: string = "erp"` + direct `apiRequest`. Existing `appMode === "factory"` conditionals left as harmless dead branches.
-- **Pass B — renamed** live UI labels from "Bale" → "Moto" / "Unit":
-  - `OffloadDetail.tsx`: "Total Bales" → "Total Motos", "Additional Cost / Bale" → "Additional Cost / Moto".
-  - `StockTransferOrder.tsx`: "X bales" → "X units", "Total Bales:" → "Total Units:".
-  - `Payroll.tsx` bonus tab: "Bales / Units" → "Motos / Units", "Bales Rate ($/unit)" → "Motos Rate ($/unit)", "Bale Bonus Rates by Location" → "Moto Bonus Rates by Location", "Bales % by Location" → "Motos % by Location".
-- **Pass C — schema renames + missing endpoints** (idempotent migration):
-  - DB column renames: `employees.bales_bonus_rate` → `motos_bonus_rate`, `container_offloads.total_bales` → `total_motos`, `container_offloads.additional_cost_per_bale` → `additional_cost_per_moto`. Drizzle field names also renamed (`balesBonusRate` → `motosBonusRate`, etc.) across `shared/schema.ts`, `server/storage.ts`, `server/routes.ts`, `client/src/pages/Payroll.tsx`, `Daybook.tsx`, `OffloadDetail.tsx`. (Local-only `totalBales` sum variable in `StockTransferOrder.tsx` left as-is since it counts mixed parts/motos for a transfer order.)
-  - 4 new endpoints — fixes the previously-404 per-location bale-rates UI in Payroll:
-    - GET/PUT `/api/employees/:id/moto-rates` — per-employee per-location moto bonus $/unit rate.
-    - GET/PUT `/api/employees/:id/moto-pct-rates` — per-employee per-location moto bonus % of sales amount.
-    - All 4 use `requireAuth` + tenant-scope check (employee must belong to `req.session.currentCompanyId`). PUT uses replace-all semantics inside `db.transaction`.
-  - 2 new tables: `employee_moto_rates` and `employee_moto_pct_rates` (id, employee_id, location_id, source_company_id, rate|pct, created_at, updated_at).
-  - **Migration deployment**: Added explicit SQL migration `migrations/0006_bale_to_moto_pass_c.sql` (fully idempotent — `DO $$ IF EXISTS` blocks for column renames, `CREATE TABLE IF NOT EXISTS` for new tables). New `scripts/migrate.ts` runs all SQL files >= `0006` and tracks them in `_idempotent_migrations` table. Added `npm run db:migrate` script. Updated `render.yaml` `buildCommand` to `npm install --production=false && npm run build && npm run db:migrate && npm run db:push` so Render auto-applies the migration on every deploy. (`db:push` continues to handle schema deltas that don't need explicit SQL.)
-  - Frontend `Payroll.tsx` API call sites updated to `/moto-rates` / `/moto-pct-rates`. Local state variable names like `editBaleRates` / `setBalesRows` left unchanged (internal-only, no functional impact).
-
-### Pass D — production safety + regression coverage
-- **Schema sanity script** (`scripts/verify-moto-schema.ts`, run via `npm run db:verify-moto-schema`): asserts the 3 required moto columns + 2 required moto tables exist AND the 3 stale "bale" columns are absent. Exits 1 with a clear failure list if any check fails. Wired into the Render build between `db:migrate` and `db:push`, so a deploy now refuses to start if the migration didn't run cleanly. New buildCommand: `npm install --production=false && npm run build && npm run db:migrate && npm run db:verify-moto-schema && npm run db:push`.
-- **HTTP regression tests** (`server/__tests__/moto-rates-routes.test.ts`, 6 tests): hits the running dev server (port 5000) and asserts (a) all 4 new endpoints — GET/PUT `/api/employees/:id/moto-rates` and `/api/employees/:id/moto-pct-rates` — return 401 JSON `{message}` (proves they're registered + auth-gated), and (b) the old `/bale-rates` and `/bale-pct-rates` paths return non-JSON content (SPA fallback HTML, proving they're not re-registered as API routes).
-- **Storage regression tests** (`server/__tests__/moto-rates-storage.test.ts`, 6 tests): drives `storage.replaceEmployeeMotoRates` / `replaceEmployeeMotoPctRates` directly using synthetic negative `employee_id`s (well outside any real range) with `beforeAll`/`afterAll` cleanup. Covers (a) initial insert, (b) replace-all semantics on subsequent PUT, (c) clearing via empty array, (d) per-employee isolation (saving for emp B doesn't touch emp A), (e) `sourceCompanyId` preserved when set / null otherwise.
-- **Empty-state copy** (`Payroll.tsx`): "No per-location rates configured." → "No moto rates configured yet." (and similarly for the % rates dialog). Internal state names like `editBaleRates`, `setBalesRows`, `bonusTab="bales"`, `data-testid="..."` left as-is per scoping rule (non-user-facing).
-- **Manual verification commands**:
-  - `npm run db:verify-moto-schema` — run anytime to confirm schema is in sync.
-  - `npx vitest run server/__tests__/moto-rates-routes.test.ts server/__tests__/moto-rates-storage.test.ts` — run the 12 regression tests (requires `npm run seed:dev` to have been run + the dev workflow on port 5000).
-  - `npm run db:migrate` — re-apply idempotent SQL migrations to a target DB.
-  - `psql -c "SELECT * FROM _idempotent_migrations"` — inspect which migrations have been applied.
-
-### Pass D follow-ups (post-review hardening)
-- **Migration `0007_moto_rates_constraints.sql`** (idempotent): adds FKs and a uniqueness constraint to the moto-rate tables added in Pass D — `employee_moto_rates(employee_id) → employees(id) ON DELETE CASCADE`, `(location_id) → locations(id) ON DELETE CASCADE`, `UNIQUE(employee_id, location_id)`; same three for `employee_moto_pct_rates`. Defensively cleans orphan/dup rows first so the constraints can be applied to any pre-existing data. Render auto-applies on next deploy.
-- **`sourceCompanyId` cross-tenant validation** (`server/routes.ts`): both PUT `/api/employees/:id/moto-rates` and `/moto-pct-rates` now build `getAccessibleCompanyIds(req.session.userId)` from `storage.getUserCompaniesWithRoles` and reject with 403 if any row's `sourceCompanyId` is not in the caller's accessible set. The primary `employee_id` was already tenant-scoped via `verifyEmployeeForCurrentCompany`; this closes the secondary cross-company write hole.
-- **Render flow simplified**: dropped `npm run db:push` from `render.yaml` `buildCommand`. New value: `npm install --production=false && npm run build && npm run db:migrate && npm run db:verify-moto-schema`. SQL migrations are now the sole schema source of truth in production.
-- **Dev seed script** (`scripts/seed-dev.ts`, run via `npm run seed:dev`): idempotent — creates `admin` user (password `admin`, written to `.admin-credentials.txt` mode 0600 only on first creation), `MAIN` company, two locations (`HQ`, `BR1`), and two employees (Ali Hassan, Sana Khan). Each step checks for existence before inserting, so safe to re-run. The 12 regression tests now require this seed to have been run because the FKs from migration 0007 reject synthetic IDs.
-- **`bonusTab` internal value renamed** (`Payroll.tsx`): the Tabs `value` for the moto bonus tab went from `"bales"` to `"motos"` (along with the union type and `data-testid="tab-motos-bonus"`). No backend impact — the value is internal-only state.
-- All 12 regression tests pass; tsc clean; schema verify 8/8 green; new constraints visible via `\d employee_moto_rates`.
-
-### Pass D audit-round-2 hardening (architect findings)
-After running an architect review on the Pass D + follow-up changes, three real issues were found and fixed:
-- **HIGH — cross-tenant locationId IDOR**: PUT `/api/employees/:id/moto-rates` and `/moto-pct-rates` previously trusted any numeric `locationId` in the body (FK only ensured the location existed *somewhere*, not in the caller's company). Added helper `getCurrentCompanyLocationIds(companyId)` that pulls the tenant's locations via `storage.getAllLocations` and rejects with 403 if any submitted `locationId` is not in the set. Combined with the existing employee tenant-scope check and `sourceCompanyId` cross-tenant check, all three referenced IDs (employee, location, sourceCompany) are now tenant-validated on every PUT.
-- **MEDIUM — concurrent PUT race**: `replaceEmployeeMotoRates` / `replaceEmployeeMotoPctRates` did delete-then-insert inside a transaction, but two simultaneous PUTs for the same employee could interleave and crash on the new `UNIQUE (employee_id, location_id)` constraint. Added `pg_advisory_xact_lock(employeeId)` as the first statement in each transaction — the lock is keyed by `employee_id` and auto-released on commit/rollback, so PUTs for the same employee serialize while different employees still run in parallel. Verified with a stress test firing 5 simultaneous PUTs against one employee: all 5 transactions commit successfully (no constraint violations), final state has exactly 2 rows (last-writer-wins).
-- **MEDIUM — missing fresh-DB bootstrap**: dropping `db:push` from `render.yaml` left the migration runner unable to bootstrap a brand-new DB (it only applies files >= 0006). Re-added `db:push` as the final step of the build chain — it runs *after* migrations + verify, so it's a no-op in steady state but provides the schema-bootstrap backstop for fresh DBs / disaster recovery. Final buildCommand: `npm install --production=false && npm run build && npm run db:migrate && npm run db:verify-moto-schema && npm run db:push`.
-
-### Pass D audit-round-3 — 10 follow-up improvements
-Implemented 10 follow-up items requested by the user:
-
-- **T01 (audit fix)** — Discovered the per-location `employee_moto_rates` table was write-only: no payroll calc read it. Fixed in the bonus-employee dialog: when the user picks a shop in `client/src/pages/Payroll.tsx`, the rate field auto-populates from `GET /api/employees/:id/moto-rates` filtered to that locationId; falls back to the scalar `employee.motosBonusRate` if no per-location row exists. Per-location rates now flow into bonus calculations.
-- **T02 (Zod validation)** — New `shared/validation.ts` exports Zod schemas (`motoRatesPutSchema`, `motoPctRatesPutSchema`, `bulkSet*Schema`) that bound `rate` to 0.01–1000 and `pct` to 0.01–100, coerce numeric strings, and cap arrays at 500 rows. Wired into both PUT endpoints + both bulk-set endpoints via the existing `validate()` middleware. Fat-finger errors now return 400 with structured field errors.
-- **T03 (soft-delete)** — Migration `0008_moto_rates_soft_delete.sql` adds `deleted_at TIMESTAMP NULL` to both rate tables; drops the strict UNIQUE(employee_id, location_id) constraint and recreates it as a partial unique index `WHERE deleted_at IS NULL` so soft-deleted rows don't block re-insertion. Storage `replaceEmployee*Rates` now `UPDATE ... SET deleted_at = NOW()` instead of `DELETE`. Selects filter `IS NULL`. Historical rate configurations are preserved.
-- **T04 (audit log)** — Migration `0009_moto_rate_audit.sql` creates `moto_rate_audit (id, employee_id, table_name, action, before_data JSONB, after_data JSONB, user_id, source_employee_id, context JSONB, created_at)`. All rate-changing storage methods (`replaceEmployeeMotoRates`, `replaceEmployeeMotoPctRates`, `bulkSetMotoRateAtLocation`, `bulkSetMotoPctRateAtLocation`, `copyEmployee*Rates`) write the audit row inside the same transaction as the change. New `GET /api/employees/:id/moto-rate-audit` endpoint returns the last 100 entries (tenant-scoped).
-- **T05 (copy from another employee)** — `POST /api/employees/:id/moto-rates/copy-from/:sourceId` and `POST /api/employees/:id/moto-pct-rates/copy-from/:sourceId`. Both employees must be in the current tenant (verified via `verifyEmployeeForCurrentCompany`). Replace-all semantics, audit-logged with `action='copy_from'` and `sourceEmployeeId`.
-- **T06 (bulk-edit by location)** — `POST /api/locations/:id/moto-rates/bulk-set` with body `{rate, employeeIds[], sourceCompanyId?}` sets the same rate at one location for many employees, preserving each employee's rates at other locations. Same for `/moto-pct-rates/bulk-set`. Tenant-scoped on locationId, every employeeId, and sourceCompanyId. Audit-logged with `action='bulk_set'` and `context={locationId, rate, sourceCompanyId}`.
-- **T07 (CSV export)** — `GET /api/companies/:id/moto-rates/export.csv` streams a CSV with columns `employee_code, employee_name, location_code, location_name, rate, pct`. Tenant-scoped on companyId via `getAccessibleCompanyIds`. Sets `Content-Type: text/csv` and `Content-Disposition: attachment` with timestamped filename.
-- **T08 (rate-change preview)** — Before the destructive replace-all PUT in the edit-employee dialog, the frontend now diffs `editBaleRates`/`editBalePctRates` against the server snapshot (`editingBaleRates`/`editingBalePctRates`) and shows a `window.confirm()` summary like `"Per-unit rates: +1 new, ~2 changed, -0 removed; Percentage rates: +0 new, ~1 changed, -0 removed"`. User can cancel to abort the save.
-- **T09 (pre-deploy pg_dump)** — **Skipped intentionally.** Render manages PG backups for managed instances; arbitrary `pg_dump` to nowhere wastes deploy time and provides no recovery path. Decision documented here so future agents don't add it.
-- **T10 (health endpoint)** — `GET /api/health` (no auth) returns `{status, db, uptimeSeconds, timestamp, nodeEnv}`. Returns 503 when DB is unreachable. Suitable for Render health probes / external monitoring. The pre-existing `/api/health/db` was kept for backward compatibility.
-
-**Schema verification:** `scripts/verify-moto-schema.ts` extended to check `deleted_at` columns on both rate tables and the `moto_rate_audit` table. Run by `npm run db:verify-moto-schema` and as part of the Render build.
-
-**Test coverage:** Total now **29 tests** across 3 files (6 routes + 6 storage + 17 authed). New authed tests cover: Zod 400 on rate=0 / rate=99999 / "1abc" (strict parser), copy-from happy path, bulk-set happy path + cross-tenant 403, audit-log GET, CSV export with header verification + cross-tenant 403, and `/api/health` smoke. All pass; tsc clean.
-
-**Architect-driven hardening (round-3.5):** Code review surfaced four follow-on issues, all fixed:
-- **HIGH — CSV formula injection (CWE-1236)**: employee/location names/codes flow into the CSV export. Cells starting with `= + - @ \t \r` could execute as formulas in Excel/Sheets and exfiltrate data. Fixed by prefixing such cells with a single quote (OWASP-recommended neutralizer) inside the `escape()` helper before normal CSV escaping.
-- **MEDIUM — copy-from IDOR back-door**: `POST /moto-rates/copy-from/:sourceId` previously trusted the source rows whole; legacy/manual data with cross-tenant `locationId` or `sourceCompanyId` would propagate to the target. Fixed by filtering source rows through `getCurrentCompanyLocationIds` + `getAccessibleCompanyIds` before replace, and reporting `skipped` count in the response.
-- **MEDIUM — Zod parser too permissive**: `parseFloat("1abc")` returned `1.0`, defeating bound checks. Replaced with strict regex `/^-?(?:\d+(?:\.\d+)?|\.\d+)$/` full-string match. Now rejects `"1abc"`, `""`, `"NaN"`, `"Infinity"`, etc. New regression test added.
-- **MEDIUM — Payroll autofill race**: rapid location/employee changes could let a slow `/moto-rates` response apply stale data to the wrong row or wrong employee. Fixed with a dispatch-time capture of `employeeId` + `locationId`; the apply path bails out if either changed during the round-trip. Also clears the rate field optimistically so the user never sees a stale value persist.
-
-### Pass D audit-round-2 — authenticated tenant-boundary tests
-Closed the "shallow tests" gap from the previous audit round.
-- **New test file** `server/__tests__/moto-rates-authed.test.ts` (7 tests): logs in as `admin` against the dev workflow over `https://$REPLIT_DEV_DOMAIN` (necessary because session cookies are `secure: true` on Replit and Express won't emit Set-Cookie over plain `localhost:5000`), captures the `erp.session=` cookie via `headers.getSetCookie()`, then exercises the full set of tenant-boundary paths:
-  1. PUT `/moto-rates` for an employee in a different company → **404** ("employee not found")
-  2. GET `/moto-rates` for an employee in a different company → **404**
-  3. PUT `/moto-rates` with a `locationId` from another company → **403** ("locationId ... does not belong")
-  4. PUT `/moto-pct-rates` with a `locationId` from another company → **403**
-  5. PUT `/moto-rates` with a `sourceCompanyId` the user has no access to → **403** ("sourceCompanyId ... not in your accessible")
-  6. PUT `/moto-rates` happy path with all-valid IDs → **200** (verifies row payload)
-  7. PUT `/moto-rates` with empty rates array → **200** (clears all rows, returns `[]`)
-- **Seed extension** (`scripts/seed-dev.ts`): added a second tenant `OTHER` / "Other Company" with its own location (`OTH-LOC`) and employee (`EMP-OTH`) for the cross-tenant cases. Admin is **not** assigned a role on this company. The setup is idempotent and verified via `SELECT c.id, c.code, c.name, COUNT(ucr.id) FROM companies LEFT JOIN user_company_roles ...` — `OTHER` shows `admin_roles=0`.
-- **Total regression coverage**: 19 tests across 3 files (6 routes + 6 storage + 7 authed); all pass; tsc clean.
-
-### Simplified accounting UX (no debit/credit jargon)
-- **New endpoints** (in `server/routes.ts`): `POST /api/accounts/transfer` writes a balanced 2-line `Payment` voucher (Debit destination, Credit source). `POST /api/accounts/adjust` writes a balanced 2-line `Journal` voucher with the opposite leg routed to a per-tenant `MANUAL_ADJ` "Manual Adjustments" suspense ledger (Equity, lazily auto-created via `getOrCreateManualAdjustmentsAccount`, race-safe via 23505 retry). Both endpoints `requireAuth` + `requireNonPOS`, are tenant-scoped (`verifyAccountOwnership`), wrap voucher header + both legs in a single `db.transaction(...)` for atomic balance integrity, and keep employee `currentBalance` cache in sync.
-- **Daybook hides system entries by default**: `GET /api/vouchers` accepts `?includeSystem=false` which filters out auto-generated voucher types (Sales, Purchase, Stock Transfer, Closing, Production, Consumption). `client/src/pages/Daybook.tsx` ships this filter on by default with a "Show automatic entries" toggle (`<Switch>`). Trial Balance / Balance Sheet / Income Statement still consume the full voucher set so they keep balancing.
-- **Tenant-isolation fix (drive-by)**: `storage.getVouchersByDateRange` now accepts an optional `companyId` and the `/api/vouchers` route always passes the session companyId — closes a cross-tenant date-range data leak that pre-existed before this work.
-- **Frontend**: `client/src/components/QuickTransferDialog.tsx` (From/To/Amount/Date/Notes, grouped Select with plain "have/owe" labels) and `QuickAdjustDialog.tsx` (Account/Increase|Decrease/Amount/Date/Reason). Wired into `client/src/pages/Accounts.tsx` header as `Adjust Balance` + `Pay / Receive` buttons next to the existing Create button. Customers (no `customer_id` column on `voucher_entries`) and factory accounts are intentionally excluded from the quick dialogs; existing flows handle them.
-
-### Pass E moto-rates round-4 — 10 follow-up improvements
-Implemented all ten audit-round-3 follow-ups (A1–A3 quick wins, B1–B3 medium, C1–C4 features).
-- **Migrations** `0010_rate_templates.sql`, `0011_effective_dated_rates.sql` (adds `effective_from`/`effective_to` + backfill from `created_at`), `0012_notifications.sql`. All applied via `npm run db:migrate`.
-- **Schema additions** (`shared/schema.ts`): `effectiveFrom`/`effectiveTo` on `employee_moto_rates` and `employee_moto_pct_rates`; new tables `rate_templates`, `rate_template_items`, `notifications`.
-- **A1 deep health** `GET /api/health/deep` — checks db connectivity, schema table count, audit-table reachability, returns 503 on degradation.
-- **A2 audit pagination/filtering** `GET /api/employees/:id/moto-rate-audit?from=&to=&action=&limit=&offset=` returns `{rows, total}` when any filter is present, else legacy raw array (backward compat).
-- **A3 outlier stats** `GET /api/locations/:id/moto-rate-stats` returns `{count, median, min, max}` (Postgres `percentile_cont`).
-- **B1 history UI** new `client/src/components/RateAuditDialog.tsx`; "View Rate History" button injected into the Edit-Employee dialog header in `Payroll.tsx`. Renders before/after diffs per audit entry with action badge, timestamp, actor.
-- **B2 CSV import** `POST /api/companies/:id/moto-rates/import.csv` — multer `upload.single("file")`, header-driven (`employee_code,location_code,rate,pct`), strict per-row decimal validation, defense-in-depth filter that the resolved employee/location belong to the target `companyId`. Returns `{employeesUpdated, ratesUpserted, pctUpserted}` on success or `{message, errors:[{line,message}]}` (HTTP 400) on per-row validation failures.
-- **B3 permission split** added `requireNonPOS` to all mutating moto-rate routes: `PUT /moto-rates`, `PUT /moto-pct-rates`, both `copy-from/:sourceId` routes, both `bulk-set` routes, all rate-template write routes, calc-preview, and CSV import. POS roles can still GET (read-only).
-- **C1 rate templates** new endpoints: `GET/POST /api/companies/:id/rate-templates`, `DELETE /api/rate-templates/:id`, `POST /api/rate-templates/:id/apply` (body `{employeeIds:[]}`). Storage methods `getRateTemplates/createRateTemplate/deleteRateTemplate/getRateTemplate`. Apply iterates each target employee and replaces their per-unit and pct rates from the template; tagged with `action: "template_apply"` and `context: {templateId, templateName}` in the audit log.
-- **C2 effective-dated rates** mutating storage methods (`replaceEmployeeMotoRates`, `replaceEmployeeMotoPctRates`, both `bulkSetMotoRateAtLocation*`) now set `effective_to = NOW()` on soft-deleted rows AND `effective_from = NOW()` on inserts. Reader endpoint `GET /api/employees/:id/moto-rates-as-of?date=...` returns `{asOf, rates, pctRates}`. Storage uses `COALESCE(effective_from, created_at) <= asOf` so backfilled rows still resolve correctly.
-- **C3 calc preview** `POST /api/payroll/calc-preview` body `{employeeId, locationId, date?, quantity?, salesAmount?}`. Uses C2 as-of reader; for each line emits `rateSource: "per_location_effective_dated" | "fallback_scalar_employee" | "none"` so the UI can show which rule applied.
-- **C4 notifications** in-app inbox: `GET /api/notifications?unreadOnly&limit`, `POST /api/notifications/mark-read` (body `{ids?:[]}`). Storage helper `notifyCompanyManagersOfRateChange(companyId, employeeId, action, actorUserId)` enqueues a row for every Admin/Owner/Manager of the company except the actor; called best-effort (try/catch logged) after every replace/copy/bulk-set/template-apply so a notification failure never aborts the underlying mutation. Bell icon `client/src/components/NotificationBell.tsx` mounted in the global header (`App.tsx`); polls every 60s, shows unread badge, "Mark all read" action.
-- **Validation**: 112/112 tests pass (sequential — pre-existing parallel-mode DB-sharing flake unrelated). `tsc --noEmit` clean. Architect (round-4) flagged: tightened CSV employee/location resolution to assert tenant ownership (defense-in-depth even though `getAllEmployees(companyId)` is already scoped), and switched as-of reader to `COALESCE(effective_from, created_at)` to remove the theoretical NULL-from + dated overlap edge case.
-
-### Pass F full-codebase audit — anonymous-access security gaps
-Ran a comprehensive audit (architect + targeted greps + endpoint probes) for IDOR, missing auth, validation gaps, money-precision issues, race conditions, N+1 queries, and frontend correctness. Most findings turned out to be **false positives** (the codebase already defends against them):
-- Frontend `useQuery` calls flagged for missing `enabled` guards (LocationInsights, CommunicationLog, Payroll statement) — all already have correct `enabled: !!id` guards.
-- `PUT /api/employees/:id/moto-rates` flagged for missing Zod — already wrapped in `validate(motoRatesPutSchema)`.
-- `/api/chat` flagged as unauth'd — endpoint doesn't exist; the actual chat lives at `/api/chatbot/*` and all 4 routes already require auth.
-- `PATCH /api/vouchers/:id` flagged for missing tenant check — endpoint doesn't exist; only `PATCH /api/vouchers/:id/sales` (auth'd) and `PUT /api/vouchers/:id/with-entries` (auth'd) exist.
-- Suppliers flagged for missing tenant scope — by design: the `suppliers` table has no `companyId` column (intentionally global across the workspace).
-
-**Real bugs fixed**: 6 endpoints were anonymously accessible and leaked business data:
-- `GET /api/suppliers` → leaked supplier names, emails, phones, payment terms
-- `GET /api/suppliers/:id` → same per-record
-- `GET /api/po-import/template` → leaked PO import schema
-- `GET /api/pos-import/template` → leaked POS import schema
-- `GET /api/stock-transfer-import/template` → leaked stock-transfer schema
-- `GET /api/stock-transfer-import/template-multi-source` → same multi-source
-
-All 6 now wear `requireAuth` (and `requireNonPOS` for the import templates, which only Admin/Owner/Manager need). Architect re-review caught a 7th: `GET /api/health/deep` (added in Pass E) was also anonymous and leaked schema metadata + audit row counts — now `requireAuth`. Endpoint probes after workflow restart confirm 401 responses; `/api/health` still 200; 112/112 tests pass; `tsc --noEmit` clean.
-
-**Deferred (acceptable trade-offs)**:
-- N+1 in `GET /api/suppliers/stats` (3 queries × N suppliers) — small supplier counts in practice, full SQL aggregate refactor would be invasive.
-- Supplier code generation race (read-then-insert with suffix) — backstopped by `UNIQUE` constraint on `suppliers.code`.
-- `syncEmployeeBalancesFromEntries` read-then-write balance updates — only invoked from synchronous import paths, not concurrent request handlers.
-- Money math via `parseFloat` in payroll `calc-preview` — preview only, not persisted; final voucher math goes through Drizzle decimal columns.
-
-### Pass G deep audit — soft-delete leaks in storage getters
-Second full-codebase audit (Pass G) targeted areas Pass F didn't cover: voucher atomicity, balance recompute correctness, soft-delete leaks, raw-SQL injection surface, migration idempotency, role-check edge cases, frontend cache invalidation, date-range off-by-ones, and unhandled async errors. The vast majority of architect findings turned out to be **false positives** on closer inspection:
-- `requireRole` "case-sensitivity" — roles are Zod-locked to exact strings (`Admin|Owner|Manager|POS1-6`); case-insensitive compare would be defensive theatre.
-- `POS.tsx` "missing cache invalidation" — already invalidates 7 keys (`/api/locations/:id/inventory`, `/api/vouchers`, `/api/accounts/all`, `/api/ledger-accounts`, `/api/bank-accounts`, `/api/suppliers`, `/api/accounts/voucher-sidebar`) on save.
-- Raw SQL injection — zero `db.execute(sql\`...\${req.body|query|params}...\`)` and zero `sql.raw(...)` calls. All dynamic values flow through Drizzle's tagged-template parameter binding.
-- Migration 0010/0011/0012 — verified all use `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE ADD COLUMN IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS`. Older 0000 lacks the guard but it's the bootstrap migration that drizzle-kit's journal prevents from re-running anyway.
-- Voucher creation atomicity — flagged as "needs `db.transaction`" in 7 routes but reading them shows most use `storage.createVoucher` then `storage.createVoucherEntry` in a tight async sequence. Wrapping each in a transaction is invasive (1000+ line refactor across legacy import paths) and there's no production evidence of orphan vouchers; deferred.
-
-**Real bug fixed**: 6 storage getter methods returned **soft-deleted (tombstoned) rows** to all callers, including sales/payroll/voucher flows that should never see them:
-- `getEmployeeByCode`, `getEmployeeById` (`server/storage.ts:728-742`)
-- `getCustomerById`, `getCustomerByCode` (`server/storage.ts:4405-4420`)
-- `getSupplierByCode`, `getSupplierById` (`server/storage.ts:940-952`)
-- `getStockItemById` (`server/storage.ts:1018-1023`)
-
-All 6 now apply `and(eq(...), isNull(table.deletedAt))`. The restore endpoint (`POST /api/deleted-items/:type/:id/restore` at `server/routes.ts:26189`) was verified to use raw `db.update` directly without going through these getters, so undelete flows are unaffected. Soft-deleted records still surface on the dedicated "Deleted Items" admin page (which queries with `isNotNull(deletedAt)` explicitly).
-
-**Validation**: 112/112 tests pass; `tsc --noEmit` clean; workflow restart smoke OK (`/api/health` 200, root 200, anonymous `/api/suppliers` 401).
-
-**Accepted regressions** (architect re-review of soft-delete fix): `getSupplierById` is also called from voucher-detail (`server/routes.ts:15868`) and PO-view (`server/routes.ts:10665`) routes; if a supplier is later soft-deleted, those historical screens will show "Unknown Supplier" for the lookup field instead of the original name. The audit-style joins (`getVoucherEntriesByVoucher` at `server/storage.ts:2642+` uses a `leftJoin` against `schema.suppliers` directly) still resolve names correctly via the join, so balance/ledger/audit views are unaffected. The cosmetic regression is preferable to silently re-surfacing tombstoned customer/supplier PII into live sales and payroll flows. Payroll balance-sync (`server/routes.ts:222`) now silently skips soft-deleted employees — this is the desired behavior (don't apply balance deltas to deleted employees) and matches the existing `if (!employee) continue` guard semantics.
+- **Inventory**: Multi-location stock tracking, container-based purchase orders, stock transfers, production/consumption vouchers.
+- **Financial Accounting**: Full double-entry voucher system (Sales, Purchase, Payment, Receipt, Journal, Contra, Stock Transfer, Production, Consumption), auto-generated vouchers, ledger account hierarchy, financial reports (Income Statement, Daybook, Opening/Closing Stock). Simplified UX for account transfers and adjustments.
+- **Point of Sale (POS)**: Restricted interface, location-authenticated sessions, barcode scanning.
+- **Partners & Service**: Supplier and customer management, service history, warranty tracking, communication logs.
+- **Assembly**: Records for motorcycle assembly from components.
+- **Payroll**: Employee management, payroll voucher creation, detailed moto bonus rate management with effective dating, templates, and audit logs.
+- **Settings (Admin-only)**: Admin panel for companies, users, fiscal periods, system preferences, role permissions, active sessions, and database statistics.
+- **Security**: Hardened authentication, centralized error handling, Zod input validation, dependency cleanup, and security audits addressing potential vulnerabilities like IDORs and cross-tenant data leaks. Implementation of soft-deletes and corresponding safe-guards to prevent data leakage.
+- **Auditing**: Comprehensive audit logging for critical data changes, particularly in employee moto rates.
+- **Notifications**: In-app notification system for key events.
+- **Health Checks**: `/api/health` and `/api/health/deep` endpoints for monitoring system status.
 
 ## External Dependencies
 
@@ -224,6 +58,11 @@ All 6 now apply `and(eq(...), isNull(table.deletedAt))`. The restore endpoint (`
 - **Carousel**: `embla-carousel-react`.
 - **Database Drivers/Tools**: `pg` (node-postgres), `drizzle-orm`, `drizzle-kit`, `connect-pg-simple`.
 - **Form Management/Validation**: `react-hook-form`, `@hookform/resolvers`, `zod`, `drizzle-zod`.
-- **Spreadsheet Export**: `xlsx`.
+- **Spreadsheet Export**: `exceljs`.
 - **Build Tools**: Vite, `esbuild`, PostCSS, Autoprefixer.
 - **AI Integration**: Google Gemini API (admin-controlled access).
+## Pass H — Full-app smoke test (May 03, 2026)
+
+- E2E smoke-tested all 56 pages logged in as admin: every page renders without React error overlays, blank states, or HTTP 500s.
+- Fix: `client/src/pages/Settings.tsx` users table — replaced bare `<>` Fragment in `users.map` (Fragment couldn't accept the Replit Vite plugin's `data-replit-metadata` prop) with `flatMap` returning sibling `<TableRow key="...-main">` and `<TableRow key="...-detail">`. Removes "Each child in a list should have a unique key" and "Invalid prop supplied to React.Fragment" warnings on /settings.
+- Authored `USAGE_GUIDE.md` documenting every page and common workflows.
