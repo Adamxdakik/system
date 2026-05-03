@@ -172,6 +172,30 @@ Implemented all ten audit-round-3 follow-ups (A1–A3 quick wins, B1–B3 medium
 - **C4 notifications** in-app inbox: `GET /api/notifications?unreadOnly&limit`, `POST /api/notifications/mark-read` (body `{ids?:[]}`). Storage helper `notifyCompanyManagersOfRateChange(companyId, employeeId, action, actorUserId)` enqueues a row for every Admin/Owner/Manager of the company except the actor; called best-effort (try/catch logged) after every replace/copy/bulk-set/template-apply so a notification failure never aborts the underlying mutation. Bell icon `client/src/components/NotificationBell.tsx` mounted in the global header (`App.tsx`); polls every 60s, shows unread badge, "Mark all read" action.
 - **Validation**: 112/112 tests pass (sequential — pre-existing parallel-mode DB-sharing flake unrelated). `tsc --noEmit` clean. Architect (round-4) flagged: tightened CSV employee/location resolution to assert tenant ownership (defense-in-depth even though `getAllEmployees(companyId)` is already scoped), and switched as-of reader to `COALESCE(effective_from, created_at)` to remove the theoretical NULL-from + dated overlap edge case.
 
+### Pass F full-codebase audit — anonymous-access security gaps
+Ran a comprehensive audit (architect + targeted greps + endpoint probes) for IDOR, missing auth, validation gaps, money-precision issues, race conditions, N+1 queries, and frontend correctness. Most findings turned out to be **false positives** (the codebase already defends against them):
+- Frontend `useQuery` calls flagged for missing `enabled` guards (LocationInsights, CommunicationLog, Payroll statement) — all already have correct `enabled: !!id` guards.
+- `PUT /api/employees/:id/moto-rates` flagged for missing Zod — already wrapped in `validate(motoRatesPutSchema)`.
+- `/api/chat` flagged as unauth'd — endpoint doesn't exist; the actual chat lives at `/api/chatbot/*` and all 4 routes already require auth.
+- `PATCH /api/vouchers/:id` flagged for missing tenant check — endpoint doesn't exist; only `PATCH /api/vouchers/:id/sales` (auth'd) and `PUT /api/vouchers/:id/with-entries` (auth'd) exist.
+- Suppliers flagged for missing tenant scope — by design: the `suppliers` table has no `companyId` column (intentionally global across the workspace).
+
+**Real bugs fixed**: 6 endpoints were anonymously accessible and leaked business data:
+- `GET /api/suppliers` → leaked supplier names, emails, phones, payment terms
+- `GET /api/suppliers/:id` → same per-record
+- `GET /api/po-import/template` → leaked PO import schema
+- `GET /api/pos-import/template` → leaked POS import schema
+- `GET /api/stock-transfer-import/template` → leaked stock-transfer schema
+- `GET /api/stock-transfer-import/template-multi-source` → same multi-source
+
+All 6 now wear `requireAuth` (and `requireNonPOS` for the import templates, which only Admin/Owner/Manager need). Architect re-review caught a 7th: `GET /api/health/deep` (added in Pass E) was also anonymous and leaked schema metadata + audit row counts — now `requireAuth`. Endpoint probes after workflow restart confirm 401 responses; `/api/health` still 200; 112/112 tests pass; `tsc --noEmit` clean.
+
+**Deferred (acceptable trade-offs)**:
+- N+1 in `GET /api/suppliers/stats` (3 queries × N suppliers) — small supplier counts in practice, full SQL aggregate refactor would be invasive.
+- Supplier code generation race (read-then-insert with suffix) — backstopped by `UNIQUE` constraint on `suppliers.code`.
+- `syncEmployeeBalancesFromEntries` read-then-write balance updates — only invoked from synchronous import paths, not concurrent request handlers.
+- Money math via `parseFloat` in payroll `calc-preview` — preview only, not persisted; final voucher math goes through Drizzle decimal columns.
+
 ## External Dependencies
 
 - **UI Libraries**: Radix UI, Tailwind CSS, shadcn/ui, `cmdk`.

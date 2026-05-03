@@ -2451,8 +2451,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===== Round-4 follow-ups =====
-  // A1: deep health check
-  app.get("/api/health/deep", async (_req, res) => {
+  // A1: deep health check (auth'd — leaks schema metadata + row counts)
+  app.get("/api/health/deep", requireAuth, async (_req, res) => {
     const startedAt = Date.now();
     const checks: any = { db: "unknown", migrations: "unknown", auditTable: "unknown" };
     try {
@@ -4363,7 +4363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Suppliers
-  app.get("/api/suppliers", async (_req, res) => {
+  app.get("/api/suppliers", requireAuth, async (_req, res) => {
     try {
       const suppliers = await storage.getAllSuppliers();
       res.json(suppliers);
@@ -4423,7 +4423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/suppliers/:id", async (req, res) => {
+  app.get("/api/suppliers/:id", requireAuth, async (req, res) => {
     try {
       const supplierId = parseInt(req.params.id);
       if (isNaN(supplierId)) {
@@ -7940,7 +7940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download sample PO import template
-  app.get("/api/po-import/template", async (_req, res) => {
+  app.get("/api/po-import/template", requireAuth, requireNonPOS, async (_req, res) => {
     try {
       // Sample data for the template
       const sampleData = [
@@ -8432,7 +8432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download sample POS import template
-  app.get("/api/pos-import/template", async (_req, res) => {
+  app.get("/api/pos-import/template", requireAuth, requireNonPOS, async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -8850,7 +8850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Download sample Stock Transfer import template
-  app.get("/api/stock-transfer-import/template", async (_req, res) => {
+  app.get("/api/stock-transfer-import/template", requireAuth, requireNonPOS, async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -8889,7 +8889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Multi-source Stock Transfer Import - Template
-  app.get("/api/stock-transfer-import/template-multi-source", async (_req, res) => {
+  app.get("/api/stock-transfer-import/template-multi-source", requireAuth, requireNonPOS, async (_req, res) => {
     try {
       const sampleData = [
         {
