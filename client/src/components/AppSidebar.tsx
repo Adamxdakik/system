@@ -47,7 +47,7 @@ import { useLocation } from "wouter";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { ROUTE_TO_FEATURE } from "@shared/schema";
-import mototrackLogo from "@assets/generated_images/mototrack_motorcycle_business_logo.png";
+import huangheLogo from "@assets/images_1779624622312.png";
 
 const menuItems = [
   {
@@ -303,15 +303,15 @@ export function AppSidebar({ user }: { user?: any }) {
     <Sidebar>
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden bg-sidebar-accent">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden bg-white p-1">
             <img 
-              src={mototrackLogo} 
-              alt="MotoTrack" 
-              className="h-full w-full object-cover"
+              src={huangheLogo} 
+              alt="Huanghe Motos" 
+              className="h-full w-full object-contain"
             />
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-bold tracking-tight">MotoTrack</span>
+            <span className="text-base font-bold tracking-tight">Huanghe Motos</span>
             <span className="text-xs text-muted-foreground">
               Business Management
             </span>

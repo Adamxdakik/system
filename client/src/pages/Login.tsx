@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import mototrackLogo from "@assets/generated_images/mototrack_motorcycle_business_logo.png";
+import huangheLogo from "@assets/images_1779624622312.png";
 
 export default function Login() {
   const { toast } = useToast();
@@ -49,15 +49,15 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md p-8">
         <div className="flex flex-col items-center gap-4 mb-8">
-          <div className="flex h-20 w-20 items-center justify-center rounded-xl overflow-hidden bg-card">
+          <div className="flex items-center justify-center rounded-xl overflow-hidden bg-white px-6 py-3">
             <img 
-              src={mototrackLogo} 
-              alt="MotoTrack Logo" 
-              className="h-full w-full object-cover"
+              src={huangheLogo} 
+              alt="Huanghe Motos Logo" 
+              className="h-12 w-auto object-contain"
             />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight">MotoTrack</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Huanghe Motos</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Motorcycle Business Management
             </p>
