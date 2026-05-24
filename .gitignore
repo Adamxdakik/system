@@ -38,9 +38,20 @@ logs/
 zipFile.zip
 *.zip
 *.tar.gz
+
+# Development screenshots and uploaded assets (not part of the app)
+Screenshot*.png
+attached_assets/*.png
+attached_assets/*.jpg
+attached_assets/*.jpeg
+attached_assets/*.gif
+attached_assets/*.webp
 attached_assets/*.sql
 attached_assets/*.gz
 attached_assets/*.tar
+attached_assets/*.txt
+# Keep the app logo
+!attached_assets/generated_images/mototrack_motorcycle_business_logo.png
 
 # Misc stray files
 ServiceHistory.tsx
