@@ -211,10 +211,10 @@ export default function Payroll() {
   const [bonusSalesCustomPct, setBonusSalesCustomPct] = useState<string>("");
   const [bonusDate, setBonusDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [bonusNotes, setBonusNotes] = useState<string>("");
-  const [balesRows, setBalesRows] = useState<Array<{ locationId: string; qty: string; rate: string; preview: string | null; loading: boolean }>>([{ locationId: "", qty: "", rate: "", preview: null, loading: false }]);
-  const [balesPeriod, setBalesPeriod] = useState<"thisMonth" | "custom">("thisMonth");
-  const [balesStart, setBalesStart] = useState<string>("");
-  const [balesEnd, setBalesEnd] = useState<string>("");
+  const [motosRows, setMotosRows] = useState<Array<{ locationId: string; qty: string; rate: string; preview: string | null; loading: boolean }>>([{ locationId: "", qty: "", rate: "", preview: null, loading: false }]);
+  const [motosPeriod, setMotosPeriod] = useState<"thisMonth" | "custom">("thisMonth");
+  const [motosStart, setMotosStart] = useState<string>("");
+  const [motosEnd, setMotosEnd] = useState<string>("");
   const [withdrawalDialogOpen, setWithdrawalDialogOpen] = useState(false);
   const [bulkPaymentDialogOpen, setBulkPaymentDialogOpen] = useState(false);
   const [advanceDialogOpen, setAdvanceDialogOpen] = useState(false);
@@ -349,10 +349,10 @@ export default function Payroll() {
   const [bulkDepositDate, setBulkDepositDate] = useState(new Date().toISOString().split('T')[0]);
   const [bulkDepositNotes, setBulkDepositNotes] = useState("");
 
-  // Edit employee bale rates state
-  const [editBaleRates, setEditBaleRates] = useState<{ locationId: string; rate: string; sourceCompanyId: string }[]>([]);
-  // Edit employee bale pct rates state (% bonus by location)
-  const [editBalePctRates, setEditBalePctRates] = useState<{ locationId: string; pct: string; sourceCompanyId: string }[]>([]);
+  // Edit employee moto rates state
+  const [editMotoRates, setEditMotoRates] = useState<{ locationId: string; rate: string; sourceCompanyId: string }[]>([]);
+  // Edit employee moto pct rates state (% bonus by location)
+  const [editMotoPctRates, setEditMotoPctRates] = useState<{ locationId: string; pct: string; sourceCompanyId: string }[]>([]);
   const [bulkBonusAutoMonth, setBulkBonusAutoMonth] = useState<"thisMonth" | "custom">("thisMonth");
   const [bulkBonusAutoStart, setBulkBonusAutoStart] = useState(() => getThisMonthRange().start);
   const [bulkBonusAutoEnd, setBulkBonusAutoEnd] = useState(() => getThisMonthRange().end);
@@ -381,7 +381,7 @@ export default function Payroll() {
     enabled: !!selectedGroupForMembers?.id,
   });
 
-  const { data: editingBaleRates } = useQuery<Array<{ id: number; locationId: number; rate: string }>>({
+  const { data: editingMotoRates } = useQuery<Array<{ id: number; locationId: number; rate: string }>>({
     queryKey: ["/api/employees", editingEmployee?.id, "moto-rates"],
     queryFn: async () => {
       if (!editingEmployee?.id) return [];
@@ -391,7 +391,7 @@ export default function Payroll() {
     enabled: !!editingEmployee && editEmployeeDialogOpen,
   });
 
-  const { data: editingBalePctRates } = useQuery<Array<{ id: number; locationId: number; pct: string; sourceCompanyId?: number | null }>>({
+  const { data: editingMotoPctRates } = useQuery<Array<{ id: number; locationId: number; pct: string; sourceCompanyId?: number | null }>>({
     queryKey: ["/api/employees", editingEmployee?.id, "moto-pct-rates"],
     queryFn: async () => {
       if (!editingEmployee?.id) return [];
@@ -406,7 +406,7 @@ export default function Payroll() {
     enabled: !!selectedCompany?.id,
   });
 
-  // Fetch locations for all other companies the user has access to (for cross-company bale rates)
+  // Fetch locations for all other companies the user has access to (for cross-company moto rates)
   const otherCompanies = companies.filter(c => c.id !== selectedCompany?.id);
   const { data: allCompanyLocations = [] } = useQuery<Array<{ id: number; name: string; companyId: number; companyName: string }>>({
     queryKey: ["/api/all-company-locations", companies.map(c => c.id).join(",")],
@@ -1265,10 +1265,10 @@ export default function Payroll() {
         : null;
       // T08: change-preview — diff local edits vs the server snapshot and ask the
       // user to confirm before the destructive replace-all PUT.
-      const validRates = editBaleRates.filter(r => r.locationId && parseFloat(r.rate) > 0);
-      const validPctRates = editBalePctRates.filter(r => r.locationId && parseFloat(r.pct) > 0);
-      const serverRates = editingBaleRates ?? [];
-      const serverPctRates = editingBalePctRates ?? [];
+      const validRates = editMotoRates.filter(r => r.locationId && parseFloat(r.rate) > 0);
+      const validPctRates = editMotoPctRates.filter(r => r.locationId && parseFloat(r.pct) > 0);
+      const serverRates = editingMotoRates ?? [];
+      const serverPctRates = editingMotoPctRates ?? [];
       const diff = (server: any[], local: any[], key: "rate" | "pct") => {
         const sMap = new Map(server.map((s: any) => [Number(s.locationId), String(s[key])]));
         const lMap = new Map(local.map((l: any) => [Number(l.locationId), String(l[key])]));
@@ -1329,20 +1329,20 @@ export default function Payroll() {
         motosBonusRate: editingEmployee.motosBonusRate != null ? String(editingEmployee.motosBonusRate) : "",
       });
     }
-    if (!editEmployeeDialogOpen) { setEditBaleRates([]); setEditBalePctRates([]); }
+    if (!editEmployeeDialogOpen) { setEditMotoRates([]); setEditMotoPctRates([]); }
   }, [editingEmployee, editEmployeeDialogOpen]);
 
   useEffect(() => {
-    if (editEmployeeDialogOpen && editingBaleRates) {
-      setEditBaleRates(editingBaleRates.map((r: any) => ({ locationId: String(r.locationId), rate: String(r.rate), sourceCompanyId: r.sourceCompanyId ? String(r.sourceCompanyId) : "" })));
+    if (editEmployeeDialogOpen && editingMotoRates) {
+      setEditMotoRates(editingMotoRates.map((r: any) => ({ locationId: String(r.locationId), rate: String(r.rate), sourceCompanyId: r.sourceCompanyId ? String(r.sourceCompanyId) : "" })));
     }
-  }, [editingBaleRates, editEmployeeDialogOpen]);
+  }, [editingMotoRates, editEmployeeDialogOpen]);
 
   useEffect(() => {
-    if (editEmployeeDialogOpen && editingBalePctRates) {
-      setEditBalePctRates(editingBalePctRates.map((r: any) => ({ locationId: String(r.locationId), pct: String(r.pct), sourceCompanyId: r.sourceCompanyId ? String(r.sourceCompanyId) : "" })));
+    if (editEmployeeDialogOpen && editingMotoPctRates) {
+      setEditMotoPctRates(editingMotoPctRates.map((r: any) => ({ locationId: String(r.locationId), pct: String(r.pct), sourceCompanyId: r.sourceCompanyId ? String(r.sourceCompanyId) : "" })));
     }
-  }, [editingBalePctRates, editEmployeeDialogOpen]);
+  }, [editingMotoPctRates, editEmployeeDialogOpen]);
 
   const deleteEmployeeMutation = useMutation({
     mutationFn: async ({ id, forceDelete = false }: { id: number; forceDelete?: boolean }) => {
@@ -1398,10 +1398,10 @@ export default function Payroll() {
     setBonusSalesCustomPct(employee.salesBonusPct != null ? String(employee.salesBonusPct) : "");
     setBonusDate(new Date().toISOString().split("T")[0]);
     setBonusNotes("");
-    setBalesRows([{ locationId: "", qty: "", rate: employee.motosBonusRate != null ? String(employee.motosBonusRate) : "", preview: null, loading: false }]);
-    setBalesPeriod("thisMonth");
-    setBalesStart(range.start);
-    setBalesEnd(range.end);
+    setMotosRows([{ locationId: "", qty: "", rate: employee.motosBonusRate != null ? String(employee.motosBonusRate) : "", preview: null, loading: false }]);
+    setMotosPeriod("thisMonth");
+    setMotosStart(range.start);
+    setMotosEnd(range.end);
     setBonusDialogOpen(true);
   };
 
@@ -1420,18 +1420,18 @@ export default function Payroll() {
     setBonusSalesLoading(false);
   };
 
-  const fetchBalesQty = async (idx: number) => {
-    const row = balesRows[idx];
+  const fetchMotosQty = async (idx: number) => {
+    const row = motosRows[idx];
     if (!row.locationId) return;
-    const start = balesPeriod === "thisMonth" ? getThisMonthRange().start : balesStart;
-    const end = balesPeriod === "thisMonth" ? getThisMonthRange().end : balesEnd;
-    setBalesRows(prev => prev.map((r, i) => i === idx ? { ...r, loading: true } : r));
+    const start = motosPeriod === "thisMonth" ? getThisMonthRange().start : motosStart;
+    const end = motosPeriod === "thisMonth" ? getThisMonthRange().end : motosEnd;
+    setMotosRows(prev => prev.map((r, i) => i === idx ? { ...r, loading: true } : r));
     try {
       const res = await modeApiRequest("GET", `/api/payroll/sales-summary?locationId=${row.locationId}&startDate=${start}&endDate=${end}`);
       const data = await res.json();
-      setBalesRows(prev => prev.map((r, i) => i === idx ? { ...r, qty: Number(data.totalQuantity || 0).toFixed(0), loading: false } : r));
+      setMotosRows(prev => prev.map((r, i) => i === idx ? { ...r, qty: Number(data.totalQuantity || 0).toFixed(0), loading: false } : r));
     } catch {
-      setBalesRows(prev => prev.map((r, i) => i === idx ? { ...r, loading: false } : r));
+      setMotosRows(prev => prev.map((r, i) => i === idx ? { ...r, loading: false } : r));
     }
   };
 
@@ -1445,8 +1445,8 @@ export default function Payroll() {
         description: `Sales bonus ${pct}% of ${formatAmount(sales)} at ${bonusSalesPreview.locationName}`,
       };
     } else {
-      const amount = balesRows.reduce((sum, r) => sum + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0);
-      const parts = balesRows
+      const amount = motosRows.reduce((sum, r) => sum + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0);
+      const parts = motosRows
         .filter(r => r.locationId && parseFloat(r.qty || "0") > 0)
         .map(r => {
           const loc = locations.find(l => l.id === parseInt(r.locationId));
@@ -1487,22 +1487,22 @@ export default function Payroll() {
 
         const ratesRes = await modeApiRequest("GET", `/api/employees/${emp.id}/moto-rates`);
         const rates: Array<{ locationId: number; rate: string; sourceCompanyId?: number }> = await ratesRes.json();
-        const hasBaleRates = rates && rates.length > 0;
+        const hasMotoRates = rates && rates.length > 0;
 
         const pctRatesRes = await modeApiRequest("GET", `/api/employees/${emp.id}/moto-pct-rates`);
         const pctRates: Array<{ locationId: number; pct: string; sourceCompanyId?: number }> = await pctRatesRes.json();
         const hasPerLocationPct = pctRates && pctRates.length > 0;
 
-        if (!hasBaleRates && !hasPct && !hasPerLocationPct) continue;
+        if (!hasMotoRates && !hasPct && !hasPerLocationPct) continue;
 
         let total = 0;
 
-        if (hasBaleRates) {
+        if (hasMotoRates) {
           for (const r of rates) {
             const srcParam = (r as any).sourceCompanyId ? `&sourceCompanyId=${(r as any).sourceCompanyId}` : "";
             const res = await modeApiRequest("GET", `/api/payroll/sales-summary?locationId=${r.locationId}&startDate=${start}&endDate=${end}${srcParam}`);
             const data = await res.json();
-            // Per-unit bale bonus
+            // Per-unit moto bonus
             total += parseFloat(data.totalQuantity || "0") * parseFloat(r.rate || "0");
           }
         }
@@ -2949,7 +2949,7 @@ export default function Payroll() {
               )}
             </TabsContent>
 
-            {/* ── Bales / Units Tab ── */}
+            {/* ── Motos / Units Tab ── */}
             <TabsContent value="motos" className="space-y-4 mt-4">
               <div className="space-y-1">
                 <Label>Period</Label>
@@ -2957,26 +2957,26 @@ export default function Payroll() {
                   <Button
                     type="button"
                     size="sm"
-                    variant={balesPeriod === "thisMonth" ? "default" : "outline"}
-                    onClick={() => setBalesPeriod("thisMonth")}
-                    data-testid="button-bales-this-month"
+                    variant={motosPeriod === "thisMonth" ? "default" : "outline"}
+                    onClick={() => setMotosPeriod("thisMonth")}
+                    data-testid="button-motos-this-month"
                   >
                     This Month
                   </Button>
                   <Button
                     type="button"
                     size="sm"
-                    variant={balesPeriod === "custom" ? "default" : "outline"}
-                    onClick={() => setBalesPeriod("custom")}
-                    data-testid="button-bales-custom-period"
+                    variant={motosPeriod === "custom" ? "default" : "outline"}
+                    onClick={() => setMotosPeriod("custom")}
+                    data-testid="button-motos-custom-period"
                   >
                     Custom
                   </Button>
                 </div>
-                {balesPeriod === "custom" && (
+                {motosPeriod === "custom" && (
                   <div className="flex gap-2 mt-2">
-                    <Input type="date" value={balesStart} onChange={(e) => setBalesStart(e.target.value)} data-testid="input-bales-start" />
-                    <Input type="date" value={balesEnd} onChange={(e) => setBalesEnd(e.target.value)} data-testid="input-bales-end" />
+                    <Input type="date" value={motosStart} onChange={(e) => setMotosStart(e.target.value)} data-testid="input-motos-start" />
+                    <Input type="date" value={motosEnd} onChange={(e) => setMotosEnd(e.target.value)} data-testid="input-motos-end" />
                   </div>
                 )}
               </div>
@@ -2985,7 +2985,7 @@ export default function Payroll() {
                 <div className="grid grid-cols-[1fr_72px_32px_72px_32px] gap-2 text-xs text-muted-foreground px-1">
                   <span>Location</span><span>Qty</span><span></span><span>Rate ($)</span><span></span>
                 </div>
-                {balesRows.map((row, idx) => (
+                {motosRows.map((row, idx) => (
                   <div key={idx} className="grid grid-cols-[1fr_72px_32px_72px_32px] gap-2 items-center">
                     <Select
                       value={row.locationId}
@@ -3000,7 +3000,7 @@ export default function Payroll() {
                         const dispatchLocationId = v;
                         const fallbackRate = selectedEmployee?.motosBonusRate != null ? String(selectedEmployee.motosBonusRate) : "";
                         // Optimistically set location + clear qty + clear rate so the user sees feedback immediately.
-                        setBalesRows(prev => prev.map((r, i) => i === idx ? { ...r, locationId: v, qty: "", rate: "" } : r));
+                        setMotosRows(prev => prev.map((r, i) => i === idx ? { ...r, locationId: v, qty: "", rate: "" } : r));
                         if (!selectedEmployee || !v) return;
                         let resolvedRate = fallbackRate;
                         try {
@@ -3010,7 +3010,7 @@ export default function Payroll() {
                           if (match) resolvedRate = String(match.rate);
                         } catch { /* keep fallback */ }
                         // Apply only if the user hasn't moved on to a different employee or location.
-                        setBalesRows(prev => {
+                        setMotosRows(prev => {
                           if (selectedEmployee?.id !== dispatchEmployeeId) return prev; // employee switched
                           const cur = prev[idx];
                           if (!cur || cur.locationId !== dispatchLocationId) return prev; // row changed
@@ -3018,7 +3018,7 @@ export default function Payroll() {
                         });
                       }}
                     >
-                      <SelectTrigger data-testid={`select-bales-location-${idx}`} className="h-9">
+                      <SelectTrigger data-testid={`select-motos-location-${idx}`} className="h-9">
                         <SelectValue placeholder="Shop" />
                       </SelectTrigger>
                       <SelectContent>
@@ -3032,8 +3032,8 @@ export default function Payroll() {
                       placeholder="0"
                       value={row.qty}
                       className="h-9"
-                      onChange={(e) => setBalesRows(prev => prev.map((r, i) => i === idx ? { ...r, qty: e.target.value } : r))}
-                      data-testid={`input-bales-qty-${idx}`}
+                      onChange={(e) => setMotosRows(prev => prev.map((r, i) => i === idx ? { ...r, qty: e.target.value } : r))}
+                      data-testid={`input-motos-qty-${idx}`}
                     />
                     <Button
                       type="button"
@@ -3041,7 +3041,7 @@ export default function Payroll() {
                       variant="ghost"
                       title="Fetch qty from sales data"
                       disabled={!row.locationId || row.loading}
-                      onClick={() => fetchBalesQty(idx)}
+                      onClick={() => fetchMotosQty(idx)}
                       data-testid={`button-fetch-qty-${idx}`}
                     >
                       {row.loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
@@ -3052,22 +3052,22 @@ export default function Payroll() {
                       placeholder="0.00"
                       value={row.rate}
                       className="h-9"
-                      onChange={(e) => setBalesRows(prev => prev.map((r, i) => i === idx ? { ...r, rate: e.target.value } : r))}
-                      data-testid={`input-bales-rate-${idx}`}
+                      onChange={(e) => setMotosRows(prev => prev.map((r, i) => i === idx ? { ...r, rate: e.target.value } : r))}
+                      data-testid={`input-motos-rate-${idx}`}
                     />
                     <Button
                       type="button"
                       size="icon"
                       variant="ghost"
                       className="text-muted-foreground"
-                      onClick={() => setBalesRows(prev => prev.length === 1 ? prev : prev.filter((_, i) => i !== idx))}
-                      data-testid={`button-remove-bales-row-${idx}`}
+                      onClick={() => setMotosRows(prev => prev.length === 1 ? prev : prev.filter((_, i) => i !== idx))}
+                      data-testid={`button-remove-motos-row-${idx}`}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
-                {balesRows.map((row, idx) => {
+                {motosRows.map((row, idx) => {
                   const q = parseFloat(row.qty || "0");
                   const r = parseFloat(row.rate || "0");
                   const total = q * r;
@@ -3085,15 +3085,15 @@ export default function Payroll() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setBalesRows(prev => [...prev, { locationId: "", qty: "", rate: selectedEmployee?.motosBonusRate != null ? String(selectedEmployee.motosBonusRate) : "", preview: null, loading: false }])}
-                data-testid="button-add-bales-row"
+                onClick={() => setMotosRows(prev => [...prev, { locationId: "", qty: "", rate: selectedEmployee?.motosBonusRate != null ? String(selectedEmployee.motosBonusRate) : "", preview: null, loading: false }])}
+                data-testid="button-add-motos-row"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Add Shop
               </Button>
 
               {(() => {
-                const total = balesRows.reduce((sum, r) => sum + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0);
+                const total = motosRows.reduce((sum, r) => sum + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0);
                 if (total <= 0) return null;
                 return (
                   <div className="rounded-md border bg-muted/30 p-3 flex justify-between items-center">
@@ -3134,7 +3134,7 @@ export default function Payroll() {
               disabled={
                 bonusTab === "sales"
                   ? !bonusSalesPreview || parseFloat(bonusSalesCustomPct || "0") <= 0
-                  : balesRows.reduce((s, r) => s + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0) <= 0
+                  : motosRows.reduce((s, r) => s + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0) <= 0
               }
               data-testid="button-save-bonus-to-bulk"
             >
@@ -3147,14 +3147,14 @@ export default function Payroll() {
               disabled={
                 bonusTab === "sales"
                   ? !bonusSalesPreview || parseFloat(bonusSalesCustomPct || "0") <= 0
-                  : balesRows.reduce((s, r) => s + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0) <= 0
+                  : motosRows.reduce((s, r) => s + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0) <= 0
               }
               data-testid="button-submit-bonus"
             >
               {bonusTab === "sales" && bonusSalesPreview
                 ? `Give Now ${formatAmount((parseFloat(bonusSalesPreview.totalSalesAmount || "0") * parseFloat(bonusSalesCustomPct || "0")) / 100)}`
                 : bonusTab === "motos"
-                ? `Give Now ${formatAmount(balesRows.reduce((s, r) => s + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0))}`
+                ? `Give Now ${formatAmount(motosRows.reduce((s, r) => s + parseFloat(r.qty || "0") * parseFloat(r.rate || "0"), 0))}`
                 : "Give Now"}
             </Button>
           </div>
@@ -4278,7 +4278,7 @@ export default function Payroll() {
                             placeholder="e.g. 2.00"
                             {...field}
                             value={field.value || ""}
-                            data-testid="input-bales-bonus-rate-create"
+                            data-testid="input-motos-bonus-rate-create"
                           />
                         </FormControl>
                         <FormMessage />
@@ -5346,17 +5346,17 @@ export default function Payroll() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => setEditBaleRates(prev => [...prev, { locationId: "", rate: "", sourceCompanyId: "" }])}
-                      data-testid="button-add-bale-rate"
+                      onClick={() => setEditMotoRates(prev => [...prev, { locationId: "", rate: "", sourceCompanyId: "" }])}
+                      data-testid="button-add-moto-rate"
                     >
                       <Plus className="h-3 w-3 mr-1" />
                       Add Location
                     </Button>
                   </div>
-                  {editBaleRates.length === 0 && (
+                  {editMotoRates.length === 0 && (
                     <p className="text-xs text-muted-foreground">No moto rates configured yet. Add locations to enable auto-calculation.</p>
                   )}
-                  {editBaleRates.map((row, idx) => {
+                  {editMotoRates.map((row, idx) => {
                     const rowCompanyId = row.sourceCompanyId || "";
                     const locationsForRow = rowCompanyId
                       ? allCompanyLocations.filter(l => String(l.companyId) === rowCompanyId)
@@ -5366,9 +5366,9 @@ export default function Payroll() {
                       {otherCompanies.length > 0 && (
                         <Select
                           value={rowCompanyId}
-                          onValueChange={(v) => setEditBaleRates(prev => prev.map((r, i) => i === idx ? { ...r, sourceCompanyId: v === "__current__" ? "" : v, locationId: "" } : r))}
+                          onValueChange={(v) => setEditMotoRates(prev => prev.map((r, i) => i === idx ? { ...r, sourceCompanyId: v === "__current__" ? "" : v, locationId: "" } : r))}
                         >
-                          <SelectTrigger className="w-32 text-xs" data-testid={`select-bale-rate-company-${idx}`}>
+                          <SelectTrigger className="w-32 text-xs" data-testid={`select-moto-rate-company-${idx}`}>
                             <SelectValue placeholder={selectedCompany?.name || "This company"} />
                           </SelectTrigger>
                           <SelectContent>
@@ -5381,9 +5381,9 @@ export default function Payroll() {
                       )}
                       <Select
                         value={row.locationId}
-                        onValueChange={(v) => setEditBaleRates(prev => prev.map((r, i) => i === idx ? { ...r, locationId: v } : r))}
+                        onValueChange={(v) => setEditMotoRates(prev => prev.map((r, i) => i === idx ? { ...r, locationId: v } : r))}
                       >
-                        <SelectTrigger className="flex-1 min-w-[120px]" data-testid={`select-bale-rate-location-${idx}`}>
+                        <SelectTrigger className="flex-1 min-w-[120px]" data-testid={`select-moto-rate-location-${idx}`}>
                           <SelectValue placeholder="Select location" />
                         </SelectTrigger>
                         <SelectContent>
@@ -5398,15 +5398,15 @@ export default function Payroll() {
                         placeholder="Rate/unit"
                         className="w-28 text-right"
                         value={row.rate}
-                        onChange={(e) => setEditBaleRates(prev => prev.map((r, i) => i === idx ? { ...r, rate: e.target.value } : r))}
-                        data-testid={`input-bale-rate-${idx}`}
+                        onChange={(e) => setEditMotoRates(prev => prev.map((r, i) => i === idx ? { ...r, rate: e.target.value } : r))}
+                        data-testid={`input-moto-rate-${idx}`}
                       />
                       <Button
                         type="button"
                         size="icon"
                         variant="ghost"
-                        onClick={() => setEditBaleRates(prev => prev.filter((_, i) => i !== idx))}
-                        data-testid={`button-remove-bale-rate-${idx}`}
+                        onClick={() => setEditMotoRates(prev => prev.filter((_, i) => i !== idx))}
+                        data-testid={`button-remove-moto-rate-${idx}`}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -5416,7 +5416,7 @@ export default function Payroll() {
                 </div>
               </div>
 
-              {/* Bales % by Location */}
+              {/* Motos % by Location */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between flex-wrap gap-1">
                   <Label className="text-sm">Motos % by Location</Label>
@@ -5424,17 +5424,17 @@ export default function Payroll() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => setEditBalePctRates(prev => [...prev, { locationId: "", pct: "", sourceCompanyId: "" }])}
-                    data-testid="button-add-bale-pct-rate"
+                    onClick={() => setEditMotoPctRates(prev => [...prev, { locationId: "", pct: "", sourceCompanyId: "" }])}
+                    data-testid="button-add-moto-pct-rate"
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     Add Location
                   </Button>
                 </div>
-                {editBalePctRates.length === 0 && (
+                {editMotoPctRates.length === 0 && (
                   <p className="text-xs text-muted-foreground">No moto % rates configured yet. Add locations to enable % auto-calculation.</p>
                 )}
-                {editBalePctRates.map((row, idx) => {
+                {editMotoPctRates.map((row, idx) => {
                   const rowCompanyId = row.sourceCompanyId || "";
                   const locationsForRow = rowCompanyId
                     ? allCompanyLocations.filter(l => String(l.companyId) === rowCompanyId)
@@ -5444,9 +5444,9 @@ export default function Payroll() {
                       {otherCompanies.length > 0 && (
                         <Select
                           value={rowCompanyId}
-                          onValueChange={(v) => setEditBalePctRates(prev => prev.map((r, i) => i === idx ? { ...r, sourceCompanyId: v === "__current__" ? "" : v, locationId: "" } : r))}
+                          onValueChange={(v) => setEditMotoPctRates(prev => prev.map((r, i) => i === idx ? { ...r, sourceCompanyId: v === "__current__" ? "" : v, locationId: "" } : r))}
                         >
-                          <SelectTrigger className="w-32 text-xs" data-testid={`select-bale-pct-rate-company-${idx}`}>
+                          <SelectTrigger className="w-32 text-xs" data-testid={`select-moto-pct-rate-company-${idx}`}>
                             <SelectValue placeholder={selectedCompany?.name || "This company"} />
                           </SelectTrigger>
                           <SelectContent>
@@ -5459,9 +5459,9 @@ export default function Payroll() {
                       )}
                       <Select
                         value={row.locationId}
-                        onValueChange={(v) => setEditBalePctRates(prev => prev.map((r, i) => i === idx ? { ...r, locationId: v } : r))}
+                        onValueChange={(v) => setEditMotoPctRates(prev => prev.map((r, i) => i === idx ? { ...r, locationId: v } : r))}
                       >
-                        <SelectTrigger className="flex-1 min-w-[120px]" data-testid={`select-bale-pct-rate-location-${idx}`}>
+                        <SelectTrigger className="flex-1 min-w-[120px]" data-testid={`select-moto-pct-rate-location-${idx}`}>
                           <SelectValue placeholder="Select location" />
                         </SelectTrigger>
                         <SelectContent>
@@ -5476,15 +5476,15 @@ export default function Payroll() {
                         placeholder="% rate"
                         className="w-24 text-right"
                         value={row.pct}
-                        onChange={(e) => setEditBalePctRates(prev => prev.map((r, i) => i === idx ? { ...r, pct: e.target.value } : r))}
-                        data-testid={`input-bale-pct-rate-${idx}`}
+                        onChange={(e) => setEditMotoPctRates(prev => prev.map((r, i) => i === idx ? { ...r, pct: e.target.value } : r))}
+                        data-testid={`input-moto-pct-rate-${idx}`}
                       />
                       <Button
                         type="button"
                         size="icon"
                         variant="ghost"
-                        onClick={() => setEditBalePctRates(prev => prev.filter((_, i) => i !== idx))}
-                        data-testid={`button-remove-bale-pct-rate-${idx}`}
+                        onClick={() => setEditMotoPctRates(prev => prev.filter((_, i) => i !== idx))}
+                        data-testid={`button-remove-moto-pct-rate-${idx}`}
                       >
                         <X className="h-4 w-4" />
                       </Button>

@@ -89,7 +89,7 @@ async function main() {
     }
   }
 
-  // 3. Old "bale" columns must not exist (rename should have happened)
+  // 3. Old "bale" columns must not exist (renamed to moto in migration)
   for (const { table, column } of MUST_NOT_EXIST_COLUMNS) {
     const { rows } = await pool.query(
       `SELECT 1 FROM information_schema.columns

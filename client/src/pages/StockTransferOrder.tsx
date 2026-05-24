@@ -626,7 +626,7 @@ export default function StockTransferOrder() {
         "Date": exportDate,
         "Destination Location": destLocation?.name || "",
         "Total Items": orderItems.length,
-        "Total Quantity": totalBales,
+        "Total Quantity": totalUnits,
         "Total Amount": totalAmount.toFixed(2),
         "Optional": isOptional ? "Yes" : "No",
       }];
@@ -732,7 +732,7 @@ export default function StockTransferOrder() {
     }
   };
 
-  const totalBales = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalUnits = orderItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="space-y-4">
@@ -1065,7 +1065,7 @@ export default function StockTransferOrder() {
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{orderItems.length} items</Badge>
                   <Badge variant="default" className="font-mono">
-                    {formatNumber(totalBales, 0)} units
+                    {formatNumber(totalUnits, 0)} units
                   </Badge>
                 </div>
               </div>
@@ -1108,7 +1108,7 @@ export default function StockTransferOrder() {
                   <div className="pt-2 border-t space-y-3">
                     <div className="flex justify-between text-sm font-medium">
                       <span>Total Units:</span>
-                      <span className="font-mono text-lg">{formatNumber(totalBales, 0)}</span>
+                      <span className="font-mono text-lg">{formatNumber(totalUnits, 0)}</span>
                     </div>
                     
                     {!editVoucherId && autosaveStatus !== "idle" && (

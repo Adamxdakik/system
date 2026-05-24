@@ -1912,7 +1912,7 @@ export class DbStorage implements IStorage {
       return groupId !== null && groupId !== undefined && costAllocationGroupIdSet.has(groupId);
     };
 
-    // Calculate total bales - if groups are marked, only count those; otherwise count all
+    // Calculate total motos - if groups are marked, only count those; otherwise count all
     // Include both PO line items and manual container items
     let totalMotos = 0;
     
@@ -1945,7 +1945,7 @@ export class DbStorage implements IStorage {
       additionalChargesTotal +
       poCharges; // Include PO freight/charges in inventory cost
 
-    // Calculate additional cost per bale
+    // Calculate additional cost per moto
     const additionalCostPerMoto = totalMotos > 0 ? totalCharges / totalMotos : 0;
 
     // Group line items by stock item and calculate new rates

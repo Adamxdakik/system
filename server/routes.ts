@@ -6259,15 +6259,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Bulk update UOM from "bale" to "BL"
+  // Bulk update UOM from legacy "bale" to "BL"
   app.post("/api/stock-items/bulk-update-uom", requireAuth, requireNonPOS, async (req, res) => {
     try {
       if (!req.session.currentCompanyId) {
         return res.status(400).json({ message: "No company selected" });
       }
 
-      // Find all stock items with UOM = "bale" for current company (case-insensitive)
-      const baleItems = await db.query.stockItems.findMany({
+      // Find all stock items with legacy UOM = "bale" for current company (case-insensitive)
+      const legacyBaleItems = await db.query.stockItems.findMany({
         where: and(
           eq(stockItems.companyId, req.session.currentCompanyId),
           or(
@@ -6278,13 +6278,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ),
       });
 
-      if (baleItems.length === 0) {
+      if (legacyBaleItems.length === 0) {
         return res.json({ message: "No items with UOM 'bale' found to update", updated: 0 });
       }
 
-      // Update all bale items to BL
+      // Update all legacy bale items to BL
       let updated = 0;
-      for (const item of baleItems) {
+      for (const item of legacyBaleItems) {
         await storage.updateStockItem(item.id, { uom: "BL" });
         updated++;
       }
@@ -17927,7 +17927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // session's current company so users cannot mutate another tenant's
         // transfer by guessing IDs. Also, validate that every location in the
         // payload (destination + each item's source) belongs to the same
-        // company, mirroring the bale-transfer protection.
+        // company, mirroring the moto-transfer protection.
         const companyId = req.session.currentCompanyId;
         if (!companyId) {
           return res.status(400).json({ message: "No company selected" });
