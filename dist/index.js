@@ -18,11 +18,6 @@ __export(schema_exports, {
   assemblyHistory: () => assemblyHistory,
   assemblyInventory: () => assemblyInventory,
   assemblyTasks: () => assemblyTasks,
-  baleProducts: () => baleProducts,
-  baleSequences: () => baleSequences,
-  baleTransferItems: () => baleTransferItems,
-  baleTransfers: () => baleTransfers,
-  bales: () => bales,
   bankAccounts: () => bankAccounts,
   bikePurchases: () => bikePurchases,
   chatMessages: () => chatMessages,
@@ -43,6 +38,8 @@ __export(schema_exports, {
   draftPosSales: () => draftPosSales,
   employeeGroupMembers: () => employeeGroupMembers,
   employeeGroups: () => employeeGroups,
+  employeeMotoPctRates: () => employeeMotoPctRates,
+  employeeMotoRates: () => employeeMotoRates,
   employees: () => employees,
   fiscalPeriodClosures: () => fiscalPeriodClosures,
   fixedAssets: () => fixedAssets,
@@ -50,10 +47,6 @@ __export(schema_exports, {
   insertAssemblyHistorySchema: () => insertAssemblyHistorySchema,
   insertAssemblyInventorySchema: () => insertAssemblyInventorySchema,
   insertAssemblyTaskSchema: () => insertAssemblyTaskSchema,
-  insertBaleProductSchema: () => insertBaleProductSchema,
-  insertBaleSchema: () => insertBaleSchema,
-  insertBaleTransferItemSchema: () => insertBaleTransferItemSchema,
-  insertBaleTransferSchema: () => insertBaleTransferSchema,
   insertBankAccountSchema: () => insertBankAccountSchema,
   insertBikePurchaseSchema: () => insertBikePurchaseSchema,
   insertChatMessageSchema: () => insertChatMessageSchema,
@@ -88,7 +81,6 @@ __export(schema_exports, {
   insertMotoAssemblySchema: () => insertMotoAssemblySchema,
   insertPOLineItemSchema: () => insertPOLineItemSchema,
   insertPartPurchaseSchema: () => insertPartPurchaseSchema,
-  insertProductionBaleSchema: () => insertProductionBaleSchema,
   insertPurchaseOrderSchema: () => insertPurchaseOrderSchema,
   insertRoleFeaturePermissionSchema: () => insertRoleFeaturePermissionSchema,
   insertSalaryAdvanceDeductionSchema: () => insertSalaryAdvanceDeductionSchema,
@@ -119,11 +111,14 @@ __export(schema_exports, {
   mixBatches: () => mixBatches,
   motoAssemblies: () => motoAssemblies,
   motoAssemblyParts: () => motoAssemblyParts,
+  motoRateAudit: () => motoRateAudit,
+  notifications: () => notifications,
   offloadRequestSchema: () => offloadRequestSchema,
   partPurchases: () => partPurchases,
   poLineItems: () => poLineItems,
-  productionBales: () => productionBales,
   purchaseOrders: () => purchaseOrders,
+  rateTemplateItems: () => rateTemplateItems,
+  rateTemplates: () => rateTemplates,
   roleFeaturePermissions: () => roleFeaturePermissions,
   salaryAdvanceDeductions: () => salaryAdvanceDeductions,
   salaryAdvances: () => salaryAdvances,
@@ -151,10 +146,10 @@ __export(schema_exports, {
   warranties: () => warranties
 });
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, integer, decimal, date, boolean, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, integer, decimal, date, boolean, timestamp, uniqueIndex, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var companies, insertCompanySchema, userCompanyRoles, insertUserCompanyRoleSchema, users, insertUserSchema, locations, insertLocationSchema, ledgerAccounts, insertLedgerAccountSchema, updateLedgerAccountSchema, employees, insertEmployeeSchema, employeeGroups, insertEmployeeGroupSchema, employeeGroupMembers, insertEmployeeGroupMemberSchema, suppliers, insertSupplierSchema, stockGroups, insertStockGroupSchema, stockItems, insertStockItemSchema, stockItemCodeAliases, insertStockItemCodeAliasSchema, bankAccounts, insertBankAccountSchema, fixedAssets, insertFixedAssetSchema, containers, insertContainerSchema, purchaseOrders, insertPurchaseOrderSchema, poLineItems, insertPOLineItemSchema, containerCharges, insertContainerChargeSchema, containerItems, insertContainerItemSchema, importLogs, insertImportLogSchema, inventory, insertInventorySchema, containerOffloads, insertContainerOffloadSchema, offloadRequestSchema, vouchers, insertVoucherSchema, voucherEntries, insertVoucherEntrySchema, fiscalPeriodClosures, insertFiscalPeriodClosureSchema, stockTransferVouchers, insertStockTransferVoucherSchema, stockTransferItems, insertStockTransferItemSchema, stockAdjustmentVouchers, insertStockAdjustmentVoucherSchema, stockAdjustmentItems, insertStockAdjustmentItemSchema, updateStockTransferItemSchema, updateStockTransferSchema, updateStockAdjustmentItemSchema, updateStockAdjustmentSchema, salesItems, insertSalesItemSchema, draftPosSales, insertDraftPosSaleSchema, draftPosSaleItems, insertDraftPosSaleItemSchema, customers, insertCustomerSchema, bikePurchases, insertBikePurchaseSchema, partPurchases, insertPartPurchaseSchema, serviceHistory, insertServiceHistorySchema, warranties, insertWarrantySchema, communicationLogs, insertCommunicationLogSchema, containerSales, insertContainerSaleSchema, interCompanyTransfers, insertInterCompanyTransferSchema, salaryAdvances, insertSalaryAdvanceSchema, salaryAdvanceDeductions, insertSalaryAdvanceDeductionSchema, dashboardCashAccounts, insertDashboardCashAccountSchema, dashboardPayableAccounts, insertDashboardPayableAccountSchema, companySettings, insertCompanySettingsSchema, bales, insertBaleSchema, mixBatches, insertMixBatchSchema, mixBatchSources, insertMixBatchSourceSchema, baleProducts, insertBaleProductSchema, baleSequences, productionBales, insertProductionBaleSchema, baleTransfers, insertBaleTransferSchema, baleTransferItems, insertBaleTransferItemSchema, customerBalances, insertCustomerBalanceSchema, stockItemLocationPrices, insertStockItemLocationPriceSchema, userPreferences, insertUserPreferencesSchema, chatMessages, insertChatMessageSchema, dashboardAccountSelections, insertDashboardAccountSelectionSchema, roleFeaturePermissions, insertRoleFeaturePermissionSchema, motoAssemblies, insertMotoAssemblySchema, motoAssemblyParts, insertMotoAssemblyPartSchema, ASSEMBLY_STAGES, assemblyInventory, insertAssemblyInventorySchema, assemblyHistory, insertAssemblyHistorySchema, assemblyTasks, insertAssemblyTaskSchema, FEATURE_KEYS, loginHistory, FEATURE_ROUTES, ROUTE_TO_FEATURE;
+var companies, insertCompanySchema, userCompanyRoles, insertUserCompanyRoleSchema, users, insertUserSchema, locations, insertLocationSchema, ledgerAccounts, insertLedgerAccountSchema, updateLedgerAccountSchema, employees, insertEmployeeSchema, employeeMotoRates, employeeMotoPctRates, motoRateAudit, rateTemplates, rateTemplateItems, notifications, employeeGroups, insertEmployeeGroupSchema, employeeGroupMembers, insertEmployeeGroupMemberSchema, suppliers, insertSupplierSchema, stockGroups, insertStockGroupSchema, stockItems, insertStockItemSchema, stockItemCodeAliases, insertStockItemCodeAliasSchema, bankAccounts, insertBankAccountSchema, fixedAssets, insertFixedAssetSchema, containers, insertContainerSchema, purchaseOrders, insertPurchaseOrderSchema, poLineItems, insertPOLineItemSchema, containerCharges, insertContainerChargeSchema, containerItems, insertContainerItemSchema, importLogs, insertImportLogSchema, inventory, insertInventorySchema, containerOffloads, insertContainerOffloadSchema, offloadRequestSchema, vouchers, insertVoucherSchema, voucherEntries, insertVoucherEntrySchema, fiscalPeriodClosures, insertFiscalPeriodClosureSchema, stockTransferVouchers, insertStockTransferVoucherSchema, stockTransferItems, insertStockTransferItemSchema, stockAdjustmentVouchers, insertStockAdjustmentVoucherSchema, stockAdjustmentItems, insertStockAdjustmentItemSchema, updateStockTransferItemSchema, updateStockTransferSchema, updateStockAdjustmentItemSchema, updateStockAdjustmentSchema, salesItems, insertSalesItemSchema, draftPosSales, insertDraftPosSaleSchema, draftPosSaleItems, insertDraftPosSaleItemSchema, customers, insertCustomerSchema, bikePurchases, insertBikePurchaseSchema, partPurchases, insertPartPurchaseSchema, serviceHistory, insertServiceHistorySchema, warranties, insertWarrantySchema, communicationLogs, insertCommunicationLogSchema, containerSales, insertContainerSaleSchema, interCompanyTransfers, insertInterCompanyTransferSchema, salaryAdvances, insertSalaryAdvanceSchema, salaryAdvanceDeductions, insertSalaryAdvanceDeductionSchema, dashboardCashAccounts, insertDashboardCashAccountSchema, dashboardPayableAccounts, insertDashboardPayableAccountSchema, companySettings, insertCompanySettingsSchema, mixBatches, insertMixBatchSchema, mixBatchSources, insertMixBatchSourceSchema, customerBalances, insertCustomerBalanceSchema, stockItemLocationPrices, insertStockItemLocationPriceSchema, userPreferences, insertUserPreferencesSchema, chatMessages, insertChatMessageSchema, dashboardAccountSelections, insertDashboardAccountSelectionSchema, roleFeaturePermissions, insertRoleFeaturePermissionSchema, motoAssemblies, insertMotoAssemblySchema, motoAssemblyParts, insertMotoAssemblyPartSchema, ASSEMBLY_STAGES, assemblyInventory, insertAssemblyInventorySchema, assemblyHistory, insertAssemblyHistorySchema, assemblyTasks, insertAssemblyTaskSchema, FEATURE_KEYS, loginHistory, FEATURE_ROUTES, ROUTE_TO_FEATURE;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -283,7 +278,7 @@ var init_schema = __esm({
       salesBonusPct: decimal("sales_bonus_pct", { precision: 10, scale: 4 }),
       salesBonusPctSourceCompanyId: integer("sales_bonus_pct_source_company_id"),
       salesBonusPctLocationId: integer("sales_bonus_pct_location_id"),
-      balesBonusRate: decimal("bales_bonus_rate", { precision: 10, scale: 4 }),
+      motosBonusRate: decimal("motos_bonus_rate", { precision: 10, scale: 4 }),
       deletedAt: timestamp("deleted_at"),
       createdAt: timestamp("created_at").notNull().defaultNow()
     });
@@ -309,6 +304,74 @@ var init_schema = __esm({
         "Date must be a valid date in YYYY-MM-DD format"
       ),
       employeeType: z.enum(["Employee", "Worker"])
+    });
+    employeeMotoRates = pgTable("employee_moto_rates", {
+      id: serial("id").primaryKey(),
+      employeeId: integer("employee_id").notNull(),
+      locationId: integer("location_id").notNull(),
+      sourceCompanyId: integer("source_company_id"),
+      rate: decimal("rate", { precision: 15, scale: 4 }).notNull(),
+      deletedAt: timestamp("deleted_at"),
+      effectiveFrom: timestamp("effective_from"),
+      effectiveTo: timestamp("effective_to"),
+      createdAt: timestamp("created_at").notNull().defaultNow(),
+      updatedAt: timestamp("updated_at").notNull().defaultNow()
+    });
+    employeeMotoPctRates = pgTable("employee_moto_pct_rates", {
+      id: serial("id").primaryKey(),
+      employeeId: integer("employee_id").notNull(),
+      locationId: integer("location_id").notNull(),
+      sourceCompanyId: integer("source_company_id"),
+      pct: decimal("pct", { precision: 15, scale: 4 }).notNull(),
+      deletedAt: timestamp("deleted_at"),
+      effectiveFrom: timestamp("effective_from"),
+      effectiveTo: timestamp("effective_to"),
+      createdAt: timestamp("created_at").notNull().defaultNow(),
+      updatedAt: timestamp("updated_at").notNull().defaultNow()
+    });
+    motoRateAudit = pgTable("moto_rate_audit", {
+      id: serial("id").primaryKey(),
+      employeeId: integer("employee_id").notNull(),
+      tableName: text("table_name").notNull(),
+      // 'employee_moto_rates' | 'employee_moto_pct_rates'
+      action: text("action").notNull(),
+      // 'replace' | 'copy_from' | 'bulk_set'
+      beforeData: jsonb("before_data"),
+      afterData: jsonb("after_data"),
+      userId: text("user_id"),
+      sourceEmployeeId: integer("source_employee_id"),
+      context: jsonb("context"),
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    });
+    rateTemplates = pgTable("rate_templates", {
+      id: serial("id").primaryKey(),
+      companyId: integer("company_id").notNull(),
+      name: text("name").notNull(),
+      description: text("description"),
+      createdBy: text("created_by"),
+      createdAt: timestamp("created_at").notNull().defaultNow(),
+      updatedAt: timestamp("updated_at").notNull().defaultNow(),
+      deletedAt: timestamp("deleted_at")
+    });
+    rateTemplateItems = pgTable("rate_template_items", {
+      id: serial("id").primaryKey(),
+      templateId: integer("template_id").notNull(),
+      locationId: integer("location_id").notNull(),
+      rate: decimal("rate", { precision: 15, scale: 4 }),
+      pct: decimal("pct", { precision: 15, scale: 4 }),
+      sourceCompanyId: integer("source_company_id"),
+      createdAt: timestamp("created_at").notNull().defaultNow()
+    });
+    notifications = pgTable("notifications", {
+      id: serial("id").primaryKey(),
+      userId: text("user_id").notNull(),
+      companyId: integer("company_id"),
+      type: text("type").notNull(),
+      title: text("title").notNull(),
+      body: text("body"),
+      payload: jsonb("payload"),
+      readAt: timestamp("read_at"),
+      createdAt: timestamp("created_at").notNull().defaultNow()
     });
     employeeGroups = pgTable("employee_groups", {
       id: serial("id").primaryKey(),
@@ -670,16 +733,16 @@ var init_schema = __esm({
       transferCharges: decimal("transfer_charges", { precision: 20, scale: 2 }).notNull().default("0"),
       transportFees: decimal("transport_fees", { precision: 20, scale: 2 }).notNull().default("0"),
       totalCharges: decimal("total_charges", { precision: 20, scale: 2 }).notNull().default("0"),
-      totalBales: decimal("total_bales", { precision: 15, scale: 3 }).notNull(),
-      additionalCostPerBale: decimal("additional_cost_per_bale", { precision: 20, scale: 2 }).notNull(),
+      totalMotos: decimal("total_motos", { precision: 15, scale: 3 }).notNull(),
+      additionalCostPerMoto: decimal("additional_cost_per_moto", { precision: 20, scale: 2 }).notNull(),
       offloadedAt: timestamp("offloaded_at").notNull().defaultNow()
     });
     insertContainerOffloadSchema = createInsertSchema(containerOffloads).omit({
       id: true,
       offloadedAt: true,
       totalCharges: true,
-      totalBales: true,
-      additionalCostPerBale: true,
+      totalMotos: true,
+      additionalCostPerMoto: true,
       officeCharges: true,
       transferCharges: true
     }).extend({
@@ -1270,44 +1333,6 @@ var init_schema = __esm({
       logoFileName: z.string().optional(),
       invoiceFooter: z.string().optional()
     });
-    bales = pgTable("bales", {
-      id: serial("id").primaryKey(),
-      companyId: integer("company_id").notNull(),
-      containerId: integer("container_id"),
-      barcode: varchar("barcode", { length: 100 }).notNull(),
-      category: text("category").notNull(),
-      grade: text("grade").notNull(),
-      origin: text("origin").notNull(),
-      weight: decimal("weight", { precision: 10, scale: 3 }).notNull(),
-      datePressed: date("date_pressed").notNull(),
-      price: decimal("price", { precision: 12, scale: 2 }),
-      currency: varchar("currency", { length: 3 }).default("USD"),
-      soldAt: timestamp("sold_at"),
-      soldVoucherId: integer("sold_voucher_id"),
-      status: text("status").notNull().default("AVAILABLE"),
-      active: boolean("active").notNull().default(true),
-      createdAt: timestamp("created_at").notNull().defaultNow(),
-      updatedAt: timestamp("updated_at").notNull().defaultNow()
-    }, (t) => ({
-      uniqueCompanyBarcode: uniqueIndex("bales_company_barcode_unique").on(t.companyId, t.barcode)
-    }));
-    insertBaleSchema = createInsertSchema(bales).omit({
-      id: true,
-      createdAt: true,
-      updatedAt: true
-    }).extend({
-      companyId: z.number().min(1, "Company is required"),
-      containerId: z.number().optional(),
-      barcode: z.string().min(1, "Barcode is required"),
-      category: z.string().min(1, "Category is required"),
-      grade: z.enum(["A", "B", "C"]),
-      origin: z.enum(["EU", "AUS", "USA"]),
-      weight: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Weight must be positive"),
-      datePressed: z.string().min(1, "Date pressed is required"),
-      price: z.string().optional(),
-      currency: z.string().length(3).optional(),
-      status: z.enum(["AVAILABLE", "HOLD", "SOLD"]).optional()
-    });
     mixBatches = pgTable("mix_batches", {
       id: serial("id").primaryKey(),
       companyId: integer("company_id").notNull(),
@@ -1355,126 +1380,6 @@ var init_schema = __esm({
     }).extend({
       mixBatchId: z.number().min(1, "Mix batch is required"),
       containerId: z.number().min(1, "Container is required"),
-      weightKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Weight must be positive"),
-      costPerKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Cost per kg must be non-negative"),
-      totalCost: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Total cost must be non-negative")
-    });
-    baleProducts = pgTable("bale_products", {
-      id: serial("id").primaryKey(),
-      companyId: integer("company_id").notNull(),
-      code: varchar("code", { length: 50 }).notNull(),
-      name: text("name").notNull(),
-      description: text("description"),
-      active: boolean("active").notNull().default(true),
-      createdAt: timestamp("created_at").notNull().defaultNow(),
-      updatedAt: timestamp("updated_at").notNull().defaultNow()
-    }, (t) => ({
-      uniqueCompanyCode: uniqueIndex("bale_products_company_code_unique").on(t.companyId, t.code)
-    }));
-    insertBaleProductSchema = createInsertSchema(baleProducts).omit({
-      id: true,
-      createdAt: true,
-      updatedAt: true
-    }).extend({
-      companyId: z.number().min(1, "Company is required"),
-      code: z.string().min(1, "Product code is required"),
-      name: z.string().min(1, "Product name is required"),
-      description: z.string().optional(),
-      active: z.boolean().optional()
-    });
-    baleSequences = pgTable("bale_sequences", {
-      id: serial("id").primaryKey(),
-      companyId: integer("company_id").notNull().references(() => companies.id),
-      nextNumber: integer("next_number").notNull().default(1),
-      createdAt: timestamp("created_at").notNull().defaultNow()
-    }, (t) => ({
-      uniqueCompanyId: uniqueIndex("bale_sequences_company_unique").on(t.companyId)
-    }));
-    productionBales = pgTable("production_bales", {
-      id: serial("id").primaryKey(),
-      companyId: integer("company_id").notNull(),
-      mixBatchId: integer("mix_batch_id"),
-      productId: integer("product_id"),
-      locationId: integer("location_id"),
-      baleCode: varchar("bale_code", { length: 50 }).notNull(),
-      barcodeValue: varchar("barcode_value", { length: 100 }).notNull(),
-      category: text("category"),
-      grade: text("grade"),
-      quantity: integer("quantity").notNull().default(1),
-      weightKg: decimal("weight_kg", { precision: 15, scale: 3 }).notNull(),
-      costPerKg: decimal("cost_per_kg", { precision: 20, scale: 2 }).notNull(),
-      totalCost: decimal("total_cost", { precision: 20, scale: 2 }).notNull(),
-      warehouseLocation: text("warehouse_location"),
-      status: text("status").notNull().default("LABEL_PRINTED"),
-      pressedAt: timestamp("pressed_at"),
-      createdAt: timestamp("created_at").notNull().defaultNow(),
-      updatedAt: timestamp("updated_at").notNull().defaultNow()
-    }, (t) => ({
-      uniqueCompanyBarcodeValue: uniqueIndex("production_bales_company_barcode_unique").on(t.companyId, t.barcodeValue)
-    }));
-    insertProductionBaleSchema = createInsertSchema(productionBales).omit({
-      id: true,
-      createdAt: true,
-      updatedAt: true
-    }).extend({
-      companyId: z.number().min(1, "Company is required"),
-      mixBatchId: z.number().optional(),
-      productId: z.number().optional(),
-      baleCode: z.string().min(1, "Bale code is required"),
-      barcodeValue: z.string().min(1, "Barcode value is required"),
-      category: z.string().optional(),
-      grade: z.string().optional(),
-      weightKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Weight must be positive"),
-      costPerKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Cost per kg must be non-negative"),
-      totalCost: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Total cost must be non-negative"),
-      warehouseLocation: z.string().optional(),
-      status: z.enum(["LABEL_PRINTED", "PRESSED", "IN_STOCK", "RESERVED", "SOLD"]).optional(),
-      pressedAt: z.string().optional()
-    });
-    baleTransfers = pgTable("bale_transfers", {
-      id: serial("id").primaryKey(),
-      companyId: integer("company_id").notNull(),
-      sourceLocationId: integer("source_location_id").notNull(),
-      destinationLocationId: integer("destination_location_id").notNull(),
-      transferDate: date("transfer_date").notNull(),
-      notes: text("notes"),
-      createdBy: varchar("created_by").notNull(),
-      updatedBy: varchar("updated_by"),
-      status: text("status").notNull().default("PENDING"),
-      createdAt: timestamp("created_at").notNull().defaultNow(),
-      updatedAt: timestamp("updated_at").notNull().defaultNow()
-    });
-    insertBaleTransferSchema = createInsertSchema(baleTransfers).omit({
-      id: true,
-      createdAt: true,
-      updatedAt: true
-    }).extend({
-      companyId: z.number().min(1, "Company is required"),
-      sourceLocationId: z.number().min(1, "Source location is required"),
-      destinationLocationId: z.number().min(1, "Destination location is required"),
-      transferDate: z.string().min(1, "Transfer date is required"),
-      notes: z.string().optional(),
-      createdBy: z.string().min(1, "Creator is required"),
-      updatedBy: z.string().optional(),
-      status: z.enum(["PENDING", "COMPLETED"]).optional()
-    });
-    baleTransferItems = pgTable("bale_transfer_items", {
-      id: serial("id").primaryKey(),
-      transferId: integer("transfer_id").notNull(),
-      productionBaleId: integer("production_bale_id").notNull(),
-      quantity: integer("quantity").notNull().default(1),
-      weightKg: decimal("weight_kg", { precision: 15, scale: 3 }).notNull(),
-      costPerKg: decimal("cost_per_kg", { precision: 20, scale: 2 }).notNull(),
-      totalCost: decimal("total_cost", { precision: 20, scale: 2 }).notNull(),
-      createdAt: timestamp("created_at").notNull().defaultNow()
-    });
-    insertBaleTransferItemSchema = createInsertSchema(baleTransferItems).omit({
-      id: true,
-      createdAt: true
-    }).extend({
-      transferId: z.number().min(1, "Transfer is required"),
-      productionBaleId: z.number().min(1, "Bale is required"),
-      quantity: z.number().min(1, "Quantity must be at least 1"),
       weightKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Weight must be positive"),
       costPerKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Cost per kg must be non-negative"),
       totalCost: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Total cost must be non-negative")
@@ -1821,6 +1726,93 @@ var init_schema = __esm({
   }
 });
 
+// shared/validation.ts
+var validation_exports = {};
+__export(validation_exports, {
+  bulkSetMotoPctRateSchema: () => bulkSetMotoPctRateSchema,
+  bulkSetMotoRateSchema: () => bulkSetMotoRateSchema,
+  motoPctRateRowSchema: () => motoPctRateRowSchema,
+  motoPctRatesPutSchema: () => motoPctRatesPutSchema,
+  motoRateRowSchema: () => motoRateRowSchema,
+  motoRatesPutSchema: () => motoRatesPutSchema,
+  rateTemplateApplySchema: () => rateTemplateApplySchema,
+  rateTemplateCreateSchema: () => rateTemplateCreateSchema,
+  rateTemplateItemSchema: () => rateTemplateItemSchema
+});
+import { z as z2 } from "zod";
+var STRICT_DECIMAL, decimalString, motoRateRowSchema, motoPctRateRowSchema, motoRatesPutSchema, motoPctRatesPutSchema, bulkSetMotoRateSchema, bulkSetMotoPctRateSchema, rateTemplateItemSchema, rateTemplateCreateSchema, rateTemplateApplySchema;
+var init_validation = __esm({
+  "shared/validation.ts"() {
+    "use strict";
+    STRICT_DECIMAL = /^-?(?:\d+(?:\.\d+)?|\.\d+)$/;
+    decimalString = (min, max, label) => z2.union([z2.string(), z2.number()]).transform((v, ctx) => {
+      let n;
+      if (typeof v === "string") {
+        const trimmed = v.trim();
+        if (!STRICT_DECIMAL.test(trimmed)) {
+          ctx.addIssue({ code: z2.ZodIssueCode.custom, message: `${label} must be a valid decimal number` });
+          return z2.NEVER;
+        }
+        n = Number(trimmed);
+      } else {
+        n = v;
+      }
+      if (!Number.isFinite(n)) {
+        ctx.addIssue({ code: z2.ZodIssueCode.custom, message: `${label} must be a number` });
+        return z2.NEVER;
+      }
+      if (n < min || n > max) {
+        ctx.addIssue({
+          code: z2.ZodIssueCode.custom,
+          message: `${label} must be between ${min} and ${max} (got ${n})`
+        });
+        return z2.NEVER;
+      }
+      return n.toFixed(4);
+    });
+    motoRateRowSchema = z2.object({
+      locationId: z2.coerce.number().int().positive(),
+      rate: decimalString(0.01, 1e3, "rate"),
+      sourceCompanyId: z2.coerce.number().int().positive().nullable().optional()
+    });
+    motoPctRateRowSchema = z2.object({
+      locationId: z2.coerce.number().int().positive(),
+      pct: decimalString(0.01, 100, "pct"),
+      sourceCompanyId: z2.coerce.number().int().positive().nullable().optional()
+    });
+    motoRatesPutSchema = z2.object({
+      rates: z2.array(motoRateRowSchema).max(500)
+    });
+    motoPctRatesPutSchema = z2.object({
+      rates: z2.array(motoPctRateRowSchema).max(500)
+    });
+    bulkSetMotoRateSchema = z2.object({
+      rate: decimalString(0.01, 1e3, "rate"),
+      employeeIds: z2.array(z2.coerce.number().int().positive()).min(1).max(500),
+      sourceCompanyId: z2.coerce.number().int().positive().nullable().optional()
+    });
+    bulkSetMotoPctRateSchema = z2.object({
+      pct: decimalString(0.01, 100, "pct"),
+      employeeIds: z2.array(z2.coerce.number().int().positive()).min(1).max(500),
+      sourceCompanyId: z2.coerce.number().int().positive().nullable().optional()
+    });
+    rateTemplateItemSchema = z2.object({
+      locationId: z2.coerce.number().int().positive(),
+      rate: decimalString(0.01, 1e3, "rate").optional(),
+      pct: decimalString(0.01, 100, "pct").optional(),
+      sourceCompanyId: z2.coerce.number().int().positive().nullable().optional()
+    }).refine((v) => v.rate != null || v.pct != null, { message: "rate or pct required" });
+    rateTemplateCreateSchema = z2.object({
+      name: z2.string().trim().min(1).max(100),
+      description: z2.string().max(500).nullable().optional(),
+      items: z2.array(rateTemplateItemSchema).min(1).max(500)
+    });
+    rateTemplateApplySchema = z2.object({
+      employeeIds: z2.array(z2.coerce.number().int().positive()).min(1).max(500)
+    });
+  }
+});
+
 // server/index.ts
 import express2 from "express";
 import session from "express-session";
@@ -1917,7 +1909,7 @@ async function write(workbook, _options) {
 import bcrypt from "bcryptjs";
 import { createHash } from "crypto";
 import CryptoJS from "crypto-js";
-import { z as z2 } from "zod";
+import { z as z3 } from "zod";
 
 // server/storage.ts
 import { eq, and, or, sql as sql2, inArray, desc, ne, isNull } from "drizzle-orm";
@@ -2032,41 +2024,6 @@ var DbStorage = class {
     await db.delete(stockGroups).where(eq(stockGroups.companyId, id));
     try {
       await db.execute(sql2`DELETE FROM mix_batch_sources WHERE mix_batch_id IN (SELECT id FROM mix_batches WHERE company_id = ${id})`);
-    } catch (e) {
-      if (!e.message?.includes("does not exist")) throw e;
-    }
-    try {
-      await db.delete(mixBatches).where(eq(mixBatches.companyId, id));
-    } catch (e) {
-      if (!e.message?.includes("does not exist")) throw e;
-    }
-    try {
-      await db.delete(productionBales).where(eq(productionBales.companyId, id));
-    } catch (e) {
-      if (!e.message?.includes("does not exist")) throw e;
-    }
-    try {
-      await db.execute(sql2`DELETE FROM bale_transfer_items WHERE transfer_id IN (SELECT id FROM bale_transfers WHERE company_id = ${id})`);
-    } catch (e) {
-      if (!e.message?.includes("does not exist")) throw e;
-    }
-    try {
-      await db.delete(baleTransfers).where(eq(baleTransfers.companyId, id));
-    } catch (e) {
-      if (!e.message?.includes("does not exist")) throw e;
-    }
-    try {
-      await db.delete(baleProducts).where(eq(baleProducts.companyId, id));
-    } catch (e) {
-      if (!e.message?.includes("does not exist")) throw e;
-    }
-    try {
-      await db.delete(baleSequences).where(eq(baleSequences.companyId, id));
-    } catch (e) {
-      if (!e.message?.includes("does not exist")) throw e;
-    }
-    try {
-      await db.delete(bales).where(eq(bales.companyId, id));
     } catch (e) {
       if (!e.message?.includes("does not exist")) throw e;
     }
@@ -2196,11 +2153,15 @@ var DbStorage = class {
     return employeesWithBalances;
   }
   async getEmployeeByCode(code) {
-    const [employee] = await db.select().from(employees).where(eq(employees.code, code));
+    const [employee] = await db.select().from(employees).where(
+      and(eq(employees.code, code), isNull(employees.deletedAt))
+    );
     return employee;
   }
   async getEmployeeById(id) {
-    const [employee] = await db.select().from(employees).where(eq(employees.id, id));
+    const [employee] = await db.select().from(employees).where(
+      and(eq(employees.id, id), isNull(employees.deletedAt))
+    );
     return employee;
   }
   async createEmployee(employee) {
@@ -2320,11 +2281,15 @@ var DbStorage = class {
     return await db.select().from(suppliers);
   }
   async getSupplierByCode(code) {
-    const [supplier] = await db.select().from(suppliers).where(eq(suppliers.code, code));
+    const [supplier] = await db.select().from(suppliers).where(
+      and(eq(suppliers.code, code), isNull(suppliers.deletedAt))
+    );
     return supplier;
   }
   async getSupplierById(id) {
-    const [supplier] = await db.select().from(suppliers).where(eq(suppliers.id, id));
+    const [supplier] = await db.select().from(suppliers).where(
+      and(eq(suppliers.id, id), isNull(suppliers.deletedAt))
+    );
     return supplier;
   }
   async createSupplier(supplier) {
@@ -2380,7 +2345,9 @@ var DbStorage = class {
     return item;
   }
   async getStockItemById(id) {
-    const [item] = await db.select().from(stockItems).where(eq(stockItems.id, id));
+    const [item] = await db.select().from(stockItems).where(
+      and(eq(stockItems.id, id), isNull(stockItems.deletedAt))
+    );
     return item;
   }
   async createStockItem(item) {
@@ -2949,25 +2916,25 @@ var DbStorage = class {
       const groupId = stockItemGroupMap.get(stockItemId);
       return groupId !== null && groupId !== void 0 && costAllocationGroupIdSet.has(groupId);
     };
-    let totalBales = 0;
+    let totalMotos = 0;
     for (const item of allLineItems) {
       if (!item.stockItemId || item.stockItemId === 0) continue;
       if (!shouldAllocateCosts(item.stockItemId)) continue;
       let qty = parseFloat(item.quantity);
       if (!isFinite(qty) || qty <= 0) qty = 1;
-      totalBales += qty;
+      totalMotos += qty;
     }
     for (const item of manualContainerItems) {
       if (!item.stockItemId || item.stockItemId === 0) continue;
       if (!shouldAllocateCosts(item.stockItemId)) continue;
       let qty = parseFloat(item.quantity);
       if (!isFinite(qty) || qty <= 0) qty = 1;
-      totalBales += qty;
+      totalMotos += qty;
     }
     const additionalChargesTotal = additionalCharges.reduce((sum, charge) => sum + charge.amount, 0);
     const poCharges = parseFloat(container.chargesTotal || "0");
     const totalCharges = parseFloat(duties || "0") + parseFloat(transportFees || "0") + additionalChargesTotal + poCharges;
-    const additionalCostPerBale = totalBales > 0 ? totalCharges / totalBales : 0;
+    const additionalCostPerMoto = totalMotos > 0 ? totalCharges / totalMotos : 0;
     const itemsMap = /* @__PURE__ */ new Map();
     for (const item of allLineItems) {
       const stockItemId = item.stockItemId;
@@ -3054,10 +3021,10 @@ var DbStorage = class {
         continue;
       }
       const averageOriginalRate = data.weightedRateSum / data.totalQuantity;
-      const itemCostAddition = shouldAllocateCosts(stockItemId) ? additionalCostPerBale : 0;
+      const itemCostAddition = shouldAllocateCosts(stockItemId) ? additionalCostPerMoto : 0;
       const newRate = averageOriginalRate + itemCostAddition;
       if (!isFinite(newRate)) {
-        throw new Error(`Calculated rate is infinite for stock item ${stockItemId}. averageRate=${averageOriginalRate}, additionalCost=${additionalCostPerBale}`);
+        throw new Error(`Calculated rate is infinite for stock item ${stockItemId}. averageRate=${averageOriginalRate}, additionalCost=${additionalCostPerMoto}`);
       }
       const [existing] = await db.select().from(inventory).where(and(
         eq(inventory.locationId, locationId),
@@ -3250,8 +3217,8 @@ var DbStorage = class {
       transferCharges: "0",
       transportFees: transportFees || "0",
       totalCharges: totalCharges.toFixed(2),
-      totalBales: totalBales.toFixed(3),
-      additionalCostPerBale: additionalCostPerBale.toFixed(2),
+      totalMotos: totalMotos.toFixed(3),
+      additionalCostPerMoto: additionalCostPerMoto.toFixed(2),
       offloadedAt: offloadDate ? new Date(offloadDate) : /* @__PURE__ */ new Date()
     }).returning();
     return offload;
@@ -4509,11 +4476,17 @@ var DbStorage = class {
     )).orderBy(customers.legalName);
   }
   async getCustomerById(id) {
-    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    const [customer] = await db.select().from(customers).where(
+      and(eq(customers.id, id), isNull(customers.deletedAt))
+    );
     return customer;
   }
   async getCustomerByCode(code, companyId) {
-    const [customer] = await db.select().from(customers).where(and(eq(customers.code, code), eq(customers.companyId, companyId)));
+    const [customer] = await db.select().from(customers).where(and(
+      eq(customers.code, code),
+      eq(customers.companyId, companyId),
+      isNull(customers.deletedAt)
+    ));
     return customer;
   }
   async createCustomer(customer) {
@@ -4780,156 +4753,6 @@ var DbStorage = class {
       return created;
     }
   }
-  // Bales
-  async getAllBales(companyId) {
-    return await db.select().from(bales).where(and(
-      eq(bales.companyId, companyId),
-      eq(bales.active, true)
-    )).orderBy(desc(bales.createdAt));
-  }
-  async getBaleById(id) {
-    const [bale] = await db.select().from(bales).where(eq(bales.id, id));
-    return bale;
-  }
-  async getBaleByBarcode(barcode, companyId) {
-    const [bale] = await db.select().from(bales).where(and(
-      eq(bales.barcode, barcode),
-      eq(bales.companyId, companyId)
-    ));
-    return bale;
-  }
-  async createBale(bale) {
-    const [created] = await db.insert(bales).values(bale).returning();
-    return created;
-  }
-  async updateBale(id, updates) {
-    const [updated] = await db.update(bales).set({ ...updates, updatedAt: sql2`now()` }).where(eq(bales.id, id)).returning();
-    return updated;
-  }
-  async deleteBale(id) {
-    await db.update(bales).set({ active: false }).where(eq(bales.id, id));
-  }
-  async bulkCreateBales(bales2) {
-    if (bales2.length === 0) return [];
-    return await db.insert(bales).values(bales2).returning();
-  }
-  // Bale Products
-  async getAllBaleProducts(companyId) {
-    return await db.select().from(baleProducts).where(eq(baleProducts.companyId, companyId)).orderBy(baleProducts.code);
-  }
-  async getBaleProductById(id) {
-    const [product] = await db.select().from(baleProducts).where(eq(baleProducts.id, id));
-    return product;
-  }
-  async getBaleProductByCode(code, companyId) {
-    const [product] = await db.select().from(baleProducts).where(
-      and(
-        eq(baleProducts.code, code),
-        eq(baleProducts.companyId, companyId)
-      )
-    );
-    return product;
-  }
-  async createBaleProduct(product) {
-    const [created] = await db.insert(baleProducts).values(product).returning();
-    return created;
-  }
-  async updateBaleProduct(id, updates) {
-    const [updated] = await db.update(baleProducts).set({ ...updates, updatedAt: sql2`now()` }).where(eq(baleProducts.id, id)).returning();
-    return updated;
-  }
-  async deleteBaleProduct(id) {
-    await db.delete(baleProducts).where(eq(baleProducts.id, id));
-  }
-  async bulkCreateBaleProducts(products) {
-    if (products.length === 0) return [];
-    const companyIds = new Set(products.map((p) => p.companyId));
-    if (companyIds.size > 1) {
-      throw new Error("All products must belong to the same company");
-    }
-    const codes = products.map((p) => p.code);
-    const duplicates = codes.filter((code, index2) => codes.indexOf(code) !== index2);
-    if (duplicates.length > 0) {
-      throw new Error(`Duplicate product codes in import: ${duplicates.join(", ")}`);
-    }
-    return await db.insert(baleProducts).values(products).returning();
-  }
-  // Bale Transfers
-  async getAllBaleTransfers(companyId) {
-    return await db.select().from(baleTransfers).where(eq(baleTransfers.companyId, companyId)).orderBy(desc(baleTransfers.createdAt));
-  }
-  async getBaleTransferById(id, companyId) {
-    const [transfer] = await db.select().from(baleTransfers).where(and(
-      eq(baleTransfers.id, id),
-      eq(baleTransfers.companyId, companyId)
-    ));
-    return transfer;
-  }
-  async createBaleTransfer(transfer) {
-    const [created] = await db.insert(baleTransfers).values(transfer).returning();
-    return created;
-  }
-  async updateBaleTransfer(id, companyId, updates) {
-    const { companyId: _ignored, ...safe } = updates;
-    const [updated] = await db.update(baleTransfers).set({ ...safe, updatedAt: sql2`now()` }).where(and(
-      eq(baleTransfers.id, id),
-      eq(baleTransfers.companyId, companyId)
-    )).returning();
-    return updated;
-  }
-  async deleteBaleTransfer(id, companyId) {
-    await db.delete(baleTransfers).where(and(
-      eq(baleTransfers.id, id),
-      eq(baleTransfers.companyId, companyId)
-    ));
-  }
-  async getBaleTransferItems(transferId, companyId) {
-    return await db.select({
-      id: baleTransferItems.id,
-      transferId: baleTransferItems.transferId,
-      productionBaleId: baleTransferItems.productionBaleId,
-      quantity: baleTransferItems.quantity,
-      weightKg: baleTransferItems.weightKg,
-      costPerKg: baleTransferItems.costPerKg,
-      totalCost: baleTransferItems.totalCost,
-      createdAt: baleTransferItems.createdAt
-    }).from(baleTransferItems).innerJoin(baleTransfers, eq(baleTransferItems.transferId, baleTransfers.id)).where(and(
-      eq(baleTransferItems.transferId, transferId),
-      eq(baleTransfers.companyId, companyId)
-    ));
-  }
-  async createBaleTransferItem(item, companyId) {
-    const [parent] = await db.select({ id: baleTransfers.id }).from(baleTransfers).where(and(
-      eq(baleTransfers.id, item.transferId),
-      eq(baleTransfers.companyId, companyId)
-    ));
-    if (!parent) return void 0;
-    const [created] = await db.insert(baleTransferItems).values(item).returning();
-    return created;
-  }
-  async updateBaleTransferItem(id, companyId, updates) {
-    const { transferId: _ignored, ...safe } = updates;
-    const ownedTransferIds = db.select({ id: baleTransfers.id }).from(baleTransfers).where(eq(baleTransfers.companyId, companyId));
-    const [updated] = await db.update(baleTransferItems).set(safe).where(and(
-      eq(baleTransferItems.id, id),
-      inArray(baleTransferItems.transferId, ownedTransferIds)
-    )).returning();
-    return updated;
-  }
-  async deleteBaleTransferItem(id, companyId) {
-    const ownedTransferIds = db.select({ id: baleTransfers.id }).from(baleTransfers).where(eq(baleTransfers.companyId, companyId));
-    await db.delete(baleTransferItems).where(and(
-      eq(baleTransferItems.id, id),
-      inArray(baleTransferItems.transferId, ownedTransferIds)
-    ));
-  }
-  async getProductionBalesByLocation(companyId, locationId) {
-    return await db.select().from(productionBales).where(and(
-      eq(productionBales.companyId, companyId),
-      eq(productionBales.locationId, locationId),
-      eq(productionBales.status, "IN_STOCK")
-    ));
-  }
   // Mix Batches
   async getAllMixBatches(companyId) {
     return await db.select().from(mixBatches).where(eq(mixBatches.companyId, companyId)).orderBy(desc(mixBatches.createdAt));
@@ -4961,113 +4784,6 @@ var DbStorage = class {
     const [created] = await db.insert(mixBatchSources).values(source).returning();
     return created;
   }
-  // Production Bales
-  async getAllProductionBales(companyId, filters) {
-    const conditions = [eq(productionBales.companyId, companyId)];
-    if (filters?.mixBatchId) {
-      conditions.push(eq(productionBales.mixBatchId, filters.mixBatchId));
-    }
-    if (filters?.status) {
-      conditions.push(eq(productionBales.status, filters.status));
-    }
-    if (filters?.category) {
-      conditions.push(eq(productionBales.category, filters.category));
-    }
-    if (filters?.grade) {
-      conditions.push(eq(productionBales.grade, filters.grade));
-    }
-    return await db.select({
-      bale: productionBales,
-      product: baleProducts,
-      location: locations
-    }).from(productionBales).leftJoin(baleProducts, eq(productionBales.productId, baleProducts.id)).leftJoin(locations, eq(productionBales.locationId, locations.id)).where(and(...conditions)).orderBy(desc(productionBales.createdAt));
-  }
-  async getProductionBaleById(id) {
-    const [bale] = await db.select().from(productionBales).where(eq(productionBales.id, id));
-    return bale;
-  }
-  async getProductionBaleByBarcode(barcodeValue, companyId) {
-    const [bale] = await db.select().from(productionBales).where(and(
-      eq(productionBales.barcodeValue, barcodeValue),
-      eq(productionBales.companyId, companyId)
-    ));
-    return bale;
-  }
-  async createProductionBale(bale) {
-    const baleData = { ...bale };
-    if (bale.pressedAt) {
-      baleData.pressedAt = new Date(bale.pressedAt);
-    }
-    const [created] = await db.insert(productionBales).values(baleData).returning();
-    return created;
-  }
-  async updateProductionBale(id, updates) {
-    const updateData = { ...updates, updatedAt: sql2`now()` };
-    if (updates.pressedAt) {
-      updateData.pressedAt = new Date(updates.pressedAt);
-    }
-    const [updated] = await db.update(productionBales).set(updateData).where(eq(productionBales.id, id)).returning();
-    return updated;
-  }
-  async deleteProductionBale(id, companyId) {
-    await db.delete(productionBales).where(and(
-      eq(productionBales.id, id),
-      eq(productionBales.companyId, companyId)
-    ));
-  }
-  async bulkCreateProductionBales(bales2) {
-    if (bales2.length === 0) return [];
-    const balesData = bales2.map((bale) => {
-      const data = { ...bale };
-      if (bale.pressedAt) {
-        data.pressedAt = new Date(bale.pressedAt);
-      }
-      return data;
-    });
-    return await db.insert(productionBales).values(balesData).returning();
-  }
-  // Update bale from scan (for factory floor scanning)
-  async updateProductionBaleFromScan(barcodeValue, companyId, updates) {
-    const bale = await this.getProductionBaleByBarcode(barcodeValue, companyId);
-    if (!bale) {
-      throw new Error(`Bale with barcode ${barcodeValue} not found`);
-    }
-    let costPerKg = "0";
-    let totalCost = "0";
-    if (bale.mixBatchId) {
-      const batch = await this.getMixBatchById(bale.mixBatchId, companyId);
-      if (batch) {
-        costPerKg = batch.costPerKg;
-        const weight = parseFloat(updates.weightKg);
-        const cost = parseFloat(costPerKg);
-        totalCost = (weight * cost).toFixed(2);
-      }
-    }
-    const [updated] = await db.update(productionBales).set({
-      weightKg: updates.weightKg,
-      category: updates.category,
-      grade: updates.grade,
-      warehouseLocation: updates.warehouseLocation,
-      costPerKg,
-      totalCost,
-      status: "PRESSED",
-      pressedAt: sql2`now()`,
-      updatedAt: sql2`now()`
-    }).where(eq(productionBales.id, bale.id)).returning();
-    return updated;
-  }
-  // Barcode generation for production bales
-  async getNextBaleBarcode(companyId) {
-    const [sequence] = await db.select().from(baleSequences).where(eq(baleSequences.companyId, companyId));
-    if (!sequence) {
-      const [newSeq] = await db.insert(baleSequences).values({ companyId, nextNumber: 2 }).returning();
-      return `HD${String(newSeq.nextNumber - 1).padStart(5, "0")}`;
-    }
-    const nextNum = sequence.nextNumber;
-    await db.update(baleSequences).set({ nextNumber: nextNum + 1 }).where(eq(baleSequences.id, sequence.id));
-    return `HD${String(nextNum).padStart(5, "0")}`;
-  }
-  // Container Sales API
   async createContainerSale(sale) {
     const [created] = await db.insert(containerSales).values(sale).returning();
     await this.addCustomerBalanceEntry({
@@ -5194,6 +4910,329 @@ var DbStorage = class {
     }
     return results;
   }
+  // Per-employee per-location moto bonus rates ($/unit)
+  // Returns only LIVE rows (deleted_at IS NULL). Use getMotoRateAudit() for history.
+  async getEmployeeMotoRates(employeeId) {
+    return await db.select().from(employeeMotoRates).where(
+      and(
+        eq(employeeMotoRates.employeeId, employeeId),
+        isNull(employeeMotoRates.deletedAt)
+      )
+    );
+  }
+  async replaceEmployeeMotoRates(employeeId, rates, auditCtx) {
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql2`SELECT pg_advisory_xact_lock(${employeeId}::bigint)`);
+      const now = /* @__PURE__ */ new Date();
+      const before = await tx.select().from(employeeMotoRates).where(
+        and(
+          eq(employeeMotoRates.employeeId, employeeId),
+          isNull(employeeMotoRates.deletedAt)
+        )
+      );
+      await tx.update(employeeMotoRates).set({ deletedAt: now, effectiveTo: now }).where(
+        and(
+          eq(employeeMotoRates.employeeId, employeeId),
+          isNull(employeeMotoRates.deletedAt)
+        )
+      );
+      let inserted = [];
+      if (rates.length > 0) {
+        inserted = await tx.insert(employeeMotoRates).values(
+          rates.map((r) => ({
+            employeeId,
+            locationId: r.locationId,
+            rate: r.rate,
+            sourceCompanyId: r.sourceCompanyId ?? null,
+            effectiveFrom: now
+          }))
+        ).returning();
+      }
+      await tx.insert(motoRateAudit).values({
+        employeeId,
+        tableName: "employee_moto_rates",
+        action: auditCtx?.action ?? "replace",
+        beforeData: before,
+        afterData: inserted,
+        userId: auditCtx?.userId ?? null,
+        sourceEmployeeId: auditCtx?.sourceEmployeeId ?? null,
+        context: auditCtx?.context ?? null
+      });
+      return inserted;
+    });
+  }
+  // Per-employee per-location moto bonus % (% of sales amount)
+  async getEmployeeMotoPctRates(employeeId) {
+    return await db.select().from(employeeMotoPctRates).where(
+      and(
+        eq(employeeMotoPctRates.employeeId, employeeId),
+        isNull(employeeMotoPctRates.deletedAt)
+      )
+    );
+  }
+  async replaceEmployeeMotoPctRates(employeeId, rates, auditCtx) {
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql2`SELECT pg_advisory_xact_lock(${employeeId}::bigint)`);
+      const now = /* @__PURE__ */ new Date();
+      const before = await tx.select().from(employeeMotoPctRates).where(
+        and(
+          eq(employeeMotoPctRates.employeeId, employeeId),
+          isNull(employeeMotoPctRates.deletedAt)
+        )
+      );
+      await tx.update(employeeMotoPctRates).set({ deletedAt: now, effectiveTo: now }).where(
+        and(
+          eq(employeeMotoPctRates.employeeId, employeeId),
+          isNull(employeeMotoPctRates.deletedAt)
+        )
+      );
+      let inserted = [];
+      if (rates.length > 0) {
+        inserted = await tx.insert(employeeMotoPctRates).values(
+          rates.map((r) => ({
+            employeeId,
+            locationId: r.locationId,
+            pct: r.pct,
+            sourceCompanyId: r.sourceCompanyId ?? null,
+            effectiveFrom: now
+          }))
+        ).returning();
+      }
+      await tx.insert(motoRateAudit).values({
+        employeeId,
+        tableName: "employee_moto_pct_rates",
+        action: auditCtx?.action ?? "replace",
+        beforeData: before,
+        afterData: inserted,
+        userId: auditCtx?.userId ?? null,
+        sourceEmployeeId: auditCtx?.sourceEmployeeId ?? null,
+        context: auditCtx?.context ?? null
+      });
+      return inserted;
+    });
+  }
+  // Copy all live moto rates from sourceEmployeeId to targetEmployeeId (replace-all).
+  async copyEmployeeMotoRates(targetEmployeeId, sourceEmployeeId, userId) {
+    const sourceRows = await this.getEmployeeMotoRates(sourceEmployeeId);
+    return this.replaceEmployeeMotoRates(
+      targetEmployeeId,
+      sourceRows.map((r) => ({ locationId: r.locationId, rate: r.rate, sourceCompanyId: r.sourceCompanyId })),
+      { userId, action: "copy_from", sourceEmployeeId }
+    );
+  }
+  async copyEmployeeMotoPctRates(targetEmployeeId, sourceEmployeeId, userId) {
+    const sourceRows = await this.getEmployeeMotoPctRates(sourceEmployeeId);
+    return this.replaceEmployeeMotoPctRates(
+      targetEmployeeId,
+      sourceRows.map((r) => ({ locationId: r.locationId, pct: r.pct, sourceCompanyId: r.sourceCompanyId })),
+      { userId, action: "copy_from", sourceEmployeeId }
+    );
+  }
+  // Bulk set the rate at a single location for many employees. Other locations
+  // for each employee are preserved (only the one location row is replaced).
+  async bulkSetMotoRateAtLocation(locationId, employeeIds, rate, sourceCompanyId, userId) {
+    let updated = 0;
+    for (const empId of employeeIds) {
+      await db.transaction(async (tx) => {
+        await tx.execute(sql2`SELECT pg_advisory_xact_lock(${empId}::bigint)`);
+        const now = /* @__PURE__ */ new Date();
+        const before = await tx.select().from(employeeMotoRates).where(
+          and(
+            eq(employeeMotoRates.employeeId, empId),
+            isNull(employeeMotoRates.deletedAt)
+          )
+        );
+        await tx.update(employeeMotoRates).set({ deletedAt: now, effectiveTo: now }).where(
+          and(
+            eq(employeeMotoRates.employeeId, empId),
+            eq(employeeMotoRates.locationId, locationId),
+            isNull(employeeMotoRates.deletedAt)
+          )
+        );
+        const [inserted] = await tx.insert(employeeMotoRates).values({ employeeId: empId, locationId, rate, sourceCompanyId, effectiveFrom: now }).returning();
+        await tx.insert(motoRateAudit).values({
+          employeeId: empId,
+          tableName: "employee_moto_rates",
+          action: "bulk_set",
+          beforeData: before,
+          afterData: [inserted],
+          userId: userId ?? null,
+          sourceEmployeeId: null,
+          context: { locationId, rate, sourceCompanyId }
+        });
+        updated++;
+      });
+    }
+    return { updated };
+  }
+  async bulkSetMotoPctRateAtLocation(locationId, employeeIds, pct, sourceCompanyId, userId) {
+    let updated = 0;
+    for (const empId of employeeIds) {
+      await db.transaction(async (tx) => {
+        await tx.execute(sql2`SELECT pg_advisory_xact_lock(${empId}::bigint)`);
+        const now = /* @__PURE__ */ new Date();
+        const before = await tx.select().from(employeeMotoPctRates).where(
+          and(
+            eq(employeeMotoPctRates.employeeId, empId),
+            isNull(employeeMotoPctRates.deletedAt)
+          )
+        );
+        await tx.update(employeeMotoPctRates).set({ deletedAt: now, effectiveTo: now }).where(
+          and(
+            eq(employeeMotoPctRates.employeeId, empId),
+            eq(employeeMotoPctRates.locationId, locationId),
+            isNull(employeeMotoPctRates.deletedAt)
+          )
+        );
+        const [inserted] = await tx.insert(employeeMotoPctRates).values({ employeeId: empId, locationId, pct, sourceCompanyId, effectiveFrom: now }).returning();
+        await tx.insert(motoRateAudit).values({
+          employeeId: empId,
+          tableName: "employee_moto_pct_rates",
+          action: "bulk_set",
+          beforeData: before,
+          afterData: [inserted],
+          userId: userId ?? null,
+          sourceEmployeeId: null,
+          context: { locationId, pct, sourceCompanyId }
+        });
+        updated++;
+      });
+    }
+    return { updated };
+  }
+  async getMotoRateAudit(employeeId, limit = 100) {
+    return await db.select().from(motoRateAudit).where(eq(motoRateAudit.employeeId, employeeId)).orderBy(desc(motoRateAudit.createdAt)).limit(limit);
+  }
+  // A2: filtered + paginated audit reader
+  async getMotoRateAuditFiltered(employeeId, opts = {}) {
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 500);
+    const offset = Math.max(opts.offset ?? 0, 0);
+    const conds = [eq(motoRateAudit.employeeId, employeeId)];
+    if (opts.from) conds.push(sql2`${motoRateAudit.createdAt} >= ${opts.from}`);
+    if (opts.to) conds.push(sql2`${motoRateAudit.createdAt} <= ${opts.to}`);
+    if (opts.action) conds.push(eq(motoRateAudit.action, opts.action));
+    const where = and(...conds);
+    const [rows, totalRow] = await Promise.all([
+      db.select().from(motoRateAudit).where(where).orderBy(desc(motoRateAudit.createdAt)).limit(limit).offset(offset),
+      db.select({ c: sql2`count(*)::int` }).from(motoRateAudit).where(where)
+    ]);
+    return { rows, total: totalRow[0]?.c ?? 0 };
+  }
+  // A3: location-wide rate stats (for soft outlier warning)
+  async getLocationMotoRateStats(locationId) {
+    const result = await db.execute(sql2`
+      SELECT
+        COUNT(*)::int AS count,
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY rate)::text AS median,
+        MIN(rate)::text AS min,
+        MAX(rate)::text AS max
+      FROM employee_moto_rates
+      WHERE location_id = ${locationId} AND deleted_at IS NULL
+    `);
+    const row = (result.rows ?? result)[0] ?? {};
+    return { count: row.count ?? 0, median: row.median, max: row.max, min: row.min };
+  }
+  // C2: read live rates as-of a specific date (for retroactive payroll runs)
+  async getEmployeeMotoRatesAsOf(employeeId, asOf) {
+    const result = await db.execute(sql2`
+      SELECT * FROM employee_moto_rates
+      WHERE employee_id = ${employeeId}
+        AND COALESCE(effective_from, created_at) <= ${asOf}
+        AND (effective_to IS NULL OR effective_to > ${asOf})
+    `);
+    return result.rows ?? result;
+  }
+  async getEmployeeMotoPctRatesAsOf(employeeId, asOf) {
+    const result = await db.execute(sql2`
+      SELECT * FROM employee_moto_pct_rates
+      WHERE employee_id = ${employeeId}
+        AND COALESCE(effective_from, created_at) <= ${asOf}
+        AND (effective_to IS NULL OR effective_to > ${asOf})
+    `);
+    return result.rows ?? result;
+  }
+  // C1: rate templates
+  async getRateTemplates(companyId) {
+    const tpls = await db.select().from(rateTemplates).where(and(eq(rateTemplates.companyId, companyId), isNull(rateTemplates.deletedAt))).orderBy(desc(rateTemplates.updatedAt));
+    if (tpls.length === 0) return [];
+    const items = await db.select().from(rateTemplateItems).where(inArray(rateTemplateItems.templateId, tpls.map((t) => t.id)));
+    return tpls.map((t) => ({ ...t, items: items.filter((i) => i.templateId === t.id) }));
+  }
+  async createRateTemplate(companyId, name, description, items, createdBy) {
+    return await db.transaction(async (tx) => {
+      const [tpl] = await tx.insert(rateTemplates).values({ companyId, name, description, createdBy: createdBy ?? null }).returning();
+      let inserted = [];
+      if (items.length > 0) {
+        inserted = await tx.insert(rateTemplateItems).values(
+          items.map((i) => ({
+            templateId: tpl.id,
+            locationId: i.locationId,
+            rate: i.rate ?? null,
+            pct: i.pct ?? null,
+            sourceCompanyId: i.sourceCompanyId ?? null
+          }))
+        ).returning();
+      }
+      return { ...tpl, items: inserted };
+    });
+  }
+  async deleteRateTemplate(templateId) {
+    await db.update(rateTemplates).set({ deletedAt: /* @__PURE__ */ new Date() }).where(eq(rateTemplates.id, templateId));
+  }
+  async getRateTemplate(templateId) {
+    const [tpl] = await db.select().from(rateTemplates).where(eq(rateTemplates.id, templateId));
+    if (!tpl) return null;
+    const items = await db.select().from(rateTemplateItems).where(eq(rateTemplateItems.templateId, templateId));
+    return { ...tpl, items };
+  }
+  // C4: notifications
+  async createNotification(n) {
+    const [row] = await db.insert(notifications).values({
+      userId: n.userId,
+      companyId: n.companyId ?? null,
+      type: n.type,
+      title: n.title,
+      body: n.body ?? null,
+      payload: n.payload ?? null
+    }).returning();
+    return row;
+  }
+  async getNotifications(userId, opts = {}) {
+    const limit = Math.min(opts.limit ?? 50, 200);
+    const conds = [eq(notifications.userId, userId)];
+    if (opts.unreadOnly) conds.push(isNull(notifications.readAt));
+    return await db.select().from(notifications).where(and(...conds)).orderBy(desc(notifications.createdAt)).limit(limit);
+  }
+  async markNotificationsRead(userId, ids) {
+    const conds = [eq(notifications.userId, userId), isNull(notifications.readAt)];
+    if (ids && ids.length > 0) conds.push(inArray(notifications.id, ids));
+    const result = await db.update(notifications).set({ readAt: /* @__PURE__ */ new Date() }).where(and(...conds)).returning({ id: notifications.id });
+    return { updated: result.length };
+  }
+  // Helper: enqueue rate-change notifications to all Admin/Owner/Manager users of a company.
+  async notifyCompanyManagersOfRateChange(companyId, employeeId, action, actorUserId) {
+    try {
+      const recipients = await db.select({ userId: userCompanyRoles.userId }).from(userCompanyRoles).where(
+        and(
+          eq(userCompanyRoles.companyId, companyId),
+          inArray(userCompanyRoles.role, ["Admin", "Owner", "Manager"])
+        )
+      );
+      if (recipients.length === 0) return;
+      const rows = recipients.filter((r) => r.userId !== actorUserId).map((r) => ({
+        userId: r.userId,
+        companyId,
+        type: "rate_change",
+        title: `Moto rate ${action}`,
+        body: `Employee #${employeeId} rates were updated (${action}).`,
+        payload: { employeeId, action }
+      }));
+      if (rows.length === 0) return;
+      await db.insert(notifications).values(rows);
+    } catch (err) {
+      console.warn("notifyCompanyManagersOfRateChange failed:", err);
+    }
+  }
 };
 var storage = new DbStorage();
 
@@ -5216,6 +5255,9 @@ function validate(schema, source = "body") {
     }
   };
 }
+
+// server/routes.ts
+init_validation();
 
 // server/chatService.ts
 import { GoogleGenAI } from "@google/genai";
@@ -5816,9 +5858,9 @@ var upload = multer({
 var BCRYPT_SALT_ROUNDS = 12;
 var activeUsers = /* @__PURE__ */ new Map();
 var ACTIVE_TIMEOUT_MS = 5 * 60 * 1e3;
-var loginSchema = z2.object({
-  username: z2.string().min(1, "Username is required").max(255),
-  password: z2.string().min(1, "Password is required").max(1024)
+var loginSchema = z3.object({
+  username: z3.string().min(1, "Username is required").max(255),
+  password: z3.string().min(1, "Password is required").max(1024)
 });
 async function hashPassword(password) {
   return bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
@@ -5901,6 +5943,24 @@ async function registerRoutes(app2) {
       console.error("Database connection failed:", error);
       res.status(500).json({ status: "error", message: error.message });
     }
+  });
+  app2.get("/api/health", async (_req, res) => {
+    let dbStatus = "down";
+    let dbError;
+    try {
+      await db.execute(sql4`SELECT 1`);
+      dbStatus = "ok";
+    } catch (e) {
+      dbError = e?.message ?? "unknown";
+    }
+    res.status(dbStatus === "ok" ? 200 : 503).json({
+      status: dbStatus === "ok" ? "ok" : "degraded",
+      db: dbStatus,
+      ...dbError ? { dbError } : {},
+      uptimeSeconds: Math.round(process.uptime()),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      nodeEnv: process.env.NODE_ENV ?? "development"
+    });
   });
   app2.post(
     "/api/auth/login",
@@ -7248,6 +7308,735 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(201).json(employee);
     })
   );
+  async function verifyEmployeeForCurrentCompany(employeeIdRaw, companyId) {
+    if (!companyId) return { ok: false, status: 400, message: "No company selected" };
+    const employeeId = parseInt(employeeIdRaw, 10);
+    if (isNaN(employeeId)) return { ok: false, status: 400, message: "Invalid employee ID" };
+    const all = await storage.getAllEmployees(companyId);
+    const found = all.find((e) => e.id === employeeId);
+    if (!found) return { ok: false, status: 404, message: "Employee not found" };
+    if (found.companyId !== companyId) {
+      return { ok: false, status: 403, message: "Access denied: employee belongs to a different company" };
+    }
+    return { ok: true, employeeId };
+  }
+  async function getAccessibleCompanyIds(userId) {
+    if (!userId) return /* @__PURE__ */ new Set();
+    const roles = await storage.getUserCompaniesWithRoles(userId);
+    return new Set(roles.map((r) => r.companyId).filter((id) => typeof id === "number"));
+  }
+  async function getCurrentCompanyLocationIds(companyId) {
+    if (!companyId) return /* @__PURE__ */ new Set();
+    const locs = await storage.getAllLocations(companyId);
+    return new Set(locs.map((l) => l.id));
+  }
+  app2.get("/api/employees/:id/moto-rates", requireAuth, async (req, res) => {
+    try {
+      const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+      if (!check.ok) return res.status(check.status).json({ message: check.message });
+      const rows = await storage.getEmployeeMotoRates(check.employeeId);
+      res.json(rows);
+    } catch (err) {
+      console.error("GET /api/employees/:id/moto-rates", err);
+      res.status(500).json({ message: err.message || "Failed to fetch moto rates" });
+    }
+  });
+  app2.put(
+    "/api/employees/:id/moto-rates",
+    requireAuth,
+    requireNonPOS,
+    // B3: POS roles cannot mutate rates
+    validate(motoRatesPutSchema),
+    async (req, res) => {
+      try {
+        const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+        if (!check.ok) return res.status(check.status).json({ message: check.message });
+        const body = req.body;
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        const clean = body.rates.map((r) => ({
+          locationId: r.locationId,
+          rate: String(r.rate),
+          sourceCompanyId: r.sourceCompanyId ?? null
+        }));
+        for (const row of clean) {
+          if (!tenantLocations.has(row.locationId)) {
+            return res.status(403).json({
+              message: `Access denied: locationId ${row.locationId} does not belong to your current company`
+            });
+          }
+        }
+        for (const row of clean) {
+          if (row.sourceCompanyId != null && !accessible.has(row.sourceCompanyId)) {
+            return res.status(403).json({
+              message: `Access denied: sourceCompanyId ${row.sourceCompanyId} is not in your accessible companies`
+            });
+          }
+        }
+        const saved = await storage.replaceEmployeeMotoRates(check.employeeId, clean, {
+          userId: req.session.userId ?? null,
+          action: "replace"
+        });
+        if (req.session.currentCompanyId) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, check.employeeId, "replace", req.session.userId ?? null);
+        }
+        res.json(saved);
+      } catch (err) {
+        console.error("PUT /api/employees/:id/moto-rates", err);
+        res.status(500).json({ message: err.message || "Failed to save moto rates" });
+      }
+    }
+  );
+  app2.get("/api/employees/:id/moto-pct-rates", requireAuth, async (req, res) => {
+    try {
+      const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+      if (!check.ok) return res.status(check.status).json({ message: check.message });
+      const rows = await storage.getEmployeeMotoPctRates(check.employeeId);
+      res.json(rows);
+    } catch (err) {
+      console.error("GET /api/employees/:id/moto-pct-rates", err);
+      res.status(500).json({ message: err.message || "Failed to fetch moto pct rates" });
+    }
+  });
+  app2.put(
+    "/api/employees/:id/moto-pct-rates",
+    requireAuth,
+    requireNonPOS,
+    // B3
+    validate(motoPctRatesPutSchema),
+    async (req, res) => {
+      try {
+        const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+        if (!check.ok) return res.status(check.status).json({ message: check.message });
+        const body = req.body;
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        const clean = body.rates.map((r) => ({
+          locationId: r.locationId,
+          pct: String(r.pct),
+          sourceCompanyId: r.sourceCompanyId ?? null
+        }));
+        for (const row of clean) {
+          if (!tenantLocations.has(row.locationId)) {
+            return res.status(403).json({
+              message: `Access denied: locationId ${row.locationId} does not belong to your current company`
+            });
+          }
+        }
+        for (const row of clean) {
+          if (row.sourceCompanyId != null && !accessible.has(row.sourceCompanyId)) {
+            return res.status(403).json({
+              message: `Access denied: sourceCompanyId ${row.sourceCompanyId} is not in your accessible companies`
+            });
+          }
+        }
+        const saved = await storage.replaceEmployeeMotoPctRates(check.employeeId, clean, {
+          userId: req.session.userId ?? null,
+          action: "replace"
+        });
+        if (req.session.currentCompanyId) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, check.employeeId, "replace", req.session.userId ?? null);
+        }
+        res.json(saved);
+      } catch (err) {
+        console.error("PUT /api/employees/:id/moto-pct-rates", err);
+        res.status(500).json({ message: err.message || "Failed to save moto pct rates" });
+      }
+    }
+  );
+  app2.post(
+    "/api/employees/:id/moto-rates/copy-from/:sourceId",
+    requireAuth,
+    requireNonPOS,
+    // B3
+    async (req, res) => {
+      try {
+        const target = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+        if (!target.ok) return res.status(target.status).json({ message: target.message });
+        const source = await verifyEmployeeForCurrentCompany(req.params.sourceId, req.session.currentCompanyId);
+        if (!source.ok) return res.status(source.status).json({ message: `Source employee: ${source.message}` });
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        const sourceRows = await storage.getEmployeeMotoRates(source.employeeId);
+        const filtered = sourceRows.filter((r) => tenantLocations.has(r.locationId)).filter((r) => r.sourceCompanyId == null || accessible.has(r.sourceCompanyId)).map((r) => ({ locationId: r.locationId, rate: r.rate, sourceCompanyId: r.sourceCompanyId }));
+        const saved = await storage.replaceEmployeeMotoRates(
+          target.employeeId,
+          filtered,
+          { userId: req.session.userId ?? null, action: "copy_from", sourceEmployeeId: source.employeeId }
+        );
+        if (req.session.currentCompanyId) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, target.employeeId, "copy_from", req.session.userId ?? null);
+        }
+        res.json({ copied: saved.length, skipped: sourceRows.length - filtered.length, rates: saved });
+      } catch (err) {
+        console.error("POST /moto-rates/copy-from", err);
+        res.status(500).json({ message: err.message || "Failed to copy moto rates" });
+      }
+    }
+  );
+  app2.post(
+    "/api/employees/:id/moto-pct-rates/copy-from/:sourceId",
+    requireAuth,
+    requireNonPOS,
+    // B3
+    async (req, res) => {
+      try {
+        const target = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+        if (!target.ok) return res.status(target.status).json({ message: target.message });
+        const source = await verifyEmployeeForCurrentCompany(req.params.sourceId, req.session.currentCompanyId);
+        if (!source.ok) return res.status(source.status).json({ message: `Source employee: ${source.message}` });
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        const sourceRows = await storage.getEmployeeMotoPctRates(source.employeeId);
+        const filtered = sourceRows.filter((r) => tenantLocations.has(r.locationId)).filter((r) => r.sourceCompanyId == null || accessible.has(r.sourceCompanyId)).map((r) => ({ locationId: r.locationId, pct: r.pct, sourceCompanyId: r.sourceCompanyId }));
+        const saved = await storage.replaceEmployeeMotoPctRates(
+          target.employeeId,
+          filtered,
+          { userId: req.session.userId ?? null, action: "copy_from", sourceEmployeeId: source.employeeId }
+        );
+        if (req.session.currentCompanyId) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, target.employeeId, "copy_from", req.session.userId ?? null);
+        }
+        res.json({ copied: saved.length, skipped: sourceRows.length - filtered.length, rates: saved });
+      } catch (err) {
+        console.error("POST /moto-pct-rates/copy-from", err);
+        res.status(500).json({ message: err.message || "Failed to copy moto pct rates" });
+      }
+    }
+  );
+  app2.post(
+    "/api/locations/:id/moto-rates/bulk-set",
+    requireAuth,
+    requireNonPOS,
+    // B3
+    validate(bulkSetMotoRateSchema),
+    async (req, res) => {
+      try {
+        const locationId = parseInt(req.params.id, 10);
+        if (isNaN(locationId)) return res.status(400).json({ message: "Invalid location ID" });
+        if (!req.session.currentCompanyId) return res.status(400).json({ message: "No company selected" });
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        if (!tenantLocations.has(locationId)) {
+          return res.status(403).json({ message: `Access denied: locationId ${locationId} does not belong to your current company` });
+        }
+        const body = req.body;
+        const tenantEmployees = await storage.getAllEmployees(req.session.currentCompanyId);
+        const tenantEmpIds = new Set(tenantEmployees.map((e) => e.id));
+        for (const id of body.employeeIds) {
+          if (!tenantEmpIds.has(id)) {
+            return res.status(403).json({ message: `Access denied: employee ${id} not in your current company` });
+          }
+        }
+        if (body.sourceCompanyId != null) {
+          const accessible = await getAccessibleCompanyIds(req.session.userId);
+          if (!accessible.has(body.sourceCompanyId)) {
+            return res.status(403).json({ message: `Access denied: sourceCompanyId ${body.sourceCompanyId} is not in your accessible companies` });
+          }
+        }
+        const result = await storage.bulkSetMotoRateAtLocation(
+          locationId,
+          body.employeeIds,
+          String(body.rate),
+          body.sourceCompanyId ?? null,
+          req.session.userId ?? null
+        );
+        for (const empId of body.employeeIds) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, empId, "bulk_set", req.session.userId ?? null);
+        }
+        res.json(result);
+      } catch (err) {
+        console.error("POST /locations/:id/moto-rates/bulk-set", err);
+        res.status(500).json({ message: err.message || "Failed to bulk-set moto rates" });
+      }
+    }
+  );
+  app2.post(
+    "/api/locations/:id/moto-pct-rates/bulk-set",
+    requireAuth,
+    requireNonPOS,
+    // B3
+    validate(bulkSetMotoPctRateSchema),
+    async (req, res) => {
+      try {
+        const locationId = parseInt(req.params.id, 10);
+        if (isNaN(locationId)) return res.status(400).json({ message: "Invalid location ID" });
+        if (!req.session.currentCompanyId) return res.status(400).json({ message: "No company selected" });
+        const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+        if (!tenantLocations.has(locationId)) {
+          return res.status(403).json({ message: `Access denied: locationId ${locationId} does not belong to your current company` });
+        }
+        const body = req.body;
+        const tenantEmployees = await storage.getAllEmployees(req.session.currentCompanyId);
+        const tenantEmpIds = new Set(tenantEmployees.map((e) => e.id));
+        for (const id of body.employeeIds) {
+          if (!tenantEmpIds.has(id)) {
+            return res.status(403).json({ message: `Access denied: employee ${id} not in your current company` });
+          }
+        }
+        if (body.sourceCompanyId != null) {
+          const accessible = await getAccessibleCompanyIds(req.session.userId);
+          if (!accessible.has(body.sourceCompanyId)) {
+            return res.status(403).json({ message: `Access denied: sourceCompanyId ${body.sourceCompanyId} is not in your accessible companies` });
+          }
+        }
+        const result = await storage.bulkSetMotoPctRateAtLocation(
+          locationId,
+          body.employeeIds,
+          String(body.pct),
+          body.sourceCompanyId ?? null,
+          req.session.userId ?? null
+        );
+        for (const empId of body.employeeIds) {
+          await storage.notifyCompanyManagersOfRateChange(req.session.currentCompanyId, empId, "bulk_set", req.session.userId ?? null);
+        }
+        res.json(result);
+      } catch (err) {
+        console.error("POST /locations/:id/moto-pct-rates/bulk-set", err);
+        res.status(500).json({ message: err.message || "Failed to bulk-set moto pct rates" });
+      }
+    }
+  );
+  app2.get("/api/employees/:id/moto-rate-audit", requireAuth, async (req, res) => {
+    try {
+      const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+      if (!check.ok) return res.status(check.status).json({ message: check.message });
+      const { from, to, action, limit, offset } = req.query;
+      const opts = {};
+      if (from) {
+        const d = new Date(from);
+        if (!isNaN(d.getTime())) opts.from = d;
+      }
+      if (to) {
+        const d = new Date(to);
+        if (!isNaN(d.getTime())) opts.to = d;
+      }
+      if (action && /^[a-z_]+$/.test(action)) opts.action = action;
+      if (limit) opts.limit = parseInt(limit, 10);
+      if (offset) opts.offset = parseInt(offset, 10);
+      const isFiltered = from || to || action || limit || offset;
+      if (isFiltered) {
+        const result = await storage.getMotoRateAuditFiltered(check.employeeId, opts);
+        return res.json(result);
+      }
+      const rows = await storage.getMotoRateAudit(check.employeeId);
+      res.json(rows);
+    } catch (err) {
+      console.error("GET /moto-rate-audit", err);
+      res.status(500).json({ message: err.message || "Failed to fetch audit log" });
+    }
+  });
+  app2.get("/api/health/deep", requireAuth, async (_req, res) => {
+    const startedAt = Date.now();
+    const checks = { db: "unknown", migrations: "unknown", auditTable: "unknown" };
+    try {
+      const r = await db.execute(sql4`SELECT 1 AS ok`);
+      checks.db = (r.rows?.[0]?.ok ?? r[0]?.ok) === 1 ? "ok" : "down";
+    } catch (e) {
+      checks.db = `error: ${e.message}`;
+    }
+    try {
+      const r = await db.execute(sql4`SELECT MAX(version)::text AS v FROM drizzle.__drizzle_migrations`);
+      checks.migrations = r.rows?.[0]?.v ?? r[0]?.v ?? null;
+    } catch (e) {
+      try {
+        const r2 = await db.execute(sql4`SELECT COUNT(*)::int AS c FROM information_schema.tables WHERE table_schema = 'public'`);
+        checks.migrations = `tables=${r2.rows?.[0]?.c ?? r2[0]?.c}`;
+      } catch {
+        checks.migrations = "unknown";
+      }
+    }
+    try {
+      const r = await db.execute(sql4`SELECT COUNT(*)::int AS c FROM moto_rate_audit`);
+      checks.auditTable = `rows=${r.rows?.[0]?.c ?? r[0]?.c}`;
+    } catch (e) {
+      checks.auditTable = `error: ${e.message}`;
+    }
+    const allOk = checks.db === "ok" && !String(checks.auditTable).startsWith("error");
+    res.status(allOk ? 200 : 503).json({
+      status: allOk ? "ok" : "degraded",
+      checks,
+      uptimeSeconds: Math.floor(process.uptime()),
+      latencyMs: Date.now() - startedAt,
+      nodeEnv: process.env.NODE_ENV,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  });
+  app2.get("/api/locations/:id/moto-rate-stats", requireAuth, async (req, res) => {
+    try {
+      const locationId = parseInt(req.params.id, 10);
+      if (isNaN(locationId)) return res.status(400).json({ message: "Invalid location ID" });
+      const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+      if (!tenantLocations.has(locationId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const stats = await storage.getLocationMotoRateStats(locationId);
+      res.json(stats);
+    } catch (err) {
+      console.error("GET /locations/:id/moto-rate-stats", err);
+      res.status(500).json({ message: err.message || "Failed to fetch rate stats" });
+    }
+  });
+  app2.get("/api/employees/:id/moto-rates-as-of", requireAuth, async (req, res) => {
+    try {
+      const check = await verifyEmployeeForCurrentCompany(req.params.id, req.session.currentCompanyId);
+      if (!check.ok) return res.status(check.status).json({ message: check.message });
+      const dateStr = String(req.query.date ?? "");
+      const asOf = dateStr ? new Date(dateStr) : /* @__PURE__ */ new Date();
+      if (isNaN(asOf.getTime())) return res.status(400).json({ message: "Invalid date" });
+      const [rates, pctRates] = await Promise.all([
+        storage.getEmployeeMotoRatesAsOf(check.employeeId, asOf),
+        storage.getEmployeeMotoPctRatesAsOf(check.employeeId, asOf)
+      ]);
+      res.json({ asOf: asOf.toISOString(), rates, pctRates });
+    } catch (err) {
+      console.error("GET /moto-rates-as-of", err);
+      res.status(500).json({ message: err.message || "Failed to fetch as-of rates" });
+    }
+  });
+  app2.post("/api/payroll/calc-preview", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const body = req.body;
+      if (!body || typeof body.employeeId !== "number" || typeof body.locationId !== "number") {
+        return res.status(400).json({ message: "employeeId and locationId required" });
+      }
+      const empCheck = await verifyEmployeeForCurrentCompany(String(body.employeeId), req.session.currentCompanyId);
+      if (!empCheck.ok) return res.status(empCheck.status).json({ message: empCheck.message });
+      const tenantLocations = await getCurrentCompanyLocationIds(req.session.currentCompanyId);
+      if (!tenantLocations.has(body.locationId)) {
+        return res.status(403).json({ message: "Access denied: locationId not in your tenant" });
+      }
+      const asOf = body.date ? new Date(body.date) : /* @__PURE__ */ new Date();
+      const [rates, pctRates] = await Promise.all([
+        storage.getEmployeeMotoRatesAsOf(empCheck.employeeId, asOf),
+        storage.getEmployeeMotoPctRatesAsOf(empCheck.employeeId, asOf)
+      ]);
+      const rateRow = rates.find((r) => r.locationId === body.locationId);
+      const pctRow = pctRates.find((r) => r.locationId === body.locationId);
+      const employees2 = await storage.getAllEmployees(req.session.currentCompanyId);
+      const emp = employees2.find((e) => e.id === empCheck.employeeId);
+      const lines = [];
+      if (body.quantity != null && body.quantity > 0) {
+        if (rateRow) {
+          lines.push({
+            type: "per_unit",
+            quantity: body.quantity,
+            rate: rateRow.rate,
+            amount: (Number(body.quantity) * Number(rateRow.rate)).toFixed(2),
+            rateSource: "per_location_effective_dated",
+            asOf: asOf.toISOString()
+          });
+        } else if (emp?.motosBonusRate) {
+          lines.push({
+            type: "per_unit",
+            quantity: body.quantity,
+            rate: emp.motosBonusRate,
+            amount: (Number(body.quantity) * Number(emp.motosBonusRate)).toFixed(2),
+            rateSource: "fallback_scalar_employee"
+          });
+        } else {
+          lines.push({ type: "per_unit", quantity: body.quantity, rate: null, amount: "0.00", rateSource: "none" });
+        }
+      }
+      if (body.salesAmount != null && body.salesAmount > 0) {
+        if (pctRow) {
+          lines.push({
+            type: "pct_of_sales",
+            salesAmount: body.salesAmount,
+            pct: pctRow.pct,
+            amount: (Number(body.salesAmount) * Number(pctRow.pct) / 100).toFixed(2),
+            rateSource: "per_location_effective_dated",
+            asOf: asOf.toISOString()
+          });
+        } else if (emp?.salesBonusPct) {
+          lines.push({
+            type: "pct_of_sales",
+            salesAmount: body.salesAmount,
+            pct: emp.salesBonusPct,
+            amount: (Number(body.salesAmount) * Number(emp.salesBonusPct) / 100).toFixed(2),
+            rateSource: "fallback_scalar_employee"
+          });
+        } else {
+          lines.push({ type: "pct_of_sales", salesAmount: body.salesAmount, pct: null, amount: "0.00", rateSource: "none" });
+        }
+      }
+      const total = lines.reduce((s, l) => s + Number(l.amount || 0), 0);
+      res.json({ employeeId: empCheck.employeeId, locationId: body.locationId, lines, total: total.toFixed(2) });
+    } catch (err) {
+      console.error("POST /api/payroll/calc-preview", err);
+      res.status(500).json({ message: err.message || "Failed to calculate preview" });
+    }
+  });
+  app2.post(
+    "/api/companies/:id/moto-rates/import.csv",
+    requireAuth,
+    requireNonPOS,
+    upload.single("file"),
+    async (req, res) => {
+      try {
+        const companyId = parseInt(req.params.id, 10);
+        if (isNaN(companyId)) return res.status(400).json({ message: "Invalid company ID" });
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        if (!accessible.has(companyId)) return res.status(403).json({ message: "Access denied" });
+        if (!req.file) return res.status(400).json({ message: "Missing 'file' upload" });
+        const text2 = req.file.buffer.toString("utf-8");
+        const lines = text2.split(/\r?\n/).filter((l) => l.trim().length > 0);
+        if (lines.length < 2) return res.status(400).json({ message: "CSV must have header + \u22651 row" });
+        const header = lines[0].split(",").map((h) => h.trim().toLowerCase());
+        const idx = (name) => header.indexOf(name);
+        const ec = idx("employee_code"), lc = idx("location_code"), rc = idx("rate"), pc = idx("pct");
+        if (ec < 0 || lc < 0 || rc < 0 && pc < 0) {
+          return res.status(400).json({ message: "Header must include employee_code, location_code, and at least one of rate/pct" });
+        }
+        const employees2 = await storage.getAllEmployees(companyId);
+        const empByCode = new Map(
+          employees2.filter((e) => e.companyId === companyId).map((e) => [e.code, e])
+        );
+        const locations2 = await storage.getAllLocations(companyId);
+        const locByCode = new Map(
+          locations2.filter((l) => l.companyId === companyId).map((l) => [l.code, l])
+        );
+        const errors = [];
+        const ratesByEmp = /* @__PURE__ */ new Map();
+        const pctByEmp = /* @__PURE__ */ new Map();
+        const STRICT = /^-?(?:\d+(?:\.\d+)?|\.\d+)$/;
+        for (let i = 1; i < lines.length; i++) {
+          const row = lines[i].split(",");
+          const empCode = row[ec]?.trim();
+          const locCode = row[lc]?.trim();
+          const emp = empByCode.get(empCode);
+          const loc = locByCode.get(locCode);
+          if (!emp) {
+            errors.push({ line: i + 1, message: `unknown employee_code '${empCode}'` });
+            continue;
+          }
+          if (!loc) {
+            errors.push({ line: i + 1, message: `unknown location_code '${locCode}'` });
+            continue;
+          }
+          const rateStr = rc >= 0 ? (row[rc] ?? "").trim() : "";
+          const pctStr = pc >= 0 ? (row[pc] ?? "").trim() : "";
+          if (rateStr) {
+            if (!STRICT.test(rateStr) || Number(rateStr) < 0.01 || Number(rateStr) > 1e3) {
+              errors.push({ line: i + 1, message: `invalid rate '${rateStr}'` });
+            } else {
+              const arr = ratesByEmp.get(emp.id) ?? [];
+              arr.push({ locationId: loc.id, rate: rateStr });
+              ratesByEmp.set(emp.id, arr);
+            }
+          }
+          if (pctStr) {
+            if (!STRICT.test(pctStr) || Number(pctStr) < 0.01 || Number(pctStr) > 100) {
+              errors.push({ line: i + 1, message: `invalid pct '${pctStr}'` });
+            } else {
+              const arr = pctByEmp.get(emp.id) ?? [];
+              arr.push({ locationId: loc.id, pct: pctStr });
+              pctByEmp.set(emp.id, arr);
+            }
+          }
+        }
+        if (errors.length > 0) {
+          return res.status(400).json({ message: `${errors.length} row error(s)`, errors });
+        }
+        let employeesUpdated = 0;
+        for (const [empId, rates] of ratesByEmp) {
+          await storage.replaceEmployeeMotoRates(empId, rates, { userId: req.session.userId ?? null, action: "csv_import" });
+          employeesUpdated++;
+        }
+        for (const [empId, pcts] of pctByEmp) {
+          await storage.replaceEmployeeMotoPctRates(empId, pcts, { userId: req.session.userId ?? null, action: "csv_import" });
+        }
+        res.json({ employeesUpdated, ratesUpserted: Array.from(ratesByEmp.values()).reduce((s, a) => s + a.length, 0), pctUpserted: Array.from(pctByEmp.values()).reduce((s, a) => s + a.length, 0) });
+      } catch (err) {
+        console.error("POST /moto-rates/import.csv", err);
+        res.status(500).json({ message: err.message || "Failed to import CSV" });
+      }
+    }
+  );
+  app2.get("/api/companies/:id/rate-templates", requireAuth, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.id, 10);
+      const accessible = await getAccessibleCompanyIds(req.session.userId);
+      if (!accessible.has(companyId)) return res.status(403).json({ message: "Access denied" });
+      const tpls = await storage.getRateTemplates(companyId);
+      res.json(tpls);
+    } catch (err) {
+      console.error("GET /rate-templates", err);
+      res.status(500).json({ message: err.message || "Failed to list templates" });
+    }
+  });
+  app2.post(
+    "/api/companies/:id/rate-templates",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const companyId = parseInt(req.params.id, 10);
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        if (!accessible.has(companyId)) return res.status(403).json({ message: "Access denied" });
+        const { rateTemplateCreateSchema: rateTemplateCreateSchema2 } = await Promise.resolve().then(() => (init_validation(), validation_exports));
+        const parsed = rateTemplateCreateSchema2.safeParse(req.body);
+        if (!parsed.success) return res.status(400).json({ message: "Invalid request", errors: parsed.error.errors });
+        const tenantLocations = await getCurrentCompanyLocationIds(companyId);
+        for (const item of parsed.data.items) {
+          if (!tenantLocations.has(item.locationId)) {
+            return res.status(403).json({ message: `locationId ${item.locationId} not in company ${companyId}` });
+          }
+          if (item.sourceCompanyId != null && !accessible.has(item.sourceCompanyId)) {
+            return res.status(403).json({ message: `sourceCompanyId ${item.sourceCompanyId} not accessible` });
+          }
+        }
+        const tpl = await storage.createRateTemplate(
+          companyId,
+          parsed.data.name,
+          parsed.data.description ?? null,
+          parsed.data.items.map((i) => ({
+            locationId: i.locationId,
+            rate: i.rate ?? null,
+            pct: i.pct ?? null,
+            sourceCompanyId: i.sourceCompanyId ?? null
+          })),
+          req.session.userId ?? null
+        );
+        res.json(tpl);
+      } catch (err) {
+        console.error("POST /rate-templates", err);
+        res.status(500).json({ message: err.message || "Failed to create template" });
+      }
+    }
+  );
+  app2.delete("/api/rate-templates/:id", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const tpl = await storage.getRateTemplate(id);
+      if (!tpl) return res.status(404).json({ message: "Template not found" });
+      const accessible = await getAccessibleCompanyIds(req.session.userId);
+      if (!accessible.has(tpl.companyId)) return res.status(403).json({ message: "Access denied" });
+      await storage.deleteRateTemplate(id);
+      res.json({ deleted: true });
+    } catch (err) {
+      console.error("DELETE /rate-templates/:id", err);
+      res.status(500).json({ message: err.message || "Failed to delete template" });
+    }
+  });
+  app2.post(
+    "/api/rate-templates/:id/apply",
+    requireAuth,
+    requireNonPOS,
+    async (req, res) => {
+      try {
+        const id = parseInt(req.params.id, 10);
+        const tpl = await storage.getRateTemplate(id);
+        if (!tpl || tpl.deletedAt) return res.status(404).json({ message: "Template not found" });
+        const accessible = await getAccessibleCompanyIds(req.session.userId);
+        if (!accessible.has(tpl.companyId)) return res.status(403).json({ message: "Access denied" });
+        const { rateTemplateApplySchema: rateTemplateApplySchema2 } = await Promise.resolve().then(() => (init_validation(), validation_exports));
+        const parsed = rateTemplateApplySchema2.safeParse(req.body);
+        if (!parsed.success) return res.status(400).json({ message: "Invalid request", errors: parsed.error.errors });
+        const employees2 = await storage.getAllEmployees(tpl.companyId);
+        const tenantEmpIds = new Set(employees2.map((e) => e.id));
+        for (const empId of parsed.data.employeeIds) {
+          if (!tenantEmpIds.has(empId)) {
+            return res.status(403).json({ message: `employee ${empId} not in template company` });
+          }
+        }
+        const rateItems = tpl.items.filter((i) => i.rate != null).map((i) => ({
+          locationId: i.locationId,
+          rate: String(i.rate),
+          sourceCompanyId: i.sourceCompanyId
+        }));
+        const pctItems = tpl.items.filter((i) => i.pct != null).map((i) => ({
+          locationId: i.locationId,
+          pct: String(i.pct),
+          sourceCompanyId: i.sourceCompanyId
+        }));
+        let applied = 0;
+        for (const empId of parsed.data.employeeIds) {
+          if (rateItems.length > 0) {
+            await storage.replaceEmployeeMotoRates(empId, rateItems, { userId: req.session.userId ?? null, action: "template_apply", context: { templateId: id, templateName: tpl.name } });
+          }
+          if (pctItems.length > 0) {
+            await storage.replaceEmployeeMotoPctRates(empId, pctItems, { userId: req.session.userId ?? null, action: "template_apply", context: { templateId: id, templateName: tpl.name } });
+          }
+          await storage.notifyCompanyManagersOfRateChange(tpl.companyId, empId, "template_apply", req.session.userId ?? null);
+          applied++;
+        }
+        res.json({ applied, templateName: tpl.name });
+      } catch (err) {
+        console.error("POST /rate-templates/:id/apply", err);
+        res.status(500).json({ message: err.message || "Failed to apply template" });
+      }
+    }
+  );
+  app2.get("/api/notifications", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const unreadOnly = req.query.unreadOnly === "true";
+      const limit = req.query.limit ? Math.min(parseInt(String(req.query.limit), 10) || 50, 200) : 50;
+      const rows = await storage.getNotifications(userId, { unreadOnly, limit });
+      res.json(rows);
+    } catch (err) {
+      console.error("GET /notifications", err);
+      res.status(500).json({ message: err.message || "Failed to fetch notifications" });
+    }
+  });
+  app2.post("/api/notifications/mark-read", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number).filter(Number.isFinite) : void 0;
+      const result = await storage.markNotificationsRead(userId, ids);
+      res.json(result);
+    } catch (err) {
+      console.error("POST /notifications/mark-read", err);
+      res.status(500).json({ message: err.message || "Failed to mark notifications" });
+    }
+  });
+  app2.get("/api/companies/:id/moto-rates/export.csv", requireAuth, async (req, res) => {
+    try {
+      const companyId = parseInt(req.params.id, 10);
+      if (isNaN(companyId)) return res.status(400).json({ message: "Invalid company ID" });
+      const accessible = await getAccessibleCompanyIds(req.session.userId);
+      if (!accessible.has(companyId)) {
+        return res.status(403).json({ message: "Access denied: company not in your accessible companies" });
+      }
+      const rows = await db.execute(sql4`
+        SELECT
+          e.code AS employee_code,
+          (e.first_name || ' ' || COALESCE(e.last_name, '')) AS employee_name,
+          l.code AS location_code,
+          l.name AS location_name,
+          COALESCE(mr.rate::text, '') AS rate,
+          COALESCE(pct.pct::text, '')  AS pct
+        FROM employees e
+        CROSS JOIN locations l
+        LEFT JOIN employee_moto_rates mr
+          ON mr.employee_id = e.id AND mr.location_id = l.id AND mr.deleted_at IS NULL
+        LEFT JOIN employee_moto_pct_rates pct
+          ON pct.employee_id = e.id AND pct.location_id = l.id AND pct.deleted_at IS NULL
+        WHERE e.company_id = ${companyId} AND l.company_id = ${companyId}
+          AND (mr.id IS NOT NULL OR pct.id IS NOT NULL)
+        ORDER BY e.code, l.code
+      `).then((r) => r.rows ?? r);
+      const escape = (v) => {
+        let s = v == null ? "" : String(v);
+        if (s.length > 0 && /^[=+\-@\t\r]/.test(s)) {
+          s = "'" + s;
+        }
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const header = "employee_code,employee_name,location_code,location_name,rate,pct\n";
+      const csv = header + rows.map(
+        (r) => [r.employee_code, r.employee_name, r.location_code, r.location_name, r.rate, r.pct].map(escape).join(",")
+      ).join("\n") + "\n";
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="moto-rates-${companyId}-${Date.now()}.csv"`);
+      res.send(csv);
+    } catch (err) {
+      console.error("GET /moto-rates/export.csv", err);
+      res.status(500).json({ message: err.message || "Failed to export CSV" });
+    }
+  });
   app2.delete("/api/employees/:id", requireAuth, async (req, res) => {
     try {
       const userRole = req.session.currentRole;
@@ -8337,7 +9126,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       }
     }
   );
-  app2.get("/api/suppliers", async (_req, res) => {
+  app2.get("/api/suppliers", requireAuth, async (_req, res) => {
     try {
       const suppliers2 = await storage.getAllSuppliers();
       res.json(suppliers2);
@@ -8379,7 +9168,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/suppliers/:id", async (req, res) => {
+  app2.get("/api/suppliers/:id", requireAuth, async (req, res) => {
     try {
       const supplierId = parseInt(req.params.id);
       if (isNaN(supplierId)) {
@@ -9868,7 +10657,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       if (!req.session.currentCompanyId) {
         return res.status(400).json({ message: "No company selected" });
       }
-      const baleItems = await db.query.stockItems.findMany({
+      const legacyBaleItems = await db.query.stockItems.findMany({
         where: and3(
           eq3(stockItems.companyId, req.session.currentCompanyId),
           or2(
@@ -9878,11 +10667,11 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           )
         )
       });
-      if (baleItems.length === 0) {
+      if (legacyBaleItems.length === 0) {
         return res.json({ message: "No items with UOM 'bale' found to update", updated: 0 });
       }
       let updated = 0;
-      for (const item of baleItems) {
+      for (const item of legacyBaleItems) {
         await storage.updateStockItem(item.id, { uom: "BL" });
         updated++;
       }
@@ -11104,7 +11893,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/po-import/template", async (_req, res) => {
+  app2.get("/api/po-import/template", requireAuth, requireNonPOS, async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -11484,7 +12273,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/pos-import/template", async (_req, res) => {
+  app2.get("/api/pos-import/template", requireAuth, requireNonPOS, async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -11789,7 +12578,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/stock-transfer-import/template", async (_req, res) => {
+  app2.get("/api/stock-transfer-import/template", requireAuth, requireNonPOS, async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -11823,7 +12612,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/stock-transfer-import/template-multi-source", async (_req, res) => {
+  app2.get("/api/stock-transfer-import/template-multi-source", requireAuth, requireNonPOS, async (_req, res) => {
     try {
       const sampleData = [
         {
@@ -12783,12 +13572,12 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           return res.status(400).json({ message: "Container must be offloaded to edit" });
         }
         const validation = offloadRequestSchema.extend({
-          dutiesAccountId: z2.number().optional(),
-          transportAccountId: z2.number().optional(),
-          additionalCharges: z2.array(z2.object({
-            description: z2.string(),
-            amount: z2.number(),
-            ledgerAccountId: z2.number()
+          dutiesAccountId: z3.number().optional(),
+          transportAccountId: z3.number().optional(),
+          additionalCharges: z3.array(z3.object({
+            description: z3.string(),
+            amount: z3.number(),
+            ledgerAccountId: z3.number()
           })).optional()
         }).safeParse(req.body);
         if (!validation.success) {
@@ -12834,8 +13623,8 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
           }
           const additionalChargesTotal = additionalCharges.reduce((sum, charge) => sum + charge.amount, 0);
           const totalCharges = parseFloat(duties || "0") + parseFloat(transportFees || "0") + additionalChargesTotal;
-          const totalBales = parseFloat(currentOffload.totalBales);
-          const additionalCostPerBale = totalBales > 0 ? totalCharges / totalBales : 0;
+          const totalMotos = parseFloat(currentOffload.totalMotos);
+          const additionalCostPerMoto = totalMotos > 0 ? totalCharges / totalMotos : 0;
           await tx.update(containerOffloads).set({
             locationId,
             duties: duties || "0",
@@ -12843,7 +13632,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
             transferCharges: "0",
             transportFees: transportFees || "0",
             totalCharges: totalCharges.toString(),
-            additionalCostPerBale: additionalCostPerBale.toString(),
+            additionalCostPerMoto: additionalCostPerMoto.toString(),
             offloadedAt: offloadDate ? new Date(offloadDate) : currentOffload.offloadedAt
           }).where(eq3(containerOffloads.id, currentOffload.id));
           const containerVouchers = await tx.select().from(vouchers).where(
@@ -21883,277 +22672,6 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  app2.get("/api/bales", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const bales2 = await storage.getAllBales(companyId);
-      res.json(bales2);
-    } catch (error) {
-      console.error("Error fetching bales:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.get("/api/bales/:id", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const id = parseInt(req.params.id);
-      const bale = await storage.getBaleById(id);
-      if (!bale) {
-        return res.status(404).json({ message: "Bale not found" });
-      }
-      if (bale.companyId !== companyId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      res.json(bale);
-    } catch (error) {
-      console.error("Error fetching bale:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.get("/api/bales/barcode/:barcode", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const barcode = req.params.barcode;
-      const bale = await storage.getBaleByBarcode(barcode, companyId);
-      if (!bale) {
-        return res.status(404).json({ message: "Bale not found" });
-      }
-      res.json(bale);
-    } catch (error) {
-      console.error("Error fetching bale by barcode:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.post("/api/bales", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const { insertBaleSchema: insertBaleSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const data = insertBaleSchema2.parse({ ...req.body, companyId });
-      const existing = await storage.getBaleByBarcode(data.barcode, companyId);
-      if (existing) {
-        return res.status(409).json({ message: "Barcode already exists" });
-      }
-      const bale = await storage.createBale(data);
-      res.json(bale);
-    } catch (error) {
-      console.error("Error creating bale:", error);
-      res.status(400).json({ message: error.message });
-    }
-  });
-  app2.patch("/api/bales/:id", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const id = parseInt(req.params.id);
-      const existing = await storage.getBaleById(id);
-      if (!existing) {
-        return res.status(404).json({ message: "Bale not found" });
-      }
-      if (existing.companyId !== companyId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const { companyId: _, ...updateData } = req.body;
-      const bale = await storage.updateBale(id, updateData);
-      res.json(bale);
-    } catch (error) {
-      console.error("Error updating bale:", error);
-      res.status(400).json({ message: error.message });
-    }
-  });
-  app2.delete("/api/bales/:id", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const id = parseInt(req.params.id);
-      const existing = await storage.getBaleById(id);
-      if (!existing) {
-        return res.status(404).json({ message: "Bale not found" });
-      }
-      if (existing.companyId !== companyId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      await storage.deleteBale(id);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting bale:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.post("/api/bales/import", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const { insertBaleSchema: insertBaleSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const balesData = req.body.bales || [];
-      if (!Array.isArray(balesData)) {
-        return res.status(400).json({ message: "Invalid data format" });
-      }
-      const validatedBales = balesData.map(
-        (b) => insertBaleSchema2.parse({ ...b, companyId })
-      );
-      const created = await storage.bulkCreateBales(validatedBales);
-      res.json({ success: true, count: created.length, bales: created });
-    } catch (error) {
-      console.error("Error importing bales:", error);
-      res.status(400).json({ message: error.message });
-    }
-  });
-  app2.get("/api/bale-products", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const products = await storage.getAllBaleProducts(companyId);
-      res.json(products);
-    } catch (error) {
-      console.error("Error fetching bale products:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.get("/api/bale-products/:id", requireAuth, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid product ID" });
-      }
-      const product = await storage.getBaleProductById(id);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      res.json(product);
-    } catch (error) {
-      console.error("Error fetching bale product:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.post("/api/bale-products", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const { insertBaleProductSchema: insertBaleProductSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const data = insertBaleProductSchema2.parse({ ...req.body, companyId });
-      const existing = await storage.getBaleProductByCode(data.code, companyId);
-      if (existing) {
-        return res.status(409).json({ message: "Product code already exists" });
-      }
-      const product = await storage.createBaleProduct(data);
-      res.json(product);
-    } catch (error) {
-      console.error("Error creating bale product:", error);
-      res.status(400).json({ message: error.message });
-    }
-  });
-  app2.patch("/api/bale-products/:id", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid product ID" });
-      }
-      const existing = await storage.getBaleProductById(id);
-      if (!existing) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      if (existing.companyId !== companyId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const { insertBaleProductSchema: insertBaleProductSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const data = insertBaleProductSchema2.partial().parse(req.body);
-      const product = await storage.updateBaleProduct(id, data);
-      res.json(product);
-    } catch (error) {
-      console.error("Error updating bale product:", error);
-      res.status(400).json({ message: error.message });
-    }
-  });
-  app2.delete("/api/bale-products/:id", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid product ID" });
-      }
-      const existing = await storage.getBaleProductById(id);
-      if (!existing) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      if (existing.companyId !== companyId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      await storage.deleteBaleProduct(id);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting bale product:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.post("/api/bale-products/import-excel", requireAuth, upload.single("file"), async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-      const workbook = await read(req.file.buffer, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const rows = utils.sheet_to_json(worksheet);
-      const { insertBaleProductSchema: insertBaleProductSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const productsData = rows.map((row) => {
-        return insertBaleProductSchema2.parse({
-          companyId,
-          // Always use authenticated company
-          code: row.code || row.Code || row.product_code || "",
-          name: row.name || row.Name || row.product_name || "",
-          description: row.description || row.Description || "",
-          active: row.active === void 0 ? true : Boolean(row.active)
-        });
-      });
-      const codes = productsData.map((p) => p.code);
-      for (const code of codes) {
-        const existing = await storage.getBaleProductByCode(code, companyId);
-        if (existing) {
-          return res.status(409).json({
-            message: `Product code "${code}" already exists in your company`
-          });
-        }
-      }
-      const created = await storage.bulkCreateBaleProducts(productsData);
-      res.json({ success: true, count: created.length, products: created });
-    } catch (error) {
-      console.error("Error importing bale products from Excel:", error);
-      res.status(400).json({ message: error.message });
-    }
-  });
   app2.get("/api/company-settings", requireAuth, async (req, res) => {
     try {
       const companyId = req.session.currentCompanyId;
@@ -22293,255 +22811,6 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(400).json({ message: error.message });
     }
   });
-  app2.get("/api/production-bales", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const filters = {};
-      if (req.query.mixBatchId) filters.mixBatchId = parseInt(req.query.mixBatchId);
-      if (req.query.status) filters.status = req.query.status;
-      if (req.query.category) filters.category = req.query.category;
-      if (req.query.grade) filters.grade = req.query.grade;
-      const bales2 = await storage.getAllProductionBales(companyId, filters);
-      res.json(bales2);
-    } catch (error) {
-      console.error("Error fetching production bales:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.get("/api/production-bales/barcode/:barcode", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const bale = await storage.getProductionBaleByBarcode(req.params.barcode, companyId);
-      if (!bale) {
-        return res.status(404).json({ message: "Bale not found" });
-      }
-      res.json(bale);
-    } catch (error) {
-      console.error("Error fetching bale by barcode:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.post("/api/production-bales/create-batch", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const { mixBatchId, productId, locationId, quantity, weightPerBale } = req.body;
-      if (!mixBatchId || !productId || !locationId || !quantity || !weightPerBale) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      const numBales = parseInt(quantity);
-      const weight = parseFloat(weightPerBale);
-      if (isNaN(numBales) || numBales < 1 || numBales > 1e3) {
-        return res.status(400).json({ message: "Quantity must be between 1 and 1000" });
-      }
-      if (isNaN(weight) || weight <= 0 || weight > 500) {
-        return res.status(400).json({ message: "Weight must be between 1 and 500 kg" });
-      }
-      const batch = await storage.getMixBatchById(mixBatchId, companyId);
-      if (!batch) {
-        return res.status(404).json({ message: "Mix batch not found" });
-      }
-      const { baleProducts: baleProducts2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const [product] = await db.select().from(baleProducts2).where(eq3(baleProducts2.id, productId));
-      if (!product || product.companyId !== companyId) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      const totalWeight = weight * numBales;
-      const costPerKg = parseFloat(batch.costPerKg);
-      const totalCostPerBale = (weight * costPerKg).toFixed(2);
-      const bales2 = await db.transaction(async (tx) => {
-        const createdBales = [];
-        const { baleSequences: baleSequences2, productionBales: productionBales2, mixBatches: mixBatches2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        for (let i = 0; i < numBales; i++) {
-          const [sequence] = await tx.select().from(baleSequences2).where(eq3(baleSequences2.companyId, companyId)).for("update");
-          let barcode;
-          if (!sequence) {
-            const [newSeq] = await tx.insert(baleSequences2).values({ companyId, nextNumber: 2 }).returning();
-            barcode = `HD${String(newSeq.nextNumber - 1).padStart(5, "0")}`;
-          } else {
-            barcode = `HD${String(sequence.nextNumber).padStart(5, "0")}`;
-            await tx.update(baleSequences2).set({ nextNumber: sequence.nextNumber + 1 }).where(eq3(baleSequences2.id, sequence.id));
-          }
-          const baleData = {
-            companyId,
-            mixBatchId,
-            productId,
-            locationId,
-            baleCode: product.code,
-            barcodeValue: barcode,
-            quantity: 1,
-            weightKg: weight.toString(),
-            costPerKg: batch.costPerKg,
-            totalCost: totalCostPerBale,
-            status: "IN_STOCK",
-            pressedAt: /* @__PURE__ */ new Date()
-          };
-          const [bale] = await tx.insert(productionBales2).values(baleData).returning();
-          createdBales.push(bale);
-        }
-        await tx.update(mixBatches2).set({
-          totalActualWeight: sql4`COALESCE(${mixBatches2.totalActualWeight}, 0) + ${totalWeight}`,
-          updatedAt: sql4`now()`
-        }).where(eq3(mixBatches2.id, mixBatchId));
-        return createdBales;
-      });
-      res.json({ bales: bales2, success: true, count: bales2.length });
-    } catch (error) {
-      console.error("Error creating production bales:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.post("/api/production-bales", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const { insertProductionBaleSchema: insertProductionBaleSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const data = insertProductionBaleSchema2.parse({ ...req.body, companyId });
-      const bale = await storage.createProductionBale(data);
-      res.json(bale);
-    } catch (error) {
-      console.error("Error creating production bale:", error);
-      res.status(400).json({ message: error.message });
-    }
-  });
-  app2.post("/api/production-bales/bulk", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const { insertProductionBaleSchema: insertProductionBaleSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const balesData = req.body.bales || [];
-      if (!Array.isArray(balesData)) {
-        return res.status(400).json({ message: "Invalid data format" });
-      }
-      const validatedBales = balesData.map(
-        (b) => insertProductionBaleSchema2.parse({ ...b, companyId })
-      );
-      const created = await storage.bulkCreateProductionBales(validatedBales);
-      res.json({ success: true, count: created.length, bales: created });
-    } catch (error) {
-      console.error("Error bulk creating bales:", error);
-      res.status(400).json({ message: error.message });
-    }
-  });
-  app2.get("/api/production-bales/next-barcode", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const barcode = await storage.getNextBaleBarcode(companyId);
-      res.json({ barcode });
-    } catch (error) {
-      console.error("Error generating barcode:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.post("/api/production-bales/scan", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const { barcodeValue, weightKg, category, grade, warehouseLocation } = req.body;
-      if (!barcodeValue || !weightKg || !category || !grade) {
-        return res.status(400).json({ message: "Missing required fields" });
-      }
-      const bale = await storage.updateProductionBaleFromScan(
-        barcodeValue,
-        companyId,
-        { weightKg, category, grade, warehouseLocation }
-      );
-      res.json(bale);
-    } catch (error) {
-      console.error("Error updating bale from scan:", error);
-      res.status(400).json({ message: error.message });
-    }
-  });
-  app2.post("/api/generate-barcode", requireAuth, async (req, res) => {
-    try {
-      const { text: text2 } = req.body;
-      if (!text2) {
-        return res.status(400).json({ message: "Barcode text is required" });
-      }
-      const bwipjs = await import("bwip-js");
-      const png = await bwipjs.toBuffer({
-        bcid: "code128",
-        text: text2,
-        scale: 3,
-        height: 10,
-        includetext: true,
-        textxalign: "center"
-      });
-      const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
-      res.json({ dataUrl });
-    } catch (error) {
-      console.error("Error generating barcode:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.delete("/api/production-bales/:id", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      const id = parseInt(req.params.id);
-      await storage.deleteProductionBale(id, companyId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting production bale:", error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.post("/api/production-bales/import-excel", requireAuth, upload.single("file"), async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) {
-        return res.status(400).json({ message: "No company selected" });
-      }
-      if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-      const workbook = await read(req.file.buffer, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const rows = utils.sheet_to_json(worksheet);
-      const { insertProductionBaleSchema: insertProductionBaleSchema2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const mixBatchId = req.body.mixBatchId ? parseInt(req.body.mixBatchId) : void 0;
-      const balesData = rows.map((row) => {
-        return insertProductionBaleSchema2.parse({
-          companyId,
-          mixBatchId,
-          baleCode: row.bale_code || row.baleCode || "",
-          barcodeValue: row.barcode_value || row.barcodeValue || row.barcode || row.bale_code || row.baleCode || "",
-          category: row.category || "",
-          grade: row.grade || "",
-          weightKg: row.weight_kg?.toString() || row.weightKg?.toString() || row.weight?.toString() || "0",
-          costPerKg: row.cost_per_kg?.toString() || row.costPerKg?.toString() || "0",
-          totalCost: row.total_cost?.toString() || row.totalCost?.toString() || "0",
-          warehouseLocation: row.warehouse_location || row.warehouseLocation || "",
-          status: row.status || "LABEL_PRINTED"
-        });
-      });
-      const created = await storage.bulkCreateProductionBales(balesData);
-      res.json({ success: true, count: created.length, bales: created });
-    } catch (error) {
-      console.error("Error importing Excel:", error);
-      res.status(400).json({ message: error.message });
-    }
-  });
   app2.get("/api/customers/:id/balance", requireAuth, async (req, res) => {
     try {
       const companyId = req.session.currentCompanyId;
@@ -22674,131 +22943,6 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       );
       const sanitizedItems = isPOS ? items.map(({ averageRate, ...rest }) => rest) : items;
       res.json(sanitizedItems);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.get("/api/bale-transfers", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) return res.status(400).json({ message: "No company selected" });
-      const transfers = await storage.getAllBaleTransfers(companyId);
-      res.json(transfers);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-  app2.get("/api/bale-transfers/:id", requireAuth, asyncHandler(async (req, res) => {
-    const companyId = req.session.currentCompanyId;
-    if (!companyId) return res.status(400).json({ message: "No company selected" });
-    const transferId = parseInt(req.params.id);
-    if (isNaN(transferId)) return res.status(400).json({ message: "Invalid transfer ID" });
-    const transfer = await storage.getBaleTransferById(transferId, companyId);
-    if (!transfer) return res.status(404).json({ message: "Transfer not found" });
-    const items = await storage.getBaleTransferItems(transfer.id, companyId);
-    res.json({ ...transfer, items });
-  }));
-  const baleTransferItemBody = z2.object({
-    id: z2.number().optional(),
-    productionBaleId: z2.number().min(1),
-    quantity: z2.number().min(1),
-    weightKg: z2.union([z2.string(), z2.number()]),
-    costPerKg: z2.union([z2.string(), z2.number()]),
-    totalCost: z2.union([z2.string(), z2.number()])
-  });
-  const baleTransferCreateBody = z2.object({
-    sourceLocationId: z2.number().min(1, "Source location is required"),
-    destinationLocationId: z2.number().min(1, "Destination location is required"),
-    transferDate: z2.string().min(1, "Transfer date is required"),
-    notes: z2.string().optional().nullable(),
-    items: z2.array(baleTransferItemBody).min(1, "At least one item is required")
-  }).refine((b) => b.sourceLocationId !== b.destinationLocationId, {
-    message: "Source and destination must be different",
-    path: ["destinationLocationId"]
-  });
-  app2.post("/api/bale-transfers", requireAuth, validate(baleTransferCreateBody), asyncHandler(async (req, res) => {
-    const companyId = req.session.currentCompanyId;
-    if (!companyId) return res.status(400).json({ message: "No company selected" });
-    const { sourceLocationId, destinationLocationId, transferDate, notes, items } = req.body;
-    const tenantLocations = await storage.getAllLocations(companyId);
-    const tenantLocationIds = new Set(tenantLocations.map((l) => l.id));
-    if (!tenantLocationIds.has(sourceLocationId) || !tenantLocationIds.has(destinationLocationId)) {
-      return res.status(403).json({ message: "Location does not belong to current company", code: "WRONG_COMPANY" });
-    }
-    const transfer = await storage.createBaleTransfer({
-      companyId,
-      sourceLocationId,
-      destinationLocationId,
-      transferDate,
-      notes: notes ?? void 0,
-      createdBy: req.session.userId,
-      status: "PENDING"
-    });
-    for (const item of items) {
-      await storage.createBaleTransferItem({
-        transferId: transfer.id,
-        productionBaleId: item.productionBaleId,
-        quantity: item.quantity,
-        weightKg: String(item.weightKg),
-        costPerKg: String(item.costPerKg),
-        totalCost: String(item.totalCost)
-      }, companyId);
-    }
-    res.json({ success: true, transferId: transfer.id });
-  }));
-  const baleTransferPatchBody = z2.object({
-    status: z2.enum(["PENDING", "COMPLETED"]).optional(),
-    notes: z2.string().optional().nullable(),
-    items: z2.array(baleTransferItemBody).optional()
-  });
-  app2.patch("/api/bale-transfers/:id", requireAuth, validate(baleTransferPatchBody), asyncHandler(async (req, res) => {
-    const companyId = req.session.currentCompanyId;
-    if (!companyId) return res.status(400).json({ message: "No company selected" });
-    const transferId = parseInt(req.params.id);
-    if (isNaN(transferId)) return res.status(400).json({ message: "Invalid transfer ID" });
-    const { items, status, notes } = req.body;
-    const updated = await storage.updateBaleTransfer(transferId, companyId, {
-      ...status !== void 0 ? { status } : {},
-      ...notes !== void 0 ? { notes: notes ?? void 0 } : {},
-      updatedBy: req.session.userId
-    });
-    if (!updated) return res.status(404).json({ message: "Transfer not found" });
-    if (items) {
-      for (const item of items) {
-        if (item.id) {
-          await storage.updateBaleTransferItem(item.id, companyId, {
-            weightKg: String(item.weightKg),
-            costPerKg: String(item.costPerKg),
-            totalCost: String(item.totalCost)
-          });
-        } else {
-          await storage.createBaleTransferItem({
-            transferId,
-            productionBaleId: item.productionBaleId,
-            quantity: item.quantity,
-            weightKg: String(item.weightKg),
-            costPerKg: String(item.costPerKg),
-            totalCost: String(item.totalCost)
-          }, companyId);
-        }
-      }
-    }
-    res.json({ success: true });
-  }));
-  app2.get("/api/bales-by-location/:locationId", requireAuth, async (req, res) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) return res.status(400).json({ message: "No company selected" });
-      const bales2 = await storage.getProductionBalesByLocation(companyId, parseInt(req.params.locationId));
-      res.json(bales2.map((b) => ({
-        id: b.id,
-        baleCode: b.baleCode,
-        category: b.category,
-        grade: b.grade,
-        weightKg: b.weightKg,
-        costPerKg: b.costPerKg,
-        totalCost: b.totalCost
-      })));
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
@@ -23477,7 +23621,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         month: sql4`EXTRACT(MONTH FROM ${containerOffloads.offloadedAt})`,
         quantity: poLineItems.quantity,
         lineTotal: poLineItems.lineTotal,
-        additionalCostPerBale: containerOffloads.additionalCostPerBale
+        additionalCostPerMoto: containerOffloads.additionalCostPerMoto
       }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq3(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq3(poLineItems.poId, purchaseOrders.id)).where(and3(
         eq3(poLineItems.stockItemId, stockItemId),
         eq3(containers.companyId, companyId),
@@ -23488,7 +23632,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         const month = Number(row.month);
         const qty = parseFloat(row.quantity);
         const baseValue = parseFloat(row.lineTotal);
-        const additionalCost = parseFloat(row.additionalCostPerBale) * qty;
+        const additionalCost = parseFloat(row.additionalCostPerMoto) * qty;
         const landedValue = baseValue + additionalCost;
         monthBuckets[month].inQty += qty;
         monthBuckets[month].inVal += landedValue;
@@ -23654,7 +23798,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       const priorOffloads = await db.select({
         quantity: poLineItems.quantity,
         lineTotal: poLineItems.lineTotal,
-        additionalCostPerBale: containerOffloads.additionalCostPerBale
+        additionalCostPerMoto: containerOffloads.additionalCostPerMoto
       }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq3(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq3(poLineItems.poId, purchaseOrders.id)).where(and3(
         eq3(poLineItems.stockItemId, stockItemId),
         eq3(containers.companyId, companyId),
@@ -23664,7 +23808,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       for (const item of priorOffloads) {
         const qty = parseFloat(item.quantity);
         const baseValue = parseFloat(item.lineTotal);
-        const additionalCost = parseFloat(item.additionalCostPerBale) * qty;
+        const additionalCost = parseFloat(item.additionalCostPerMoto) * qty;
         priorInwardQty += qty;
         priorInwardValue += baseValue + additionalCost;
       }
@@ -23742,7 +23886,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       const afterOffloads = await db.select({
         quantity: poLineItems.quantity,
         lineTotal: poLineItems.lineTotal,
-        additionalCostPerBale: containerOffloads.additionalCostPerBale
+        additionalCostPerMoto: containerOffloads.additionalCostPerMoto
       }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq3(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq3(poLineItems.poId, purchaseOrders.id)).where(and3(
         eq3(poLineItems.stockItemId, stockItemId),
         eq3(containers.companyId, companyId),
@@ -23752,7 +23896,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       for (const item of afterOffloads) {
         const qty = parseFloat(item.quantity);
         const baseValue = parseFloat(item.lineTotal);
-        const additionalCost = parseFloat(item.additionalCostPerBale) * qty;
+        const additionalCost = parseFloat(item.additionalCostPerMoto) * qty;
         afterMonthNetQty += qty;
         afterMonthNetValue += baseValue + additionalCost;
       }
@@ -23904,7 +24048,7 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         quantity: poLineItems.quantity,
         rate: poLineItems.rate,
         lineTotal: poLineItems.lineTotal,
-        additionalCostPerBale: containerOffloads.additionalCostPerBale
+        additionalCostPerMoto: containerOffloads.additionalCostPerMoto
       }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).innerJoin(purchaseOrders, eq3(purchaseOrders.containerId, containers.id)).innerJoin(poLineItems, eq3(poLineItems.poId, purchaseOrders.id)).where(and3(
         eq3(poLineItems.stockItemId, stockItemId),
         eq3(containers.companyId, companyId),
@@ -23916,8 +24060,8 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         const qty = parseFloat(item.quantity);
         const baseRate = parseFloat(item.rate);
         const baseValue = parseFloat(item.lineTotal);
-        const additionalCostPerBale = parseFloat(item.additionalCostPerBale);
-        const additionalCost = additionalCostPerBale * qty;
+        const additionalCostPerMoto = parseFloat(item.additionalCostPerMoto);
+        const additionalCost = additionalCostPerMoto * qty;
         const landedValue = baseValue + additionalCost;
         const landedRate = landedValue / qty;
         const offloadDateStr = item.offloadedAt instanceof Date ? item.offloadedAt.toISOString().split("T")[0] : String(item.offloadedAt).split("T")[0];
@@ -24233,9 +24377,9 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  const updateInventoryFieldsSchema = z2.object({
-    color: z2.string().max(50).transform((v) => v?.trim() || null).optional(),
-    assignedStatus: z2.string().max(100).transform((v) => v?.trim() || null).optional()
+  const updateInventoryFieldsSchema = z3.object({
+    color: z3.string().max(50).transform((v) => v?.trim() || null).optional(),
+    assignedStatus: z3.string().max(100).transform((v) => v?.trim() || null).optional()
   });
   app2.patch("/api/inventory/:locationId/:stockItemId", requireAuth, async (req, res) => {
     try {
@@ -25283,10 +25427,10 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
       res.status(500).json({ message: error.message });
     }
   });
-  const updateAssemblyHistorySchema = z2.object({
-    technician: z2.string().optional(),
-    completed: z2.boolean().optional(),
-    status: z2.enum(["pending", "completed"]).optional()
+  const updateAssemblyHistorySchema = z3.object({
+    technician: z3.string().optional(),
+    completed: z3.boolean().optional(),
+    status: z3.enum(["pending", "completed"]).optional()
   });
   app2.patch("/api/assembly-history/:id", requireAuth, async (req, res) => {
     try {
@@ -25485,8 +25629,8 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         transferCharges: containerOffloads.transferCharges,
         transportFees: containerOffloads.transportFees,
         totalCharges: containerOffloads.totalCharges,
-        totalBales: containerOffloads.totalBales,
-        additionalCostPerBale: containerOffloads.additionalCostPerBale,
+        totalMotos: containerOffloads.totalMotos,
+        additionalCostPerMoto: containerOffloads.additionalCostPerMoto,
         offloadedAt: containerOffloads.offloadedAt
       }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).leftJoin(locations, eq3(containerOffloads.locationId, locations.id)).where(and3(...conditions)).orderBy(desc3(containerOffloads.offloadedAt)).execute();
       res.json(offloadRows.map((o) => ({
@@ -25517,8 +25661,8 @@ WHERE company_id = ${result.companyId} AND code = '${result.accountCode}';`
         transferCharges: containerOffloads.transferCharges,
         transportFees: containerOffloads.transportFees,
         totalCharges: containerOffloads.totalCharges,
-        totalBales: containerOffloads.totalBales,
-        additionalCostPerBale: containerOffloads.additionalCostPerBale,
+        totalMotos: containerOffloads.totalMotos,
+        additionalCostPerMoto: containerOffloads.additionalCostPerMoto,
         offloadedAt: containerOffloads.offloadedAt
       }).from(containerOffloads).innerJoin(containers, eq3(containerOffloads.containerId, containers.id)).leftJoin(locations, eq3(containerOffloads.locationId, locations.id)).where(and3(
         eq3(containerOffloads.id, offloadId),

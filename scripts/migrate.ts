@@ -6,7 +6,16 @@ import path from "node:path";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.resolve(__dirname, "..", "migrations");
 
-const MIN_TAG = "0006";
+const MIN_TAG = "0000";
+
+// PostgreSQL error codes that mean "this object already exists"
+const ALREADY_EXISTS_CODES = new Set([
+  "42P07", // duplicate_table
+  "42710", // duplicate_object (index, constraint, etc.)
+  "42701", // duplicate_column
+  "42P16", // invalid_table_definition (constraint already exists in some PG versions)
+  "23505", // unique_violation (already-applied unique constraint seeds)
+]);
 
 async function main() {
   let connectionString: string;
@@ -56,24 +65,50 @@ async function main() {
 
   for (const file of files) {
     const tag = file.replace(/\.sql$/, "");
-    const sql = await readFile(path.join(MIGRATIONS_DIR, file), "utf8");
 
-    console.log(`migrate: applying ${tag} (idempotent)`);
+    // Skip if already recorded as applied
+    const { rows: already } = await pool.query(
+      `SELECT 1 FROM _idempotent_migrations WHERE tag = $1`,
+      [tag],
+    );
+    if (already.length > 0) {
+      console.log(`migrate: → ${tag} already applied, skipping`);
+      continue;
+    }
+
+    const sql = await readFile(path.join(MIGRATIONS_DIR, file), "utf8");
+    console.log(`migrate: applying ${tag}`);
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
       await client.query(sql);
       await client.query(
-        `INSERT INTO _idempotent_migrations (tag) VALUES ($1)
-         ON CONFLICT (tag) DO UPDATE SET applied_at = now()`,
+        `INSERT INTO _idempotent_migrations (tag) VALUES ($1)`,
         [tag],
       );
       await client.query("COMMIT");
       console.log(`migrate: ✓ ${tag}`);
-    } catch (err) {
+    } catch (err: any) {
       await client.query("ROLLBACK");
-      console.error(`migrate: ✗ ${tag} failed`, err);
-      throw err;
+
+      const isAlreadyExists =
+        ALREADY_EXISTS_CODES.has(err.code) ||
+        String(err.message).toLowerCase().includes("already exists");
+
+      if (isAlreadyExists) {
+        // Schema was pre-created (e.g. via drizzle-kit push on a prior deploy).
+        // Mark the migration as applied so future runs skip it cleanly.
+        await pool.query(
+          `INSERT INTO _idempotent_migrations (tag) VALUES ($1) ON CONFLICT (tag) DO NOTHING`,
+          [tag],
+        );
+        console.warn(
+          `migrate: ⚠ ${tag} — schema already present, marking as applied`,
+        );
+      } else {
+        console.error(`migrate: ✗ ${tag} failed`, err);
+        throw err;
+      }
     } finally {
       client.release();
     }
