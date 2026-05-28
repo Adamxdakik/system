@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import huangheLogo from "@assets/images_1779624622312.png";
+import huangheLogo from "../assets/huanghe-logo.png";
 
 export default function Login() {
   const { toast } = useToast();

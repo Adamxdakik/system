@@ -47,7 +47,7 @@ import { useLocation } from "wouter";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { ROUTE_TO_FEATURE } from "@shared/schema";
-import huangheLogo from "@assets/images_1779624622312.png";
+import huangheLogo from "../assets/huanghe-logo.png";
 
 const menuItems = [
   {
