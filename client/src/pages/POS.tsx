@@ -7,7 +7,16 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
-import { MapPin, Wallet, Printer, AlertCircle, Search, Check, Trash2, Upload } from "lucide-react";
+import {
+  MapPin,
+  Printer,
+  AlertCircle,
+  Search,
+  Check,
+  Trash2,
+  Upload,
+  ChevronDown,
+} from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useReactToPrint } from "react-to-print";
@@ -26,6 +35,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface SaleRow {
   id: string;
@@ -68,7 +82,19 @@ interface Location {
   country: string | null;
 }
 
-export default function POS({ posUser, editVoucherId }: { posUser?: any; editVoucherId?: string } = {}) {
+interface POSProps {
+  posUser?: any;
+  editVoucherId?: string;
+  embedded?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
+}
+
+export default function POS({
+  posUser,
+  editVoucherId,
+  embedded = false,
+  onDirtyChange,
+}: POSProps = {}) {
   const { selectedLocation, setSelectedLocation } = useLocationContext();
   const [_location, navigate] = useLocation();
 
@@ -82,10 +108,9 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
   // Fetch all locations for the dropdown (non-POS users only)
   const { data: allLocations = [] } = useQuery<Location[]>({
     queryKey: ["/api/locations"],
-    enabled: !posUser, // Only fetch for non-POS users
+    enabled: !posUser,
   });
 
-  // Use either the selected location (for Admin/Owner/Manager) or POS user's assigned location
   const activeLocation = posUser ? posLocation : selectedLocation;
 
   // Fetch inventory for the active location
@@ -95,8 +120,6 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
     retry: false,
   });
 
-  // Transform API inventory to POS format with stockItemId
-  // Coalesce null/undefined names and codes to prevent toLowerCase() errors
   const inventory: (InventoryItem & { stockItemId: number })[] = apiInventory.map((item) => ({
     code: (item.stockItemCode || "").trim(),
     name: (item.stockItemName || "Unknown Item").trim(),
@@ -111,7 +134,6 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
     enabled: !!activeLocation,
   });
 
-  // Filter cash ledger accounts
   const cashLedgerAccounts = allLedgerAccounts.filter((acc: any) => acc.accountType === "Cash");
 
   // Fetch assigned cash account for POS users
@@ -138,16 +160,13 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
   const [rows, setRows] = useState<SaleRow[]>([
     { id: "1", itemName: "", quantity: 0, rate: 0, amount: 0 },
   ]);
-  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number }>({
-    row: 0,
-    col: 0,
-  });
+  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number }>({ row: 0, col: 0 });
   const [paymentAccountType, setPaymentAccountType] = useState<"cash" | "credit">("cash");
   const [paymentAccountId, setPaymentAccountId] = useState("");
   const [isCreditSale, setIsCreditSale] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [notes, setNotes] = useState("");
-  const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [saleDate, setSaleDate] = useState(new Date().toISOString().split("T")[0]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeRow, setActiveRow] = useState<number | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -163,7 +182,8 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
   const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Auto-set cash account for POS users with assigned cash account
+  // ── Effects (all preserved) ──────────────────────────────────────────────
+
   useEffect(() => {
     if (posUser?.cashAccountId && assignedCashAccount && !paymentAccountId) {
       setPaymentAccountType("cash");
@@ -171,39 +191,30 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
     }
   }, [posUser, assignedCashAccount, paymentAccountId]);
 
-  // Set location from edit voucher when in edit mode
   useEffect(() => {
     if (editVoucher && editVoucher.locationId && !selectedLocation && allLocations.length > 0) {
-      const voucherLocation = allLocations.find(loc => loc.id === editVoucher.locationId);
-      if (voucherLocation) {
-        setSelectedLocation(voucherLocation);
-      }
+      const voucherLocation = allLocations.find((loc) => loc.id === editVoucher.locationId);
+      if (voucherLocation) setSelectedLocation(voucherLocation);
     }
   }, [editVoucher, allLocations, selectedLocation, setSelectedLocation]);
 
-  // Auto-select first cash account when loaded (for non-POS users)
   useEffect(() => {
-    // Skip auto-selection if POS user has assigned cash account
     if (posUser?.cashAccountId) return;
-    
     if (paymentAccountType === "cash" && cashLedgerAccounts.length > 0 && !paymentAccountId) {
       setPaymentAccountId(String(cashLedgerAccounts[0].id));
     }
   }, [paymentAccountType, cashLedgerAccounts, paymentAccountId, posUser]);
 
-  // Reset account selection when switching account type (disabled for POS users with assigned account)
   useEffect(() => {
-    if (posUser?.cashAccountId) return; // Don't reset for POS users
+    if (posUser?.cashAccountId) return;
     setPaymentAccountId("");
   }, [paymentAccountType, posUser]);
 
-  // Populate form when editing existing voucher
   useEffect(() => {
     if (editVoucher && editVoucher.salesItems && editVoucher.salesItems.length > 0) {
-      console.log('[POS Edit] Loading voucher for edit:', editVoucher);
-      console.log('[POS Edit] Sales items:', editVoucher.salesItems);
-      
-      // Populate rows with sales items
+      console.log("[POS Edit] Loading voucher for edit:", editVoucher);
+      console.log("[POS Edit] Sales items:", editVoucher.salesItems);
+
       const newRows: SaleRow[] = editVoucher.salesItems.map((item: any, index: number) => ({
         id: String(index + 1),
         itemName: item.stockItemName || "",
@@ -212,70 +223,36 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
         rate: parseFloat(item.sellingPrice),
         amount: parseFloat(item.totalSales),
       }));
-      
-      // Add a blank row at the end for adding new items
-      newRows.push({
-        id: String(newRows.length + 1),
-        itemName: "",
-        quantity: 0,
-        rate: 0,
-        amount: 0,
-      });
-      
+      newRows.push({ id: String(newRows.length + 1), itemName: "", quantity: 0, rate: 0, amount: 0 });
       setRows(newRows);
-      console.log('[POS Edit] Set rows to:', newRows);
+      console.log("[POS Edit] Set rows to:", newRows);
 
-      // Populate notes
-      if (editVoucher.description) {
-        setNotes(editVoucher.description);
-      }
+      if (editVoucher.description) setNotes(editVoucher.description);
+      if (editVoucher.voucherDate) setSaleDate(editVoucher.voucherDate);
 
-      // Populate date from voucher
-      if (editVoucher.voucherDate) {
-        setSaleDate(editVoucher.voucherDate);
-      }
-
-      // Populate payment account and credit sale info from voucher entries
       if (editVoucher.entries && editVoucher.entries.length > 0) {
-        console.log('[POS Edit] Voucher entries:', editVoucher.entries);
-        
-        // Find the debit entry (the payment account)
-        const debitEntry = editVoucher.entries.find((entry: any) => 
-          parseFloat(entry.debitAmount || "0") > 0
-        );
-        
+        console.log("[POS Edit] Voucher entries:", editVoucher.entries);
+        const debitEntry = editVoucher.entries.find((entry: any) => parseFloat(entry.debitAmount || "0") > 0);
         if (debitEntry) {
-          console.log('[POS Edit] Debit entry found:', debitEntry);
-          
-          // Ledger account - determine if cash or credit
+          console.log("[POS Edit] Debit entry found:", debitEntry);
           if (debitEntry.ledgerAccountId) {
             const ledgerAccount = allLedgerAccounts.find((acc: any) => acc.id === debitEntry.ledgerAccountId);
-            
             if (ledgerAccount) {
-              // Cash account
               if (ledgerAccount.accountType === "Cash") {
                 setPaymentAccountType("cash");
                 setPaymentAccountId(String(debitEntry.ledgerAccountId));
                 setIsCreditSale(false);
-                console.log('[POS Edit] Set cash account:', debitEntry.ledgerAccountId);
-              } 
-              // Customer/Receivable account (Asset type for customers)
-              else {
+                console.log("[POS Edit] Set cash account:", debitEntry.ledgerAccountId);
+              } else {
                 setPaymentAccountType("credit");
                 setPaymentAccountId(String(debitEntry.ledgerAccountId));
                 setIsCreditSale(true);
-                console.log('[POS Edit] Set credit sale with customer account:', debitEntry.ledgerAccountId);
+                console.log("[POS Edit] Set credit sale:", debitEntry.ledgerAccountId);
               }
             } else {
-              // Fallback: use narration to detect if it's credit sale
-              const isCreditSaleEntry = debitEntry.narration?.includes('Credit Sale');
-              if (isCreditSaleEntry) {
-                setPaymentAccountType("credit");
-                setIsCreditSale(true);
-              } else {
-                setPaymentAccountType("cash");
-                setIsCreditSale(false);
-              }
+              const isCreditSaleEntry = debitEntry.narration?.includes("Credit Sale");
+              if (isCreditSaleEntry) { setPaymentAccountType("credit"); setIsCreditSale(true); }
+              else { setPaymentAccountType("cash"); setIsCreditSale(false); }
               setPaymentAccountId(String(debitEntry.ledgerAccountId));
             }
           }
@@ -284,41 +261,35 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
     }
   }, [editVoucher, allLedgerAccounts]);
 
-  // Scroll highlighted item into view
   useEffect(() => {
     if (itemListRef.current && activeRow !== null) {
       const highlightedElement = itemListRef.current.children[highlightedIndex] as HTMLElement;
-      if (highlightedElement) {
-        highlightedElement.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      }
+      if (highlightedElement) highlightedElement.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   }, [highlightedIndex, activeRow]);
 
-  // Warn user about unsaved changes when leaving the page
+  // Warn on browser unload + report dirty state to parent
   useEffect(() => {
-    const hasUnsavedChanges = rows.some(row => row.itemName && row.quantity > 0);
+    const hasUnsavedChanges = rows.some((row) => row.itemName && row.quantity > 0);
+
+    // Report to parent (Sales.tsx tab container)
+    onDirtyChange?.(hasUnsavedChanges);
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
-        e.returnValue = ''; // Modern browsers require this
+        e.returnValue = "";
       }
     };
+    if (hasUnsavedChanges) window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [rows, onDirtyChange]);
 
-    if (hasUnsavedChanges) {
-      window.addEventListener('beforeunload', handleBeforeUnload);
-    }
+  // ── Mutations (all preserved) ────────────────────────────────────────────
 
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [rows]);
-
-  // Save sale mutation (handles both create and update)
   const saveMutation = useMutation({
     mutationFn: async (saleData: any) => {
       if (editVoucherId) {
-        // Update existing voucher - use the sales voucher update endpoint
         const updateData = {
           locationId: saleData.locationId,
           description: saleData.notes,
@@ -334,7 +305,6 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
         const res = await apiRequest("PATCH", `/api/vouchers/${editVoucherId}/sales`, updateData);
         return await res.json();
       } else {
-        // Create new sale
         const res = await apiRequest("POST", "/api/pos/sales", saleData);
         return await res.json();
       }
@@ -343,22 +313,15 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
       setSavedSale(data);
       toast({
         title: editVoucherId ? "Sale Updated" : "Sale Saved",
-        description: `Sale ${data.voucher?.voucherNumber} has been ${editVoucherId ? 'updated' : 'saved'} successfully.`,
+        description: `Sale ${data.voucher?.voucherNumber} has been ${editVoucherId ? "updated" : "saved"} successfully.`,
       });
-      
       if (editVoucherId) {
-        // Navigate back to daybook after update
         navigate("/pos-daybook");
       } else {
-        // Clear the form for new sales
         setRows([{ id: "1", itemName: "", quantity: 0, rate: 0, amount: 0 }]);
         setNotes("");
-        
-        // Auto-show print dialog
         setShowPrintDialog(true);
       }
-      
-      // Invalidate inventory query to refresh stock levels
       queryClient.invalidateQueries({ queryKey: [`/api/locations/${activeLocation?.id}/inventory`] });
       queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/accounts/all"] });
@@ -370,58 +333,50 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || `Failed to ${editVoucherId ? 'update' : 'save'} sale`,
+        description: error.message || `Failed to ${editVoucherId ? "update" : "save"} sale`,
         variant: "destructive",
       });
     },
   });
 
-  // Set print time when print dialog opens
   useEffect(() => {
     if (showPrintDialog) {
       const now = new Date();
-      const timeString = now.toLocaleString('en-US', {
-        month: '2-digit',
-        day: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true,
-      });
-      setPrintTime(timeString);
+      setPrintTime(
+        now.toLocaleString("en-US", {
+          month: "2-digit", day: "2-digit", year: "numeric",
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
+        })
+      );
     }
   }, [showPrintDialog]);
 
-  // Print handler
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: savedSale?.voucher?.voucherNumber ? `Invoice-${savedSale.voucher.voucherNumber}` : "Invoice",
     onAfterPrint: () => setShowPrintDialog(false),
   });
 
-  // Save draft mutation
   const saveDraftMutation = useMutation({
     mutationFn: async () => {
       if (!activeLocation) throw new Error("No location selected");
-      
-      const validItems = rows.filter(r => r.stockItemId && r.quantity > 0 && r.rate > 0);
+      const validItems = rows.filter((r) => r.stockItemId && r.quantity > 0 && r.rate > 0);
       if (validItems.length === 0) throw new Error("No items to save");
-
       const draftData = {
         locationId: activeLocation.id,
         paymentAccountType: isCreditSale ? "credit" : paymentAccountType,
-        paymentAccountId: isCreditSale ? (selectedCustomerId ? parseInt(selectedCustomerId) : null) : (paymentAccountId ? parseInt(paymentAccountId) : null),
+        paymentAccountId: isCreditSale
+          ? selectedCustomerId ? parseInt(selectedCustomerId) : null
+          : paymentAccountId ? parseInt(paymentAccountId) : null,
         isCreditSale,
         notes,
-        items: validItems.map(row => ({
+        items: validItems.map((row) => ({
           stockItemId: row.stockItemId,
           quantity: row.quantity.toString(),
           rate: row.rate.toString(),
           amount: row.amount.toString(),
         })),
       };
-
       if (currentDraftId) {
         const res = await apiRequest("PATCH", `/api/pos/drafts/${currentDraftId}`, draftData);
         return await res.json();
@@ -432,39 +387,24 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
     },
     onSuccess: (data) => {
       setCurrentDraftId(data.id);
-      toast({
-        title: "Draft Saved",
-        description: "Your transaction has been saved as a draft",
-      });
+      toast({ title: "Draft Saved", description: "Your transaction has been saved as a draft" });
       refetchDrafts();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save draft",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to save draft", variant: "destructive" });
     },
   });
 
-  // Load draft handler
   const handleLoadDraft = async (draftId: number) => {
     try {
       const res = await fetch(`/api/pos/drafts/${draftId}`);
       if (!res.ok) throw new Error("Failed to load draft");
-      
       const draft = await res.json();
-      
-      // Populate form with draft data
       if (draft.paymentAccountType) setPaymentAccountType(draft.paymentAccountType);
       if (draft.paymentAccountId) setPaymentAccountId(String(draft.paymentAccountId));
       setIsCreditSale(draft.isCreditSale || false);
-      if (draft.isCreditSale && draft.paymentAccountId) {
-        setSelectedCustomerId(String(draft.paymentAccountId));
-      }
+      if (draft.isCreditSale && draft.paymentAccountId) setSelectedCustomerId(String(draft.paymentAccountId));
       setNotes(draft.notes || "");
-
-      // Populate rows with draft items
       const draftRows = draft.items.map((item: any, index: number) => ({
         id: String(index + 1),
         itemName: item.stockItemName,
@@ -473,58 +413,29 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
         rate: parseFloat(item.rate),
         amount: parseFloat(item.amount),
       }));
-
-      // Add blank row at end
-      draftRows.push({
-        id: String(draftRows.length + 1),
-        itemName: "",
-        quantity: 0,
-        rate: 0,
-        amount: 0,
-      });
-
+      draftRows.push({ id: String(draftRows.length + 1), itemName: "", quantity: 0, rate: 0, amount: 0 });
       setRows(draftRows);
       setCurrentDraftId(draftId);
       setShowDraftDialog(false);
-
-      toast({
-        title: "Draft Loaded",
-        description: "Transaction has been loaded from draft",
-      });
+      toast({ title: "Draft Loaded", description: "Transaction has been loaded from draft" });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load draft",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to load draft", variant: "destructive" });
     }
   };
 
-  // Delete draft mutation
   const deleteDraftMutation = useMutation({
-    mutationFn: async (draftId: number) => {
-      await apiRequest("DELETE", `/api/pos/drafts/${draftId}`);
-    },
+    mutationFn: async (draftId: number) => { await apiRequest("DELETE", `/api/pos/drafts/${draftId}`); },
     onSuccess: () => {
-      toast({
-        title: "Draft Deleted",
-        description: "Draft has been deleted successfully",
-      });
+      toast({ title: "Draft Deleted", description: "Draft has been deleted successfully" });
       refetchDrafts();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete draft",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "Failed to delete draft", variant: "destructive" });
     },
   });
 
-  // Conditional renders after all hooks are called
-  // Allow users to proceed to POS without location selected - they can select it in the UI
+  // ── Guard renders ────────────────────────────────────────────────────────
 
-  // Show loading state while fetching POS user's location
   if (posUser && locationLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -532,8 +443,6 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
       </div>
     );
   }
-
-  // Show loading state while fetching voucher for edit mode
   if (editVoucherId && editVoucherLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -541,8 +450,6 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
       </div>
     );
   }
-
-  // Show error if POS user's location is not accessible in current company
   if (posUser && locationError) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
@@ -551,22 +458,14 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
           <h2 className="text-xl font-semibold">Location Access Denied</h2>
         </div>
         <p className="text-center text-muted-foreground max-w-md">
-          You don't have access to a location in the currently selected company. 
-          Please contact your administrator to assign you to a location in this company, 
-          or switch to a different company where you have location access.
+          You don't have access to a location in the currently selected company. Please contact your administrator.
         </p>
-        <Button 
-          onClick={() => window.location.reload()} 
-          variant="outline"
-          data-testid="button-retry-location"
-        >
+        <Button onClick={() => window.location.reload()} variant="outline" data-testid="button-retry-location">
           Retry
         </Button>
       </div>
     );
   }
-
-  // Show error if POS user has no assigned location
   if (posUser && !posUser.assignedLocationId) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
@@ -575,14 +474,11 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
           <h2 className="text-xl font-semibold">No Location Assigned</h2>
         </div>
         <p className="text-center text-muted-foreground max-w-md">
-          You don't have a location assigned to your account. 
-          Please contact your administrator to assign you to a location.
+          You don't have a location assigned to your account. Please contact your administrator.
         </p>
       </div>
     );
   }
-
-  // Show error if inventory access is denied
   if (activeLocation && inventoryError) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
@@ -591,46 +487,38 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
           <h2 className="text-xl font-semibold">Inventory Access Denied</h2>
         </div>
         <p className="text-center text-muted-foreground max-w-md">
-          Unable to access inventory for this location. This may be because the location 
-          belongs to a different company or you don't have the necessary permissions.
+          Unable to access inventory for this location.
         </p>
-        <Button 
-          onClick={() => window.location.reload()} 
-          variant="outline"
-          data-testid="button-retry-inventory"
-        >
+        <Button onClick={() => window.location.reload()} variant="outline" data-testid="button-retry-inventory">
           Retry
         </Button>
       </div>
     );
   }
 
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
   const columns = [
-    { key: "itemName", label: "Item Name", width: "flex-1" },
+    { key: "itemName", label: "Product", width: "flex-1" },
     { key: "quantity", label: "Qty", width: "w-24" },
-    { key: "rate", label: "Rate", width: "w-32" },
-    { key: "amount", label: "Amount", width: "w-32" },
+    { key: "rate", label: "Price", width: "w-32" },
+    { key: "amount", label: "Total", width: "w-32" },
     { key: "delete", label: "", width: "w-12" },
   ];
 
   const getFilteredInventory = () => {
     if (!searchTerm) return inventory;
-    const searchLower = searchTerm.toLowerCase();
-    return inventory.filter((item) =>
-      (item.name || "").toLowerCase().includes(searchLower) ||
-      (item.code || "").toLowerCase().includes(searchLower)
+    const s = searchTerm.toLowerCase();
+    return inventory.filter(
+      (item) =>
+        (item.name || "").toLowerCase().includes(s) ||
+        (item.code || "").toLowerCase().includes(s)
     );
   };
 
   const selectItem = (item: InventoryItem & { stockItemId: number }) => {
-    if (item.stock === 0) {
-      setZeroStockItem(item.name);
-      setZeroStockAlert(true);
-      return;
-    }
-
+    if (item.stock === 0) { setZeroStockItem(item.name); setZeroStockAlert(true); return; }
     if (activeRow === null) return;
-
     const newRows = [...rows];
     newRows[activeRow] = {
       ...newRows[activeRow],
@@ -640,426 +528,324 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
       stockItemId: item.stockItemId,
     };
     newRows[activeRow].amount = (newRows[activeRow].quantity || 1) * item.price;
-    
     setRows(newRows);
     setSearchTerm("");
     setHighlightedIndex(0);
-
-    // Add new row if last row is being edited
     if (activeRow === rows.length - 1) {
-      setRows([
-        ...newRows,
-        {
-          id: String(rows.length + 1),
-          itemName: "",
-          quantity: 0,
-          rate: 0,
-          amount: 0,
-        },
-      ]);
+      setRows([...newRows, { id: String(rows.length + 1), itemName: "", quantity: 0, rate: 0, amount: 0 }]);
     }
-
-    // Move to quantity field
-    setTimeout(() => {
-      focusCell(activeRow, 1);
-      setActiveRow(null);
-    }, 0);
+    setTimeout(() => { focusCell(activeRow, 1); setActiveRow(null); }, 0);
   };
 
   const updateRow = (index: number, field: keyof SaleRow, value: string | number) => {
     const newRows = [...rows];
-    
-    // Convert numeric fields properly - keep as number even during typing
     if (field === "quantity" || field === "rate") {
       const numValue = value === "" || value === "-" ? 0 : parseFloat(String(value)) || 0;
       newRows[index] = { ...newRows[index], [field]: numValue };
-      
-      // Auto-calculate amount
       const qty = field === "quantity" ? numValue : newRows[index].quantity;
       const rate = field === "rate" ? numValue : newRows[index].rate;
       newRows[index].amount = qty * rate;
     } else {
       newRows[index] = { ...newRows[index], [field]: value };
     }
-    
-    // Update search term when typing in item name
-    if (field === "itemName") {
-      setSearchTerm(String(value));
-      setHighlightedIndex(0);
-    }
-    
+    if (field === "itemName") { setSearchTerm(String(value)); setHighlightedIndex(0); }
     setRows(newRows);
-
-    // Add new row if last row is being edited (only for non-empty numeric values)
     if (index === rows.length - 1 && value !== "" && value !== 0 && field !== "itemName") {
-      setRows([
-        ...newRows,
-        {
-          id: String(rows.length + 1),
-          itemName: "",
-          quantity: 0,
-          rate: 0,
-          amount: 0,
-        },
-      ]);
+      setRows([...newRows, { id: String(rows.length + 1), itemName: "", quantity: 0, rate: 0, amount: 0 }]);
     }
   };
 
   const handleDeleteRow = (index: number) => {
-    // Don't allow deleting if it's the only row
     if (rows.length === 1) {
-      toast({
-        title: "Cannot Delete",
-        description: "At least one row must remain",
-        variant: "destructive",
-      });
+      toast({ title: "Cannot Delete", description: "At least one row must remain", variant: "destructive" });
       return;
     }
-
-    // Remove the row
     const newRows = rows.filter((_, i) => i !== index);
-    
-    // Ensure there's always at least one blank row for adding new items
-    const hasBlankRow = newRows.some(row => !row.itemName && row.quantity === 0 && row.rate === 0);
-    if (!hasBlankRow) {
-      newRows.push({
-        id: String(Date.now()),
-        itemName: "",
-        quantity: 0,
-        rate: 0,
-        amount: 0,
-      });
-    }
-    
+    const hasBlankRow = newRows.some((row) => !row.itemName && row.quantity === 0 && row.rate === 0);
+    if (!hasBlankRow) newRows.push({ id: String(Date.now()), itemName: "", quantity: 0, rate: 0, amount: 0 });
     setRows(newRows);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, rowIndex: number, colIndex: number) => {
-    const maxCol = columns.length - 2; // Exclude delete column from navigation
+    const maxCol = columns.length - 2;
     const maxRow = rows.length - 1;
     const isItemNameField = columns[colIndex].key === "itemName";
     const filteredItems = getFilteredInventory();
 
-    // Special handling for item name field with filtered items
     if (isItemNameField && activeRow === rowIndex && filteredItems.length > 0) {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setHighlightedIndex((prev) => Math.min(prev + 1, filteredItems.length - 1));
-        return;
-      }
-      if (e.key === "ArrowUp" && highlightedIndex > 0) {
-        e.preventDefault();
-        setHighlightedIndex((prev) => Math.max(prev - 1, 0));
-        return;
-      }
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (filteredItems[highlightedIndex]) {
-          selectItem(filteredItems[highlightedIndex]);
-        }
-        return;
-      }
+      if (e.key === "ArrowDown") { e.preventDefault(); setHighlightedIndex((p) => Math.min(p + 1, filteredItems.length - 1)); return; }
+      if (e.key === "ArrowUp" && highlightedIndex > 0) { e.preventDefault(); setHighlightedIndex((p) => Math.max(p - 1, 0)); return; }
+      if (e.key === "Enter") { e.preventDefault(); if (filteredItems[highlightedIndex]) selectItem(filteredItems[highlightedIndex]); return; }
     }
 
     switch (e.key) {
       case "ArrowUp":
-        if (!isItemNameField || filteredItems.length === 0) {
-          e.preventDefault();
-          if (rowIndex > 0) {
-            setSelectedCell({ row: rowIndex - 1, col: colIndex });
-            focusCell(rowIndex - 1, colIndex);
-          }
-        }
+        if (!isItemNameField || filteredItems.length === 0) { e.preventDefault(); if (rowIndex > 0) { setSelectedCell({ row: rowIndex - 1, col: colIndex }); focusCell(rowIndex - 1, colIndex); } }
         break;
       case "ArrowDown":
-        if (!isItemNameField || filteredItems.length === 0) {
-          e.preventDefault();
-          if (rowIndex < maxRow) {
-            setSelectedCell({ row: rowIndex + 1, col: colIndex });
-            focusCell(rowIndex + 1, colIndex);
-          }
-        }
+        if (!isItemNameField || filteredItems.length === 0) { e.preventDefault(); if (rowIndex < maxRow) { setSelectedCell({ row: rowIndex + 1, col: colIndex }); focusCell(rowIndex + 1, colIndex); } }
         break;
       case "Enter": {
         e.preventDefault();
-        
-        // If on item name field with filtered items, select the highlighted item
-        if (isItemNameField && filteredItems.length > 0) {
-          if (filteredItems[highlightedIndex]) {
-            selectItem(filteredItems[highlightedIndex]);
-          }
-          return;
-        }
-        
-        // Navigate between fields: itemName (0) → qty (1) → rate (2) → new row (itemName of next)
+        if (isItemNameField && filteredItems.length > 0) { if (filteredItems[highlightedIndex]) selectItem(filteredItems[highlightedIndex]); return; }
         const isQtyField = columns[colIndex].key === "quantity";
         const isRateField = columns[colIndex].key === "rate";
-        
-        if (isItemNameField) {
-          // itemName → qty
-          setSelectedCell({ row: rowIndex, col: 1 });
-          focusCell(rowIndex, 1);
-        } else if (isQtyField) {
-          // qty → rate
-          setSelectedCell({ row: rowIndex, col: 2 });
-          focusCell(rowIndex, 2);
-        } else if (isRateField) {
-          // rate → new row itemName
+        if (isItemNameField) { setSelectedCell({ row: rowIndex, col: 1 }); focusCell(rowIndex, 1); }
+        else if (isQtyField) { setSelectedCell({ row: rowIndex, col: 2 }); focusCell(rowIndex, 2); }
+        else if (isRateField) {
           const nextRow = rows[rowIndex + 1];
           if (!nextRow || !nextRow.itemName) {
-            // Add a new row if needed
-            setRows(prev => [...prev, {
-              id: String(Date.now()),
-              itemName: "",
-              quantity: 0,
-              rate: 0,
-              amount: 0,
-            }]);
-            // Focus on item name field of new row
-            setTimeout(() => {
-              setSelectedCell({ row: rowIndex + 1, col: 0 });
-              focusCell(rowIndex + 1, 0);
-            }, 50);
-          } else {
-            // Move to next row's item name field
-            setSelectedCell({ row: rowIndex + 1, col: 0 });
-            focusCell(rowIndex + 1, 0);
-          }
+            setRows((prev) => [...prev, { id: String(Date.now()), itemName: "", quantity: 0, rate: 0, amount: 0 }]);
+            setTimeout(() => { setSelectedCell({ row: rowIndex + 1, col: 0 }); focusCell(rowIndex + 1, 0); }, 50);
+          } else { setSelectedCell({ row: rowIndex + 1, col: 0 }); focusCell(rowIndex + 1, 0); }
         }
         break;
       }
       case "ArrowLeft":
         e.preventDefault();
-        if (colIndex > 0) {
-          setSelectedCell({ row: rowIndex, col: colIndex - 1 });
-          focusCell(rowIndex, colIndex - 1);
-        }
+        if (colIndex > 0) { setSelectedCell({ row: rowIndex, col: colIndex - 1 }); focusCell(rowIndex, colIndex - 1); }
         break;
       case "ArrowRight":
         e.preventDefault();
-        if (colIndex < maxCol) {
-          setSelectedCell({ row: rowIndex, col: colIndex + 1 });
-          focusCell(rowIndex, colIndex + 1);
-        }
+        if (colIndex < maxCol) { setSelectedCell({ row: rowIndex, col: colIndex + 1 }); focusCell(rowIndex, colIndex + 1); }
         break;
       case "Tab":
-        if (!e.shiftKey && colIndex < maxCol) {
-          e.preventDefault();
-          setSelectedCell({ row: rowIndex, col: colIndex + 1 });
-          focusCell(rowIndex, colIndex + 1);
-        }
+        if (!e.shiftKey && colIndex < maxCol) { e.preventDefault(); setSelectedCell({ row: rowIndex, col: colIndex + 1 }); focusCell(rowIndex, colIndex + 1); }
         break;
     }
   };
 
   const focusCell = (rowIndex: number, colIndex: number) => {
     const key = `${rowIndex}-${colIndex}`;
-    setTimeout(() => {
-      inputRefs.current[key]?.focus();
-      inputRefs.current[key]?.select();
-    }, 0);
+    setTimeout(() => { inputRefs.current[key]?.focus(); inputRefs.current[key]?.select(); }, 0);
   };
 
   const handleSaveSale = () => {
-    // Validate
-    if (!activeLocation) {
-      toast({
-        title: "Error",
-        description: "Please select a location",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate payment account for cash sales
-    if (!isCreditSale && !paymentAccountId) {
-      toast({
-        title: "Error",
-        description: "Please select a payment account",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate customer for credit sales
-    if (isCreditSale && !selectedCustomerId) {
-      toast({
-        title: "Error",
-        description: "Please select a customer for credit sale",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const validItems = rows.filter(r => r.stockItemId && r.quantity > 0 && r.rate > 0);
-    if (validItems.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please add at least one item to the sale",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Prepare sale data
-    const saleData = {
+    if (!activeLocation) { toast({ title: "Error", description: "Please select a location", variant: "destructive" }); return; }
+    if (!isCreditSale && !paymentAccountId) { toast({ title: "Error", description: "Please select a payment account", variant: "destructive" }); return; }
+    if (isCreditSale && !selectedCustomerId) { toast({ title: "Error", description: "Please select a customer for credit sale", variant: "destructive" }); return; }
+    const validItems = rows.filter((r) => r.stockItemId && r.quantity > 0 && r.rate > 0);
+    if (validItems.length === 0) { toast({ title: "Error", description: "Please add at least one item to the sale", variant: "destructive" }); return; }
+    saveMutation.mutate({
       locationId: activeLocation.id,
       paymentAccountType: isCreditSale ? "credit" : paymentAccountType,
       paymentAccountId: isCreditSale ? parseInt(selectedCustomerId) : parseInt(paymentAccountId),
       isCreditSale,
       notes,
       voucherDate: saleDate,
-      items: validItems.map(row => ({
-        stockItemId: row.stockItemId,
-        quantity: row.quantity.toString(),
-        rate: row.rate.toString(),
-      })),
-    };
-
-    saveMutation.mutate(saleData);
+      items: validItems.map((row) => ({ stockItemId: row.stockItemId, quantity: row.quantity.toString(), rate: row.rate.toString() })),
+    });
   };
 
   const total = rows.reduce((sum, row) => sum + (row.amount || 0), 0);
   const totalQty = rows.reduce((sum, row) => sum + (parseFloat(String(row.quantity)) || 0), 0);
   const filteredItems = getFilteredInventory();
 
+  // ── Render ───────────────────────────────────────────────────────────────
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Point of Sale</h1>
-        <div className="flex gap-2">
-          {!posUser && (
-            <Link href="/pos-import">
-              <Button variant="outline" className="gap-2" data-testid="button-import-sales">
-                <Upload className="h-4 w-4" />
-                Import Sales
-              </Button>
-            </Link>
-          )}
-          <Button 
-            variant="outline"
-            onClick={() => setShowDraftDialog(true)}
-            disabled={drafts.length === 0}
-            data-testid="button-load-draft"
-          >
-            Load Draft {drafts.length > 0 && `(${drafts.length})`}
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={() => saveDraftMutation.mutate()}
-            disabled={saveDraftMutation.isPending || rows.filter(r => r.stockItemId && r.quantity > 0).length === 0}
-            data-testid="button-save-draft"
-          >
-            {saveDraftMutation.isPending ? "Saving..." : currentDraftId ? "Update Draft" : "Save as Draft"}
-          </Button>
-          <Button 
-            onClick={handleSaveSale}
-            disabled={saveMutation.isPending}
-            className="gap-2"
-            data-testid="button-complete-sale"
-          >
-            {saveMutation.isPending ? (editVoucherId ? "Updating..." : "Saving...") : (editVoucherId ? "Update Sale" : "Save & Print")}
-            {!saveMutation.isPending && <Check className="h-4 w-4" />}
-          </Button>
+      {/* Page heading — only when not embedded */}
+      {!embedded && (
+        <div>
+          <h1 className="text-2xl font-semibold">New Sale</h1>
+          <p className="text-sm text-muted-foreground">
+            Sell motorcycles, spare parts and workshop items.
+          </p>
         </div>
-      </div>
+      )}
 
-      <div className="flex gap-4">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          {posUser ? (
-            <div className="px-3 py-1.5">
-              <span className="font-medium">{activeLocation?.name}</span>
-            </div>
-          ) : (
-            <Select 
-              value={activeLocation?.id.toString() || ""} 
-              onValueChange={(value) => {
-                const location = allLocations.find(loc => loc.id.toString() === value);
-                if (location) {
-                  setSelectedLocation(location);
-                }
-              }}
-            >
-              <SelectTrigger className="w-64" data-testid="select-location">
-                <SelectValue placeholder="Select location" />
-              </SelectTrigger>
-              <SelectContent>
-                {allLocations.map((loc) => (
-                  <SelectItem key={loc.id} value={loc.id.toString()}>
-                    {loc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-
-        {/* Date Picker */}
-        <div className="flex items-center gap-2">
-          <DatePickerInput
-            value={saleDate}
-            onChange={setSaleDate}
-            placeholder="Sale date"
-            className="w-48"
-            data-testid="input-sale-date"
-          />
-        </div>
-
-        {/* Hide cash account selector when credit sale is ON */}
-        {!isCreditSale && (
-          <div className="flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-            {posUser?.cashAccountId && assignedCashAccount ? (
-              // Show read-only cash account for POS users
-              <div className="px-3 py-1.5 bg-muted/50 rounded-md border">
-                <span className="text-sm font-medium">{assignedCashAccount.name}</span>
-                <span className="text-xs text-muted-foreground ml-2">({assignedCashAccount.code})</span>
+      {/* ── Sale information card ────────────────────────────────────────── */}
+      <Card className="p-4 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Location */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Sale Location
+            </p>
+            {posUser ? (
+              <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md border text-sm">
+                <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="font-medium">{activeLocation?.name || "—"}</span>
               </div>
             ) : (
-              // Show cash account selector for non-POS users
-              <Select value={paymentAccountId} onValueChange={setPaymentAccountId}>
-                <SelectTrigger className="w-56" data-testid="select-payment-account">
-                  <SelectValue placeholder="Select cash account" />
+              <Select
+                value={activeLocation?.id.toString() || ""}
+                onValueChange={(value) => {
+                  const loc = allLocations.find((l) => l.id.toString() === value);
+                  if (loc) setSelectedLocation(loc);
+                }}
+              >
+                <SelectTrigger data-testid="select-location">
+                  <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  {cashLedgerAccounts.map((acc: any) => (
-                    <SelectItem key={acc.id} value={String(acc.id)}>
-                      {acc.name} ({acc.code})
+                  {allLocations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id.toString()}>
+                      {loc.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
           </div>
-        )}
 
+          {/* Payment type */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Payment Type
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant={!isCreditSale ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
+                data-testid="button-payment-cash"
+                onClick={() => { setIsCreditSale(false); setPaymentAccountType("cash"); }}
+              >
+                Cash
+              </Button>
+              <Button
+                variant={isCreditSale ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
+                data-testid="button-payment-credit"
+                onClick={() => { setIsCreditSale(true); setPaymentAccountType("credit"); }}
+              >
+                Credit
+              </Button>
+            </div>
+          </div>
 
-        <div className="flex-1 flex items-center gap-2">
-          <Textarea
-            placeholder="Notes (optional)"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="resize-none h-9"
-            data-testid="input-notes"
-          />
+          {/* Payment account or customer */}
+          <div className="space-y-1.5">
+            {!isCreditSale ? (
+              <>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Cash Account
+                </p>
+                {posUser?.cashAccountId && assignedCashAccount ? (
+                  <div className="px-3 py-2 bg-muted/50 rounded-md border text-sm">
+                    <span className="font-medium">{assignedCashAccount.name}</span>
+                    <span className="text-muted-foreground ml-2 text-xs">({assignedCashAccount.code})</span>
+                  </div>
+                ) : (
+                  <Select value={paymentAccountId} onValueChange={setPaymentAccountId}>
+                    <SelectTrigger data-testid="select-payment-account">
+                      <SelectValue placeholder="Select cash account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cashLedgerAccounts.map((acc: any) => (
+                        <SelectItem key={acc.id} value={String(acc.id)}>
+                          {acc.name} ({acc.code})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Customer Account
+                </p>
+                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                  <SelectTrigger data-testid="select-customer-account">
+                    <SelectValue placeholder="Select customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customerAccounts.map((acc: any) => (
+                      <SelectItem key={acc.id} value={String(acc.id)}>
+                        {acc.name} ({acc.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className="flex gap-4">
-        {/* Main Spreadsheet Area */}
-        <Card className="flex-1 overflow-hidden">
+        {/* More Options collapsible */}
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground -ml-2"
+              data-testid="button-more-options"
+            >
+              <ChevronDown className="h-4 w-4" />
+              More Options
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t mt-2">
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Sale Date
+                </p>
+                <DatePickerInput
+                  value={saleDate}
+                  onChange={setSaleDate}
+                  placeholder="Sale date"
+                  className="w-full"
+                  data-testid="input-sale-date"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Notes
+                </p>
+                <Textarea
+                  placeholder="Notes (optional)"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="resize-none h-9 min-h-0"
+                  data-testid="input-notes"
+                />
+              </div>
+              <div className="flex gap-2 md:col-span-2">
+                {!posUser && (
+                  <Link href="/pos-import">
+                    <Button variant="outline" size="sm" className="gap-2" data-testid="button-import-sales">
+                      <Upload className="h-4 w-4" />
+                      Import Sales
+                    </Button>
+                  </Link>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDraftDialog(true)}
+                  disabled={drafts.length === 0}
+                  data-testid="button-load-draft"
+                >
+                  Load Draft {drafts.length > 0 && `(${drafts.length})`}
+                </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+
+      {/* ── Sale lines + Product search ──────────────────────────────────── */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        {/* Sale lines card */}
+        <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <div className="min-w-full">
               {/* Header */}
               <div className="flex bg-muted/50 border-b sticky top-0 z-10">
-                <div className="w-12 flex items-center justify-center border-r h-10 font-medium text-xs">
+                <div className="w-10 flex items-center justify-center border-r h-11 text-xs text-muted-foreground font-medium">
                   #
                 </div>
                 {columns.map((col) => (
                   <div
                     key={col.key}
-                    className={`${col.width} flex items-center px-3 border-r h-10 font-medium text-sm`}
+                    className={`${col.width} flex items-center px-3 border-r h-11 font-medium text-sm ${
+                      col.key === "amount" || col.key === "rate" ? "justify-end" : ""
+                    }`}
                   >
                     {col.label}
                   </div>
@@ -1067,17 +853,20 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
               </div>
 
               {/* Rows */}
-              <div className="max-h-[calc(100vh-24rem)] overflow-y-auto">
+              <div className="max-h-[calc(100vh-28rem)] overflow-y-auto">
                 {rows.map((row, rowIndex) => (
-                  <div key={row.id} className="flex border-b hover-elevate">
-                    <div className="w-12 flex items-center justify-center border-r h-10 text-xs text-muted-foreground">
+                  <div
+                    key={row.id}
+                    className="flex border-b hover:bg-muted/20 transition-colors"
+                  >
+                    <div className="w-10 flex items-center justify-center border-r h-12 text-xs text-muted-foreground">
                       {rowIndex + 1}
                     </div>
                     {columns.map((col, colIndex) => (
                       <div
                         key={col.key}
-                        className={`${col.width} border-r h-10 ${
-                          col.key === "amount" ? "bg-muted/30" : ""
+                        className={`${col.width} border-r h-12 ${
+                          col.key === "amount" ? "bg-muted/20" : ""
                         }`}
                       >
                         {col.key === "delete" ? (
@@ -1094,48 +883,29 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
                           </div>
                         ) : (
                           <input
-                            ref={(el) => {
-                              if (el) inputRefs.current[`${rowIndex}-${colIndex}`] = el;
-                            }}
+                            ref={(el) => { if (el) inputRefs.current[`${rowIndex}-${colIndex}`] = el; }}
                             type={col.key === "quantity" || col.key === "rate" ? "number" : "text"}
                             value={
                               col.key === "amount"
                                 ? row.amount.toFixed(2)
                                 : col.key === "quantity" || col.key === "rate"
-                                  ? (row[col.key as keyof SaleRow] === 0 ? "" : row[col.key as keyof SaleRow])
-                                  : row[col.key as keyof SaleRow]
+                                ? row[col.key as keyof SaleRow] === 0 ? "" : row[col.key as keyof SaleRow]
+                                : row[col.key as keyof SaleRow]
                             }
-                            onChange={(e) => {
-                              if (col.key !== "amount") {
-                                updateRow(rowIndex, col.key as keyof SaleRow, e.target.value);
-                              }
-                            }}
+                            onChange={(e) => { if (col.key !== "amount") updateRow(rowIndex, col.key as keyof SaleRow, e.target.value); }}
                             onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
                             onFocus={() => {
                               setSelectedCell({ row: rowIndex, col: colIndex });
-                              if (col.key === "itemName") {
-                                setActiveRow(rowIndex);
-                                setSearchTerm(row.itemName);
-                                setHighlightedIndex(0);
-                              }
+                              if (col.key === "itemName") { setActiveRow(rowIndex); setSearchTerm(row.itemName); setHighlightedIndex(0); }
                             }}
-                            onBlur={() => {
-                              if (col.key === "itemName") {
-                                setActiveRow(null);
-                                setSearchTerm("");
-                              }
-                            }}
+                            onBlur={() => { if (col.key === "itemName") { setActiveRow(null); setSearchTerm(""); } }}
                             readOnly={col.key === "amount"}
-                            className={`w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20 ${
+                            className={`w-full h-full px-3 bg-transparent outline-none focus:bg-primary/5 text-sm ${
                               col.key === "quantity" || col.key === "rate" || col.key === "amount"
                                 ? "font-mono text-right"
                                 : ""
-                            } ${col.key === "amount" ? "cursor-not-allowed" : ""}`}
-                            placeholder={
-                              col.key === "itemName"
-                                ? "Type to search..."
-                                : ""
-                            }
+                            } ${col.key === "amount" ? "cursor-not-allowed text-muted-foreground" : ""}`}
+                            placeholder={col.key === "itemName" ? "Search product..." : ""}
                             data-testid={`input-${col.key}-${rowIndex}`}
                           />
                         )}
@@ -1147,87 +917,131 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
             </div>
           </div>
 
-          {/* Total Section */}
-          <div className="border-t bg-muted/20 p-4">
-            <div className="flex justify-end items-center gap-8 max-w-md ml-auto">
-              <div className="text-sm text-muted-foreground">Total Items:</div>
-              <div className="text-sm font-mono font-medium">
-                {rows.filter((r) => r.amount > 0).length}
+          {/* Order summary + actions */}
+          <div className="border-t bg-muted/10 p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+              <div className="flex gap-8 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Products</p>
+                  <p className="font-mono font-semibold">{rows.filter((r) => r.amount > 0).length}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Total Quantity</p>
+                  <p className="font-mono font-semibold" data-testid="text-total-qty">
+                    {totalQty > 0 ? totalQty.toFixed(2) : "0"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Grand Total</p>
+                  <p className="font-mono font-bold text-2xl" data-testid="text-grand-total">
+                    ${total.toFixed(2)}
+                  </p>
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground">Total Qty:</div>
-              <div className="text-sm font-mono font-medium" data-testid="text-total-qty">
-                {totalQty > 0 ? totalQty.toFixed(3) : "0"}
-              </div>
-              <div className="text-lg font-semibold">Grand Total:</div>
-              <div className="text-2xl font-bold font-mono" data-testid="text-grand-total">
-                ${total.toFixed(2)}
+
+              <div className="flex gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={() => saveDraftMutation.mutate()}
+                  disabled={
+                    saveDraftMutation.isPending ||
+                    rows.filter((r) => r.stockItemId && r.quantity > 0).length === 0
+                  }
+                  data-testid="button-save-draft"
+                >
+                  {saveDraftMutation.isPending
+                    ? "Saving..."
+                    : currentDraftId
+                    ? "Update Draft"
+                    : "Save Draft"}
+                </Button>
+                <Button
+                  onClick={handleSaveSale}
+                  disabled={saveMutation.isPending}
+                  className="gap-2"
+                  data-testid="button-complete-sale"
+                >
+                  {saveMutation.isPending
+                    ? editVoucherId ? "Updating..." : "Saving..."
+                    : editVoucherId ? "Update Sale" : "Complete Sale & Print"}
+                  {!saveMutation.isPending && <Check className="h-4 w-4" />}
+                </Button>
               </div>
             </div>
           </div>
         </Card>
 
-        {/* Right Panel - Item Search */}
-        <Card className="w-96 flex flex-col sticky top-4 max-h-[calc(100vh-8rem)] self-start">
-          <div className="p-4 border-b">
-            <h3 className="text-sm font-semibold mb-3">Search Items</h3>
+        {/* Product search panel */}
+        <Card className="flex flex-col sticky top-4 max-h-[calc(100vh-12rem)] self-start">
+          <div className="p-3 border-b">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+              Find Motorcycle or Part
+            </p>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name or code..."
+                placeholder="Search motorcycle, part, code or barcode..."
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setHighlightedIndex(0);
-                }}
-                className="pl-9"
+                onChange={(e) => { setSearchTerm(e.target.value); setHighlightedIndex(0); }}
+                className="pl-9 text-sm"
                 data-testid="input-search"
               />
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-2" ref={itemListRef}>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {filteredItems.map((item, idx) => (
                 <button
                   key={item.stockItemId}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (activeRow !== null) {
-                      selectItem(item);
-                    }
-                  }}
-                  className={`w-full text-left px-3 py-3 rounded-md hover-elevate active-elevate-2 ${
-                    item.stock === 0 ? "opacity-60" : ""
-                  } ${idx === highlightedIndex && activeRow !== null ? "bg-accent" : ""}`}
+                  onMouseDown={(e) => { e.preventDefault(); if (activeRow !== null) selectItem(item); }}
+                  className={`w-full text-left px-3 py-2.5 rounded-md transition-colors hover:bg-muted/60 ${
+                    item.stock === 0 ? "opacity-50" : ""
+                  } ${idx === highlightedIndex && activeRow !== null ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
                   data-testid={`item-${idx}`}
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium mb-1">{item.name}</div>
-                      <div className="text-xs text-muted-foreground font-mono">
-                        {item.code}
-                      </div>
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{item.code}</p>
+                      <p className="text-xs mt-0.5">
+                        <span
+                          className={
+                            item.stock === 0
+                              ? "text-destructive font-medium"
+                              : item.stock < 10
+                              ? "text-amber-600 font-medium"
+                              : "text-emerald-600 font-medium"
+                          }
+                        >
+                          {item.stock === 0 ? "Out of stock" : `${item.stock} available`}
+                        </span>
+                      </p>
                     </div>
-                    <div className="flex items-center">
-                      <div className={`text-xs font-medium px-2 py-0.5 rounded ${
-                        item.stock === 0 
-                          ? "bg-destructive/10 text-destructive" 
-                          : item.stock < 10
-                          ? "bg-chart-3/10 text-chart-3"
-                          : "bg-chart-2/10 text-chart-2"
-                      }`}>
-                        {item.stock === 0 ? "Out" : `${item.stock}`}
-                      </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-mono font-semibold">${item.price.toFixed(2)}</p>
                     </div>
                   </div>
                 </button>
               ))}
+              {filteredItems.length === 0 && searchTerm && (
+                <p className="text-center text-sm text-muted-foreground py-6">
+                  No products found
+                </p>
+              )}
+              {filteredItems.length === 0 && !searchTerm && (
+                <p className="text-center text-sm text-muted-foreground py-6">
+                  Search for a product above
+                </p>
+              )}
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Zero Stock Alert Dialog */}
+      {/* ── Dialogs (all preserved) ──────────────────────────────────────── */}
+
+      {/* Zero Stock Alert */}
       <AlertDialog open={zeroStockAlert} onOpenChange={setZeroStockAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1241,9 +1055,7 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button onClick={() => setZeroStockAlert(false)} data-testid="button-close-alert">
-              OK
-            </Button>
+            <Button onClick={() => setZeroStockAlert(false)} data-testid="button-close-alert">OK</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1257,15 +1069,12 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
               Sale has been saved successfully. Would you like to print the invoice?
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
-          {/* Hidden Print Template */}
           <div className="hidden">
             <div ref={printRef} className="p-6 bg-white text-black">
               <div className="text-center mb-4">
                 <h1 className="text-2xl font-bold mb-1">SALES INVOICE</h1>
                 <p className="text-sm text-gray-600">Invoice #{savedSale?.voucher?.voucherNumber}</p>
               </div>
-              
               <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
                 <div>
                   <p className="font-semibold mb-0.5">Location:</p>
@@ -1277,14 +1086,12 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
                   <p>{savedSale?.saleDate}</p>
                 </div>
               </div>
-
               {posUser && (
                 <div className="mb-4 p-2 bg-gray-50 border border-gray-200 text-sm">
                   <p className="font-semibold mb-0.5">Printed by:</p>
                   <p>{posUser.name} at {printTime}</p>
                 </div>
               )}
-
               {savedSale?.isCreditSale && savedSale?.customer && (
                 <div className="mb-4 p-2 bg-gray-100 border border-gray-300">
                   <p className="font-semibold mb-0.5">Customer (Credit Sale):</p>
@@ -1292,14 +1099,13 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
                   <p className="text-sm text-gray-600">Account: {savedSale.customer.code}</p>
                 </div>
               )}
-
-              <table className="w-full mb-4 border-collapse" style={{ tableLayout: 'fixed' }}>
+              <table className="w-full mb-4 border-collapse" style={{ tableLayout: "fixed" }}>
                 <colgroup>
-                  <col style={{ width: '8%' }} />
-                  <col style={{ width: '42%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '17%' }} />
-                  <col style={{ width: '18%' }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "42%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "17%" }} />
+                  <col style={{ width: "18%" }} />
                 </colgroup>
                 <thead>
                   <tr className="border-b-2 border-black">
@@ -1322,7 +1128,6 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
                   ))}
                 </tbody>
               </table>
-
               <div className="flex justify-end mb-4">
                 <div className="w-48">
                   <div className="flex justify-between py-1 text-lg font-bold border-t-2 border-black">
@@ -1331,20 +1136,17 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
                   </div>
                 </div>
               </div>
-
               {savedSale?.voucher?.description && (
                 <div className="mb-4">
                   <p className="font-semibold mb-0.5">Notes:</p>
                   <p className="text-sm">{savedSale.voucher.description}</p>
                 </div>
               )}
-
               <div className="text-center text-sm text-gray-600 mt-4 pt-3 border-t">
                 <p>Thank you for your business!</p>
               </div>
             </div>
           </div>
-
           <AlertDialogFooter>
             <Button variant="outline" onClick={() => setShowPrintDialog(false)} data-testid="button-cancel-print">
               Close
@@ -1366,38 +1168,22 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
               Select a draft to continue working on it. Loading a draft will replace your current work.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
           <div className="max-h-96 overflow-y-auto">
             {drafts.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">No drafts available</p>
             ) : (
               <div className="space-y-2">
                 {drafts.map((draft: any) => (
-                  <div key={draft.id} className="flex items-center justify-between p-4 border rounded-md hover-elevate">
+                  <div key={draft.id} className="flex items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors">
                     <div className="flex-1">
-                      <p className="font-medium">
-                        Draft #{draft.id} - {new Date(draft.updatedAt).toLocaleString()}
-                      </p>
-                      {draft.notes && (
-                        <p className="text-sm text-muted-foreground mt-1">{draft.notes}</p>
-                      )}
+                      <p className="font-medium">Draft #{draft.id} — {new Date(draft.updatedAt).toLocaleString()}</p>
+                      {draft.notes && <p className="text-sm text-muted-foreground mt-1">{draft.notes}</p>}
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleLoadDraft(draft.id)}
-                        data-testid={`button-load-draft-${draft.id}`}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleLoadDraft(draft.id)} data-testid={`button-load-draft-${draft.id}`}>
                         Load
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteDraftMutation.mutate(draft.id)}
-                        disabled={deleteDraftMutation.isPending}
-                        data-testid={`button-delete-draft-${draft.id}`}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => deleteDraftMutation.mutate(draft.id)} disabled={deleteDraftMutation.isPending} data-testid={`button-delete-draft-${draft.id}`}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -1406,7 +1192,6 @@ export default function POS({ posUser, editVoucherId }: { posUser?: any; editVou
               </div>
             )}
           </div>
-
           <AlertDialogFooter>
             <Button variant="outline" onClick={() => setShowDraftDialog(false)} data-testid="button-cancel-draft">
               Cancel

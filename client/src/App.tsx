@@ -46,6 +46,7 @@ const ImportStockItems = lazy(() => import("@/pages/ImportStockItems"));
 const StockQuery = lazy(() => import("@/pages/StockQuery"));
 const StockItemDetail = lazy(() => import("@/pages/StockItemDetail"));
 const SalesReport = lazy(() => import("@/pages/SalesReport"));
+const Sales = lazy(() => import("@/pages/Sales"));
 const POSDaybook = lazy(() => import("@/pages/POSDaybook"));
 const OffloadDetail = lazy(() => import("@/pages/OffloadDetail"));
 const EditSupplier = lazy(() => import("@/pages/EditSupplier"));
@@ -133,10 +134,10 @@ function Router({ user }: { user: any }) {
       <Switch>
         <Route path="/" component={Dashboard} />
         {/* More-specific routes FIRST — wouter 3 uses prefix matching inside Switch */}
-        <Route path="/pos/edit/:id">{(params) => <POS editVoucherId={params.id} />}</Route>
+        <Route path="/pos/edit/:id">{(params) => <Sales initialTab="new" editVoucherId={params.id} />}</Route>
         <Route path="/pos-daybook" component={POSDaybook} />
         <Route path="/pos-import" component={POSImport} />
-        <Route path="/pos">{() => <POS />}</Route>
+        <Route path="/pos">{() => <Sales initialTab="new" />}</Route>
         <Route path="/vouchers/:id/edit" component={VoucherEdit} />
         <Route path="/vouchers">{() => <Vouchers />}</Route>
         <Route path="/purchase-orders/:id/edit" component={PurchaseOrderEdit} />
@@ -168,7 +169,7 @@ function Router({ user }: { user: any }) {
         <Route path="/payroll" component={Payroll} />
         <Route path="/create" component={AccountingCreate} />
         <Route path="/import-stock-items" component={ImportStockItems} />
-        <Route path="/sales-report" component={SalesReport} />
+        <Route path="/sales-report">{() => <Sales initialTab="history" />}</Route>
         <Route path="/voucher-detail/:voucherId" component={VoucherDetail} />
         <Route path="/sold-containers" component={SoldContainers} />
         <Route path="/moto-assembly" component={MotoAssembly} />
