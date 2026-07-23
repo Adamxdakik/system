@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, vouchersTable, voucherEntriesTable, accountsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray, desc } from "drizzle-orm";
 import { requireCompany } from "../middlewares/requireAuth";
 import { CreateVoucherBody, GetVoucherParams, ListVouchersQueryParams } from "@workspace/api-zod";
 
@@ -111,6 +111,56 @@ router.get("/vouchers/:id", requireCompany, async (req, res): Promise<void> => {
       creditAmount: toNum(e.creditAmount),
     })),
   });
+});
+
+// Sales history — SALES vouchers with their entries, for the POS history tab
+router.get("/sales-history", requireCompany, async (req, res): Promise<void> => {
+  const companyId = req.session.companyId!;
+
+  const vouchers = await db
+    .select()
+    .from(vouchersTable)
+    .where(and(eq(vouchersTable.companyId, companyId), eq(vouchersTable.voucherType, "SALES")))
+    .orderBy(desc(vouchersTable.voucherDate), desc(vouchersTable.createdAt));
+
+  if (!vouchers.length) {
+    res.json([]);
+    return;
+  }
+
+  const ids = vouchers.map((v) => v.id);
+  const entries = await db
+    .select({
+      id: voucherEntriesTable.id,
+      voucherId: voucherEntriesTable.voucherId,
+      accountId: voucherEntriesTable.accountId,
+      accountName: accountsTable.name,
+      accountCode: accountsTable.code,
+      debitAmount: voucherEntriesTable.debitAmount,
+      creditAmount: voucherEntriesTable.creditAmount,
+      narration: voucherEntriesTable.narration,
+    })
+    .from(voucherEntriesTable)
+    .leftJoin(accountsTable, eq(voucherEntriesTable.accountId, accountsTable.id))
+    .where(inArray(voucherEntriesTable.voucherId, ids));
+
+  const byVoucher: Record<number, typeof entries> = {};
+  for (const e of entries) {
+    if (!byVoucher[e.voucherId]) byVoucher[e.voucherId] = [];
+    byVoucher[e.voucherId].push(e);
+  }
+
+  res.json(
+    vouchers.map((v) => ({
+      ...v,
+      totalAmount: toNum(v.totalAmount),
+      entries: (byVoucher[v.id] ?? []).map((e) => ({
+        ...e,
+        debitAmount: toNum(e.debitAmount),
+        creditAmount: toNum(e.creditAmount),
+      })),
+    }))
+  );
 });
 
 export default router;
