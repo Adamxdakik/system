@@ -21,7 +21,7 @@ router.get("/vouchers", requireCompany, async (req, res): Promise<void> => {
   const vouchers = await dbQuery.orderBy(vouchersTable.voucherDate);
   const filtered = vouchers
     .filter((v) => !query.data?.date || v.voucherDate === query.data.date)
-    .filter((v) => !query.data?.type || v.voucherType === query.data.type);
+    .filter((v) => !query.data?.type || v.voucherType.toUpperCase() === query.data.type.toUpperCase());
 
   res.json(filtered.map((v) => ({ ...v, totalAmount: toNum(v.totalAmount) })));
 });

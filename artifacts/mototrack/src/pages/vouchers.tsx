@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useListVouchers, useCreateVoucher, useListAccounts } from "@workspace/api-client-react"
+import { useListVouchers, useCreateVoucher, useListAccounts, getListVouchersQueryKey } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -158,7 +158,7 @@ function VoucherForm({ onClose }: { onClose: () => void }) {
       }
     }, {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] })
+        queryClient.invalidateQueries({ queryKey: getListVouchersQueryKey() })
         onClose()
       }
     })

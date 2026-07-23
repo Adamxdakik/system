@@ -1,6 +1,7 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Link, useLocation } from "wouter"
-import { useGetMe, useLogout, getGetMeQueryKey } from "@workspace/api-client-react"
+import { useGetMe, useLogout, getGetMeQueryKey, useListCompanies, useSetCompany } from "@workspace/api-client-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -15,7 +16,8 @@ import {
   Users, 
   Settings, 
   LogOut,
-  Wrench
+  Wrench,
+  Building2
 } from "lucide-react"
 
 const NAV_ITEMS = [
@@ -30,9 +32,64 @@ const NAV_ITEMS = [
   { href: "/settings", label: "Settings", icon: Settings },
 ]
 
+function CompanySelector({ onSelected }: { onSelected: () => void }) {
+  const { data: companies, isLoading } = useListCompanies()
+  const setCompany = useSetCompany()
+  const queryClient = useQueryClient()
+  const [selected, setSelected] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const handleSelect = async (companyId: number) => {
+    setSaving(true)
+    setCompany.mutate(
+      { data: { companyId } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() })
+          onSelected()
+        },
+        onSettled: () => setSaving(false),
+      }
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur flex items-center justify-center">
+      <div className="w-full max-w-md border border-primary/20 bg-card rounded-sm shadow-2xl shadow-primary/10 overflow-hidden">
+        <div className="h-14 bg-primary/5 border-b border-primary/20 flex items-center gap-3 px-6">
+          <Building2 className="w-5 h-5 text-primary" />
+          <span className="font-bold tracking-widest text-primary uppercase text-sm">Select Operating Company</span>
+        </div>
+        <div className="p-6 space-y-3">
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground font-mono text-sm">LOADING...</div>
+          ) : (
+            companies?.map((c) => (
+              <button
+                key={c.id}
+                disabled={saving}
+                onClick={() => handleSelect(c.id)}
+                className={cn(
+                  "w-full text-left px-4 py-3 border rounded-sm font-mono text-sm transition-all",
+                  "hover:border-primary hover:bg-primary/5 hover:text-primary",
+                  "border-border text-foreground",
+                  saving && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <div className="font-bold tracking-wider">{c.name}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{c.code}</div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Shell({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation()
-  const { data: user, error, isLoading } = useGetMe({ query: { retry: false, queryKey: getGetMeQueryKey() } })
+  const { data: user, error, isLoading, refetch } = useGetMe({ query: { retry: false, queryKey: getGetMeQueryKey() } })
   const logout = useLogout()
 
   useEffect(() => {
@@ -57,6 +114,11 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
+      {/* Company selector overlay — shown until a company is picked */}
+      {!user.companyId && (
+        <CompanySelector onSelected={() => refetch()} />
+      )}
+
       {/* Sidebar */}
       <aside className="w-64 border-r border-border bg-sidebar flex flex-col hidden md:flex shrink-0">
         <div className="h-16 flex items-center px-6 border-b border-border shrink-0">
@@ -87,9 +149,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         {/* Header */}
         <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6 shrink-0">
           <div className="flex items-center gap-4">
-            <span className="font-mono text-sm font-bold text-muted-foreground">
+            <button
+              onClick={() => refetch()}
+              className="font-mono text-sm font-bold text-muted-foreground hover:text-primary transition-colors flex items-center gap-2"
+              title="Switch company"
+            >
+              <Building2 className="w-4 h-4" />
               {user.companyName || "NO COMPANY SELECTED"}
-            </span>
+            </button>
             <Badge variant="outline" className="font-mono border-primary/50 text-primary">
               {user.role}
             </Badge>
