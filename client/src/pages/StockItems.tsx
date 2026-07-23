@@ -142,9 +142,9 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
 
   // ── Manage state (all existing, preserved) ──────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedGroupFilter, setSelectedGroupFilter] = useState<
-    number | null | "uncategorized"
-  >(null);
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState<number | null | "uncategorized">(
+    null,
+  );
   const [selectedStockItemId, setSelectedStockItemId] = useState<number | null>(null);
   const [selectedStockItemName, setSelectedStockItemName] = useState<string>("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -186,7 +186,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
       if (!res.ok) throw new Error("Failed to fetch inventory summary");
       return res.json();
     },
-    enabled: allLocationIds.length > 0,
+    enabled: allLocationIds.length > 0 && overviewVisited,
   });
 
   // ── Per-product totals (memoised) ───────────────────────────────────────
@@ -203,8 +203,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
             totalValue += locData.value;
             if (locData.quantity !== 0) locationCount++;
           }
-          const averageCost =
-            totalQuantity !== 0 ? totalValue / totalQuantity : 0;
+          const averageCost = totalQuantity !== 0 ? totalValue / totalQuantity : 0;
           map.set(item.id, {
             totalQuantity,
             totalValue,
@@ -337,8 +336,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
       const matchesSearch =
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.barcode &&
-          item.barcode.toLowerCase().includes(searchTerm.toLowerCase()));
+        (item.barcode && item.barcode.toLowerCase().includes(searchTerm.toLowerCase()));
 
       if (selectedGroupFilter === "uncategorized") {
         return matchesSearch && !item.stockGroupId;
@@ -358,14 +356,12 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
     () => ({
       totalProducts: stockItems.length,
       activeProducts: stockItems.filter((i) => i.active).length,
-      inStock: stockItems.filter(
-        (i) => (productTotals.get(i.id)?.totalQuantity ?? 0) > 0
-      ).length,
+      inStock: stockItems.filter((i) => (productTotals.get(i.id)?.totalQuantity ?? 0) > 0).length,
       outOfStock: stockItems.filter(
-        (i) => i.active && (productTotals.get(i.id)?.totalQuantity ?? 0) === 0
+        (i) => i.active && (productTotals.get(i.id)?.totalQuantity ?? 0) === 0,
       ).length,
     }),
-    [stockItems, productTotals]
+    [stockItems, productTotals],
   );
 
   // ── Export ───────────────────────────────────────────────────────────────
@@ -387,8 +383,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
 
   const statusBadge = (item: StockItem) => {
     const status = getItemStatus(item);
-    if (status === "inactive")
-      return <Badge variant="secondary">Inactive</Badge>;
+    if (status === "inactive") return <Badge variant="secondary">Inactive</Badge>;
     if (status === "in-stock")
       return (
         <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">
@@ -418,19 +413,11 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
       {/* ── Internal sub-tabs ─────────────────────────────────────────── */}
       <Tabs value={stockSubTab} onValueChange={handleSubTabChange}>
         <TabsList className="h-9">
-          <TabsTrigger
-            value="overview"
-            className="gap-2 text-sm"
-            data-testid="tab-stock-overview"
-          >
+          <TabsTrigger value="overview" className="gap-2 text-sm" data-testid="tab-stock-overview">
             <Package className="h-3.5 w-3.5" />
             Stock Overview
           </TabsTrigger>
-          <TabsTrigger
-            value="manage"
-            className="gap-2 text-sm"
-            data-testid="tab-manage-products"
-          >
+          <TabsTrigger value="manage" className="gap-2 text-sm" data-testid="tab-manage-products">
             <Edit className="h-3.5 w-3.5" />
             Manage Products
           </TabsTrigger>
@@ -465,9 +452,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                     <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
                       In Stock
                     </p>
-                    <p className="text-2xl font-bold text-emerald-600">
-                      {overviewStats.inStock}
-                    </p>
+                    <p className="text-2xl font-bold text-emerald-600">{overviewStats.inStock}</p>
                   </CardHeader>
                 </Card>
                 <Card>
@@ -475,9 +460,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                     <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
                       Out of Stock
                     </p>
-                    <p className="text-2xl font-bold text-amber-600">
-                      {overviewStats.outOfStock}
-                    </p>
+                    <p className="text-2xl font-bold text-amber-600">{overviewStats.outOfStock}</p>
                   </CardHeader>
                 </Card>
               </div>
@@ -691,10 +674,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={exportToExcel}
-                        data-testid="button-export-items"
-                      >
+                      <DropdownMenuItem onClick={exportToExcel} data-testid="button-export-items">
                         <Download className="h-4 w-4 mr-2" />
                         Export
                       </DropdownMenuItem>
@@ -703,9 +683,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                         disabled={updateUOMMutation.isPending}
                         data-testid="button-update-uom"
                       >
-                        {updateUOMMutation.isPending
-                          ? "Converting..."
-                          : "Convert to Unit"}
+                        {updateUOMMutation.isPending ? "Converting..." : "Convert to Unit"}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -743,18 +721,14 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                     />
                   </div>
                   <Select
-                    value={
-                      selectedGroupFilter === null
-                        ? "all"
-                        : String(selectedGroupFilter)
-                    }
+                    value={selectedGroupFilter === null ? "all" : String(selectedGroupFilter)}
                     onValueChange={(val) => {
                       setSelectedGroupFilter(
                         val === "all"
                           ? null
                           : val === "uncategorized"
-                          ? "uncategorized"
-                          : parseInt(val)
+                            ? "uncategorized"
+                            : parseInt(val),
                       );
                     }}
                   >
@@ -807,10 +781,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                         <tbody>
                           {filteredManageItems.length === 0 ? (
                             <tr>
-                              <td
-                                colSpan={8}
-                                className="text-center py-8 text-muted-foreground"
-                              >
+                              <td colSpan={8} className="text-center py-8 text-muted-foreground">
                                 {searchTerm
                                   ? "No products found matching your search"
                                   : "No products found"}
@@ -818,9 +789,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                             </tr>
                           ) : (
                             filteredManageItems.map((item) => {
-                              const sellingPrice = parseFloat(
-                                item.sellingPrice || "0"
-                              );
+                              const sellingPrice = parseFloat(item.sellingPrice || "0");
                               const isSelected = selectedIds.includes(item.id);
                               return (
                                 <tr
@@ -828,10 +797,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                                   className="border-t hover-elevate h-12"
                                   data-testid={`row-stock-item-${item.id}`}
                                 >
-                                  <td
-                                    className="px-3"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
+                                  <td className="px-3" onClick={(e) => e.stopPropagation()}>
                                     <Checkbox
                                       checked={isSelected}
                                       onCheckedChange={(checked) =>
@@ -842,9 +808,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                                   </td>
                                   <td
                                     className="px-3 font-medium cursor-pointer"
-                                    onClick={() =>
-                                      handleStockItemClick(item.id, item.name)
-                                    }
+                                    onClick={() => handleStockItemClick(item.id, item.name)}
                                     data-testid={`name-${item.id}`}
                                   >
                                     <div className="flex items-center gap-2">
@@ -854,47 +818,35 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                                   </td>
                                   <td
                                     className="px-3 font-mono text-sm text-muted-foreground cursor-pointer"
-                                    onClick={() =>
-                                      handleStockItemClick(item.id, item.name)
-                                    }
+                                    onClick={() => handleStockItemClick(item.id, item.name)}
                                   >
                                     {item.code}
                                   </td>
                                   <td
                                     className="px-3 text-sm cursor-pointer"
-                                    onClick={() =>
-                                      handleStockItemClick(item.id, item.name)
-                                    }
+                                    onClick={() => handleStockItemClick(item.id, item.name)}
                                     data-testid={`group-${item.id}`}
                                   >
                                     {getStockGroupName(item.stockGroupId)}
                                   </td>
                                   <td
                                     className="px-3 font-mono text-xs text-muted-foreground cursor-pointer"
-                                    onClick={() =>
-                                      handleStockItemClick(item.id, item.name)
-                                    }
+                                    onClick={() => handleStockItemClick(item.id, item.name)}
                                   >
                                     {item.barcode || "—"}
                                   </td>
                                   <td
                                     className="px-3 text-right font-mono cursor-pointer"
-                                    onClick={() =>
-                                      handleStockItemClick(item.id, item.name)
-                                    }
+                                    onClick={() => handleStockItemClick(item.id, item.name)}
                                   >
                                     ${sellingPrice.toFixed(2)}
                                   </td>
                                   <td
                                     className="px-3 cursor-pointer"
-                                    onClick={() =>
-                                      handleStockItemClick(item.id, item.name)
-                                    }
+                                    onClick={() => handleStockItemClick(item.id, item.name)}
                                     data-testid={`status-${item.id}`}
                                   >
-                                    <Badge
-                                      variant={item.active ? "default" : "secondary"}
-                                    >
+                                    <Badge variant={item.active ? "default" : "secondary"}>
                                       {item.active ? "Active" : "Inactive"}
                                     </Badge>
                                   </td>
@@ -945,28 +897,19 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
         onOpenChange={setEditDialogOpen}
         stockItemId={editStockItemId}
       />
-      <StockItemCreateDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-      />
-      <CombinedImportDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-      />
+      <StockItemCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      <CombinedImportDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent data-testid="dialog-confirm-delete">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete {selectedIds.length}{" "}
-              {selectedIds.length === 1 ? "product" : "products"}? This action
-              cannot be undone.
+              {selectedIds.length === 1 ? "product" : "products"}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-destructive hover:bg-destructive/90"

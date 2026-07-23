@@ -27,8 +27,6 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const Login = lazy(() => import("@/pages/Login"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const POS = lazy(() => import("@/pages/POS"));
-const StockItems = lazy(() => import("@/pages/StockItems"));
-const Containers = lazy(() => import("@/pages/Containers"));
 const AddContainer = lazy(() => import("@/pages/AddContainer"));
 const Accounts = lazy(() => import("@/pages/Accounts"));
 const Suppliers = lazy(() => import("@/pages/Suppliers"));
@@ -43,9 +41,7 @@ const Settings = lazy(() => import("@/pages/Settings"));
 const VoucherEdit = lazy(() => import("@/pages/VoucherEdit"));
 const Payroll = lazy(() => import("@/pages/Payroll"));
 const ImportStockItems = lazy(() => import("@/pages/ImportStockItems"));
-const StockQuery = lazy(() => import("@/pages/StockQuery"));
 const StockItemDetail = lazy(() => import("@/pages/StockItemDetail"));
-const SalesReport = lazy(() => import("@/pages/SalesReport"));
 const Sales = lazy(() => import("@/pages/Sales"));
 const Inventory = lazy(() => import("@/pages/Inventory"));
 const POSDaybook = lazy(() => import("@/pages/POSDaybook"));
@@ -69,7 +65,6 @@ const MotoAssembly = lazy(() => import("@/pages/MotoAssembly"));
 const AssemblyHistory = lazy(() => import("@/pages/AssemblyHistory"));
 const IncomeStatement = lazy(() => import("@/pages/IncomeStatement"));
 const Customers = lazy(() => import("@/pages/Customers"));
-const LocationInsights = lazy(() => import("@/pages/LocationInsights"));
 const EmployeeInventory = lazy(() => import("@/pages/EmployeeInventory"));
 const Service = lazy(() => import("@/pages/Service"));
 const PurchaseHistory = lazy(() => import("@/pages/PurchaseHistory"));
@@ -115,7 +110,7 @@ function Router({ user }: { user: any }) {
     const timer = setInterval(send, 30000);
     return () => clearInterval(timer);
   }, [_location]);
-  
+
   if (isPOS) {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -135,7 +130,9 @@ function Router({ user }: { user: any }) {
       <Switch>
         <Route path="/" component={Dashboard} />
         {/* More-specific routes FIRST — wouter 3 uses prefix matching inside Switch */}
-        <Route path="/pos/edit/:id">{(params) => <Sales initialTab="new" editVoucherId={params.id} />}</Route>
+        <Route path="/pos/edit/:id">
+          {(params) => <Sales initialTab="new" editVoucherId={params.id} />}
+        </Route>
         <Route path="/pos-daybook" component={POSDaybook} />
         <Route path="/pos-import" component={POSImport} />
         <Route path="/pos">{() => <Sales initialTab="new" />}</Route>
@@ -149,12 +146,21 @@ function Router({ user }: { user: any }) {
         <Route path="/containers">{() => <Inventory initialTab="shipments" />}</Route>
         <Route path="/stock-items/:id/history/:year/:month" component={StockItemVouchers} />
         <Route path="/stock-items/:id/history" component={StockItemHistory} />
-        <Route path="/stock-items/:stockItemId/monthly-summary" component={LocationMonthlySummary} />
+        <Route
+          path="/stock-items/:stockItemId/monthly-summary"
+          component={LocationMonthlySummary}
+        />
         <Route path="/stock-items">{() => <Inventory initialTab="parts" />}</Route>
         <Route path="/stock-query/:id" component={StockItemDetail} />
-        <Route path="/stock-query" component={StockQuery} />
-        <Route path="/locations/:locationId/stock-items/:stockItemId/vouchers/:year/:month" component={LocationVouchers} />
-        <Route path="/locations/:locationId/stock-items/:stockItemId/history" component={LocationMonthlySummary} />
+        <Route path="/stock-query">{() => <Inventory initialTab="parts" />}</Route>
+        <Route
+          path="/locations/:locationId/stock-items/:stockItemId/vouchers/:year/:month"
+          component={LocationVouchers}
+        />
+        <Route
+          path="/locations/:locationId/stock-items/:stockItemId/history"
+          component={LocationMonthlySummary}
+        />
         <Route path="/opening-stock/:groupId" component={OpeningStockDetail} />
         <Route path="/opening-stock" component={OpeningStockSummary} />
         <Route path="/closing-stock/:groupId" component={ClosingStockDetail} />
@@ -194,8 +200,12 @@ function Router({ user }: { user: any }) {
 function AuthenticatedApp() {
   const [currentLocation, setLocation] = useLocation();
   const { open: cmdOpen, setOpen: setCmdOpen } = useCommandPalette();
-  
-  const { data: user, isLoading, error } = useQuery<any>({
+
+  const {
+    data: user,
+    isLoading,
+    error,
+  } = useQuery<any>({
     queryKey: ["/api/auth/me"],
     retry: false,
   });
@@ -238,7 +248,7 @@ function AuthenticatedApp() {
     const isOnPOS = currentLocation === "/";
     const isOnInventory = currentLocation === "/location-inventory";
     const isOnDaybook = currentLocation === "/pos-daybook";
-    
+
     return (
       <div className="flex flex-col h-screen w-full">
         <OfflineBanner />
@@ -327,7 +337,9 @@ function AuthenticatedApp() {
                 </kbd>
               </Button>
               <NotificationBell />
-              <span className="text-sm text-muted-foreground">{user.username} ({user.role})</span>
+              <span className="text-sm text-muted-foreground">
+                {user.username} ({user.role})
+              </span>
               <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -358,16 +370,16 @@ export default function App() {
               <DateFormatProvider>
                 <CurrencyProvider>
                   <CursorNavProvider>
-                      <Suspense fallback={<PageLoader />}>
-                        <Switch>
-                          <Route path="/login" component={Login} />
-                          <Route path="/employee-inventory" component={EmployeeInventory} />
-                          <Route>
-                            <AuthenticatedApp />
-                          </Route>
-                        </Switch>
-                      </Suspense>
-                      <Toaster />
+                    <Suspense fallback={<PageLoader />}>
+                      <Switch>
+                        <Route path="/login" component={Login} />
+                        <Route path="/employee-inventory" component={EmployeeInventory} />
+                        <Route>
+                          <AuthenticatedApp />
+                        </Route>
+                      </Switch>
+                    </Suspense>
+                    <Toaster />
                   </CursorNavProvider>
                 </CurrencyProvider>
               </DateFormatProvider>

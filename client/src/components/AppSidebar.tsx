@@ -1,17 +1,10 @@
 import { Link, useLocation } from "wouter";
-import {
-  ShoppingCart,
-  Package,
-  MoreHorizontal,
-  ChevronDown,
-  LayoutDashboard,
-} from "lucide-react";
+import { ShoppingCart, Package, MoreHorizontal, ChevronDown } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -21,11 +14,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { ROUTE_TO_FEATURE } from "@shared/schema";
@@ -35,13 +24,20 @@ import {
   salesItems,
   inventoryItems,
   moreSections,
+  type NavigationItem,
 } from "@/config/navigation";
 
 // ── Active-route helper ───────────────────────────────────────────────────────
 
-function isRouteActive(currentPath: string, itemPath: string): boolean {
-  if (itemPath === "/") return currentPath === "/";
-  return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`);
+function matchesNavigationItem(currentPath: string, item: NavigationItem): boolean {
+  const prefixes = item.activePrefixes ?? [item.url];
+
+  return prefixes.some((prefix) => {
+    if (prefix === "/") {
+      return currentPath === "/";
+    }
+    return currentPath === prefix || currentPath.startsWith(`${prefix}/`);
+  });
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -98,15 +94,13 @@ export function AppSidebar({ user }: { user?: any }) {
 
   // ── Active-state helpers ───────────────────────────────────────────────────
 
-  const isSalesActive = visibleSales.some((i) => isRouteActive(location, i.url));
-  const isInventoryActive = visibleInventory.some((i) => isRouteActive(location, i.url));
+  const isSalesActive = visibleSales.some((i) => matchesNavigationItem(location, i));
+  const isInventoryActive = visibleInventory.some((i) => matchesNavigationItem(location, i));
   const isMoreActive = visibleMoreSections.some((s) =>
-    s.items.some((i) => isRouteActive(location, i.url))
+    s.items.some((i) => matchesNavigationItem(location, i)),
   );
 
-  const initials = user?.username
-    ? user.username.substring(0, 2).toUpperCase()
-    : "AD";
+  const initials = user?.username ? user.username.substring(0, 2).toUpperCase() : "AD";
 
   return (
     <Sidebar>
@@ -114,16 +108,10 @@ export function AppSidebar({ user }: { user?: any }) {
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden bg-white p-1 shrink-0">
-            <img
-              src={huangheLogo}
-              alt="Huanghe Motors"
-              className="h-full w-full object-contain"
-            />
+            <img src={huangheLogo} alt="Huanghe Motors" className="h-full w-full object-contain" />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-base font-bold tracking-tight leading-tight">
-              Huanghe Motors
-            </span>
+            <span className="text-base font-bold tracking-tight leading-tight">Huanghe Motors</span>
             <span className="text-xs text-sidebar-foreground/50 leading-tight">
               Motorcycle Business Management
             </span>
@@ -136,14 +124,10 @@ export function AppSidebar({ user }: { user?: any }) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-
               {/* Dashboard — direct link */}
               {primaryItems.filter(isItemVisible).map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isRouteActive(location, item.url)}
-                  >
+                  <SidebarMenuButton asChild isActive={matchesNavigationItem(location, item)}>
                     <Link href={item.url} data-testid={`link-${item.url}`}>
                       <item.icon className="h-5 w-5" />
                       <span>{item.title}</span>
@@ -154,10 +138,7 @@ export function AppSidebar({ user }: { user?: any }) {
 
               {/* Sales */}
               {visibleSales.length > 0 && (
-                <Collapsible
-                  defaultOpen={isSalesActive}
-                  className="group/sales"
-                >
+                <Collapsible defaultOpen={isSalesActive} className="group/sales">
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton isActive={isSalesActive}>
@@ -172,12 +153,9 @@ export function AppSidebar({ user }: { user?: any }) {
                           <SidebarMenuSubItem key={item.url}>
                             <SidebarMenuSubButton
                               asChild
-                              isActive={isRouteActive(location, item.url)}
+                              isActive={matchesNavigationItem(location, item)}
                             >
-                              <Link
-                                href={item.url}
-                                data-testid={`link-${item.url}`}
-                              >
+                              <Link href={item.url} data-testid={`link-${item.url}`}>
                                 <item.icon className="h-4 w-4" />
                                 <span>{item.title}</span>
                               </Link>
@@ -192,10 +170,7 @@ export function AppSidebar({ user }: { user?: any }) {
 
               {/* Inventory */}
               {visibleInventory.length > 0 && (
-                <Collapsible
-                  defaultOpen={isInventoryActive}
-                  className="group/inventory"
-                >
+                <Collapsible defaultOpen={isInventoryActive} className="group/inventory">
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton isActive={isInventoryActive}>
@@ -210,12 +185,9 @@ export function AppSidebar({ user }: { user?: any }) {
                           <SidebarMenuSubItem key={item.url}>
                             <SidebarMenuSubButton
                               asChild
-                              isActive={isRouteActive(location, item.url)}
+                              isActive={matchesNavigationItem(location, item)}
                             >
-                              <Link
-                                href={item.url}
-                                data-testid={`link-${item.url}`}
-                              >
+                              <Link href={item.url} data-testid={`link-${item.url}`}>
                                 <item.icon className="h-4 w-4" />
                                 <span>{item.title}</span>
                               </Link>
@@ -230,10 +202,7 @@ export function AppSidebar({ user }: { user?: any }) {
 
               {/* More */}
               {visibleMoreSections.length > 0 && (
-                <Collapsible
-                  defaultOpen={isMoreActive}
-                  className="group/more"
-                >
+                <Collapsible defaultOpen={isMoreActive} className="group/more">
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton isActive={isMoreActive}>
@@ -254,12 +223,9 @@ export function AppSidebar({ user }: { user?: any }) {
                                 <SidebarMenuSubItem key={item.url}>
                                   <SidebarMenuSubButton
                                     asChild
-                                    isActive={isRouteActive(location, item.url)}
+                                    isActive={matchesNavigationItem(location, item)}
                                   >
-                                    <Link
-                                      href={item.url}
-                                      data-testid={`link-${item.url}`}
-                                    >
+                                    <Link href={item.url} data-testid={`link-${item.url}`}>
                                       <item.icon className="h-4 w-4" />
                                       <span>{item.title}</span>
                                     </Link>
@@ -274,7 +240,6 @@ export function AppSidebar({ user }: { user?: any }) {
                   </SidebarMenuItem>
                 </Collapsible>
               )}
-
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -287,9 +252,7 @@ export function AppSidebar({ user }: { user?: any }) {
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-sm font-medium truncate">
-              {user?.username || "User"}
-            </span>
+            <span className="text-sm font-medium truncate">{user?.username || "User"}</span>
             <span className="text-xs text-sidebar-foreground/50 truncate">
               {user?.role || "Role"}
             </span>

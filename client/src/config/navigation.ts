@@ -24,6 +24,7 @@ export interface NavigationItem {
   title: string;
   url: string;
   icon: LucideIcon;
+  activePrefixes?: string[];
 }
 
 export interface NavigationSection {
@@ -35,18 +36,48 @@ export interface NavigationSection {
 // ── Top-level groups ─────────────────────────────────────────────────────────
 
 export const primaryItems: NavigationItem[] = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  {
+    title: "Dashboard",
+    url: "/",
+    icon: LayoutDashboard,
+    activePrefixes: ["/"],
+  },
 ];
 
 export const salesItems: NavigationItem[] = [
-  { title: "New Sale", url: "/pos", icon: ShoppingCart },
-  { title: "Sales History", url: "/sales-report", icon: History },
+  {
+    title: "New Sale",
+    url: "/pos",
+    icon: ShoppingCart,
+    activePrefixes: ["/pos"],
+  },
+  {
+    title: "Sales History",
+    url: "/sales-report",
+    icon: History,
+    activePrefixes: ["/sales-report"],
+  },
 ];
 
 export const inventoryItems: NavigationItem[] = [
-  { title: "Parts & Stock", url: "/stock-items", icon: Package },
-  { title: "Shipments", url: "/containers", icon: Container },
-  { title: "Location Details", url: "/location-insights", icon: MapPin },
+  {
+    title: "Parts & Stock",
+    url: "/stock-items",
+    icon: Package,
+    activePrefixes: ["/stock-items", "/stock-query"],
+  },
+  {
+    title: "Shipments",
+    url: "/containers",
+    icon: Container,
+    activePrefixes: ["/containers"],
+  },
+  {
+    title: "Location Details",
+    url: "/location-insights",
+    icon: MapPin,
+    activePrefixes: ["/location-insights"],
+  },
 ];
 
 // ── "More" sections ───────────────────────────────────────────────────────────
@@ -106,7 +137,5 @@ export const commandItems: CommandItem[] = [
   ...primaryItems.map((i) => ({ ...i, group: "Main" })),
   ...salesItems.map((i) => ({ ...i, group: "Sales" })),
   ...inventoryItems.map((i) => ({ ...i, group: "Inventory" })),
-  ...moreSections.flatMap((s) =>
-    s.items.map((i) => ({ ...i, group: s.title }))
-  ),
+  ...moreSections.flatMap((s) => s.items.map((i) => ({ ...i, group: s.title }))),
 ];

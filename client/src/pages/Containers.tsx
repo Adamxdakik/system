@@ -69,9 +69,8 @@ interface ContainersProps {
 // ── Component ───────────────────────────────────────────────────────────────
 
 export default function Containers({ embedded = false }: ContainersProps = {}) {
-  const [shipmentTab, setShipmentTab] = useState<"otw" | "arrived" | "completed">(
-    "otw"
-  );
+  const [shipmentTab, setShipmentTab] = useState<"otw" | "arrived" | "completed">("otw");
+  const [completedVisited, setCompletedVisited] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("ALL");
   const [, navigate] = useLocation();
@@ -83,11 +82,9 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
     enabled: !!selectedCompany?.id,
   });
 
-  const { data: soldContainers = [], isLoading: isSoldLoading } = useQuery<
-    SoldContainer[]
-  >({
+  const { data: soldContainers = [], isLoading: isSoldLoading } = useQuery<SoldContainer[]>({
     queryKey: ["/api/containers/sold", selectedCompany?.id],
-    enabled: !!selectedCompany?.id,
+    enabled: !!selectedCompany?.id && completedVisited,
   });
 
   const { data: suppliers = [] } = useQuery<Supplier[]>({
@@ -98,7 +95,7 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
   const otwContainers = allContainers.filter((c) => c.status === "OTW");
   const arrivedContainers = allContainers.filter((c) => c.status === "ARRIVED");
   const completedActiveContainers = allContainers.filter(
-    (c) => c.status !== "OTW" && c.status !== "ARRIVED"
+    (c) => c.status !== "OTW" && c.status !== "ARRIVED",
   );
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -117,8 +114,7 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
         )
           return false;
       }
-      if (supplierFilter !== "ALL" && c.supplierId.toString() !== supplierFilter)
-        return false;
+      if (supplierFilter !== "ALL" && c.supplierId.toString() !== supplierFilter) return false;
       return true;
     });
 
@@ -150,8 +146,8 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
       shipmentTab === "otw"
         ? filteredOtw
         : shipmentTab === "arrived"
-        ? filteredArrived
-        : filteredCompleted;
+          ? filteredArrived
+          : filteredCompleted;
 
     const data = list.map((container) => ({
       "Container Number": container.containerNumber,
@@ -172,13 +168,10 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
     shipmentTab === "otw"
       ? filteredOtw
       : shipmentTab === "arrived"
-      ? filteredArrived
-      : filteredCompleted;
+        ? filteredArrived
+        : filteredCompleted;
 
-  const activeTotal = activeList.reduce(
-    (sum, c) => sum + parseFloat(c.grandTotal || "0"),
-    0
-  );
+  const activeTotal = activeList.reduce((sum, c) => sum + parseFloat(c.grandTotal || "0"), 0);
 
   // ── Status badge ─────────────────────────────────────────────────────────
   const statusBadge = (status: string) => {
@@ -241,23 +234,17 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
             <TableBody>
               {list.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-12 text-muted-foreground"
-                  >
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     {shipmentTab === "otw"
                       ? "No shipments on the way"
                       : shipmentTab === "arrived"
-                      ? "No shipments ready to receive"
-                      : "No received shipments"}
+                        ? "No shipments ready to receive"
+                        : "No received shipments"}
                   </TableCell>
                 </TableRow>
               ) : (
                 list.map((container) => (
-                  <TableRow
-                    key={container.id}
-                    data-testid={`row-container-${container.id}`}
-                  >
+                  <TableRow key={container.id} data-testid={`row-container-${container.id}`}>
                     <TableCell className="font-mono font-medium">
                       {container.containerNumber}
                     </TableCell>
@@ -394,25 +381,21 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
       {/* ── Main tabs ──────────────────────────────────────────────────── */}
       <Tabs
         value={shipmentTab}
-        onValueChange={(v) => setShipmentTab(v as typeof shipmentTab)}
+        onValueChange={(v) => {
+          const tab = v as typeof shipmentTab;
+          setShipmentTab(tab);
+          if (tab === "completed") setCompletedVisited(true);
+        }}
       >
         <TabsList className="h-10">
-          <TabsTrigger
-            value="otw"
-            className="gap-2 px-4"
-            data-testid="tab-shipments-otw"
-          >
+          <TabsTrigger value="otw" className="gap-2 px-4" data-testid="tab-shipments-otw">
             <Truck className="h-4 w-4" />
             On the Way
             <Badge variant="secondary" className="ml-1 px-1.5">
               {otwContainers.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger
-            value="arrived"
-            className="gap-2 px-4"
-            data-testid="tab-shipments-arrived"
-          >
+          <TabsTrigger value="arrived" className="gap-2 px-4" data-testid="tab-shipments-arrived">
             <Package className="h-4 w-4" />
             Ready to Receive
             <Badge variant="secondary" className="ml-1 px-1.5">
@@ -451,11 +434,11 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
                 <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
                   Total Value
                 </p>
-                <p
-                  className="text-2xl font-bold font-mono"
-                  data-testid="text-total-amount"
-                >
-                  ${formatNumber(filteredOtw.reduce((s, c) => s + parseFloat(c.grandTotal || "0"), 0))}
+                <p className="text-2xl font-bold font-mono" data-testid="text-total-amount">
+                  $
+                  {formatNumber(
+                    filteredOtw.reduce((s, c) => s + parseFloat(c.grandTotal || "0"), 0),
+                  )}
                 </p>
               </CardHeader>
             </Card>
@@ -480,7 +463,10 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
                   Total Value
                 </p>
                 <p className="text-2xl font-bold font-mono">
-                  ${formatNumber(filteredArrived.reduce((s, c) => s + parseFloat(c.grandTotal || "0"), 0))}
+                  $
+                  {formatNumber(
+                    filteredArrived.reduce((s, c) => s + parseFloat(c.grandTotal || "0"), 0),
+                  )}
                 </p>
               </CardHeader>
             </Card>
@@ -514,15 +500,10 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
                   Total Recorded Value
                 </p>
                 <p className="text-xl font-bold font-mono">
-                  ${formatNumber(
-                    filteredCompleted.reduce(
-                      (s, c) => s + parseFloat(c.grandTotal || "0"),
-                      0
-                    ) +
-                      filteredSold.reduce(
-                        (s, c) => s + parseFloat(c.totalAmount || "0"),
-                        0
-                      )
+                  $
+                  {formatNumber(
+                    filteredCompleted.reduce((s, c) => s + parseFloat(c.grandTotal || "0"), 0) +
+                      filteredSold.reduce((s, c) => s + parseFloat(c.totalAmount || "0"), 0),
                   )}
                 </p>
               </CardHeader>
@@ -567,9 +548,7 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
                               <TableCell className="font-mono font-medium">
                                 {container.containerNumber}
                               </TableCell>
-                              <TableCell>
-                                {getSupplierName(container.supplierId)}
-                              </TableCell>
+                              <TableCell>{getSupplierName(container.supplierId)}</TableCell>
                               <TableCell className="font-mono text-sm">
                                 {new Date(container.importDate).toLocaleDateString()}
                               </TableCell>
@@ -581,9 +560,7 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() =>
-                                    navigate(`/containers/${container.id}`)
-                                  }
+                                  onClick={() => navigate(`/containers/${container.id}`)}
                                   data-testid={`button-view-${container.id}`}
                                   className="gap-2"
                                 >
@@ -640,10 +617,7 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
                         </TableHeader>
                         <TableBody>
                           {filteredSold.map((sale) => (
-                            <TableRow
-                              key={sale.saleId}
-                              data-testid={`row-sale-${sale.saleId}`}
-                            >
+                            <TableRow key={sale.saleId} data-testid={`row-sale-${sale.saleId}`}>
                               <TableCell className="font-mono font-medium">
                                 {sale.containerNumber}
                               </TableCell>

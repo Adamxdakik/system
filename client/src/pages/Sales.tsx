@@ -52,9 +52,7 @@ export default function Sales({ initialTab = "new", editVoucherId }: SalesProps)
     <div className="space-y-4">
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {isEditMode ? "Edit Sale" : "Sales"}
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight">{isEditMode ? "Edit Sale" : "Sales"}</h1>
         <p className="text-muted-foreground text-sm">
           {isEditMode
             ? "Update the details of this sales transaction."
@@ -65,43 +63,31 @@ export default function Sales({ initialTab = "new", editVoucherId }: SalesProps)
       {/* ── Tabs (hidden in edit mode) ───────────────────────────────────── */}
       {!isEditMode && (
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="h-10">
-            <TabsTrigger
-              value="new"
-              className="gap-2 px-4"
-              data-testid="tab-new-sale"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              New Sale
-            </TabsTrigger>
-            <TabsTrigger
-              value="history"
-              className="gap-2 px-4"
-              data-testid="tab-sales-history"
-            >
-              <History className="h-4 w-4" />
-              Sales History
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="h-10">
+              <TabsTrigger value="new" className="gap-2 px-4" data-testid="tab-new-sale">
+                <ShoppingCart className="h-4 w-4" />
+                New Sale
+              </TabsTrigger>
+              <TabsTrigger value="history" className="gap-2 px-4" data-testid="tab-sales-history">
+                <History className="h-4 w-4" />
+                Sales History
+              </TabsTrigger>
+            </TabsList>
+          </div>
         </Tabs>
       )}
 
       {/* ── New Sale panel ───────────────────────────────────────────────── */}
-      <div style={{ display: activeTab === "new" || isEditMode ? undefined : "none" }}>
+      <div hidden={activeTab !== "new" && !isEditMode}>
         {(newSaleVisited || isEditMode) && (
-          <POS
-            embedded
-            editVoucherId={editVoucherId}
-            onDirtyChange={setSaleIsDirty}
-          />
+          <POS embedded editVoucherId={editVoucherId} onDirtyChange={setSaleIsDirty} />
         )}
       </div>
 
       {/* ── Sales History panel ──────────────────────────────────────────── */}
       {!isEditMode && (
-        <div style={{ display: activeTab === "history" ? undefined : "none" }}>
-          {historyVisited && <SalesReport embedded />}
-        </div>
+        <div hidden={activeTab !== "history"}>{historyVisited && <SalesReport embedded />}</div>
       )}
 
       {/* ── Unsaved-sale warning ─────────────────────────────────────────── */}
@@ -114,10 +100,7 @@ export default function Sales({ initialTab = "new", editVoucherId }: SalesProps)
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDirtyWarning(false)}
-            >
+            <Button variant="outline" onClick={() => setShowDirtyWarning(false)}>
               Stay on New Sale
             </Button>
             <Button

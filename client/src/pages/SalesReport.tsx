@@ -107,7 +107,10 @@ const formatCurrency = (value: string | number): string => {
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "$0";
   if (num % 1 === 0) return "$" + Math.abs(num).toLocaleString("en-US");
-  return "$" + Math.abs(num).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (
+    "$" +
+    Math.abs(num).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  );
 };
 
 const formatNumber = (value: string | number): string => {
@@ -164,12 +167,17 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
       const body: any = {};
       if (startDate) body.startDate = startDate;
       if (endDate) body.endDate = endDate;
-      if (selectedLocation && selectedLocation !== "all") body.locationId = parseInt(selectedLocation);
-      if (selectedStockItem && selectedStockItem !== "all") body.stockItemId = parseInt(selectedStockItem);
+      if (selectedLocation && selectedLocation !== "all")
+        body.locationId = parseInt(selectedLocation);
+      if (selectedStockItem && selectedStockItem !== "all")
+        body.stockItemId = parseInt(selectedStockItem);
       return apiRequest("POST", "/api/sales-report/recalculate-costs", body);
     },
     onSuccess: (data: any) => {
-      toast({ title: "Cost Prices Updated", description: `Updated ${data.updatedCount} of ${data.totalChecked} sales items` });
+      toast({
+        title: "Cost Prices Updated",
+        description: `Updated ${data.updatedCount} of ${data.totalChecked} sales items`,
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/sales-report"] });
     },
     onError: (error: Error) => {
@@ -184,8 +192,10 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
   const queryParams = new URLSearchParams();
   if (startDate) queryParams.append("startDate", startDate);
   if (endDate) queryParams.append("endDate", endDate);
-  if (selectedLocation && selectedLocation !== "all") queryParams.append("locationId", selectedLocation);
-  if (selectedStockItem && selectedStockItem !== "all") queryParams.append("stockItemId", selectedStockItem);
+  if (selectedLocation && selectedLocation !== "all")
+    queryParams.append("locationId", selectedLocation);
+  if (selectedStockItem && selectedStockItem !== "all")
+    queryParams.append("stockItemId", selectedStockItem);
   const queryString = queryParams.toString();
   const queryKey = queryString ? `/api/sales-report?${queryString}` : "/api/sales-report";
 
@@ -229,9 +239,8 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
         (inv.locationName || "").toLowerCase().includes(s) ||
         inv.items.some(
           (i) =>
-            i.stockItemName.toLowerCase().includes(s) ||
-            i.stockItemCode.toLowerCase().includes(s)
-        )
+            i.stockItemName.toLowerCase().includes(s) || i.stockItemCode.toLowerCase().includes(s),
+        ),
     );
   }, [invoices, searchTerm]);
 
@@ -246,79 +255,125 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
           ? filteredInvoices.reduce((s, i) => s + i.totalSales, 0) / filteredInvoices.length
           : 0,
     }),
-    [filteredInvoices]
+    [filteredInvoices],
   );
 
-  // ── Advanced view: grouped data ──────────────────────────────────────────
-  const groupedData: DailySummary[] = salesData.reduce((acc: DailySummary[], item) => {
-    const itemDate = parseISO(item.voucherDate);
-    let groupKey: string;
-    let displayDate: string;
-    if (grouping === "daily") { groupKey = format(startOfDay(itemDate), "yyyy-MM-dd"); displayDate = formatDisplayDate(itemDate); }
-    else if (grouping === "monthly") { groupKey = format(startOfMonth(itemDate), "yyyy-MM"); displayDate = format(itemDate, "MMMM yyyy"); }
-    else { groupKey = format(startOfYear(itemDate), "yyyy"); displayDate = format(itemDate, "yyyy"); }
+  // ── Advanced view: grouped data (memoised) ───────────────────────────────
+  const groupedData: DailySummary[] = useMemo(() => {
+    const result = salesData.reduce((acc: DailySummary[], item) => {
+      const itemDate = parseISO(item.voucherDate);
+      let groupKey: string;
+      let displayDate: string;
+      if (grouping === "daily") {
+        groupKey = format(startOfDay(itemDate), "yyyy-MM-dd");
+        displayDate = formatDisplayDate(itemDate);
+      } else if (grouping === "monthly") {
+        groupKey = format(startOfMonth(itemDate), "yyyy-MM");
+        displayDate = format(itemDate, "MMMM yyyy");
+      } else {
+        groupKey = format(startOfYear(itemDate), "yyyy");
+        displayDate = format(itemDate, "yyyy");
+      }
 
-    if (searchTerm) {
-      const s = searchTerm.toLowerCase();
-      const matches =
-        item.stockItemName.toLowerCase().includes(s) ||
-        (item.locationName && item.locationName.toLowerCase().includes(s));
-      if (!matches) return acc;
-    }
+      if (searchTerm) {
+        const s = searchTerm.toLowerCase();
+        const matches =
+          item.stockItemName.toLowerCase().includes(s) ||
+          (item.locationName && item.locationName.toLowerCase().includes(s));
+        if (!matches) return acc;
+      }
 
-    const existing = acc.find((g) => g.date === groupKey);
-    const totalSales = parseFloat(item.totalSales);
-    const totalCost = parseFloat(item.totalCost);
-    const totalConfiguredCost = item.totalConfiguredCost;
-    const costProfit = parseFloat(item.costProfit);
-    const configuredProfit = item.configuredProfit;
-    const qty = parseFloat(item.quantity) || 0;
+      const existing = acc.find((g) => g.date === groupKey);
+      const totalSales = parseFloat(item.totalSales);
+      const totalCost = parseFloat(item.totalCost);
+      const totalConfiguredCost = item.totalConfiguredCost;
+      const costProfit = parseFloat(item.costProfit);
+      const configuredProfit = item.configuredProfit;
+      const qty = parseFloat(item.quantity) || 0;
 
-    if (existing) {
-      existing.totalSales += totalSales;
-      existing.totalCost += totalCost;
-      existing.totalConfiguredCost += totalConfiguredCost;
-      existing.costProfit += costProfit;
-      existing.configuredProfit += configuredProfit;
-      existing.itemCount += qty;
-      existing.items.push(item);
-    } else {
-      acc.push({ date: groupKey, displayDate, totalSales, totalCost, totalConfiguredCost, costProfit, configuredProfit, itemCount: qty, items: [item] });
-    }
-    return acc;
-  }, []);
-  groupedData.sort((a, b) => b.date.localeCompare(a.date));
+      if (existing) {
+        existing.totalSales += totalSales;
+        existing.totalCost += totalCost;
+        existing.totalConfiguredCost += totalConfiguredCost;
+        existing.costProfit += costProfit;
+        existing.configuredProfit += configuredProfit;
+        existing.itemCount += qty;
+        existing.items.push(item);
+      } else {
+        acc.push({
+          date: groupKey,
+          displayDate,
+          totalSales,
+          totalCost,
+          totalConfiguredCost,
+          costProfit,
+          configuredProfit,
+          itemCount: qty,
+          items: [item],
+        });
+      }
+      return acc;
+    }, []);
+    result.sort((a, b) => b.date.localeCompare(a.date));
+    return result;
+  }, [salesData, grouping, searchTerm, formatDisplayDate]);
 
-  const filteredGroupedData = groupedData.filter((group) => {
-    if (profitFilter === "all") return true;
-    if (profitFilter === "positive") return group.configuredProfit >= 0;
-    if (profitFilter === "negative") return group.configuredProfit < 0;
-    return true;
-  });
+  const filteredGroupedData = useMemo(
+    () =>
+      groupedData.filter((group) => {
+        if (profitFilter === "all") return true;
+        if (profitFilter === "positive") return group.configuredProfit >= 0;
+        if (profitFilter === "negative") return group.configuredProfit < 0;
+        return true;
+      }),
+    [groupedData, profitFilter],
+  );
 
-  const totals = filteredGroupedData.reduce(
-    (acc, group) => ({
-      totalSales: acc.totalSales + group.totalSales,
-      totalCost: acc.totalCost + group.totalCost,
-      totalConfiguredCost: acc.totalConfiguredCost + group.totalConfiguredCost,
-      costProfit: acc.costProfit + group.costProfit,
-      configuredProfit: acc.configuredProfit + group.configuredProfit,
-      itemCount: acc.itemCount + group.itemCount,
-    }),
-    { totalSales: 0, totalCost: 0, totalConfiguredCost: 0, costProfit: 0, configuredProfit: 0, itemCount: 0 }
+  const totals = useMemo(
+    () =>
+      filteredGroupedData.reduce(
+        (acc, group) => ({
+          totalSales: acc.totalSales + group.totalSales,
+          totalCost: acc.totalCost + group.totalCost,
+          totalConfiguredCost: acc.totalConfiguredCost + group.totalConfiguredCost,
+          costProfit: acc.costProfit + group.costProfit,
+          configuredProfit: acc.configuredProfit + group.configuredProfit,
+          itemCount: acc.itemCount + group.itemCount,
+        }),
+        {
+          totalSales: 0,
+          totalCost: 0,
+          totalConfiguredCost: 0,
+          costProfit: 0,
+          configuredProfit: 0,
+          itemCount: 0,
+        },
+      ),
+    [filteredGroupedData],
   );
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleClearFilters = () => {
-    setStartDate(""); setEndDate(""); setSelectedLocation(""); setSelectedStockItem(""); setSearchTerm(""); setProfitFilter("all"); setActivePreset(""); setHighlightedIndex(null);
+    setStartDate("");
+    setEndDate("");
+    setSelectedLocation("");
+    setSelectedStockItem("");
+    setSearchTerm("");
+    setProfitFilter("all");
+    setActivePreset("");
+    setHighlightedIndex(null);
   };
 
   const handlePresetSelect = (start: string, end: string, id: PresetId) => {
-    setActivePreset(id); setStartDate(start); setEndDate(end); setHighlightedIndex(null);
+    setActivePreset(id);
+    setStartDate(start);
+    setEndDate(end);
+    setHighlightedIndex(null);
   };
 
   const handleRowClick = (summary: DailySummary) => {
-    setSelectedDaySummary(summary); setDetailsDialogOpen(true);
+    setSelectedDaySummary(summary);
+    setDetailsDialogOpen(true);
   };
 
   // Advanced keyboard navigation
@@ -326,11 +381,31 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
     if (!showAdvancedReport) return;
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      const isInput = tag === "input" || tag === "textarea" || tag === "select" || (e.target as HTMLElement)?.isContentEditable;
+      const isInput =
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        (e.target as HTMLElement)?.isContentEditable;
       if (detailsDialogOpen || isInput) return;
-      if (e.key === "ArrowUp") { e.preventDefault(); setHighlightedIndex((p) => { if (p === null || p === 0) return filteredGroupedData.length - 1; return p - 1; }); }
-      if (e.key === "ArrowDown") { e.preventDefault(); setHighlightedIndex((p) => { if (p === null) return 0; if (p >= filteredGroupedData.length - 1) return 0; return p + 1; }); }
-      if (e.key === "Enter" && highlightedIndex !== null && filteredGroupedData[highlightedIndex]) { e.preventDefault(); handleRowClick(filteredGroupedData[highlightedIndex]); }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightedIndex((p) => {
+          if (p === null || p === 0) return filteredGroupedData.length - 1;
+          return p - 1;
+        });
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightedIndex((p) => {
+          if (p === null) return 0;
+          if (p >= filteredGroupedData.length - 1) return 0;
+          return p + 1;
+        });
+      }
+      if (e.key === "Enter" && highlightedIndex !== null && filteredGroupedData[highlightedIndex]) {
+        e.preventDefault();
+        handleRowClick(filteredGroupedData[highlightedIndex]);
+      }
       if (e.key === "Escape") setHighlightedIndex(null);
     };
     document.addEventListener("keydown", handler);
@@ -347,7 +422,7 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
 
   const handleExportExcel = async () => {
     const exportData = groupedData.map((group) => ({
-      "Date": group.displayDate,
+      Date: group.displayDate,
       "Items Sold": group.itemCount,
       "Total Sales": group.totalSales.toFixed(2),
       "Total Cost": group.totalCost.toFixed(2),
@@ -356,7 +431,7 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
       "Configured Profit": group.configuredProfit.toFixed(2),
     }));
     exportData.push({
-      "Date": "TOTAL",
+      Date: "TOTAL",
       "Items Sold": totals.itemCount,
       "Total Sales": totals.totalSales.toFixed(2),
       "Total Cost": totals.totalCost.toFixed(2),
@@ -383,11 +458,21 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <Label>Start Date</Label>
-            <DatePickerInput value={startDate} onChange={setStartDate} placeholder="Start date" data-testid="input-start-date" />
+            <DatePickerInput
+              value={startDate}
+              onChange={setStartDate}
+              placeholder="Start date"
+              data-testid="input-start-date"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>End Date</Label>
-            <DatePickerInput value={endDate} onChange={setEndDate} placeholder="End date" data-testid="input-end-date" />
+            <DatePickerInput
+              value={endDate}
+              onChange={setEndDate}
+              placeholder="End date"
+              data-testid="input-end-date"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Location</Label>
@@ -398,7 +483,9 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
               <SelectContent>
                 <SelectItem value="all">All Locations</SelectItem>
                 {locations.map((loc: any) => (
-                  <SelectItem key={loc.id} value={loc.id.toString()}>{loc.name}</SelectItem>
+                  <SelectItem key={loc.id} value={loc.id.toString()}>
+                    {loc.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -413,7 +500,12 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
             />
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={handleClearFilters} data-testid="button-clear-filters">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleClearFilters}
+          data-testid="button-clear-filters"
+        >
           Clear Filters
         </Button>
       </CardContent>
@@ -427,7 +519,9 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
       {!embedded && (
         <div>
           <h1 className="text-2xl font-bold">Sales History</h1>
-          <p className="text-sm text-muted-foreground">Review and analyze your sales transactions.</p>
+          <p className="text-sm text-muted-foreground">
+            Review and analyze your sales transactions.
+          </p>
         </div>
       )}
 
@@ -454,28 +548,61 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                 disabled={recalculateMutation.isPending}
                 data-testid="button-recalculate-costs"
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${recalculateMutation.isPending ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`w-4 h-4 mr-2 ${recalculateMutation.isPending ? "animate-spin" : ""}`}
+                />
                 {recalculateMutation.isPending ? "Updating..." : "Fix Cost Prices"}
               </Button>
-              <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={groupedData.length === 0} data-testid="button-export-excel">
-                <FileSpreadsheet className="w-4 h-4 mr-2" />Export Excel
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportExcel}
+                disabled={groupedData.length === 0}
+                data-testid="button-export-excel"
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export Excel
               </Button>
-              <Button variant="outline" size="sm" onClick={handleExportPDF} disabled={groupedData.length === 0} data-testid="button-export-pdf">
-                <FileText className="w-4 h-4 mr-2" />Export PDF
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPDF}
+                disabled={groupedData.length === 0}
+                data-testid="button-export-pdf"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
               </Button>
             </div>
           </div>
 
           {/* Advanced summary cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card><CardHeader className="pb-2"><CardDescription>Total Sales</CardDescription><CardTitle className="text-2xl">{formatCurrency(totals.totalSales)}</CardTitle></CardHeader></Card>
-            <Card><CardHeader className="pb-2"><CardDescription>Cost Price Total</CardDescription><CardTitle className="text-2xl">{formatCurrency(totals.totalCost)}</CardTitle></CardHeader></Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Total Sales</CardDescription>
+                <CardTitle className="text-2xl">{formatCurrency(totals.totalSales)}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Cost Price Total</CardDescription>
+                <CardTitle className="text-2xl">{formatCurrency(totals.totalCost)}</CardTitle>
+              </CardHeader>
+            </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Cost Profit</CardDescription>
-                <CardTitle className={`text-2xl flex items-center gap-2 ${totals.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  {totals.costProfit >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                  {totals.costProfit < 0 ? "-" : ""}{formatCurrency(totals.costProfit)}
+                <CardTitle
+                  className={`text-2xl flex items-center gap-2 ${totals.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                >
+                  {totals.costProfit >= 0 ? (
+                    <TrendingUp className="w-5 h-5" />
+                  ) : (
+                    <TrendingDown className="w-5 h-5" />
+                  )}
+                  {totals.costProfit < 0 ? "-" : ""}
+                  {formatCurrency(totals.costProfit)}
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -483,7 +610,9 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
 
           {/* Advanced filters */}
           <Card>
-            <CardHeader><CardTitle className="text-sm">Advanced Filters</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-sm">Advanced Filters</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Quick Period</Label>
@@ -493,7 +622,9 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                 <div className="space-y-1.5">
                   <Label>View By</Label>
                   <Select value={grouping} onValueChange={(v) => setGrouping(v as GroupingType)}>
-                    <SelectTrigger data-testid="select-grouping"><SelectValue /></SelectTrigger>
+                    <SelectTrigger data-testid="select-grouping">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="daily">Daily</SelectItem>
                       <SelectItem value="monthly">Monthly</SelectItem>
@@ -503,8 +634,13 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                 </div>
                 <div className="space-y-1.5">
                   <Label>Profit Filter</Label>
-                  <Select value={profitFilter} onValueChange={(v) => setProfitFilter(v as ProfitFilter)}>
-                    <SelectTrigger data-testid="select-profit-filter"><SelectValue /></SelectTrigger>
+                  <Select
+                    value={profitFilter}
+                    onValueChange={(v) => setProfitFilter(v as ProfitFilter)}
+                  >
+                    <SelectTrigger data-testid="select-profit-filter">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Profits</SelectItem>
                       <SelectItem value="positive">Positive Only</SelectItem>
@@ -514,52 +650,91 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                 </div>
                 <div className="space-y-1.5">
                   <Label>Start Date</Label>
-                  <DatePickerInput value={startDate} onChange={setStartDate} placeholder="Start date" data-testid="input-start-date" />
+                  <DatePickerInput
+                    value={startDate}
+                    onChange={setStartDate}
+                    placeholder="Start date"
+                    data-testid="input-start-date"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>End Date</Label>
-                  <DatePickerInput value={endDate} onChange={setEndDate} placeholder="End date" data-testid="input-end-date" />
+                  <DatePickerInput
+                    value={endDate}
+                    onChange={setEndDate}
+                    placeholder="End date"
+                    data-testid="input-end-date"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Location</Label>
                   <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                    <SelectTrigger data-testid="select-location"><SelectValue placeholder="All Locations" /></SelectTrigger>
+                    <SelectTrigger data-testid="select-location">
+                      <SelectValue placeholder="All Locations" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Locations</SelectItem>
-                      {locations.map((loc: any) => <SelectItem key={loc.id} value={loc.id.toString()}>{loc.name}</SelectItem>)}
+                      {locations.map((loc: any) => (
+                        <SelectItem key={loc.id} value={loc.id.toString()}>
+                          {loc.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Stock Item</Label>
+                  <Label>Product</Label>
                   <Select value={selectedStockItem} onValueChange={setSelectedStockItem}>
-                    <SelectTrigger data-testid="select-stock-item"><SelectValue placeholder="All Items" /></SelectTrigger>
+                    <SelectTrigger data-testid="select-stock-item">
+                      <SelectValue placeholder="All Products" />
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Items</SelectItem>
-                      {stockItems.map((item: any) => <SelectItem key={item.id} value={item.id.toString()}>{item.name}</SelectItem>)}
+                      <SelectItem value="all">All Products</SelectItem>
+                      {stockItems.map((item: any) => (
+                        <SelectItem key={item.id} value={item.id.toString()}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Search</Label>
-                  <Input placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} data-testid="input-search" />
+                  <Input
+                    placeholder="Search..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    data-testid="input-search"
+                  />
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={handleClearFilters} data-testid="button-clear-filters">Clear Filters</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearFilters}
+                data-testid="button-clear-filters"
+              >
+                Clear Filters
+              </Button>
             </CardContent>
           </Card>
 
           {/* Advanced table */}
           <Card>
             <CardHeader>
-              <CardTitle>Sales by {grouping.charAt(0).toUpperCase() + grouping.slice(1)} ({filteredGroupedData.length})</CardTitle>
+              <CardTitle>
+                Sales by {grouping.charAt(0).toUpperCase() + grouping.slice(1)} (
+                {filteredGroupedData.length})
+              </CardTitle>
               <CardDescription>Click on any row to view detailed breakdown</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading sales data...</div>
               ) : filteredGroupedData.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">No sales transactions found. Try adjusting your filters.</div>
+                <div className="text-center py-8 text-muted-foreground">
+                  No sales transactions found. Try adjusting your filters.
+                </div>
               ) : (
                 <div className="overflow-x-auto" ref={tableRef}>
                   <Table>
@@ -579,26 +754,53 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                           key={group.date}
                           data-testid={`row-sale-${group.date}`}
                           data-row-index={idx}
-                          className={cn("cursor-pointer hover-elevate", highlightedIndex === idx && "bg-primary/10 ring-1 ring-inset ring-primary/30")}
-                          onClick={() => { setHighlightedIndex(idx); handleRowClick(group); }}
+                          className={cn(
+                            "cursor-pointer hover-elevate",
+                            highlightedIndex === idx &&
+                              "bg-primary/10 ring-1 ring-inset ring-primary/30",
+                          )}
+                          onClick={() => {
+                            setHighlightedIndex(idx);
+                            handleRowClick(group);
+                          }}
                         >
                           <TableCell className="font-medium">{group.displayDate}</TableCell>
-                          <TableCell className="text-right font-mono">{formatNumber(group.itemCount)}</TableCell>
-                          <TableCell className="text-right font-mono">{formatCurrency(group.totalSales)}</TableCell>
-                          <TableCell className="text-right font-mono">{formatCurrency(group.totalCost)}</TableCell>
-                          <TableCell className={`text-right font-mono font-semibold ${group.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                            {group.costProfit < 0 ? "-" : ""}{formatCurrency(group.costProfit)}
+                          <TableCell className="text-right font-mono">
+                            {formatNumber(group.itemCount)}
                           </TableCell>
-                          <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(group.totalSales)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(group.totalCost)}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right font-mono font-semibold ${group.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                          >
+                            {group.costProfit < 0 ? "-" : ""}
+                            {formatCurrency(group.costProfit)}
+                          </TableCell>
+                          <TableCell>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </TableCell>
                         </TableRow>
                       ))}
                       <TableRow className="font-bold bg-muted/50">
                         <TableCell>TOTAL</TableCell>
-                        <TableCell className="text-right font-mono">{formatNumber(totals.itemCount)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatCurrency(totals.totalSales)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatCurrency(totals.totalCost)}</TableCell>
-                        <TableCell className={`text-right font-mono ${totals.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                          {totals.costProfit < 0 ? "-" : ""}{formatCurrency(totals.costProfit)}
+                        <TableCell className="text-right font-mono">
+                          {formatNumber(totals.itemCount)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatCurrency(totals.totalSales)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatCurrency(totals.totalCost)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right font-mono ${totals.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {totals.costProfit < 0 ? "-" : ""}
+                          {formatCurrency(totals.costProfit)}
                         </TableCell>
                         <TableCell></TableCell>
                       </TableRow>
@@ -615,21 +817,51 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
               <DialogHeader>
                 <DialogTitle>Sales Details — {selectedDaySummary?.displayDate}</DialogTitle>
                 <DialogDescription>
-                  All items sold on this {grouping === "daily" ? "day" : grouping === "monthly" ? "month" : "year"}
+                  All items sold on this{" "}
+                  {grouping === "daily" ? "day" : grouping === "monthly" ? "month" : "year"}
                 </DialogDescription>
               </DialogHeader>
               {selectedDaySummary && (
                 <div className="space-y-4">
                   <div className="sticky top-0 z-10 bg-background pt-2 pb-3 -mx-6 px-6 border-b">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <Card><CardHeader className="pb-2"><CardDescription className="text-xs">Total Qty</CardDescription><CardTitle className="text-lg">{formatNumber(selectedDaySummary.items.reduce((s, i) => s + parseFloat(i.quantity), 0))}</CardTitle></CardHeader></Card>
-                      <Card><CardHeader className="pb-2"><CardDescription className="text-xs">Total Sales</CardDescription><CardTitle className="text-lg">{formatCurrency(selectedDaySummary.totalSales)}</CardTitle></CardHeader></Card>
-                      <Card><CardHeader className="pb-2"><CardDescription className="text-xs">Cost Total</CardDescription><CardTitle className="text-lg">{formatCurrency(selectedDaySummary.totalCost)}</CardTitle></CardHeader></Card>
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardDescription className="text-xs">Total Qty</CardDescription>
+                          <CardTitle className="text-lg">
+                            {formatNumber(
+                              selectedDaySummary.items.reduce(
+                                (s, i) => s + parseFloat(i.quantity),
+                                0,
+                              ),
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                      </Card>
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardDescription className="text-xs">Total Sales</CardDescription>
+                          <CardTitle className="text-lg">
+                            {formatCurrency(selectedDaySummary.totalSales)}
+                          </CardTitle>
+                        </CardHeader>
+                      </Card>
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardDescription className="text-xs">Cost Total</CardDescription>
+                          <CardTitle className="text-lg">
+                            {formatCurrency(selectedDaySummary.totalCost)}
+                          </CardTitle>
+                        </CardHeader>
+                      </Card>
                       <Card>
                         <CardHeader className="pb-2">
                           <CardDescription className="text-xs">Cost Profit</CardDescription>
-                          <CardTitle className={`text-lg ${selectedDaySummary.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                            {selectedDaySummary.costProfit < 0 ? "-" : ""}{formatCurrency(selectedDaySummary.costProfit)}
+                          <CardTitle
+                            className={`text-lg ${selectedDaySummary.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                          >
+                            {selectedDaySummary.costProfit < 0 ? "-" : ""}
+                            {formatCurrency(selectedDaySummary.costProfit)}
                           </CardTitle>
                         </CardHeader>
                       </Card>
@@ -654,14 +886,27 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                           <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.stockItemName}</TableCell>
                             <TableCell>{item.locationName || "—"}</TableCell>
-                            <TableCell className="text-right font-mono">{formatNumber(item.quantity)}</TableCell>
-                            <TableCell className="text-right font-mono">{formatCurrency(item.actualSellingPrice)}</TableCell>
-                            <TableCell className="text-right font-mono">{formatCurrency(item.costPrice)}</TableCell>
-                            <TableCell className="text-right font-mono">{formatCurrency(item.totalCost)}</TableCell>
-                            <TableCell className={`text-right font-mono ${parseFloat(item.costProfit) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                              {parseFloat(item.costProfit) < 0 ? "-" : ""}{formatCurrency(item.costProfit)}
+                            <TableCell className="text-right font-mono">
+                              {formatNumber(item.quantity)}
                             </TableCell>
-                            <TableCell className={`text-right font-mono text-sm ${item.costProfitPercentage >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            <TableCell className="text-right font-mono">
+                              {formatCurrency(item.actualSellingPrice)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatCurrency(item.costPrice)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatCurrency(item.totalCost)}
+                            </TableCell>
+                            <TableCell
+                              className={`text-right font-mono ${parseFloat(item.costProfit) >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {parseFloat(item.costProfit) < 0 ? "-" : ""}
+                              {formatCurrency(item.costProfit)}
+                            </TableCell>
+                            <TableCell
+                              className={`text-right font-mono text-sm ${item.costProfitPercentage >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
                               {item.costProfitPercentage.toFixed(1)}%
                             </TableCell>
                           </TableRow>
@@ -691,13 +936,17 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription className="text-xs">Total Sales</CardDescription>
-                <CardTitle className="text-xl font-mono">{formatCurrency(simpleStats.totalSales)}</CardTitle>
+                <CardTitle className="text-xl font-mono">
+                  {formatCurrency(simpleStats.totalSales)}
+                </CardTitle>
               </CardHeader>
             </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription className="text-xs">Units Sold</CardDescription>
-                <CardTitle className="text-xl font-mono">{formatNumber(simpleStats.unitsSold)}</CardTitle>
+                <CardTitle className="text-xl font-mono">
+                  {formatNumber(simpleStats.unitsSold)}
+                </CardTitle>
               </CardHeader>
             </Card>
             <Card>
@@ -709,7 +958,9 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription className="text-xs">Average Sale</CardDescription>
-                <CardTitle className="text-xl font-mono">{formatCurrency(simpleStats.avgSale)}</CardTitle>
+                <CardTitle className="text-xl font-mono">
+                  {formatCurrency(simpleStats.avgSale)}
+                </CardTitle>
               </CardHeader>
             </Card>
           </div>
@@ -766,18 +1017,35 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                           key={inv.voucherId}
                           className="cursor-pointer hover:bg-muted/50 transition-colors"
                           data-testid={`row-invoice-${inv.voucherId}`}
-                          onClick={() => { setSelectedInvoice(inv); setInvoiceDialogOpen(true); }}
+                          onClick={() => {
+                            setSelectedInvoice(inv);
+                            setInvoiceDialogOpen(true);
+                          }}
                         >
-                          <TableCell className="font-mono font-medium text-sm">{inv.voucherNumber}</TableCell>
-                          <TableCell className="text-sm">{formatDisplayDate(parseISO(inv.voucherDate))}</TableCell>
+                          <TableCell className="font-mono font-medium text-sm">
+                            {inv.voucherNumber}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {formatDisplayDate(parseISO(inv.voucherDate))}
+                          </TableCell>
                           <TableCell>
                             {inv.locationName ? (
-                              <Badge variant="secondary" className="font-normal">{inv.locationName}</Badge>
-                            ) : "—"}
+                              <Badge variant="secondary" className="font-normal">
+                                {inv.locationName}
+                              </Badge>
+                            ) : (
+                              "—"
+                            )}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-sm">{formatNumber(inv.totalQuantity)}</TableCell>
-                          <TableCell className="text-right font-mono font-semibold text-sm">{formatCurrency(inv.totalSales)}</TableCell>
-                          <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            {formatNumber(inv.totalQuantity)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-semibold text-sm">
+                            {formatCurrency(inv.totalSales)}
+                          </TableCell>
+                          <TableCell>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -813,25 +1081,40 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                       {selectedInvoice.items.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.stockItemName}</TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">{item.stockItemCode}</TableCell>
-                          <TableCell className="text-right font-mono">{formatNumber(item.quantity)}</TableCell>
-                          <TableCell className="text-right font-mono">{formatCurrency(item.actualSellingPrice)}</TableCell>
-                          <TableCell className="text-right font-mono font-semibold">{formatCurrency(item.totalSales)}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {item.stockItemCode}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatNumber(item.quantity)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(item.actualSellingPrice)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-semibold">
+                            {formatCurrency(item.totalSales)}
+                          </TableCell>
                         </TableRow>
                       ))}
                       <TableRow className="bg-muted/50 font-bold">
                         <TableCell colSpan={4}>Invoice Total</TableCell>
-                        <TableCell className="text-right font-mono">{formatCurrency(selectedInvoice.totalSales)}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatCurrency(selectedInvoice.totalSales)}
+                        </TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>
 
                   <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button variant="outline" onClick={() => setInvoiceDialogOpen(false)}>Close</Button>
+                    <Button variant="outline" onClick={() => setInvoiceDialogOpen(false)}>
+                      Close
+                    </Button>
                     <Button
                       className="gap-2"
                       data-testid={`button-edit-sale-${selectedInvoice.voucherId}`}
-                      onClick={() => { setInvoiceDialogOpen(false); navigate(`/pos/edit/${selectedInvoice.voucherId}`); }}
+                      onClick={() => {
+                        setInvoiceDialogOpen(false);
+                        navigate(`/pos/edit/${selectedInvoice.voucherId}`);
+                      }}
                     >
                       <Pencil className="h-4 w-4" />
                       Edit Sale

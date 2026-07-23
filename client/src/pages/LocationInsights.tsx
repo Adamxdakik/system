@@ -111,9 +111,7 @@ interface LocationInsightsProps {
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export default function LocationInsights({
-  embedded = false,
-}: LocationInsightsProps = {}) {
+export default function LocationInsights({ embedded = false }: LocationInsightsProps = {}) {
   const [_loc, navigate] = useLocation();
   const { toast } = useToast();
 
@@ -121,8 +119,7 @@ export default function LocationInsights({
   const [showComparison, setShowComparison] = useState(false);
 
   // ── Simple view state ────────────────────────────────────────────────────
-  const [selectedLocationForDetail, setSelectedLocationForDetail] =
-    useState<Location | null>(null);
+  const [selectedLocationForDetail, setSelectedLocationForDetail] = useState<Location | null>(null);
   const [simpleSearch, setSimpleSearch] = useState("");
   const [simpleCategoryFilter, setSimpleCategoryFilter] = useState("");
 
@@ -142,21 +139,19 @@ export default function LocationInsights({
     return saved ? JSON.parse(saved) : [];
   });
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(
-    () => new Set(savedState?.expandedGroups || [])
+    () => new Set(savedState?.expandedGroups || []),
   );
   const [asOfDate, setAsOfDate] = useState(
-    () => savedState?.asOfDate || new Date().toISOString().split("T")[0]
+    () => savedState?.asOfDate || new Date().toISOString().split("T")[0],
   );
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(
-    savedState?.selectedRowKey || null
+    savedState?.selectedRowKey || null,
   );
   const [highlightedRows, setHighlightedRows] = useState<Set<string>>(
-    () => new Set(savedState?.highlightedRows || [])
+    () => new Set(savedState?.highlightedRows || []),
   );
-  const [selectedLocationIndex] = useState<number>(
-    savedState?.selectedLocationIndex || 0
-  );
+  const [selectedLocationIndex] = useState<number>(savedState?.selectedLocationIndex || 0);
   const tableScrollContainer = useRef<HTMLDivElement>(null);
   const [editingCell, setEditingCell] = useState<{
     itemId: number;
@@ -175,13 +170,7 @@ export default function LocationInsights({
       selectedLocationIndex,
     };
     sessionStorage.setItem(STATE_KEY, JSON.stringify(state));
-  }, [
-    expandedGroups,
-    asOfDate,
-    selectedRowKey,
-    highlightedRows,
-    selectedLocationIndex,
-  ]);
+  }, [expandedGroups, asOfDate, selectedRowKey, highlightedRows, selectedLocationIndex]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedLocationIds));
@@ -200,40 +189,32 @@ export default function LocationInsights({
   }, [locations]);
 
   // Comparison view summary query
-  const { data: summaryData, isLoading: summaryLoading } =
-    useQuery<LocationSummaryResponse>({
-      queryKey: [
-        "/api/location-summary",
-        { locationIds: selectedLocationIds.join(","), asOfDate },
-      ],
-      queryFn: async () => {
-        const params = new URLSearchParams();
-        if (selectedLocationIds.length > 0) {
-          params.append("locationIds", selectedLocationIds.join(","));
-        }
-        params.append("asOfDate", asOfDate);
-        const res = await fetch(`/api/location-summary?${params.toString()}`, {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("Failed to fetch location summary");
-        return res.json();
-      },
-      enabled: selectedLocationIds.length > 0 && showComparison,
-    });
+  const { data: summaryData, isLoading: summaryLoading } = useQuery<LocationSummaryResponse>({
+    queryKey: ["/api/location-summary", { locationIds: selectedLocationIds.join(","), asOfDate }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedLocationIds.length > 0) {
+        params.append("locationIds", selectedLocationIds.join(","));
+      }
+      params.append("asOfDate", asOfDate);
+      const res = await fetch(`/api/location-summary?${params.toString()}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch location summary");
+      return res.json();
+    },
+    enabled: selectedLocationIds.length > 0 && showComparison,
+  });
 
   // Single-location inventory query
-  const { data: inventoryData = [], isLoading: inventoryLoading } = useQuery<
-    InventoryItem[]
-  >({
+  const { data: inventoryData = [], isLoading: inventoryLoading } = useQuery<InventoryItem[]>({
     queryKey: selectedLocationForDetail
       ? [`/api/locations/${selectedLocationForDetail.id}/inventory`]
       : [],
-    enabled: !!selectedLocationForDetail,
+    enabled: !!selectedLocationForDetail && !showComparison,
   });
 
-  const inventory = inventoryData.filter(
-    (item) => parseFloat(item.quantity || "0") !== 0
-  );
+  const inventory = inventoryData.filter((item) => parseFloat(item.quantity || "0") !== 0);
 
   // ── Simple view computed values ──────────────────────────────────────────
   const categories = useMemo(() => {
@@ -252,8 +233,7 @@ export default function LocationInsights({
         item.stockItemName.toLowerCase().includes(s) ||
         item.stockItemCode.toLowerCase().includes(s) ||
         (item.stockGroupName || "").toLowerCase().includes(s);
-      const matchesCategory =
-        !simpleCategoryFilter || item.stockGroupName === simpleCategoryFilter;
+      const matchesCategory = !simpleCategoryFilter || item.stockGroupName === simpleCategoryFilter;
       return matchesSearch && matchesCategory;
     });
   }, [inventory, simpleSearch, simpleCategoryFilter]);
@@ -261,19 +241,13 @@ export default function LocationInsights({
   const simpleStats = useMemo(
     () => ({
       productsAvailable: inventory.length,
-      totalQuantity: inventory.reduce(
-        (s, i) => s + parseFloat(i.quantity || "0"),
-        0
-      ),
-      stockValue: inventory.reduce(
-        (s, i) => s + parseFloat(i.totalValue || "0"),
-        0
-      ),
+      totalQuantity: inventory.reduce((s, i) => s + parseFloat(i.quantity || "0"), 0),
+      stockValue: inventory.reduce((s, i) => s + parseFloat(i.totalValue || "0"), 0),
       categoryCount: new Set(
-        inventory.filter((i) => i.stockGroupId !== null).map((i) => i.stockGroupId)
+        inventory.filter((i) => i.stockGroupId !== null).map((i) => i.stockGroupId),
       ).size,
     }),
-    [inventory]
+    [inventory],
   );
 
   // ── Comparison view helpers (all preserved) ──────────────────────────────
@@ -304,8 +278,7 @@ export default function LocationInsights({
     return groups;
   }, [] as any[]);
   stockGroupsForDetail.forEach((group: any) => {
-    if (group.totalQuantity > 0)
-      group.averageRate = group.totalValue / group.totalQuantity;
+    if (group.totalQuantity > 0) group.averageRate = group.totalValue / group.totalQuantity;
   });
 
   const selectedLocations = selectedLocationIds
@@ -323,9 +296,7 @@ export default function LocationInsights({
 
   const toggleLocation = (locationId: number) => {
     setSelectedLocationIds((prev) =>
-      prev.includes(locationId)
-        ? prev.filter((id) => id !== locationId)
-        : [...prev, locationId]
+      prev.includes(locationId) ? prev.filter((id) => id !== locationId) : [...prev, locationId],
     );
   };
 
@@ -356,20 +327,17 @@ export default function LocationInsights({
       color?: string;
       assignedStatus?: string;
     }) => {
-      const res = await apiRequest(
-        "PATCH",
-        `/api/inventory/${locationId}/${stockItemId}`,
-        { color, assignedStatus }
-      );
+      const res = await apiRequest("PATCH", `/api/inventory/${locationId}/${stockItemId}`, {
+        color,
+        assignedStatus,
+      });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0];
-          return (
-            typeof key === "string" && key.startsWith("/api/location-summary")
-          );
+          return typeof key === "string" && key.startsWith("/api/location-summary");
         },
       });
     },
@@ -403,9 +371,7 @@ export default function LocationInsights({
           {/* Location selector + Compare button */}
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
             <div className="flex items-center gap-3 flex-1">
-              <Label className="text-sm font-medium whitespace-nowrap">
-                Location
-              </Label>
+              <Label className="text-sm font-medium whitespace-nowrap">Location</Label>
               <Select
                 value={selectedLocationForDetail?.id.toString() || ""}
                 onValueChange={(val) => {
@@ -417,10 +383,7 @@ export default function LocationInsights({
                   }
                 }}
               >
-                <SelectTrigger
-                  className="w-64"
-                  data-testid="select-location-detail"
-                >
+                <SelectTrigger className="w-64" data-testid="select-location-detail">
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
@@ -452,9 +415,7 @@ export default function LocationInsights({
                     <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
                       Products Available
                     </p>
-                    <p className="text-2xl font-bold">
-                      {simpleStats.productsAvailable}
-                    </p>
+                    <p className="text-2xl font-bold">{simpleStats.productsAvailable}</p>
                   </CardHeader>
                 </Card>
                 <Card>
@@ -475,7 +436,8 @@ export default function LocationInsights({
                       Stock Value
                     </p>
                     <p className="text-2xl font-bold font-mono">
-                      ${simpleStats.stockValue.toLocaleString("en-US", {
+                      $
+                      {simpleStats.stockValue.toLocaleString("en-US", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
@@ -487,9 +449,7 @@ export default function LocationInsights({
                     <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
                       Categories
                     </p>
-                    <p className="text-2xl font-bold">
-                      {simpleStats.categoryCount}
-                    </p>
+                    <p className="text-2xl font-bold">{simpleStats.categoryCount}</p>
                   </CardHeader>
                 </Card>
               </div>
@@ -508,9 +468,7 @@ export default function LocationInsights({
                 </div>
                 <Select
                   value={simpleCategoryFilter || "all"}
-                  onValueChange={(v) =>
-                    setSimpleCategoryFilter(v === "all" ? "" : v)
-                  }
+                  onValueChange={(v) => setSimpleCategoryFilter(v === "all" ? "" : v)}
                 >
                   <SelectTrigger className="w-44 text-sm" data-testid="select-location-category">
                     <SelectValue placeholder="Category" />
@@ -566,9 +524,7 @@ export default function LocationInsights({
                               <TableRow
                                 key={item.inventoryId}
                                 className="cursor-pointer hover:bg-muted/50 transition-colors"
-                                onClick={() =>
-                                  navigate(`/stock-query/${item.stockItemId}`)
-                                }
+                                onClick={() => navigate(`/stock-query/${item.stockItemId}`)}
                                 data-testid={`row-location-item-${item.stockItemId}`}
                               >
                                 <TableCell className="font-medium">
@@ -585,24 +541,18 @@ export default function LocationInsights({
                                 </TableCell>
                                 <TableCell className="text-right font-mono text-sm">
                                   {parseFloat(item.quantity) % 1 === 0
-                                    ? Math.floor(
-                                        parseFloat(item.quantity)
-                                      ).toLocaleString()
+                                    ? Math.floor(parseFloat(item.quantity)).toLocaleString()
                                     : parseFloat(item.quantity).toFixed(2)}
                                 </TableCell>
                                 <TableCell className="text-right font-mono text-sm">
-                                  $
-                                  {parseFloat(item.averageRate).toFixed(2)}
+                                  ${parseFloat(item.averageRate).toFixed(2)}
                                 </TableCell>
                                 <TableCell className="text-right font-mono text-sm font-semibold">
                                   $
-                                  {parseFloat(item.totalValue).toLocaleString(
-                                    "en-US",
-                                    {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    }
-                                  )}
+                                  {parseFloat(item.totalValue).toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
                                 </TableCell>
                                 <TableCell>
                                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -619,8 +569,8 @@ export default function LocationInsights({
 
               {!inventoryLoading && filteredSimpleInventory.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Showing {filteredSimpleInventory.length} of {inventory.length}{" "}
-                  products at {selectedLocationForDetail.name}
+                  Showing {filteredSimpleInventory.length} of {inventory.length} products at{" "}
+                  {selectedLocationForDetail.name}
                 </p>
               )}
             </>
@@ -664,16 +614,9 @@ export default function LocationInsights({
                   data-testid="input-as-of-date"
                 />
               </div>
-              <Dialog
-                open={locationDialogOpen}
-                onOpenChange={setLocationDialogOpen}
-              >
+              <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    data-testid="button-configure-locations"
-                  >
+                  <Button variant="outline" size="sm" data-testid="button-configure-locations">
                     <Settings2 className="h-4 w-4 mr-1" />
                     Locations ({selectedLocations.length})
                   </Button>
@@ -715,9 +658,7 @@ export default function LocationInsights({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        setSelectedLocationIds(locations.map((l) => l.id))
-                      }
+                      onClick={() => setSelectedLocationIds(locations.map((l) => l.id))}
                       data-testid="button-select-all-locations"
                     >
                       Select All
@@ -739,9 +680,7 @@ export default function LocationInsights({
           {selectedLocations.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  Select locations to view inventory summary
-                </p>
+                <p className="text-muted-foreground">Select locations to view inventory summary</p>
                 <Button
                   variant="outline"
                   className="mt-4"
@@ -755,14 +694,8 @@ export default function LocationInsights({
             </Card>
           ) : (
             <Card className="overflow-hidden">
-              <div
-                className="max-h-[calc(100vh-15rem)] overflow-auto"
-                ref={tableScrollContainer}
-              >
-                <table
-                  className="w-full border-collapse"
-                  style={{ fontSize: "12px" }}
-                >
+              <div className="max-h-[calc(100vh-15rem)] overflow-auto" ref={tableScrollContainer}>
+                <table className="w-full border-collapse" style={{ fontSize: "12px" }}>
                   <thead className="sticky top-0 z-20 bg-muted">
                     <tr className="bg-muted">
                       <th
@@ -851,8 +784,7 @@ export default function LocationInsights({
                                   ? "bg-blue-400 dark:bg-blue-800"
                                   : "bg-accent/30 hover:bg-accent/50",
                                 groupIndex > 0 && "border-t",
-                                selectedRowKey === buildRowKey(group.id) &&
-                                  "ring-2 ring-primary"
+                                selectedRowKey === buildRowKey(group.id) && "ring-2 ring-primary",
                               )}
                               onClick={() => {
                                 toggleGroup(group.id);
@@ -866,7 +798,7 @@ export default function LocationInsights({
                                   "py-1 px-2 border-r sticky left-0 z-10 font-semibold text-xs",
                                   highlightedRows.has(buildRowKey(group.id))
                                     ? "bg-blue-400 dark:bg-blue-800"
-                                    : "bg-accent/30"
+                                    : "bg-accent/30",
                                 )}
                               >
                                 <div className="flex items-center gap-1">
@@ -890,56 +822,41 @@ export default function LocationInsights({
                                   locIndex === selectedLocationIndex &&
                                   selectedRowKey === buildRowKey(group.id);
                                 return (
-                                  <Fragment
-                                    key={`group-${group.id}-loc-${location.id}`}
-                                  >
+                                  <Fragment key={`group-${group.id}-loc-${location.id}`}>
                                     <td
                                       className={cn(
                                         "text-right py-1 px-2 tabular-nums font-medium text-xs",
-                                        isSelectedCell &&
-                                          "bg-blue-200 dark:bg-blue-800"
+                                        isSelectedCell && "bg-blue-200 dark:bg-blue-800",
                                       )}
                                     >
-                                      {formatNum(
-                                        data.quantity,
-                                        0,
-                                        group.items[0]?.uom || ""
-                                      )}
+                                      {formatNum(data.quantity, 0, group.items[0]?.uom || "")}
                                     </td>
                                     <td
                                       className={cn(
                                         "text-left py-1 px-2 text-xs",
-                                        isSelectedCell &&
-                                          "bg-blue-200 dark:bg-blue-800"
+                                        isSelectedCell && "bg-blue-200 dark:bg-blue-800",
                                       )}
                                     ></td>
                                     <td
                                       className={cn(
                                         "text-right py-1 px-2 tabular-nums text-foreground text-xs",
-                                        isSelectedCell &&
-                                          "bg-blue-200 dark:bg-blue-800"
+                                        isSelectedCell && "bg-blue-200 dark:bg-blue-800",
                                       )}
                                     >
-                                      {data.rate === 0
-                                        ? ""
-                                        : "$" + formatNum(data.rate, 2)}
+                                      {data.rate === 0 ? "" : "$" + formatNum(data.rate, 2)}
                                     </td>
                                     <td
                                       className={cn(
                                         "text-right py-1 px-2 tabular-nums font-semibold text-xs",
-                                        isSelectedCell &&
-                                          "bg-blue-200 dark:bg-blue-800"
+                                        isSelectedCell && "bg-blue-200 dark:bg-blue-800",
                                       )}
                                     >
-                                      {data.value === 0
-                                        ? ""
-                                        : "$" + formatNum(data.value, 2)}
+                                      {data.value === 0 ? "" : "$" + formatNum(data.value, 2)}
                                     </td>
                                     <td
                                       className={cn(
                                         "text-left py-1 px-2 border-r text-xs",
-                                        isSelectedCell &&
-                                          "bg-blue-200 dark:bg-blue-800"
+                                        isSelectedCell && "bg-blue-200 dark:bg-blue-800",
                                       )}
                                     ></td>
                                   </Fragment>
@@ -953,22 +870,17 @@ export default function LocationInsights({
                                   <tr
                                     key={`item-${item.id}`}
                                     className={cn(
-                                      highlightedRows.has(
-                                        buildRowKey(group.id, item.id)
-                                      )
+                                      highlightedRows.has(buildRowKey(group.id, item.id))
                                         ? "bg-blue-300 dark:bg-blue-700"
                                         : itemIndex % 2 === 0
-                                        ? "bg-background"
-                                        : "bg-muted/30",
+                                          ? "bg-background"
+                                          : "bg-muted/30",
                                       "hover:bg-accent/20 cursor-pointer",
-                                      selectedRowKey ===
-                                        buildRowKey(group.id, item.id) &&
-                                        "ring-2 ring-primary"
+                                      selectedRowKey === buildRowKey(group.id, item.id) &&
+                                        "ring-2 ring-primary",
                                     )}
                                     onClick={() =>
-                                      setSelectedRowKey(
-                                        buildRowKey(group.id, item.id)
-                                      )
+                                      setSelectedRowKey(buildRowKey(group.id, item.id))
                                     }
                                     data-testid={`row-item-${item.id}`}
                                     data-row-key={buildRowKey(group.id, item.id)}
@@ -976,22 +888,18 @@ export default function LocationInsights({
                                     <td
                                       className={cn(
                                         "py-0.5 pl-6 pr-2 border-r sticky left-0 z-10 cursor-pointer hover:underline text-xs",
-                                        highlightedRows.has(
-                                          buildRowKey(group.id, item.id)
-                                        )
+                                        highlightedRows.has(buildRowKey(group.id, item.id))
                                           ? "bg-blue-300 dark:bg-blue-700"
                                           : itemIndex % 2 === 0
-                                          ? "bg-background"
-                                          : "bg-muted/30"
+                                            ? "bg-background"
+                                            : "bg-muted/30",
                                       )}
                                     >
                                       <span
                                         className="text-blue-500 dark:text-blue-400 truncate block"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          navigate(
-                                            `/stock-items/${item.id}/monthly-summary`
-                                          );
+                                          navigate(`/stock-items/${item.id}/monthly-summary`);
                                         }}
                                         data-testid={`link-item-${item.id}`}
                                       >
@@ -999,9 +907,7 @@ export default function LocationInsights({
                                       </span>
                                     </td>
                                     {selectedLocations.map((location, locIndex) => {
-                                      const data = item.locationData[
-                                        location.id
-                                      ] || {
+                                      const data = item.locationData[location.id] || {
                                         quantity: 0,
                                         rate: 0,
                                         value: 0,
@@ -1010,17 +916,13 @@ export default function LocationInsights({
                                       };
                                       const isSelectedCell =
                                         locIndex === selectedLocationIndex &&
-                                        selectedRowKey ===
-                                          buildRowKey(group.id, item.id);
+                                        selectedRowKey === buildRowKey(group.id, item.id);
                                       return (
-                                        <Fragment
-                                          key={`item-${item.id}-loc-${location.id}`}
-                                        >
+                                        <Fragment key={`item-${item.id}-loc-${location.id}`}>
                                           <td
                                             className={cn(
                                               "text-right py-0.5 px-2 tabular-nums cursor-pointer hover:bg-accent/30 text-xs",
-                                              isSelectedCell &&
-                                                "bg-blue-200 dark:bg-blue-800"
+                                              isSelectedCell && "bg-blue-200 dark:bg-blue-800",
                                             )}
                                           >
                                             {formatNum(data.quantity, 0, item.uom)}
@@ -1028,8 +930,7 @@ export default function LocationInsights({
                                           <td
                                             className={cn(
                                               "text-left py-0.5 px-1 text-xs cursor-pointer hover:bg-accent/30",
-                                              isSelectedCell &&
-                                                "bg-blue-200 dark:bg-blue-800"
+                                              isSelectedCell && "bg-blue-200 dark:bg-blue-800",
                                             )}
                                             onClick={(e) => {
                                               e.stopPropagation();
@@ -1042,8 +943,7 @@ export default function LocationInsights({
                                             data-testid={`cell-color-${item.id}-${location.id}`}
                                           >
                                             {editingCell?.itemId === item.id &&
-                                            editingCell?.locationId ===
-                                              location.id &&
+                                            editingCell?.locationId === location.id &&
                                             editingCell?.field === "color" ? (
                                               <Input
                                                 className="h-5 text-xs px-1 w-full min-w-[60px]"
@@ -1052,9 +952,7 @@ export default function LocationInsights({
                                                 onClick={(e) => e.stopPropagation()}
                                                 onBlur={(e) => {
                                                   const newColor = e.target.value;
-                                                  if (
-                                                    newColor !== (data.color || "")
-                                                  ) {
+                                                  if (newColor !== (data.color || "")) {
                                                     updateInventoryMutation.mutate({
                                                       locationId: location.id,
                                                       stockItemId: item.id,
@@ -1065,11 +963,8 @@ export default function LocationInsights({
                                                 }}
                                                 onKeyDown={(e) => {
                                                   if (e.key === "Enter")
-                                                    (
-                                                      e.target as HTMLInputElement
-                                                    ).blur();
-                                                  else if (e.key === "Escape")
-                                                    setEditingCell(null);
+                                                    (e.target as HTMLInputElement).blur();
+                                                  else if (e.key === "Escape") setEditingCell(null);
                                                 }}
                                                 data-testid={`input-color-${item.id}-${location.id}`}
                                               />
@@ -1082,30 +977,23 @@ export default function LocationInsights({
                                           <td
                                             className={cn(
                                               "text-right py-0.5 px-2 tabular-nums text-xs",
-                                              isSelectedCell &&
-                                                "bg-blue-200 dark:bg-blue-800"
+                                              isSelectedCell && "bg-blue-200 dark:bg-blue-800",
                                             )}
                                           >
-                                            {data.rate === 0
-                                              ? ""
-                                              : "$" + formatNum(data.rate, 2)}
+                                            {data.rate === 0 ? "" : "$" + formatNum(data.rate, 2)}
                                           </td>
                                           <td
                                             className={cn(
                                               "text-right py-0.5 px-2 tabular-nums text-xs",
-                                              isSelectedCell &&
-                                                "bg-blue-200 dark:bg-blue-800"
+                                              isSelectedCell && "bg-blue-200 dark:bg-blue-800",
                                             )}
                                           >
-                                            {data.value === 0
-                                              ? ""
-                                              : "$" + formatNum(data.value, 2)}
+                                            {data.value === 0 ? "" : "$" + formatNum(data.value, 2)}
                                           </td>
                                           <td
                                             className={cn(
                                               "text-left py-0.5 px-1 border-r text-xs cursor-pointer hover:bg-accent/30",
-                                              isSelectedCell &&
-                                                "bg-blue-200 dark:bg-blue-800"
+                                              isSelectedCell && "bg-blue-200 dark:bg-blue-800",
                                             )}
                                             onClick={(e) => {
                                               e.stopPropagation();
@@ -1118,22 +1006,16 @@ export default function LocationInsights({
                                             data-testid={`cell-status-${item.id}-${location.id}`}
                                           >
                                             {editingCell?.itemId === item.id &&
-                                            editingCell?.locationId ===
-                                              location.id &&
+                                            editingCell?.locationId === location.id &&
                                             editingCell?.field === "status" ? (
                                               <Input
                                                 className="h-5 text-xs px-1 w-full min-w-[70px]"
-                                                defaultValue={
-                                                  data.assignedStatus || ""
-                                                }
+                                                defaultValue={data.assignedStatus || ""}
                                                 autoFocus
                                                 onClick={(e) => e.stopPropagation()}
                                                 onBlur={(e) => {
                                                   const newStatus = e.target.value;
-                                                  if (
-                                                    newStatus !==
-                                                    (data.assignedStatus || "")
-                                                  ) {
+                                                  if (newStatus !== (data.assignedStatus || "")) {
                                                     updateInventoryMutation.mutate({
                                                       locationId: location.id,
                                                       stockItemId: item.id,
@@ -1144,11 +1026,8 @@ export default function LocationInsights({
                                                 }}
                                                 onKeyDown={(e) => {
                                                   if (e.key === "Enter")
-                                                    (
-                                                      e.target as HTMLInputElement
-                                                    ).blur();
-                                                  else if (e.key === "Escape")
-                                                    setEditingCell(null);
+                                                    (e.target as HTMLInputElement).blur();
+                                                  else if (e.key === "Escape") setEditingCell(null);
                                                 }}
                                                 data-testid={`input-status-${item.id}-${location.id}`}
                                               />
@@ -1171,9 +1050,11 @@ export default function LocationInsights({
                               Grand Total
                             </td>
                             {selectedLocations.map((location) => {
-                              const data = summaryData.grandTotals[
-                                location.id
-                              ] || { quantity: 0, rate: 0, value: 0 };
+                              const data = summaryData.grandTotals[location.id] || {
+                                quantity: 0,
+                                rate: 0,
+                                value: 0,
+                              };
                               return (
                                 <Fragment key={`total-${location.id}`}>
                                   <td className="text-right py-1 px-2 tabular-nums text-xs">
@@ -1181,14 +1062,10 @@ export default function LocationInsights({
                                   </td>
                                   <td className="text-left py-1 px-2 text-xs"></td>
                                   <td className="text-right py-1 px-2 tabular-nums text-xs">
-                                    {data.rate === 0
-                                      ? ""
-                                      : "$" + formatNum(data.rate, 2)}
+                                    {data.rate === 0 ? "" : "$" + formatNum(data.rate, 2)}
                                   </td>
                                   <td className="text-right py-1 px-2 tabular-nums text-xs">
-                                    {data.value === 0
-                                      ? ""
-                                      : "$" + formatNum(data.value, 2)}
+                                    {data.value === 0 ? "" : "$" + formatNum(data.value, 2)}
                                   </td>
                                   <td className="text-left py-1 px-2 border-r text-xs"></td>
                                 </Fragment>

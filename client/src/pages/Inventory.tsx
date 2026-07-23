@@ -37,42 +37,36 @@ export default function Inventory({ initialTab = "parts" }: InventoryProps) {
 
       {/* ── Top-level tabs ───────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="h-10">
-          <TabsTrigger
-            value="parts"
-            className="gap-2 px-4"
-            data-testid="tab-inventory-parts"
-          >
-            <Package className="h-4 w-4" />
-            Parts & Stock
-          </TabsTrigger>
-          <TabsTrigger
-            value="shipments"
-            className="gap-2 px-4"
-            data-testid="tab-inventory-shipments"
-          >
-            <Container className="h-4 w-4" />
-            Shipments
-          </TabsTrigger>
-          <TabsTrigger
-            value="locations"
-            className="gap-2 px-4"
-            data-testid="tab-inventory-locations"
-          >
-            <MapPin className="h-4 w-4" />
-            Location Details
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="h-10">
+            <TabsTrigger value="parts" className="gap-2 px-4" data-testid="tab-inventory-parts">
+              <Package className="h-4 w-4" />
+              Parts & Stock
+            </TabsTrigger>
+            <TabsTrigger
+              value="shipments"
+              className="gap-2 px-4"
+              data-testid="tab-inventory-shipments"
+            >
+              <Container className="h-4 w-4" />
+              Shipments
+            </TabsTrigger>
+            <TabsTrigger
+              value="locations"
+              className="gap-2 px-4"
+              data-testid="tab-inventory-locations"
+            >
+              <MapPin className="h-4 w-4" />
+              Location Details
+            </TabsTrigger>
+          </TabsList>
+        </div>
       </Tabs>
 
       {/* ── Tab panels — lazy mount, keep alive once visited ────────── */}
-      <div style={{ display: activeTab === "parts" ? undefined : "none" }}>
-        {partsVisited && <StockItems embedded />}
-      </div>
-      <div style={{ display: activeTab === "shipments" ? undefined : "none" }}>
-        {shipmentsVisited && <Containers embedded />}
-      </div>
-      <div style={{ display: activeTab === "locations" ? undefined : "none" }}>
+      <div hidden={activeTab !== "parts"}>{partsVisited && <StockItems embedded />}</div>
+      <div hidden={activeTab !== "shipments"}>{shipmentsVisited && <Containers embedded />}</div>
+      <div hidden={activeTab !== "locations"}>
         {locationsVisited && <LocationInsights embedded />}
       </div>
     </div>
