@@ -51,8 +51,8 @@ interface StockItemDetails {
 }
 
 const formatSmartNumber = (value: string | number) => {
-  const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(num)) return '0';
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "0";
   return num % 1 === 0 ? num.toString() : value.toString();
 };
 
@@ -66,21 +66,24 @@ export default function StockItemDetail() {
     queryKey: ["/api/stock-items"],
   });
 
-  const selectedItem = stockItems.find(item => item.id === itemId);
+  const selectedItem = stockItems.find((item) => item.id === itemId);
 
-  const { data: itemDetails, isLoading: detailsLoading, error: detailsError } = useQuery<StockItemDetails>({
+  const {
+    data: itemDetails,
+    isLoading: detailsLoading,
+    error: detailsError,
+  } = useQuery<StockItemDetails>({
     queryKey: [`/api/stock-items/${itemId}/details`],
     enabled: !!itemId,
   });
 
   const handleBack = () => {
-    navigate("/stock-query");
+    navigate("/stock-items");
   };
 
   const handleSaleClick = (saleDate: string, voucherId?: number) => {
     if (!voucherId) return;
-    // Normalize date to YYYY-MM-DD format (remove time if present)
-    const normalizedDate = saleDate.split(' ')[0];
+    const normalizedDate = saleDate.split(" ")[0];
     navigate(`/pos-daybook?date=${normalizedDate}&voucherId=${voucherId}`);
   };
 
@@ -94,11 +97,11 @@ export default function StockItemDetail() {
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Stock Query
+          Back to Parts & Stock
         </Button>
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
-            Stock item not found
+            Product not found
           </CardContent>
         </Card>
       </div>
@@ -107,6 +110,7 @@ export default function StockItemDetail() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* ── Back ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -115,19 +119,24 @@ export default function StockItemDetail() {
           className="gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Stock Query
+          Back to Parts & Stock
         </Button>
       </div>
 
+      {/* ── Header ────────────────────────────────────────────────────── */}
       <div>
         <h1 className="text-3xl font-bold">
-          {selectedItem?.name || "Loading..."} ({selectedItem?.code || ""})
+          {selectedItem?.name || "Loading..."}
         </h1>
-        <p className="text-muted-foreground">
-          Purchase history, sales history, and current inventory locations
+        <p className="text-muted-foreground font-mono text-sm mt-0.5">
+          Code: {selectedItem?.code || ""}
+        </p>
+        <p className="text-muted-foreground text-sm mt-1">
+          Purchases, sales and current stock by location.
         </p>
       </div>
 
+      {/* ── Content ───────────────────────────────────────────────────── */}
       {detailsLoading ? (
         <div className="space-y-6">
           <Skeleton className="h-48 w-full" />
@@ -137,18 +146,22 @@ export default function StockItemDetail() {
       ) : detailsError ? (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
-            Failed to load stock item details. Please try again.
+            Failed to load product details. Please try again.
           </CardContent>
         </Card>
       ) : !itemDetails ? (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
-            No details available for this stock item.
+            No details available for this product.
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue="purchases" className="space-y-6">
+        <Tabs defaultValue="inventory" className="space-y-6">
           <TabsList>
+            <TabsTrigger value="inventory" data-testid="tab-inventory">
+              <MapPin className="h-4 w-4 mr-2" />
+              Stock by Location
+            </TabsTrigger>
             <TabsTrigger value="purchases" data-testid="tab-purchases">
               <Package className="h-4 w-4 mr-2" />
               Purchases
@@ -157,182 +170,216 @@ export default function StockItemDetail() {
               <TrendingUp className="h-4 w-4 mr-2" />
               Sales
             </TabsTrigger>
-            <TabsTrigger value="inventory" data-testid="tab-inventory">
-              <MapPin className="h-4 w-4 mr-2" />
-              Inventory Locations
-            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="purchases" className="space-y-4">
-            <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Purchases
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {itemDetails.purchases.length > 0 ? (
-                <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Container #</TableHead>
-                        <TableHead className="text-right">Qty</TableHead>
-                        <TableHead className="text-right">Rate</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {itemDetails.purchases.map((purchase, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>{purchase.containerNumber || "N/A"}</TableCell>
-                          <TableCell className="text-right font-mono">{formatSmartNumber(purchase.quantity)}</TableCell>
-                          <TableCell className="text-right font-mono">${parseFloat(purchase.rate).toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  <div className="mt-3 pt-3 border-t flex justify-end">
-                    <div className="text-sm">
-                      <span className="font-semibold">Total Quantity: </span>
-                      <span className="font-mono">
-                        {formatSmartNumber(
-                          itemDetails.purchases.reduce((sum, p) => sum + parseFloat(p.quantity || "0"), 0)
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">No purchase history</p>
-              )}
-            </CardContent>
-          </Card>
-          </TabsContent>
-
-          <TabsContent value="sales" className="space-y-4">
-            <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Sales
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {itemDetails.sales.length > 0 ? (
-                <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead className="text-right">Qty</TableHead>
-                        <TableHead className="text-right">Selling Price</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {itemDetails.sales.map((sale, idx) => (
-                        <TableRow 
-                          key={idx}
-                          onClick={() => handleSaleClick(sale.saleDate, sale.voucherId)}
-                          className={sale.voucherId ? "cursor-pointer hover-elevate" : ""}
-                          data-testid={`row-sale-${idx}`}
-                        >
-                          <TableCell>{formatDisplayDate(new Date(sale.saleDate))}</TableCell>
-                          <TableCell>{sale.locationName || "-"}</TableCell>
-                          <TableCell className="text-right font-mono">{formatSmartNumber(sale.quantity)}</TableCell>
-                          <TableCell className="text-right font-mono">${parseFloat(sale.sellingPrice).toFixed(2)}</TableCell>
-                          <TableCell className="text-right font-mono">${parseFloat(sale.totalSales).toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  <div className="mt-3 pt-3 border-t flex justify-end gap-6">
-                    <div className="text-sm">
-                      <span className="font-semibold">Total Quantity: </span>
-                      <span className="font-mono">
-                        {formatSmartNumber(
-                          itemDetails.sales.reduce((sum, s) => sum + parseFloat(s.quantity || "0"), 0)
-                        )}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-semibold">Total Value: </span>
-                      <span className="font-mono">
-                        ${itemDetails.sales.reduce((sum, s) => sum + parseFloat(s.totalSales || "0"), 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">No sales history</p>
-              )}
-            </CardContent>
-          </Card>
-          </TabsContent>
-
+          {/* ── Stock by Location ──────────────────────────────────────── */}
           <TabsContent value="inventory" className="space-y-4">
             <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Current Inventory Locations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {itemDetails.inventoryLocations.length > 0 ? (
-                <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Location</TableHead>
-                        <TableHead className="text-right">Quantity</TableHead>
-                        <TableHead className="text-right">Avg Rate</TableHead>
-                        <TableHead className="text-right">Total Value</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {itemDetails.inventoryLocations.map((loc) => (
-                        <TableRow key={loc.locationId}>
-                          <TableCell>
-                            {loc.locationName} ({loc.locationCode})
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatSmartNumber(loc.quantity)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            ${parseFloat(loc.averageRate).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            ${parseFloat(loc.totalValue).toFixed(2)}
-                          </TableCell>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Stock by Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {itemDetails.inventoryLocations.length > 0 ? (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Location</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
+                          <TableHead className="text-right">Average Cost</TableHead>
+                          <TableHead className="text-right">Total Value</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  <div className="mt-3 pt-3 border-t flex justify-end gap-6">
-                    <div className="text-sm">
-                      <span className="font-semibold">Total Quantity: </span>
-                      <span className="font-mono">
-                        {formatSmartNumber(
-                          itemDetails.inventoryLocations.reduce((sum, loc) => sum + parseFloat(loc.quantity || "0"), 0)
-                        )}
-                      </span>
+                      </TableHeader>
+                      <TableBody>
+                        {itemDetails.inventoryLocations.map((loc) => (
+                          <TableRow key={loc.locationId}>
+                            <TableCell>
+                              {loc.locationName} ({loc.locationCode})
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatSmartNumber(loc.quantity)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              ${parseFloat(loc.averageRate).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              ${parseFloat(loc.totalValue).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <div className="mt-3 pt-3 border-t flex justify-end gap-6">
+                      <div className="text-sm">
+                        <span className="font-semibold">Total Quantity: </span>
+                        <span className="font-mono">
+                          {formatSmartNumber(
+                            itemDetails.inventoryLocations.reduce(
+                              (sum, loc) => sum + parseFloat(loc.quantity || "0"),
+                              0
+                            )
+                          )}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-semibold">Total Value: </span>
+                        <span className="font-mono">
+                          $
+                          {itemDetails.inventoryLocations
+                            .reduce(
+                              (sum, loc) => sum + parseFloat(loc.totalValue || "0"),
+                              0
+                            )
+                            .toFixed(2)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-sm">
-                      <span className="font-semibold">Total Value: </span>
-                      <span className="font-mono">
-                        ${itemDetails.inventoryLocations.reduce((sum, loc) => sum + parseFloat(loc.totalValue || "0"), 0).toFixed(2)}
-                      </span>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No inventory at any location
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Purchases ─────────────────────────────────────────────── */}
+          <TabsContent value="purchases" className="space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Purchases
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {itemDetails.purchases.length > 0 ? (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Container #</TableHead>
+                          <TableHead className="text-right">Qty</TableHead>
+                          <TableHead className="text-right">Rate</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {itemDetails.purchases.map((purchase, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{purchase.containerNumber || "N/A"}</TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatSmartNumber(purchase.quantity)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              ${parseFloat(purchase.rate).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <div className="mt-3 pt-3 border-t flex justify-end">
+                      <div className="text-sm">
+                        <span className="font-semibold">Total Quantity: </span>
+                        <span className="font-mono">
+                          {formatSmartNumber(
+                            itemDetails.purchases.reduce(
+                              (sum, p) => sum + parseFloat(p.quantity || "0"),
+                              0
+                            )
+                          )}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">No inventory at any location</p>
-              )}
-            </CardContent>
-          </Card>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No purchase history</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Sales ─────────────────────────────────────────────────── */}
+          <TabsContent value="sales" className="space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Sales
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {itemDetails.sales.length > 0 ? (
+                  <>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead className="text-right">Qty</TableHead>
+                          <TableHead className="text-right">Selling Price</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {itemDetails.sales.map((sale, idx) => (
+                          <TableRow
+                            key={idx}
+                            onClick={() => handleSaleClick(sale.saleDate, sale.voucherId)}
+                            className={sale.voucherId ? "cursor-pointer hover-elevate" : ""}
+                            data-testid={`row-sale-${idx}`}
+                          >
+                            <TableCell>
+                              {formatDisplayDate(new Date(sale.saleDate))}
+                            </TableCell>
+                            <TableCell>{sale.locationName || "-"}</TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatSmartNumber(sale.quantity)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              ${parseFloat(sale.sellingPrice).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              ${parseFloat(sale.totalSales).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <div className="mt-3 pt-3 border-t flex justify-end gap-6">
+                      <div className="text-sm">
+                        <span className="font-semibold">Total Quantity: </span>
+                        <span className="font-mono">
+                          {formatSmartNumber(
+                            itemDetails.sales.reduce(
+                              (sum, s) => sum + parseFloat(s.quantity || "0"),
+                              0
+                            )
+                          )}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-semibold">Total Value: </span>
+                        <span className="font-mono">
+                          $
+                          {itemDetails.sales
+                            .reduce(
+                              (sum, s) => sum + parseFloat(s.totalSales || "0"),
+                              0
+                            )
+                            .toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No sales history</p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       )}

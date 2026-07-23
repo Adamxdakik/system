@@ -1,13 +1,46 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
+import { useLocation } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Package, Edit, FileSpreadsheet, Trash2, Download } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Search,
+  Plus,
+  Package,
+  Edit,
+  FileSpreadsheet,
+  Trash2,
+  Download,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StockItemDetailsDialog } from "@/components/StockItemDetailsDialog";
 import { StockItemEditDialog } from "@/components/StockItemEditDialog";
 import { StockItemCreateDialog } from "@/components/StockItemCreateDialog";
@@ -25,6 +58,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import * as XLSX from "@/lib/excelHelper";
+
+// ── Interfaces ──────────────────────────────────────────────────────────────
 
 interface StockItem {
   id: number;
@@ -44,9 +79,72 @@ interface StockGroup {
   name: string;
 }
 
-export default function StockItems() {
+interface Location {
+  id: number;
+  name: string;
+  code: string;
+}
+
+interface OverviewLocationData {
+  quantity: number;
+  rate: number;
+  value: number;
+}
+
+interface OverviewItemData {
+  id: number;
+  locationData: Record<number, OverviewLocationData>;
+}
+
+interface OverviewGroupData {
+  items: OverviewItemData[];
+}
+
+interface OverviewSummaryResponse {
+  stockGroups: OverviewGroupData[];
+}
+
+interface ProductTotals {
+  totalQuantity: number;
+  totalValue: number;
+  averageCost: number;
+  locationCount: number;
+}
+
+// ── Props ───────────────────────────────────────────────────────────────────
+
+interface StockItemsProps {
+  embedded?: boolean;
+}
+
+// ── Component ───────────────────────────────────────────────────────────────
+
+export default function StockItems({ embedded = false }: StockItemsProps = {}) {
+  const [, navigate] = useLocation();
+  const today = new Date().toISOString().split("T")[0];
+
+  // ── Internal sub-tab state ──────────────────────────────────────────────
+  const [stockSubTab, setStockSubTab] = useState<"overview" | "manage">("overview");
+  const [overviewVisited, setOverviewVisited] = useState(true);
+  const [manageVisited, setManageVisited] = useState(false);
+
+  const handleSubTabChange = (val: string) => {
+    const t = val as "overview" | "manage";
+    setStockSubTab(t);
+    if (t === "overview") setOverviewVisited(true);
+    if (t === "manage") setManageVisited(true);
+  };
+
+  // ── Overview filter state ───────────────────────────────────────────────
+  const [overviewSearch, setOverviewSearch] = useState("");
+  const [overviewGroup, setOverviewGroup] = useState("all");
+  const [overviewStatus, setOverviewStatus] = useState("all");
+
+  // ── Manage state (all existing, preserved) ──────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedGroupFilter, setSelectedGroupFilter] = useState<number | null | "uncategorized">(null);
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState<
+    number | null | "uncategorized"
+  >(null);
   const [selectedStockItemId, setSelectedStockItemId] = useState<number | null>(null);
   const [selectedStockItemName, setSelectedStockItemName] = useState<string>("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -59,6 +157,7 @@ export default function StockItems() {
 
   const { toast } = useToast();
 
+  // ── Queries ─────────────────────────────────────────────────────────────
   const { data: stockItems = [], isLoading } = useQuery<StockItem[]>({
     queryKey: ["/api/stock-items"],
   });
@@ -67,6 +166,58 @@ export default function StockItems() {
     queryKey: ["/api/stock-groups"],
   });
 
+  const { data: locations = [] } = useQuery<Location[]>({
+    queryKey: ["/api/locations"],
+  });
+
+  const allLocationIds = locations.map((l) => l.id);
+
+  const { data: summaryData } = useQuery<OverviewSummaryResponse>({
+    queryKey: ["/api/location-summary", allLocationIds.join(","), today],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (allLocationIds.length > 0) {
+        params.append("locationIds", allLocationIds.join(","));
+      }
+      params.append("asOfDate", today);
+      const res = await fetch(`/api/location-summary?${params.toString()}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch inventory summary");
+      return res.json();
+    },
+    enabled: allLocationIds.length > 0,
+  });
+
+  // ── Per-product totals (memoised) ───────────────────────────────────────
+  const productTotals = useMemo(() => {
+    const map = new Map<number, ProductTotals>();
+    if (summaryData?.stockGroups) {
+      for (const group of summaryData.stockGroups) {
+        for (const item of group.items) {
+          let totalQuantity = 0;
+          let totalValue = 0;
+          let locationCount = 0;
+          for (const locData of Object.values(item.locationData)) {
+            totalQuantity += locData.quantity;
+            totalValue += locData.value;
+            if (locData.quantity !== 0) locationCount++;
+          }
+          const averageCost =
+            totalQuantity !== 0 ? totalValue / totalQuantity : 0;
+          map.set(item.id, {
+            totalQuantity,
+            totalValue,
+            averageCost,
+            locationCount,
+          });
+        }
+      }
+    }
+    return map;
+  }, [summaryData]);
+
+  // ── Mutations (all preserved) ───────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: async (ids: number[]) => {
       return await apiRequest("POST", "/api/stock-items/bulk-delete", { ids });
@@ -76,13 +227,13 @@ export default function StockItems() {
       setSelectedIds([]);
       toast({
         title: "Success",
-        description: data.message || "Stock items deleted successfully",
+        description: data.message || "Products deleted successfully",
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete stock items",
+        description: error.message || "Failed to delete products",
         variant: "destructive",
       });
     },
@@ -108,9 +259,10 @@ export default function StockItems() {
     },
   });
 
+  // ── Handlers ────────────────────────────────────────────────────────────
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(filteredStockItems.map(item => item.id));
+      setSelectedIds(filteredManageItems.map((item) => item.id));
     } else {
       setSelectedIds([]);
     }
@@ -118,15 +270,13 @@ export default function StockItems() {
 
   const handleSelectItem = (id: number, checked: boolean) => {
     if (checked) {
-      setSelectedIds(prev => [...prev, id]);
+      setSelectedIds((prev) => [...prev, id]);
     } else {
-      setSelectedIds(prev => prev.filter(itemId => itemId !== id));
+      setSelectedIds((prev) => prev.filter((itemId) => itemId !== id));
     }
   };
 
-  const handleDeleteClick = () => {
-    setDeleteDialogOpen(true);
-  };
+  const handleDeleteClick = () => setDeleteDialogOpen(true);
 
   const handleConfirmDelete = () => {
     deleteMutation.mutate(selectedIds);
@@ -140,19 +290,56 @@ export default function StockItems() {
   };
 
   const handleEditClick = (stockItemId: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click from firing
+    e.stopPropagation();
     setEditStockItemId(stockItemId);
     setEditDialogOpen(true);
   };
 
-  const filteredStockItems = stockItems
+  // ── Filtering ────────────────────────────────────────────────────────────
+  const getStockGroupName = (stockGroupId: number | null) => {
+    if (!stockGroupId) return "Uncategorized";
+    const group = stockGroups.find((g) => g.id === stockGroupId);
+    return group ? group.name : "Unknown";
+  };
+
+  const getItemStatus = (item: StockItem): "inactive" | "in-stock" | "out-of-stock" => {
+    if (!item.active) return "inactive";
+    const totals = productTotals.get(item.id);
+    return (totals?.totalQuantity ?? 0) > 0 ? "in-stock" : "out-of-stock";
+  };
+
+  // Overview filtered
+  const filteredOverviewItems = useMemo(() => {
+    return stockItems.filter((item) => {
+      const s = overviewSearch.toLowerCase();
+      const matchesSearch =
+        !overviewSearch ||
+        item.name.toLowerCase().includes(s) ||
+        item.code.toLowerCase().includes(s) ||
+        (item.barcode && item.barcode.toLowerCase().includes(s));
+
+      const matchesGroup =
+        overviewGroup === "all" ||
+        (overviewGroup === "uncategorized"
+          ? !item.stockGroupId
+          : item.stockGroupId === parseInt(overviewGroup));
+
+      const status = getItemStatus(item);
+      const matchesStatus = overviewStatus === "all" || overviewStatus === status;
+
+      return matchesSearch && matchesGroup && matchesStatus;
+    });
+  }, [stockItems, overviewSearch, overviewGroup, overviewStatus, productTotals]);
+
+  // Manage filtered (existing logic)
+  const filteredManageItems = stockItems
     .filter((item) => {
-      // Filter by search term
-      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch =
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.barcode && item.barcode.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      // Filter by stock group
+        (item.barcode &&
+          item.barcode.toLowerCase().includes(searchTerm.toLowerCase()));
+
       if (selectedGroupFilter === "uncategorized") {
         return matchesSearch && !item.stockGroupId;
       } else if (selectedGroupFilter !== null) {
@@ -160,226 +347,591 @@ export default function StockItems() {
       }
       return matchesSearch;
     })
-    .sort((a, b) => a.id - b.id); // Sort chronologically by ID
+    .sort((a, b) => a.id - b.id);
 
-  const getStockGroupName = (stockGroupId: number | null) => {
-    if (!stockGroupId) return "Uncategorized";
-    const group = stockGroups.find(g => g.id === stockGroupId);
-    return group ? group.name : "Unknown";
-  };
+  const allFilteredSelected =
+    filteredManageItems.length > 0 &&
+    filteredManageItems.every((item) => selectedIds.includes(item.id));
 
-  const allFilteredSelected = filteredStockItems.length > 0 && 
-    filteredStockItems.every(item => selectedIds.includes(item.id));
+  // ── Summary card values ──────────────────────────────────────────────────
+  const overviewStats = useMemo(
+    () => ({
+      totalProducts: stockItems.length,
+      activeProducts: stockItems.filter((i) => i.active).length,
+      inStock: stockItems.filter(
+        (i) => (productTotals.get(i.id)?.totalQuantity ?? 0) > 0
+      ).length,
+      outOfStock: stockItems.filter(
+        (i) => i.active && (productTotals.get(i.id)?.totalQuantity ?? 0) === 0
+      ).length,
+    }),
+    [stockItems, productTotals]
+  );
 
+  // ── Export ───────────────────────────────────────────────────────────────
   const exportToExcel = async () => {
-    const data = stockItems.map(item => ({
+    const data = stockItems.map((item) => ({
       Code: item.code,
       Name: item.name,
       Barcode: item.barcode || "",
       UOM: item.uom,
-      "Stock Group": getStockGroupName(item.stockGroupId),
+      Category: getStockGroupName(item.stockGroupId),
       "Selling Price": item.sellingPrice,
       Active: item.active ? "Yes" : "No",
     }));
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Items");
-    await XLSX.writeFile(workbook, "stock-items.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
+    await XLSX.writeFile(workbook, "products.xlsx");
   };
 
+  const statusBadge = (item: StockItem) => {
+    const status = getItemStatus(item);
+    if (status === "inactive")
+      return <Badge variant="secondary">Inactive</Badge>;
+    if (status === "in-stock")
+      return (
+        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">
+          In Stock
+        </Badge>
+      );
+    return (
+      <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">
+        Out of Stock
+      </Badge>
+    );
+  };
+
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Page heading — only when not embedded */}
+      {!embedded && (
         <div>
-          <h1 className="text-2xl font-semibold">Stock Items</h1>
+          <h1 className="text-2xl font-semibold">Parts & Stock</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage all stock items in your company
+            Manage motorcycles, spare parts and available inventory.
           </p>
         </div>
-        <div className="flex gap-2">
-          {selectedIds.length > 0 && (
-            <Button 
-              variant="destructive" 
-              className="gap-2" 
-              onClick={handleDeleteClick}
-              data-testid="button-delete-selected"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete {selectedIds.length} {selectedIds.length === 1 ? 'Item' : 'Items'}
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => updateUOMMutation.mutate()}
-            disabled={updateUOMMutation.isPending}
-            data-testid="button-update-uom"
-          >
-            {updateUOMMutation.isPending ? "Converting..." : "Convert to Unit"}
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={exportToExcel}
-            data-testid="button-export-items"
-          >
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => setImportDialogOpen(true)}
-            data-testid="button-import-data"
-          >
-            <FileSpreadsheet className="h-4 w-4" />
-            Import
-          </Button>
-          <Button 
-            className="gap-2" 
-            onClick={() => setCreateDialogOpen(true)}
-            data-testid="button-add-item"
-          >
-            <Plus className="h-4 w-4" />
-            Add Item
-          </Button>
-        </div>
-      </div>
+      )}
 
-      <Card className="p-4">
-        <div className="flex gap-4 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, code, or barcode..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-              data-testid="input-search"
-            />
-          </div>
-          <Select
-            value={selectedGroupFilter === null ? "all" : String(selectedGroupFilter)}
-            onValueChange={(val) => {
-              setSelectedGroupFilter(val === "all" ? null : val === "uncategorized" ? "uncategorized" : parseInt(val));
-            }}
+      {/* ── Internal sub-tabs ─────────────────────────────────────────── */}
+      <Tabs value={stockSubTab} onValueChange={handleSubTabChange}>
+        <TabsList className="h-9">
+          <TabsTrigger
+            value="overview"
+            className="gap-2 text-sm"
+            data-testid="tab-stock-overview"
           >
-            <SelectTrigger className="w-48" data-testid="select-stock-group">
-              <SelectValue placeholder="Select group" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Groups</SelectItem>
-              <SelectItem value="uncategorized">Uncategorized</SelectItem>
-              {stockGroups.map(group => (
-                <SelectItem key={group.id} value={String(group.id)}>{group.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <Package className="h-3.5 w-3.5" />
+            Stock Overview
+          </TabsTrigger>
+          <TabsTrigger
+            value="manage"
+            className="gap-2 text-sm"
+            data-testid="tab-manage-products"
+          >
+            <Edit className="h-3.5 w-3.5" />
+            Manage Products
+          </TabsTrigger>
+        </TabsList>
 
-        {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        ) : (
-          <div className="rounded-md border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr className="h-12">
-                  <th className="w-12 px-3">
-                    <Checkbox
-                      checked={allFilteredSelected}
-                      onCheckedChange={handleSelectAll}
-                      data-testid="checkbox-select-all"
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/*  A. STOCK OVERVIEW                                             */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <TabsContent value="overview" className="space-y-4 mt-4">
+          {overviewVisited && (
+            <>
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                      Total Products
+                    </p>
+                    <p className="text-2xl font-bold">{overviewStats.totalProducts}</p>
+                  </CardHeader>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                      Active Products
+                    </p>
+                    <p className="text-2xl font-bold">{overviewStats.activeProducts}</p>
+                  </CardHeader>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                      In Stock
+                    </p>
+                    <p className="text-2xl font-bold text-emerald-600">
+                      {overviewStats.inStock}
+                    </p>
+                  </CardHeader>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                      Out of Stock
+                    </p>
+                    <p className="text-2xl font-bold text-amber-600">
+                      {overviewStats.outOfStock}
+                    </p>
+                  </CardHeader>
+                </Card>
+              </div>
+
+              {/* Filters + actions */}
+              <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+                <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search motorcycle, part, code or barcode..."
+                      value={overviewSearch}
+                      onChange={(e) => setOverviewSearch(e.target.value)}
+                      className="pl-9 text-sm"
+                      data-testid="input-search"
                     />
-                  </th>
-                  <th className="text-left px-3 font-medium">Name</th>
-                  <th className="text-left px-3 font-medium">Stock Group</th>
-                  <th className="text-left px-3 font-medium">Status</th>
-                  <th className="text-center px-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredStockItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                      {searchTerm ? "No items found matching your search" : "No stock items found"}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredStockItems.map((item) => {
-                    const sellingPrice = parseFloat(item.sellingPrice || "0");
-                    const isSelected = selectedIds.includes(item.id);
-                    
-                    return (
-                      <tr
-                        key={item.id}
-                        className="border-t hover-elevate h-12"
-                        data-testid={`row-stock-item-${item.id}`}
+                  </div>
+                  <Select value={overviewGroup} onValueChange={setOverviewGroup}>
+                    <SelectTrigger className="w-44 text-sm" data-testid="select-stock-group">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="uncategorized">Uncategorized</SelectItem>
+                      {stockGroups.map((g) => (
+                        <SelectItem key={g.id} value={String(g.id)}>
+                          {g.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={overviewStatus} onValueChange={setOverviewStatus}>
+                    <SelectTrigger className="w-44 text-sm" data-testid="select-stock-status">
+                      <SelectValue placeholder="Stock Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="in-stock">In Stock</SelectItem>
+                      <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    className="gap-2"
+                    onClick={() => {
+                      setStockSubTab("manage");
+                      setManageVisited(true);
+                      setCreateDialogOpen(true);
+                    }}
+                    data-testid="button-add-item"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Product
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => {
+                      setStockSubTab("manage");
+                      setManageVisited(true);
+                      setImportDialogOpen(true);
+                    }}
+                    data-testid="button-import-data"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Import
+                  </Button>
+                </div>
+              </div>
+
+              {/* Stock table */}
+              <Card className="overflow-hidden">
+                <CardContent className="p-0">
+                  {isLoading ? (
+                    <div className="space-y-2 p-4">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Product</TableHead>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead className="text-right">Total Qty</TableHead>
+                            <TableHead className="text-right">Locations</TableHead>
+                            <TableHead className="text-right">Avg Cost</TableHead>
+                            <TableHead className="text-right">Selling Price</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredOverviewItems.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={9}
+                                className="text-center py-10 text-muted-foreground"
+                              >
+                                {overviewSearch
+                                  ? "No products match your search"
+                                  : "No products found"}
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredOverviewItems.map((item) => {
+                              const totals = productTotals.get(item.id) || {
+                                totalQuantity: 0,
+                                totalValue: 0,
+                                averageCost: 0,
+                                locationCount: 0,
+                              };
+                              return (
+                                <TableRow
+                                  key={item.id}
+                                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                  onClick={() => navigate(`/stock-query/${item.id}`)}
+                                  data-testid={`row-product-overview-${item.id}`}
+                                >
+                                  <TableCell className="font-medium">
+                                    <div className="flex items-center gap-2">
+                                      <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+                                      {item.name}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm text-muted-foreground">
+                                    {item.code}
+                                  </TableCell>
+                                  <TableCell className="text-sm">
+                                    {getStockGroupName(item.stockGroupId)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono text-sm">
+                                    {totals.totalQuantity !== 0
+                                      ? totals.totalQuantity % 1 === 0
+                                        ? totals.totalQuantity.toLocaleString()
+                                        : totals.totalQuantity.toFixed(2)
+                                      : "0"}
+                                  </TableCell>
+                                  <TableCell className="text-right text-sm">
+                                    {totals.locationCount}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono text-sm">
+                                    {totals.averageCost > 0
+                                      ? `$${totals.averageCost.toFixed(2)}`
+                                      : "—"}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono text-sm">
+                                    ${parseFloat(item.sellingPrice || "0").toFixed(2)}
+                                  </TableCell>
+                                  <TableCell>{statusBadge(item)}</TableCell>
+                                  <TableCell>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {!isLoading && filteredOverviewItems.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Showing {filteredOverviewItems.length} of {stockItems.length} products
+                </p>
+              )}
+            </>
+          )}
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/*  B. MANAGE PRODUCTS                                            */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <TabsContent value="manage" className="space-y-4 mt-4">
+          {manageVisited && (
+            <>
+              {/* Header */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h2 className="text-lg font-semibold">Manage Products</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Create, edit, import and organise motorcycle products.
+                  </p>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {selectedIds.length > 0 && (
+                    <Button
+                      variant="destructive"
+                      className="gap-2"
+                      onClick={handleDeleteClick}
+                      data-testid="button-delete-selected"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete {selectedIds.length}{" "}
+                      {selectedIds.length === 1 ? "Product" : "Products"}
+                    </Button>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="gap-2">
+                        Admin Tools
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={exportToExcel}
+                        data-testid="button-export-items"
                       >
-                        <td className="px-3" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={(checked) => handleSelectItem(item.id, checked as boolean)}
-                            data-testid={`checkbox-${item.id}`}
-                          />
-                        </td>
-                        <td 
-                          className="px-3 font-medium cursor-pointer" 
-                          onClick={() => handleStockItemClick(item.id, item.name)}
-                          data-testid={`name-${item.id}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                            {item.name}
-                          </div>
-                        </td>
-                        <td 
-                          className="px-3 text-sm cursor-pointer" 
-                          onClick={() => handleStockItemClick(item.id, item.name)}
-                          data-testid={`group-${item.id}`}
-                        >
-                          {getStockGroupName(item.stockGroupId)}
-                        </td>
-                        <td 
-                          className="px-3 cursor-pointer" 
-                          onClick={() => handleStockItemClick(item.id, item.name)}
-                          data-testid={`status-${item.id}`}
-                        >
-                          <Badge variant={item.active ? "default" : "secondary"}>
-                            {item.active ? "Active" : "Inactive"}
-                          </Badge>
-                        </td>
-                        <td className="px-3 text-center">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => handleEditClick(item.id, e)}
-                            data-testid={`button-edit-${item.id}`}
-                            className="gap-2"
-                          >
-                            <Edit className="h-4 w-4" />
-                            Edit
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => updateUOMMutation.mutate()}
+                        disabled={updateUOMMutation.isPending}
+                        data-testid="button-update-uom"
+                      >
+                        {updateUOMMutation.isPending
+                          ? "Converting..."
+                          : "Convert to Unit"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setImportDialogOpen(true)}
+                    data-testid="button-import-data"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Import
+                  </Button>
+                  <Button
+                    className="gap-2"
+                    onClick={() => setCreateDialogOpen(true)}
+                    data-testid="button-add-item"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Product
+                  </Button>
+                </div>
+              </div>
 
-        {!isLoading && filteredStockItems.length > 0 && (
-          <div className="mt-4 text-sm text-muted-foreground">
-            Showing {filteredStockItems.length} of {stockItems.length} items (Use Location Prices tab to set per-location prices)
-          </div>
-        )}
-      </Card>
+              {/* Filters */}
+              <Card className="p-4">
+                <div className="flex gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name, code, or barcode..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                      data-testid="input-search"
+                    />
+                  </div>
+                  <Select
+                    value={
+                      selectedGroupFilter === null
+                        ? "all"
+                        : String(selectedGroupFilter)
+                    }
+                    onValueChange={(val) => {
+                      setSelectedGroupFilter(
+                        val === "all"
+                          ? null
+                          : val === "uncategorized"
+                          ? "uncategorized"
+                          : parseInt(val)
+                      );
+                    }}
+                  >
+                    <SelectTrigger className="w-48" data-testid="select-stock-group">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="uncategorized">Uncategorized</SelectItem>
+                      {stockGroups.map((group) => (
+                        <SelectItem key={group.id} value={String(group.id)}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </Card>
 
+              {/* Table */}
+              <Card className="overflow-hidden">
+                <CardContent className="p-0">
+                  {isLoading ? (
+                    <div className="space-y-2 p-4">
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr className="h-11">
+                            <th className="w-12 px-3">
+                              <Checkbox
+                                checked={allFilteredSelected}
+                                onCheckedChange={handleSelectAll}
+                                data-testid="checkbox-select-all"
+                              />
+                            </th>
+                            <th className="text-left px-3 font-medium">Product</th>
+                            <th className="text-left px-3 font-medium">Code</th>
+                            <th className="text-left px-3 font-medium">Category</th>
+                            <th className="text-left px-3 font-medium">Barcode</th>
+                            <th className="text-right px-3 font-medium">Selling Price</th>
+                            <th className="text-left px-3 font-medium">Status</th>
+                            <th className="text-center px-3 font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredManageItems.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan={8}
+                                className="text-center py-8 text-muted-foreground"
+                              >
+                                {searchTerm
+                                  ? "No products found matching your search"
+                                  : "No products found"}
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredManageItems.map((item) => {
+                              const sellingPrice = parseFloat(
+                                item.sellingPrice || "0"
+                              );
+                              const isSelected = selectedIds.includes(item.id);
+                              return (
+                                <tr
+                                  key={item.id}
+                                  className="border-t hover-elevate h-12"
+                                  data-testid={`row-stock-item-${item.id}`}
+                                >
+                                  <td
+                                    className="px-3"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={(checked) =>
+                                        handleSelectItem(item.id, checked as boolean)
+                                      }
+                                      data-testid={`checkbox-${item.id}`}
+                                    />
+                                  </td>
+                                  <td
+                                    className="px-3 font-medium cursor-pointer"
+                                    onClick={() =>
+                                      handleStockItemClick(item.id, item.name)
+                                    }
+                                    data-testid={`name-${item.id}`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Package className="h-4 w-4 text-muted-foreground" />
+                                      {item.name}
+                                    </div>
+                                  </td>
+                                  <td
+                                    className="px-3 font-mono text-sm text-muted-foreground cursor-pointer"
+                                    onClick={() =>
+                                      handleStockItemClick(item.id, item.name)
+                                    }
+                                  >
+                                    {item.code}
+                                  </td>
+                                  <td
+                                    className="px-3 text-sm cursor-pointer"
+                                    onClick={() =>
+                                      handleStockItemClick(item.id, item.name)
+                                    }
+                                    data-testid={`group-${item.id}`}
+                                  >
+                                    {getStockGroupName(item.stockGroupId)}
+                                  </td>
+                                  <td
+                                    className="px-3 font-mono text-xs text-muted-foreground cursor-pointer"
+                                    onClick={() =>
+                                      handleStockItemClick(item.id, item.name)
+                                    }
+                                  >
+                                    {item.barcode || "—"}
+                                  </td>
+                                  <td
+                                    className="px-3 text-right font-mono cursor-pointer"
+                                    onClick={() =>
+                                      handleStockItemClick(item.id, item.name)
+                                    }
+                                  >
+                                    ${sellingPrice.toFixed(2)}
+                                  </td>
+                                  <td
+                                    className="px-3 cursor-pointer"
+                                    onClick={() =>
+                                      handleStockItemClick(item.id, item.name)
+                                    }
+                                    data-testid={`status-${item.id}`}
+                                  >
+                                    <Badge
+                                      variant={item.active ? "default" : "secondary"}
+                                    >
+                                      {item.active ? "Active" : "Inactive"}
+                                    </Badge>
+                                  </td>
+                                  <td className="px-3 text-center">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => handleEditClick(item.id, e)}
+                                      data-testid={`button-edit-${item.id}`}
+                                      className="gap-2"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                      Edit
+                                    </Button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {!isLoading && filteredManageItems.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Showing {filteredManageItems.length} of {stockItems.length} products
+                </p>
+              )}
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* ── Shared dialogs (all preserved) ──────────────────────────────── */}
       {selectedStockItemId && (
         <StockItemDetailsDialog
           open={detailsDialogOpen}
@@ -388,35 +940,34 @@ export default function StockItems() {
           stockItemName={selectedStockItemName}
         />
       )}
-
       <StockItemEditDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         stockItemId={editStockItemId}
       />
-
       <StockItemCreateDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
       />
-
       <CombinedImportDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
       />
-
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent data-testid="dialog-confirm-delete">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {selectedIds.length} stock {selectedIds.length === 1 ? 'item' : 'items'}? 
-              This action cannot be undone.
+              Are you sure you want to delete {selectedIds.length}{" "}
+              {selectedIds.length === 1 ? "product" : "products"}? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel data-testid="button-cancel-delete">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-destructive hover:bg-destructive/90"
               data-testid="button-confirm-delete"
