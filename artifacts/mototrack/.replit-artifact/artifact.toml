@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "MotoTrack ERP/POS"
+version = "1.0.0"
+id = "artifacts/mototrack"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20998
+
+[services.development]
+run = "pnpm --filter @workspace/mototrack run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mototrack", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/mototrack/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20998"
+BASE_PATH = "/"
