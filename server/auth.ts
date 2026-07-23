@@ -13,13 +13,23 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ message: "User not found" });
   }
 
-  // Check if a company is selected.
-  // Use 403 + a distinct code so the frontend can prompt the user to pick a
-  // company instead of treating it as a logout.
+  // Auto-set company if not already in session (covers fresh sessions,
+  // server restarts, and any timing gap before the client calls set-company).
   if (!req.session.currentCompanyId) {
-    return res
-      .status(403)
-      .json({ message: "No company selected", code: "NO_COMPANY_SELECTED" });
+    const userCompanies = await storage.getUserCompaniesWithRoles(req.session.userId);
+    if (userCompanies.length === 0) {
+      return res.status(403).json({ message: "No company access", code: "NO_COMPANY_ACCESS" });
+    }
+    const first = userCompanies[0];
+    req.session.currentCompanyId = first.companyId;
+    req.session.currentRole = first.role;
+    req.session.currentLocationId = first.assignedLocationId;
+    req.session.currentPOSStation = first.posStation;
+    req.session.cashAccountId = first.cashAccountId;
+    req.session.canSellNegativeStock = first.canSellNegativeStock;
+    req.session.canEditDaybook = first.canEditDaybook;
+    // Best-effort save; don't block the request if it fails
+    req.session.save(() => {});
   }
 
   // Load the user's role for the current company
