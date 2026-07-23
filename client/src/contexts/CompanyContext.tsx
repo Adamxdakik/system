@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 
@@ -21,6 +21,8 @@ const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  // Track the last company ID we successfully synced to the server session
+  const syncedCompanyIdRef = useRef<number | null>(null);
 
   // Fetch user's companies with roles
   const { data: userCompanies = [], isLoading } = useQuery<any[]>({
@@ -34,47 +36,59 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       code: uc.companyCode,
       name: uc.companyName,
       active: uc.companyActive,
+      companyType: uc.companyType,
     }))
-    .filter((company, index, self) => 
+    .filter((company, index, self) =>
       index === self.findIndex((c) => c.id === company.id)
     );
 
-  // Auto-select first company if none selected and companies are loaded
+  // Restore selected company from localStorage on mount, or auto-select first company
   useEffect(() => {
-    if (!selectedCompany && companies.length > 0) {
-      setSelectedCompany(companies[0]);
-    }
-  }, [companies, selectedCompany]);
+    if (companies.length === 0) return;
+    if (selectedCompany) return; // already set
+
+    const savedCompanyId = localStorage.getItem("selectedCompanyId");
+    const restored = savedCompanyId
+      ? companies.find((c) => c.id === parseInt(savedCompanyId))
+      : null;
+
+    setSelectedCompany(restored ?? companies[0]);
+  }, [companies]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Whenever selectedCompany changes, sync the company to the server session.
+  // This covers: auto-select, localStorage restore, and manual selectCompany calls.
+  useEffect(() => {
+    if (!selectedCompany) return;
+    if (syncedCompanyIdRef.current === selectedCompany.id) return; // already synced
+
+    fetch("/api/auth/set-company", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ companyId: selectedCompany.id }),
+    }).then((res) => {
+      if (res.ok) {
+        syncedCompanyIdRef.current = selectedCompany.id;
+        // Refresh all data queries for the newly active company
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return !(
+              typeof key === "string" &&
+              (key.includes("/api/auth") || key.includes("/api/user/companies"))
+            );
+          },
+        });
+      }
+    }).catch(() => {
+      // Network error — will retry on next company change
+    });
+  }, [selectedCompany]);
 
   const selectCompany = (company: Company) => {
     setSelectedCompany(company);
-    // Store in localStorage for persistence
     localStorage.setItem("selectedCompanyId", company.id.toString());
-    
-    // Invalidate all queries to refresh data for the new company
-    // Using a predicate to catch all queries except auth-related ones
-    queryClient.invalidateQueries({
-      predicate: (query) => {
-        const key = query.queryKey[0];
-        // Don't invalidate auth-related queries
-        if (typeof key === 'string' && (key.includes('/api/auth') || key.includes('/api/user/companies'))) {
-          return false;
-        }
-        return true;
-      }
-    });
   };
-
-  // Restore selected company from localStorage on mount
-  useEffect(() => {
-    const savedCompanyId = localStorage.getItem("selectedCompanyId");
-    if (savedCompanyId && companies.length > 0) {
-      const company = companies.find((c) => c.id === parseInt(savedCompanyId));
-      if (company) {
-        setSelectedCompany(company);
-      }
-    }
-  }, [companies]);
 
   return (
     <CompanyContext.Provider
