@@ -12147,8 +12147,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // ?includeSystem=false so manual entries are the primary surface; toggle
       // re-enables the full view. Default behavior is unchanged (everything).
       const SYSTEM_VOUCHER_TYPES = new Set([
-        "Sales",
-        "Purchase",
         "Stock Transfer",
         "StockTransfer",
         "Closing",
