@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1762197527676,
+      "tag": "0000_conscious_william_stryker",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1762249325365,
+      "tag": "0001_parallel_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762274055857,
+      "tag": "0002_married_loa",
+      "breakpoints": true
+    }
+  ]
+}

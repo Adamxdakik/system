@@ -1,45 +1,58 @@
-# [Project name]
+# MotoTrack ERP/POS — HuangHe Motors (HHM)
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+## Overview
 
-## Run & Operate
+MotoTrack is a comprehensive ERP and POS system for HuangHe Motors (HHM), a motorcycle import and distribution company. Its main purpose is to manage multi-location inventory, streamline container-based purchasing, handle full double-entry financial accounting, process payroll, and manage supplier and customer relationships.
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+## System Architecture
+
+### Legacy App (client/ + server/)
+
+The original codebase lives in `client/` (React 18 + Vite frontend) and `server/` (Express.js backend). It uses a single root `package.json` and a single `shared/schema.ts` for types. Run with `tsx server/index.ts` on port 5000.
+
+### New ERP/POS (artifacts/)
+
+A full rebuild of the system using a pnpm workspace monorepo:
+
+- **artifacts/mototrack** — React 18 + Vite frontend (port from `$PORT`)
+- **artifacts/api-server** — Express 5 API server (port 8080)
+- **lib/db** — Drizzle ORM + PostgreSQL schema
+- **lib/api-client-react** — Auto-generated React Query hooks (Orval)
+- **lib/api-zod** — Auto-generated Zod validators (Orval)
+
+## Run & Operate (new artifacts)
+
+- `pnpm --filter @workspace/api-server run dev` — API server
+- `pnpm --filter @workspace/mototrack run dev` — frontend
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `DATABASE_URL`, `SESSION_SECRET`
 
-## Stack
+## Stack (new artifacts)
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- API codegen: Orval (from OpenAPI spec in `lib/api-spec/openapi.yaml`)
+- Build: esbuild (ESM bundle)
 
-## Where things live
+## User Preferences
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+Preferred communication style: Simple, everyday language.
 
-## Architecture decisions
+## Key Features (new artifacts)
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Multi-tenant ERP/POS (companies, locations, users with roles)
+- Inventory: stock groups, stock items, containers/import shipments
+- Financial: double-entry voucher system, daybook, ledger accounts
+- POS terminal with day-by-day sales history
+- Payroll: employees per company
+- Session-based auth (SHA-256 passwords, express-session)
+- Company selector after login
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Always run `pnpm --filter @workspace/api-server run build` before restarting the API workflow after route changes
+- Voucher types stored as uppercase (SALES, RECEIPT, PAYMENT, JOURNAL)
+- Session requires `credentials: 'include'` on all fetch calls — handled by `custom-fetch.ts`

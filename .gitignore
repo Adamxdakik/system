@@ -1,5 +1,3 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
-
 # compiled output
 dist
 tmp
@@ -10,6 +8,19 @@ out-tsc
 
 # dependencies
 node_modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+build/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
 
 # IDEs and editors
 /.idea
@@ -19,13 +30,10 @@ node_modules
 *.launch
 .settings/
 *.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # misc
 /.sass-cache
@@ -41,9 +49,39 @@ testem.log
 .DS_Store
 Thumbs.db
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
+# Logs
+logs/
+*.log
 
 # Replit
 .cache/
 .local/
+.local/state/
+.upm/
+.config/
+.breakpoints
+
+# Project artifacts that should not be committed
+zipFile.zip
+*.zip
+*.tar.gz
+
+# Development screenshots and uploaded assets (not part of the app)
+Screenshot*.png
+attached_assets/*.png
+attached_assets/*.jpg
+attached_assets/*.jpeg
+attached_assets/*.gif
+attached_assets/*.webp
+attached_assets/*.sql
+attached_assets/*.gz
+attached_assets/*.tar
+attached_assets/*.txt
+# Keep the app logo
+!attached_assets/generated_images/mototrack_motorcycle_business_logo.png
+
+# Misc stray files
+ServiceHistory.tsx
+client/src/test
+_trash/
+.admin-credentials.txt

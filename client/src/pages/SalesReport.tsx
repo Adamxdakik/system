@@ -1,0 +1,752 @@
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { FileSpreadsheet, FileText, TrendingUp, TrendingDown, ChevronRight, RefreshCw } from "lucide-react";
+import * as XLSX from "@/lib/excelHelper";
+import { format, parseISO, startOfDay, startOfMonth, startOfYear } from "date-fns";
+import { useDateFormat } from "@/contexts/DateFormatContext";
+import { PeriodPresets, type PresetId } from "@/components/PeriodPresets";
+import { cn } from "@/lib/utils";
+
+interface SalesReportItem {
+  id: number;
+  voucherId: number;
+  voucherNumber: string;
+  voucherDate: string;
+  locationId: number | null;
+  locationName: string | null;
+  stockItemId: number;
+  stockItemCode: string;
+  stockItemName: string;
+  quantity: string;
+  actualSellingPrice: string;
+  configuredSellingPrice: string;
+  costPrice: string;
+  totalSales: string;
+  totalCost: string;
+  totalConfiguredCost: number;
+  costProfit: string;
+  costProfitPercentage: number;
+  configuredProfit: number;
+  configuredProfitPercentage: number;
+  createdAt: string;
+}
+
+interface DailySummary {
+  date: string;
+  displayDate: string;
+  totalSales: number;
+  totalCost: number;
+  totalConfiguredCost: number;
+  costProfit: number;
+  configuredProfit: number;
+  itemCount: number;
+  items: SalesReportItem[];
+}
+
+type GroupingType = "daily" | "monthly" | "yearly";
+type ProfitFilter = "all" | "positive" | "negative";
+
+// Format currency: adds commas, removes .00 if whole number
+const formatCurrency = (value: string | number): string => {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return '$0';
+  // If whole number, no decimals; otherwise 2 decimals
+  if (num % 1 === 0) {
+    return '$' + Math.abs(num).toLocaleString('en-US');
+  }
+  return '$' + Math.abs(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+// Format number with commas, remove .00 if whole
+const formatNumber = (value: string | number): string => {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return '0';
+  if (num % 1 === 0) {
+    return num.toLocaleString('en-US');
+  }
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+// For backwards compatibility
+const formatSmartNumber = (value: string | number) => {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return '0';
+  return num % 1 === 0 ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+export default function SalesReport() {
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [selectedStockItem, setSelectedStockItem] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [grouping, setGrouping] = useState<GroupingType>("daily");
+  const [profitFilter, setProfitFilter] = useState<ProfitFilter>("all");
+  const [selectedDaySummary, setSelectedDaySummary] = useState<DailySummary | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [activePreset, setActivePreset] = useState<PresetId | string>("");
+  const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const { formatDisplayDate } = useDateFormat();
+
+  // Mutation to recalculate cost prices
+  const recalculateMutation = useMutation({
+    mutationFn: async () => {
+      const body: any = {};
+      if (startDate) body.startDate = startDate;
+      if (endDate) body.endDate = endDate;
+      if (selectedLocation && selectedLocation !== "all") body.locationId = parseInt(selectedLocation);
+      if (selectedStockItem && selectedStockItem !== "all") body.stockItemId = parseInt(selectedStockItem);
+      
+      return apiRequest("POST", "/api/sales-report/recalculate-costs", body);
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Cost Prices Updated",
+        description: `Updated ${data.updatedCount} of ${data.totalChecked} sales items`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-report"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch locations
+  const { data: locations = [] } = useQuery<any[]>({
+    queryKey: ["/api/locations"],
+  });
+
+  // Fetch stock items
+  const { data: stockItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/stock-items"],
+  });
+
+  // Build query params
+  const queryParams = new URLSearchParams();
+  if (startDate) queryParams.append("startDate", startDate);
+  if (endDate) queryParams.append("endDate", endDate);
+  if (selectedLocation && selectedLocation !== "all") queryParams.append("locationId", selectedLocation);
+  if (selectedStockItem && selectedStockItem !== "all") queryParams.append("stockItemId", selectedStockItem);
+
+  const queryString = queryParams.toString();
+  const queryKey = queryString ? `/api/sales-report?${queryString}` : "/api/sales-report";
+
+  // Fetch sales report data
+  const { data: salesData = [], isLoading } = useQuery<SalesReportItem[]>({
+    queryKey: [queryKey],
+  });
+
+  // Group sales by date/month/year
+  const groupedData: DailySummary[] = salesData.reduce((acc: DailySummary[], item) => {
+    const itemDate = parseISO(item.voucherDate);
+    let groupKey: string;
+    let displayDate: string;
+
+    if (grouping === "daily") {
+      groupKey = format(startOfDay(itemDate), "yyyy-MM-dd");
+      displayDate = formatDisplayDate(itemDate);
+    } else if (grouping === "monthly") {
+      groupKey = format(startOfMonth(itemDate), "yyyy-MM");
+      displayDate = format(itemDate, "MMMM yyyy");
+    } else {
+      groupKey = format(startOfYear(itemDate), "yyyy");
+      displayDate = format(itemDate, "yyyy");
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matches = 
+        item.stockItemName.toLowerCase().includes(searchLower) ||
+        (item.locationName && item.locationName.toLowerCase().includes(searchLower));
+      if (!matches) return acc;
+    }
+
+    const existing = acc.find(g => g.date === groupKey);
+    const totalSales = parseFloat(item.totalSales);
+    const totalCost = parseFloat(item.totalCost);
+    const totalConfiguredCost = item.totalConfiguredCost;
+    const costProfit = parseFloat(item.costProfit);
+    const configuredProfit = item.configuredProfit;
+
+    // itemCount represents the number of units (e.g. bikes) sold, not the
+    // number of invoice line rows. A single sale line can carry quantity > 1,
+    // so sum item.quantity instead of incrementing by 1.
+    const qty = parseFloat(item.quantity) || 0;
+
+    if (existing) {
+      existing.totalSales += totalSales;
+      existing.totalCost += totalCost;
+      existing.totalConfiguredCost += totalConfiguredCost;
+      existing.costProfit += costProfit;
+      existing.configuredProfit += configuredProfit;
+      existing.itemCount += qty;
+      existing.items.push(item);
+    } else {
+      acc.push({
+        date: groupKey,
+        displayDate,
+        totalSales,
+        totalCost,
+        totalConfiguredCost,
+        costProfit,
+        configuredProfit,
+        itemCount: qty,
+        items: [item],
+      });
+    }
+
+    return acc;
+  }, []);
+
+  // Sort by date descending (most recent first)
+  groupedData.sort((a, b) => b.date.localeCompare(a.date));
+
+  // Apply profit filter
+  const filteredGroupedData = groupedData.filter(group => {
+    if (profitFilter === "all") return true;
+    if (profitFilter === "positive") return group.configuredProfit >= 0;
+    if (profitFilter === "negative") return group.configuredProfit < 0;
+    return true;
+  });
+
+  // Calculate totals
+  const totals = filteredGroupedData.reduce(
+    (acc, group) => ({
+      totalSales: acc.totalSales + group.totalSales,
+      totalCost: acc.totalCost + group.totalCost,
+      totalConfiguredCost: acc.totalConfiguredCost + group.totalConfiguredCost,
+      costProfit: acc.costProfit + group.costProfit,
+      configuredProfit: acc.configuredProfit + group.configuredProfit,
+      itemCount: acc.itemCount + group.itemCount,
+    }),
+    { totalSales: 0, totalCost: 0, totalConfiguredCost: 0, costProfit: 0, configuredProfit: 0, itemCount: 0 }
+  );
+
+  const handleClearFilters = () => {
+    setStartDate("");
+    setEndDate("");
+    setSelectedLocation("");
+    setSelectedStockItem("");
+    setSearchTerm("");
+    setProfitFilter("all");
+    setActivePreset("");
+    setHighlightedIndex(null);
+  };
+
+  const handlePresetSelect = (start: string, end: string, id: PresetId) => {
+    setActivePreset(id);
+    setStartDate(start);
+    setEndDate(end);
+    setHighlightedIndex(null);
+  };
+
+  const handleRowClick = (summary: DailySummary) => {
+    setSelectedDaySummary(summary);
+    setDetailsDialogOpen(true);
+  };
+
+  // Keyboard ↑/↓ row navigation
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isInput = tag === "input" || tag === "textarea" || tag === "select" || (e.target as HTMLElement)?.isContentEditable;
+      if (detailsDialogOpen || isInput) return;
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightedIndex((prev) => {
+          if (prev === null || prev === 0) return filteredGroupedData.length - 1;
+          return prev - 1;
+        });
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightedIndex((prev) => {
+          if (prev === null) return 0;
+          if (prev >= filteredGroupedData.length - 1) return 0;
+          return prev + 1;
+        });
+      }
+      if (e.key === "Enter" && highlightedIndex !== null && filteredGroupedData[highlightedIndex]) {
+        e.preventDefault();
+        handleRowClick(filteredGroupedData[highlightedIndex]);
+      }
+      if (e.key === "Escape") {
+        setHighlightedIndex(null);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [detailsDialogOpen, filteredGroupedData, highlightedIndex]);
+
+  useEffect(() => {
+    if (highlightedIndex !== null && tableRef.current) {
+      const rows = tableRef.current.querySelectorAll("tr[data-row-index]");
+      const row = rows[highlightedIndex] as HTMLElement;
+      row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [highlightedIndex]);
+
+  const handleExportExcel = async () => {
+    const exportData = groupedData.map((group) => ({
+      "Date": group.displayDate,
+      "Items Sold": group.itemCount,
+      "Total Sales": group.totalSales.toFixed(2),
+      "Total Cost": group.totalCost.toFixed(2),
+      "Cost Profit": group.costProfit.toFixed(2),
+      "Configured Cost": group.totalConfiguredCost.toFixed(2),
+      "Configured Profit": group.configuredProfit.toFixed(2),
+    }));
+
+    // Add totals row (Items Sold = sum of quantities, not invoice line count)
+    exportData.push({
+      "Date": "TOTAL",
+      "Items Sold": totals.itemCount,
+      "Total Sales": totals.totalSales.toFixed(2),
+      "Total Cost": totals.totalCost.toFixed(2),
+      "Cost Profit": totals.costProfit.toFixed(2),
+      "Configured Cost": totals.totalConfiguredCost.toFixed(2),
+      "Configured Profit": totals.configuredProfit.toFixed(2),
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sales History");
+    
+    const fileName = `sales-report-${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+    await XLSX.writeFile(wb, fileName);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Sales History</h1>
+          <p className="text-muted-foreground">
+            Analyze profit and loss from POS transactions
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => recalculateMutation.mutate()}
+            disabled={recalculateMutation.isPending}
+            data-testid="button-recalculate-costs"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${recalculateMutation.isPending ? "animate-spin" : ""}`} />
+            {recalculateMutation.isPending ? "Updating..." : "Fix Cost Prices"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportExcel}
+            disabled={groupedData.length === 0}
+            data-testid="button-export-excel"
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Export Excel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportPDF}
+            disabled={groupedData.length === 0}
+            data-testid="button-export-pdf"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Export PDF
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Sales</CardDescription>
+            <CardTitle className="text-2xl">
+              {formatCurrency(totals.totalSales)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Cost Price Total</CardDescription>
+            <CardTitle className="text-2xl">
+              {formatCurrency(totals.totalCost)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Cost Profit</CardDescription>
+            <CardTitle className={`text-2xl flex items-center gap-2 ${totals.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+              {totals.costProfit >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+              {totals.costProfit < 0 ? '-' : ''}{formatCurrency(totals.costProfit)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Quick Period</Label>
+            <PeriodPresets onSelect={handlePresetSelect} activePreset={activePreset} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="grouping">View By</Label>
+              <Select
+                value={grouping}
+                onValueChange={(value) => setGrouping(value as GroupingType)}
+              >
+                <SelectTrigger id="grouping" data-testid="select-grouping">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="profitFilter">Profit Filter</Label>
+              <Select
+                value={profitFilter}
+                onValueChange={(value) => setProfitFilter(value as ProfitFilter)}
+              >
+                <SelectTrigger id="profitFilter" data-testid="select-profit-filter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Profits</SelectItem>
+                  <SelectItem value="positive">Positive Only</SelectItem>
+                  <SelectItem value="negative">Negative Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Start Date</Label>
+              <DatePickerInput
+                value={startDate}
+                onChange={setStartDate}
+                placeholder="Start date"
+                data-testid="input-start-date"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endDate">End Date</Label>
+              <DatePickerInput
+                value={endDate}
+                onChange={setEndDate}
+                placeholder="End date"
+                data-testid="input-end-date"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Select
+                value={selectedLocation}
+                onValueChange={setSelectedLocation}
+              >
+                <SelectTrigger id="location" data-testid="select-location">
+                  <SelectValue placeholder="All Locations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Locations</SelectItem>
+                  {locations.map((loc: any) => (
+                    <SelectItem key={loc.id} value={loc.id.toString()}>
+                      {loc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stockItem">Stock Item</Label>
+              <Select
+                value={selectedStockItem}
+                onValueChange={setSelectedStockItem}
+              >
+                <SelectTrigger id="stockItem" data-testid="select-stock-item">
+                  <SelectValue placeholder="All Items" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Items</SelectItem>
+                  {stockItems.map((item: any) => (
+                    <SelectItem key={item.id} value={item.id.toString()}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="search">Search</Label>
+              <Input
+                id="search"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                data-testid="input-search"
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              onClick={handleClearFilters}
+              data-testid="button-clear-filters"
+            >
+              Clear Filters
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Sales by {grouping.charAt(0).toUpperCase() + grouping.slice(1)} ({filteredGroupedData.length})</CardTitle>
+          <CardDescription>Click on any row to view detailed breakdown</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Loading sales data...
+            </div>
+          ) : filteredGroupedData.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No sales transactions found. Try adjusting your filters.
+            </div>
+          ) : (
+            <div className="overflow-x-auto" ref={tableRef}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Items</TableHead>
+                    <TableHead className="text-right">Total Sales</TableHead>
+                    <TableHead className="text-right">Cost Price Total</TableHead>
+                    <TableHead className="text-right">Cost Profit</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredGroupedData.map((group, idx) => (
+                    <TableRow 
+                      key={group.date} 
+                      data-testid={`row-sale-${group.date}`}
+                      data-row-index={idx}
+                      className={cn(
+                        "cursor-pointer hover-elevate",
+                        highlightedIndex === idx && "bg-primary/10 ring-1 ring-inset ring-primary/30"
+                      )}
+                      onClick={() => { setHighlightedIndex(idx); handleRowClick(group); }}
+                    >
+                      <TableCell className="font-medium">{group.displayDate}</TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatNumber(group.itemCount)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatCurrency(group.totalSales)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatCurrency(group.totalCost)}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono font-semibold ${group.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {group.costProfit < 0 ? '-' : ''}{formatCurrency(group.costProfit)}
+                      </TableCell>
+                      <TableCell>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {/* Totals Row */}
+                  <TableRow className="font-bold bg-muted/50">
+                    <TableCell>TOTAL</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {formatNumber(totals.itemCount)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {formatCurrency(totals.totalSales)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {formatCurrency(totals.totalCost)}
+                    </TableCell>
+                    <TableCell className={`text-right font-mono ${totals.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                      {totals.costProfit < 0 ? '-' : ''}{formatCurrency(totals.costProfit)}
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Sales Details - {selectedDaySummary?.displayDate}</DialogTitle>
+            <DialogDescription>
+              All items sold on this {grouping === "daily" ? "day" : grouping === "monthly" ? "month" : "year"}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedDaySummary && (
+            <div className="space-y-4">
+              {/* Summary Cards - Sticky Header */}
+              <div className="sticky top-0 z-10 bg-background pt-2 pb-3 -mx-6 px-6 border-b">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription className="text-xs">Total Qty</CardDescription>
+                      <CardTitle className="text-lg">
+                        {formatNumber(selectedDaySummary.items.reduce((sum, item) => sum + parseFloat(item.quantity), 0))}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription className="text-xs">Total Sales</CardDescription>
+                      <CardTitle className="text-lg">
+                        {formatCurrency(selectedDaySummary.totalSales)}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription className="text-xs">Cost Total</CardDescription>
+                      <CardTitle className="text-lg">
+                        {formatCurrency(selectedDaySummary.totalCost)}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription className="text-xs">Cost Profit</CardDescription>
+                      <CardTitle className={`text-lg ${selectedDaySummary.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {selectedDaySummary.costProfit < 0 ? '-' : ''}{formatCurrency(selectedDaySummary.costProfit)}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item Name</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Sold Price</TableHead>
+                      <TableHead className="text-right">Cost Price</TableHead>
+                      <TableHead className="text-right">Total Cost</TableHead>
+                      <TableHead className="text-right">Cost Profit</TableHead>
+                      <TableHead className="text-right">Cost %</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedDaySummary.items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.stockItemName}</TableCell>
+                          <TableCell>{item.locationName || "-"}</TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatNumber(item.quantity)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(item.actualSellingPrice)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(item.costPrice)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(item.totalCost)}
+                          </TableCell>
+                          <TableCell className={`text-right font-mono ${parseFloat(item.costProfit) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {parseFloat(item.costProfit) < 0 ? '-' : ''}{formatCurrency(item.costProfit)}
+                          </TableCell>
+                          <TableCell className={`text-right font-mono text-sm ${item.costProfitPercentage >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {item.costProfitPercentage.toFixed(1)}%
+                          </TableCell>
+                        </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .container * {
+            visibility: visible;
+          }
+          .container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          button {
+            display: none !important;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}

@@ -1,0 +1,1926 @@
+import { sql } from "drizzle-orm";
+import { pgTable, text, varchar, serial, integer, decimal, date, boolean, timestamp, uniqueIndex, index, jsonb } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+// Companies table - represents different business entities
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: text("name").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertCompanySchema = createInsertSchema(companies).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  code: z.string().min(1, "Code is required"),
+  name: z.string().min(1, "Name is required"),
+});
+
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type Company = typeof companies.$inferSelect;
+
+// User-Company-Role junction table - allows users to have different roles in different companies
+export const userCompanyRoles = pgTable("user_company_roles", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  companyId: integer("company_id").notNull(),
+  role: text("role").notNull(),
+  assignedLocationId: integer("assigned_location_id"),
+  cashAccountId: integer("cash_account_id"),
+  posStation: integer("pos_station"),
+  canSellNegativeStock: boolean("can_sell_negative_stock").notNull().default(false),
+  canEditDaybook: boolean("can_edit_daybook").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertUserCompanyRoleSchema = createInsertSchema(userCompanyRoles).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  userId: z.string().min(1, "User ID is required"),
+  companyId: z.number().min(1, "Company ID is required"),
+  role: z.enum(["Admin", "Owner", "Manager", "POS1", "POS2", "POS3", "POS4", "POS5", "POS6"]),
+});
+
+export type InsertUserCompanyRole = z.infer<typeof insertUserCompanyRoleSchema>;
+export type UserCompanyRole = typeof userCompanyRoles.$inferSelect;
+
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  active: boolean("active").notNull().default(true),
+  chatbotEnabled: boolean("chatbot_enabled").notNull().default(false),
+  employeeInventoryAccess: boolean("employee_inventory_access").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(4, "Password must be at least 4 characters"),
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+export const locations = pgTable("locations", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: text("name").notNull(),
+  city: text("city"),
+  state: text("state"),
+  country: text("country"),
+  active: boolean("active").notNull().default(true),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertLocationSchema = createInsertSchema(locations).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  code: z.string().optional(),
+  name: z.string().min(1, "Name is required"),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().optional(),
+});
+
+export type InsertLocation = z.infer<typeof insertLocationSchema>;
+export type Location = typeof locations.$inferSelect;
+
+export const ledgerAccounts = pgTable("ledger_accounts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
+  name: text("name").notNull(),
+  accountType: text("account_type").notNull(),
+  subType: text("sub_type"),
+  parentId: integer("parent_id"),
+  openingBalance: decimal("opening_balance", { precision: 20, scale: 2 }).default("0"),
+  openingBalanceSide: text("opening_balance_side"),
+  active: boolean("active").notNull().default(true),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyCode: uniqueIndex("ledger_accounts_company_code_unique").on(t.companyId, t.code),
+}));
+
+export const insertLedgerAccountSchema = createInsertSchema(ledgerAccounts).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  code: z.string().optional(),
+  name: z.string().min(1, "Name is required").refine(val => val.trim().length > 0, "Name cannot be only whitespace"),
+  accountType: z.enum(["Asset", "Liability", "Equity", "Income", "Expense", "Bank", "Cash", "Indirect Expense", "Direct Expense", "Government Taxes", "Loans", "Duty Agent", "Transporter Agent", "Accounts Payable", "Profit"]),
+  subType: z.string().optional(),
+  openingBalance: z.string().optional(),
+  openingBalanceSide: z.enum(["Dr", "Cr"]).optional(),
+  parentId: z.number().optional(),
+});
+
+export const updateLedgerAccountSchema = insertLedgerAccountSchema.partial().extend({
+  id: z.number().min(1, "Account ID is required"),
+}).required({ id: true });
+
+export type InsertLedgerAccount = z.infer<typeof insertLedgerAccountSchema>;
+export type UpdateLedgerAccount = z.infer<typeof updateLedgerAccountSchema>;
+export type LedgerAccount = typeof ledgerAccounts.$inferSelect;
+
+export const employees = pgTable("employees", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  joinDate: date("join_date").notNull(),
+  department: text("department"),
+  employeeType: text("employee_type").notNull().default("Employee"),
+  monthlySalary: decimal("monthly_salary", { precision: 15, scale: 2 }).notNull().default("0"),
+  openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0"),
+  currentBalance: decimal("current_balance", { precision: 15, scale: 2 }).notNull().default("0"),
+  totalDeposits: decimal("total_deposits", { precision: 15, scale: 2 }).notNull().default("0"),
+  totalWithdrawals: decimal("total_withdrawals", { precision: 15, scale: 2 }).notNull().default("0"),
+  active: boolean("active").notNull().default(true),
+  salesBonusPct: decimal("sales_bonus_pct", { precision: 10, scale: 4 }),
+  salesBonusPctSourceCompanyId: integer("sales_bonus_pct_source_company_id"),
+  salesBonusPctLocationId: integer("sales_bonus_pct_location_id"),
+  motosBonusRate: decimal("motos_bonus_rate", { precision: 10, scale: 4 }),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertEmployeeSchema = createInsertSchema(employees).omit({
+  id: true,
+  createdAt: true,
+  currentBalance: true,
+  totalDeposits: true,
+  totalWithdrawals: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  code: z.string().optional(),
+  firstName: z.string().min(1, "First name is required").refine(val => val.trim().length > 0, "First name cannot be only whitespace"),
+  lastName: z.string().min(1, "Last name is required").refine(val => val.trim().length > 0, "Last name cannot be only whitespace"),
+  email: z.string().email("Invalid email format").optional().or(z.literal("")),
+  joinDate: z.string().min(1, "Starting date is required").refine(
+    (val) => {
+      const regex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!regex.test(val)) return false;
+      const date = new Date(val);
+      return !isNaN(date.getTime()) && val === date.toISOString().split('T')[0];
+    },
+    "Date must be a valid date in YYYY-MM-DD format"
+  ),
+  employeeType: z.enum(["Employee", "Worker"]),
+});
+
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type Employee = typeof employees.$inferSelect;
+
+// Per-employee per-location moto bonus rate (per-unit dollar rate)
+export const employeeMotoRates = pgTable("employee_moto_rates", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  sourceCompanyId: integer("source_company_id"),
+  rate: decimal("rate", { precision: 15, scale: 4 }).notNull(),
+  deletedAt: timestamp("deleted_at"),
+  effectiveFrom: timestamp("effective_from"),
+  effectiveTo: timestamp("effective_to"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type EmployeeMotoRate = typeof employeeMotoRates.$inferSelect;
+export type InsertEmployeeMotoRate = typeof employeeMotoRates.$inferInsert;
+
+// Per-employee per-location moto bonus % (% of sales amount)
+export const employeeMotoPctRates = pgTable("employee_moto_pct_rates", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  sourceCompanyId: integer("source_company_id"),
+  pct: decimal("pct", { precision: 15, scale: 4 }).notNull(),
+  deletedAt: timestamp("deleted_at"),
+  effectiveFrom: timestamp("effective_from"),
+  effectiveTo: timestamp("effective_to"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type EmployeeMotoPctRate = typeof employeeMotoPctRates.$inferSelect;
+export type InsertEmployeeMotoPctRate = typeof employeeMotoPctRates.$inferInsert;
+
+// Audit log for all changes to per-employee moto rates (replace/copy/bulk).
+// Written inside the same transaction as the rate change so history is atomic.
+export const motoRateAudit = pgTable("moto_rate_audit", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull(),
+  tableName: text("table_name").notNull(),       // 'employee_moto_rates' | 'employee_moto_pct_rates'
+  action: text("action").notNull(),              // 'replace' | 'copy_from' | 'bulk_set'
+  beforeData: jsonb("before_data"),
+  afterData: jsonb("after_data"),
+  userId: text("user_id"),
+  sourceEmployeeId: integer("source_employee_id"),
+  context: jsonb("context"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type MotoRateAudit = typeof motoRateAudit.$inferSelect;
+export type InsertMotoRateAudit = typeof motoRateAudit.$inferInsert;
+
+// C1 — rate templates (named bundles applied to N employees in one click)
+export const rateTemplates = pgTable("rate_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+});
+export type RateTemplate = typeof rateTemplates.$inferSelect;
+export type InsertRateTemplate = typeof rateTemplates.$inferInsert;
+
+export const rateTemplateItems = pgTable("rate_template_items", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  rate: decimal("rate", { precision: 15, scale: 4 }),
+  pct: decimal("pct", { precision: 15, scale: 4 }),
+  sourceCompanyId: integer("source_company_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type RateTemplateItem = typeof rateTemplateItems.$inferSelect;
+export type InsertRateTemplateItem = typeof rateTemplateItems.$inferInsert;
+
+// C4 — in-app notifications inbox
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  companyId: integer("company_id"),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body"),
+  payload: jsonb("payload"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+export const employeeGroups = pgTable("employee_groups", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  groupType: text("group_type").notNull().default("Employee"), // "Employee" or "Worker"
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertEmployeeGroupSchema = createInsertSchema(employeeGroups).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  name: z.string().min(1, "Group name is required").refine(val => val.trim().length > 0, "Group name cannot be only whitespace"),
+  description: z.string().optional(),
+  groupType: z.enum(["Employee", "Worker"]).default("Employee"),
+});
+
+export type InsertEmployeeGroup = z.infer<typeof insertEmployeeGroupSchema>;
+export type EmployeeGroup = typeof employeeGroups.$inferSelect;
+
+export const employeeGroupMembers = pgTable("employee_group_members", {
+  id: serial("id").primaryKey(),
+  employeeGroupId: integer("employee_group_id").notNull(),
+  employeeId: integer("employee_id").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertEmployeeGroupMemberSchema = createInsertSchema(employeeGroupMembers).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  employeeGroupId: z.number().min(1, "Employee group is required"),
+  employeeId: z.number().min(1, "Employee is required"),
+});
+
+export type InsertEmployeeGroupMember = z.infer<typeof insertEmployeeGroupMemberSchema>;
+export type EmployeeGroupMember = typeof employeeGroupMembers.$inferSelect;
+
+export const suppliers = pgTable("suppliers", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  legalName: text("legal_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  address: text("address"),
+  taxId: text("tax_id"),
+  paymentTerms: text("payment_terms"),
+  openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0"),
+  active: boolean("active").notNull().default(true),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertSupplierSchema = createInsertSchema(suppliers).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  code: z.string().optional(),
+  legalName: z.string().min(1, "Legal name is required"),
+  email: z.string().email("Invalid email format").optional().or(z.literal("")),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  taxId: z.string().optional(),
+  paymentTerms: z.string().optional(),
+  openingBalance: z.string().optional(),
+});
+
+export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+export type Supplier = typeof suppliers.$inferSelect;
+
+export const stockGroups = pgTable("stock_groups", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
+  name: text("name").notNull(),
+  parentId: integer("parent_id"),
+  allocateImportCosts: boolean("allocate_import_costs").notNull().default(false),
+  active: boolean("active").notNull().default(true),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyCode: uniqueIndex("stock_groups_company_code_unique").on(t.companyId, t.code),
+}));
+
+export const insertStockGroupSchema = createInsertSchema(stockGroups).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  code: z.string().min(1, "Code is required"),
+  name: z.string().min(1, "Name is required"),
+  allocateImportCosts: z.boolean().optional().default(false),
+});
+
+export type InsertStockGroup = z.infer<typeof insertStockGroupSchema>;
+export type StockGroup = typeof stockGroups.$inferSelect;
+
+export const stockItems = pgTable("stock_items", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
+  name: text("name").notNull(),
+  stockGroupId: integer("stock_group_id"),
+  uom: text("uom").notNull(),
+  openingQty: decimal("opening_qty", { precision: 15, scale: 3 }).default("0"),
+  openingRate: decimal("opening_rate", { precision: 15, scale: 2 }).default("0"),
+  openingValue: decimal("opening_value", { precision: 15, scale: 2 }).default("0"),
+  reorderLevel: decimal("reorder_level", { precision: 15, scale: 3 }).default("0"),
+  sellingPrice: decimal("selling_price", { precision: 15, scale: 2 }).default("0"),
+  active: boolean("active").notNull().default(true),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyCode: uniqueIndex("stock_items_company_code_unique").on(t.companyId, t.code),
+}));
+
+export const insertStockItemSchema = createInsertSchema(stockItems).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  code: z.string().min(1, "Code is required"),
+  name: z.string().min(1, "Name is required"),
+  uom: z.string().min(1, "Unit of measure is required"),
+});
+
+export type InsertStockItem = z.infer<typeof insertStockItemSchema>;
+export type StockItem = typeof stockItems.$inferSelect;
+
+export const stockItemCodeAliases = pgTable("stock_item_code_aliases", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  stockItemId: integer("stock_item_id").notNull(),
+  aliasCode: varchar("alias_code", { length: 50 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyAlias: uniqueIndex("stock_item_code_aliases_company_alias_unique").on(t.companyId, t.aliasCode),
+}));
+
+export const insertStockItemCodeAliasSchema = createInsertSchema(stockItemCodeAliases).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  aliasCode: z.string().min(1, "Alias code is required"),
+  description: z.string().optional(),
+});
+
+export type InsertStockItemCodeAlias = z.infer<typeof insertStockItemCodeAliasSchema>;
+export type StockItemCodeAlias = typeof stockItemCodeAliases.$inferSelect;
+
+export const bankAccounts = pgTable("bank_accounts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: text("name").notNull(),
+  bankName: text("bank_name").notNull(),
+  accountNumber: text("account_number").notNull(),
+  routingCode: text("routing_code"),
+  linkedLedgerId: integer("linked_ledger_id"),
+  openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0"),
+  openingBalanceSide: text("opening_balance_side"),
+  active: boolean("active").notNull().default(true),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertBankAccountSchema = createInsertSchema(bankAccounts).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  code: z.string().min(1, "Code is required"),
+  name: z.string().min(1, "Name is required"),
+  bankName: z.string().min(1, "Bank name is required"),
+  accountNumber: z.string().min(1, "Account number is required"),
+  openingBalanceSide: z.enum(["Dr", "Cr"]).optional(),
+});
+
+export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
+export type BankAccount = typeof bankAccounts.$inferSelect;
+
+export const fixedAssets = pgTable("fixed_assets", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  purchaseDate: date("purchase_date").notNull(),
+  purchaseAmount: decimal("purchase_amount", { precision: 15, scale: 2 }).notNull(),
+  depreciationMethod: text("depreciation_method").notNull().default("None"),
+  usefulLife: integer("useful_life"),
+  openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertFixedAssetSchema = createInsertSchema(fixedAssets).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  code: z.string().min(1, "Code is required"),
+  name: z.string().min(1, "Name is required"),
+  category: z.string().min(1, "Category is required"),
+  purchaseDate: z.string().min(1, "Purchase date is required"),
+  purchaseAmount: z.string().min(1, "Purchase amount is required"),
+  depreciationMethod: z.enum(["None", "StraightLine", "Declining"]),
+});
+
+export type InsertFixedAsset = z.infer<typeof insertFixedAssetSchema>;
+export type FixedAsset = typeof fixedAssets.$inferSelect;
+
+export const containers = pgTable("containers", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  containerNumber: varchar("container_number", { length: 100 }).notNull().unique(),
+  supplierId: integer("supplier_id").notNull(),
+  status: text("status").notNull().default("OTW"),
+  importDate: date("import_date").notNull(),
+  itemsTotal: decimal("items_total", { precision: 20, scale: 2 }).default("0"),
+  chargesTotal: decimal("charges_total", { precision: 20, scale: 2 }).default("0"),
+  grandTotal: decimal("grand_total", { precision: 20, scale: 2 }).default("0"),
+  itemName: text("item_name"),
+  ratePerKg: decimal("rate_per_kg", { precision: 10, scale: 2 }),
+  totalKg: decimal("total_kg", { precision: 15, scale: 2 }),
+  carrier: text("carrier"),
+  vesselName: text("vessel_name"),
+  originPort: text("origin_port"),
+  destinationPort: text("destination_port"),
+  departureDate: date("departure_date"),
+  estimatedArrival: date("estimated_arrival"),
+  trackingStatus: text("tracking_status"),
+  lastLocation: text("last_location"),
+  lastTrackingUpdate: timestamp("last_tracking_update"),
+  trackingEvents: text("tracking_events"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertContainerSchema = createInsertSchema(containers).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  containerNumber: z.string().min(1, "Container number is required"),
+  supplierId: z.number().min(1, "Supplier is required"),
+  importDate: z.string().min(1, "Import date is required"),
+});
+
+export type InsertContainer = z.infer<typeof insertContainerSchema>;
+export type Container = typeof containers.$inferSelect;
+
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  poNumber: varchar("po_number", { length: 100 }).notNull(),
+  containerId: integer("container_id").notNull(),
+  supplierId: integer("supplier_id").notNull(),
+  voucherId: integer("voucher_id"),
+  currency: text("currency").notNull().default("USD"),
+  itemsTotal: decimal("items_total", { precision: 20, scale: 2 }).default("0"),
+  freight: decimal("freight", { precision: 20, scale: 2 }).default("0"),
+  surcharge: decimal("surcharge", { precision: 20, scale: 2 }).default("0"),
+  fumigation: decimal("fumigation", { precision: 20, scale: 2 }).default("0"),
+  documentCharges: decimal("document_charges", { precision: 20, scale: 2 }).default("0"),
+  discount: decimal("discount", { precision: 20, scale: 2 }).default("0"),
+  otherCharges: decimal("other_charges", { precision: 20, scale: 2 }).default("0"),
+  chargesEdited: boolean("charges_edited").default(false),
+  status: text("status").notNull().default("Open"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  poNumber: z.string().min(1, "PO number is required"),
+  containerId: z.number().min(1, "Container is required"),
+  supplierId: z.number().min(1, "Supplier is required"),
+  freight: z.string().optional(),
+  surcharge: z.string().optional(),
+  fumigation: z.string().optional(),
+  documentCharges: z.string().optional(),
+  discount: z.string().optional(),
+  otherCharges: z.string().optional(),
+  chargesEdited: z.boolean().optional(),
+});
+
+export type InsertPurchaseOrder = z.infer<typeof insertPurchaseOrderSchema>;
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+
+export const poLineItems = pgTable("po_line_items", {
+  id: serial("id").primaryKey(),
+  poId: integer("po_id").notNull(),
+  stockItemId: integer("stock_item_id").notNull(),
+  itemName: text("item_name").notNull(),
+  quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+  rate: decimal("rate", { precision: 15, scale: 2 }).notNull(),
+  lineTotal: decimal("line_total", { precision: 20, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPOLineItemSchema = createInsertSchema(poLineItems).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  poId: z.number().min(1, "PO is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  itemName: z.string().min(1, "Item name is required"),
+  quantity: z.string().min(1, "Quantity is required"),
+  rate: z.string().min(1, "Rate is required"),
+  lineTotal: z.string().min(1, "Line total is required"),
+});
+
+export type InsertPOLineItem = z.infer<typeof insertPOLineItemSchema>;
+export type POLineItem = typeof poLineItems.$inferSelect;
+
+export const containerCharges = pgTable("container_charges", {
+  id: serial("id").primaryKey(),
+  containerId: integer("container_id").notNull(),
+  chargeType: text("charge_type").notNull(),
+  amount: decimal("amount", { precision: 20, scale: 2 }).notNull(),
+  ledgerAccountId: integer("ledger_account_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertContainerChargeSchema = createInsertSchema(containerCharges).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  containerId: z.number().min(1, "Container is required"),
+  chargeType: z.string().min(1, "Charge type is required"),
+  amount: z.string().min(1, "Amount is required"),
+});
+
+export type InsertContainerCharge = z.infer<typeof insertContainerChargeSchema>;
+export type ContainerCharge = typeof containerCharges.$inferSelect;
+
+// Container Items - tracks individual items in a container with qty, rate, weight
+export const containerItems = pgTable("container_items", {
+  id: serial("id").primaryKey(),
+  containerId: integer("container_id").notNull(),
+  stockItemId: integer("stock_item_id"),
+  itemName: text("item_name").notNull(),
+  quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+  ratePerKg: decimal("rate_per_kg", { precision: 15, scale: 2 }).notNull(),
+  weightKg: decimal("weight_kg", { precision: 15, scale: 3 }).notNull(),
+  lineTotal: decimal("line_total", { precision: 20, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertContainerItemSchema = createInsertSchema(containerItems).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  containerId: z.number().min(1, "Container is required"),
+  stockItemId: z.number().optional(),
+  itemName: z.string().min(1, "Item name is required"),
+  quantity: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Quantity must be positive"),
+  ratePerKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Rate must be non-negative"),
+  weightKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Weight must be positive"),
+  lineTotal: z.string().min(1, "Line total is required"),
+});
+
+export type InsertContainerItem = z.infer<typeof insertContainerItemSchema>;
+export type ContainerItem = typeof containerItems.$inferSelect;
+
+export const importLogs = pgTable("import_logs", {
+  id: serial("id").primaryKey(),
+  fileName: text("file_name").notNull(),
+  fileHash: text("file_hash").notNull().unique(),
+  rowCount: integer("row_count").notNull(),
+  containerId: integer("container_id"),
+  status: text("status").notNull(),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertImportLogSchema = createInsertSchema(importLogs).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  fileName: z.string().min(1, "File name is required"),
+  fileHash: z.string().min(1, "File hash is required"),
+  rowCount: z.number().min(0, "Row count must be non-negative"),
+  status: z.enum(["Success", "Failed", "Pending"]),
+});
+
+export type InsertImportLog = z.infer<typeof insertImportLogSchema>;
+export type ImportLog = typeof importLogs.$inferSelect;
+
+export const inventory = pgTable("inventory", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  stockItemId: integer("stock_item_id").notNull(),
+  quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull().default("0"),
+  averageRate: decimal("average_rate", { precision: 20, scale: 2 }).notNull().default("0"),
+  totalValue: decimal("total_value", { precision: 20, scale: 2 }).notNull().default("0"),
+  color: text("color"),
+  assignedStatus: text("assigned_status"),
+  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+});
+
+export const insertInventorySchema = createInsertSchema(inventory).omit({
+  id: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  locationId: z.number().min(1, "Location is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  quantity: z.string(),
+  averageRate: z.string(),
+  totalValue: z.string(),
+  color: z.string().optional(),
+  assignedStatus: z.string().optional(),
+});
+
+export type InsertInventory = z.infer<typeof insertInventorySchema>;
+export type Inventory = typeof inventory.$inferSelect;
+
+export const containerOffloads = pgTable("container_offloads", {
+  id: serial("id").primaryKey(),
+  containerId: integer("container_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  duties: decimal("duties", { precision: 20, scale: 2 }).notNull().default("0"),
+  officeCharges: decimal("office_charges", { precision: 20, scale: 2 }).notNull().default("0"),
+  transferCharges: decimal("transfer_charges", { precision: 20, scale: 2 }).notNull().default("0"),
+  transportFees: decimal("transport_fees", { precision: 20, scale: 2 }).notNull().default("0"),
+  totalCharges: decimal("total_charges", { precision: 20, scale: 2 }).notNull().default("0"),
+  totalMotos: decimal("total_motos", { precision: 15, scale: 3 }).notNull(),
+  additionalCostPerMoto: decimal("additional_cost_per_moto", { precision: 20, scale: 2 }).notNull(),
+  offloadedAt: timestamp("offloaded_at").notNull().defaultNow(),
+});
+
+export const insertContainerOffloadSchema = createInsertSchema(containerOffloads).omit({
+  id: true,
+  offloadedAt: true,
+  totalCharges: true,
+  totalMotos: true,
+  additionalCostPerMoto: true,
+  officeCharges: true,
+  transferCharges: true,
+}).extend({
+  containerId: z.number().min(1, "Container is required"),
+  locationId: z.number().min(1, "Location is required"),
+  duties: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Duties must be a valid non-negative number"),
+  transportFees: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Transport fees must be a valid non-negative number"),
+});
+
+export const offloadRequestSchema = insertContainerOffloadSchema.omit({
+  containerId: true,
+}).extend({
+  offloadDate: z.string().min(1, "Offload date is required").regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD required)"),
+  dutiesAccountId: z.number().nullable().optional(),
+  transportAccountId: z.number().nullable().optional(),
+  additionalCharges: z.array(z.object({
+    description: z.string().min(1, "Description is required"),
+    amount: z.number().min(0, "Amount must be non-negative"),
+    ledgerAccountId: z.number().min(1, "Ledger account is required"),
+  })).optional(),
+  costAllocationGroupIds: z.array(z.number()).optional(),
+});
+
+export type InsertContainerOffload = z.infer<typeof insertContainerOffloadSchema>;
+export type ContainerOffload = typeof containerOffloads.$inferSelect;
+export type OffloadRequest = z.infer<typeof offloadRequestSchema>;
+
+export const vouchers = pgTable("vouchers", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  locationId: integer("location_id"),
+  locationName: text("location_name"),
+  voucherNumber: varchar("voucher_number", { length: 100 }).notNull().unique(),
+  voucherType: text("voucher_type").notNull(),
+  voucherDate: date("voucher_date").notNull(),
+  description: text("description"),
+  totalAmount: decimal("total_amount", { precision: 20, scale: 2 }).notNull(),
+  optional: boolean("optional").notNull().default(false),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertVoucherSchema = createInsertSchema(vouchers).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  locationId: z.number().optional(),
+  locationName: z.string().optional(),
+  voucherNumber: z.string().min(1, "Voucher number is required"),
+  voucherType: z.enum(["Payment", "Receipt", "Journal", "Sales", "Purchase", "Contra", "Stock Transfer"]),
+  voucherDate: z.string().min(1, "Voucher date is required"),
+  totalAmount: z.string().min(1, "Total amount is required"),
+  optional: z.boolean().optional().default(false),
+});
+
+export type InsertVoucher = z.infer<typeof insertVoucherSchema>;
+export type Voucher = typeof vouchers.$inferSelect;
+
+export const voucherEntries = pgTable("voucher_entries", {
+  id: serial("id").primaryKey(),
+  voucherId: integer("voucher_id").notNull(),
+  ledgerAccountId: integer("ledger_account_id"),
+  bankAccountId: integer("bank_account_id"),
+  fixedAssetId: integer("fixed_asset_id"),
+  supplierId: integer("supplier_id"),
+  employeeId: integer("employee_id"),
+  debitAmount: decimal("debit_amount", { precision: 20, scale: 2 }).default("0"),
+  creditAmount: decimal("credit_amount", { precision: 20, scale: 2 }).default("0"),
+  narration: text("narration"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertVoucherEntrySchema = createInsertSchema(voucherEntries).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  voucherId: z.number().min(1, "Voucher is required"),
+  ledgerAccountId: z.number().optional(),
+  bankAccountId: z.number().optional(),
+  fixedAssetId: z.number().optional(),
+  supplierId: z.number().optional(),
+  employeeId: z.number().optional(),
+  debitAmount: z.string().optional(),
+  creditAmount: z.string().optional(),
+});
+
+export type InsertVoucherEntry = z.infer<typeof insertVoucherEntrySchema>;
+export type VoucherEntry = typeof voucherEntries.$inferSelect;
+
+// Fiscal Period Closures
+export const fiscalPeriodClosures = pgTable("fiscal_period_closures", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "restrict" }),
+  periodStartDate: date("period_start_date").notNull(),
+  periodEndDate: date("period_end_date").notNull(),
+  closureDate: timestamp("closure_date").notNull().defaultNow(),
+  closedByUserId: varchar("closed_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  closingVoucherId: integer("closing_voucher_id").notNull().unique().references(() => vouchers.id, { onDelete: "restrict" }),
+  retainedEarningsAccountId: integer("retained_earnings_account_id").notNull().references(() => ledgerAccounts.id, { onDelete: "restrict" }),
+  totalIncome: decimal("total_income", { precision: 15, scale: 2 }).notNull(),
+  totalExpense: decimal("total_expense", { precision: 15, scale: 2 }).notNull(),
+  netIncome: decimal("net_income", { precision: 15, scale: 2 }).notNull(),
+  status: text("status").notNull().default("CLOSED"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyPeriod: uniqueIndex("fiscal_closures_company_period_unique").on(t.companyId, t.periodEndDate),
+}));
+
+export const insertFiscalPeriodClosureSchema = createInsertSchema(fiscalPeriodClosures).omit({
+  id: true,
+  createdAt: true,
+  closureDate: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  periodStartDate: z.string().min(1, "Period start date is required"),
+  periodEndDate: z.string().min(1, "Period end date is required"),
+  closedByUserId: z.string().min(1, "User is required"),
+  closingVoucherId: z.number().min(1, "Closing voucher is required"),
+  retainedEarningsAccountId: z.number().min(1, "Retained earnings account is required"),
+  totalIncome: z.string(),
+  totalExpense: z.string(),
+  netIncome: z.string(),
+  status: z.enum(["CLOSED", "REOPENED"]).optional(),
+  notes: z.string().optional(),
+});
+
+export type InsertFiscalPeriodClosure = z.infer<typeof insertFiscalPeriodClosureSchema>;
+export type FiscalPeriodClosure = typeof fiscalPeriodClosures.$inferSelect;
+
+// Stock Transfer Vouchers
+export const stockTransferVouchers = pgTable("stock_transfer_vouchers", {
+  id: serial("id").primaryKey(),
+  voucherId: integer("voucher_id").notNull(),
+  sourceLocationId: integer("source_location_id").notNull(),
+  destinationLocationId: integer("destination_location_id").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertStockTransferVoucherSchema = createInsertSchema(stockTransferVouchers).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  voucherId: z.number().min(1, "Voucher is required"),
+  sourceLocationId: z.number().min(1, "Source location is required"),
+  destinationLocationId: z.number().min(1, "Destination location is required"),
+});
+
+export type InsertStockTransferVoucher = z.infer<typeof insertStockTransferVoucherSchema>;
+export type StockTransferVoucher = typeof stockTransferVouchers.$inferSelect;
+
+// Stock Transfer Items
+export const stockTransferItems = pgTable("stock_transfer_items", {
+  id: serial("id").primaryKey(),
+  transferId: integer("transfer_id").notNull(),
+  stockItemId: integer("stock_item_id").notNull(),
+  sourceLocationId: integer("source_location_id"),
+  quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+  rate: decimal("rate", { precision: 15, scale: 2 }).notNull(),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertStockTransferItemSchema = createInsertSchema(stockTransferItems).omit({
+  id: true,
+  createdAt: true,
+  totalAmount: true,
+}).extend({
+  transferId: z.number().min(1, "Transfer is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  quantity: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Quantity must be positive"),
+  rate: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Rate must be non-negative"),
+});
+
+export type InsertStockTransferItem = z.infer<typeof insertStockTransferItemSchema>;
+export type StockTransferItem = typeof stockTransferItems.$inferSelect;
+
+// Stock Adjustment Vouchers (Production/Consumption)
+export const stockAdjustmentVouchers = pgTable("stock_adjustment_vouchers", {
+  id: serial("id").primaryKey(),
+  voucherId: integer("voucher_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  adjustmentType: text("adjustment_type").notNull(), // "Production" or "Consumption"
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertStockAdjustmentVoucherSchema = createInsertSchema(stockAdjustmentVouchers).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  voucherId: z.number().min(1, "Voucher is required"),
+  locationId: z.number().min(1, "Location is required"),
+  adjustmentType: z.enum(["Production", "Consumption", "Mixed"]),
+});
+
+export type InsertStockAdjustmentVoucher = z.infer<typeof insertStockAdjustmentVoucherSchema>;
+export type StockAdjustmentVoucher = typeof stockAdjustmentVouchers.$inferSelect;
+
+// Stock Adjustment Items
+export const stockAdjustmentItems = pgTable("stock_adjustment_items", {
+  id: serial("id").primaryKey(),
+  adjustmentId: integer("adjustment_id").notNull(),
+  stockItemId: integer("stock_item_id").notNull(),
+  quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(), // Positive for production, negative for consumption
+  rate: decimal("rate", { precision: 15, scale: 2 }).notNull(),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertStockAdjustmentItemSchema = createInsertSchema(stockAdjustmentItems).omit({
+  id: true,
+  createdAt: true,
+  totalAmount: true,
+}).extend({
+  adjustmentId: z.number().min(1, "Adjustment is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  quantity: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) !== 0, "Quantity cannot be zero"),
+  rate: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Rate must be non-negative"),
+});
+
+export type InsertStockAdjustmentItem = z.infer<typeof insertStockAdjustmentItemSchema>;
+export type StockAdjustmentItem = typeof stockAdjustmentItems.$inferSelect;
+
+// Update schemas for stock transfers and adjustments
+export const updateStockTransferItemSchema = z.object({
+  sourceLocationId: z.coerce.number().int().positive("Source location must be a positive integer"),
+  stockItemId: z.coerce.number().int().positive("Stock item must be a positive integer"),
+  quantity: z.coerce.number().finite("Quantity must be a finite number").refine((val) => val !== 0, "Quantity cannot be zero"),
+  rate: z.coerce.number().nonnegative("Rate must be non-negative").finite("Rate must be a finite number"),
+});
+
+export const updateStockTransferSchema = z.object({
+  destinationLocationId: z.coerce.number().int().positive("Destination location must be a positive integer"),
+  notes: z.string().optional(),
+  items: z.array(updateStockTransferItemSchema).min(1, "At least one item is required"),
+});
+
+export type UpdateStockTransfer = z.infer<typeof updateStockTransferSchema>;
+
+export const updateStockAdjustmentItemSchema = z.object({
+  stockItemId: z.coerce.number().int().positive("Stock item must be a positive integer"),
+  quantity: z.coerce.number().finite("Quantity must be a finite number").refine((val) => val !== 0, "Quantity cannot be zero"),
+  rate: z.coerce.number().nonnegative("Rate must be non-negative").finite("Rate must be a finite number"),
+});
+
+export const updateStockAdjustmentSchema = z.object({
+  locationId: z.coerce.number().int().positive("Location must be a positive integer"),
+  adjustmentType: z.enum(["Production", "Consumption"]),
+  notes: z.string().optional(),
+  items: z.array(updateStockAdjustmentItemSchema).min(1, "At least one item is required"),
+});
+
+export type UpdateStockAdjustment = z.infer<typeof updateStockAdjustmentSchema>;
+
+// Sales Items - tracks item-level details for POS sales
+export const salesItems = pgTable("sales_items", {
+  id: serial("id").primaryKey(),
+  voucherId: integer("voucher_id").notNull(),
+  stockItemId: integer("stock_item_id").notNull(),
+  quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+  sellingPrice: decimal("selling_price", { precision: 15, scale: 2 }).notNull(),
+  costPrice: decimal("cost_price", { precision: 15, scale: 2 }).notNull(),
+  totalSales: decimal("total_sales", { precision: 15, scale: 2 }).notNull(),
+  totalCost: decimal("total_cost", { precision: 15, scale: 2 }).notNull(),
+  profit: decimal("profit", { precision: 15, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertSalesItemSchema = createInsertSchema(salesItems).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  voucherId: z.number().min(1, "Voucher is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  quantity: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Quantity must be positive"),
+  sellingPrice: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Selling price must be non-negative"),
+  costPrice: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Cost price must be non-negative"),
+  totalSales: z.string(),
+  totalCost: z.string(),
+  profit: z.string(),
+});
+
+export type InsertSalesItem = z.infer<typeof insertSalesItemSchema>;
+export type SalesItem = typeof salesItems.$inferSelect;
+
+// Draft POS Sales - stores unsaved POS transactions for later completion
+export const draftPosSales = pgTable("draft_pos_sales", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  locationId: integer("location_id").notNull(),
+  paymentAccountType: text("payment_account_type"), // "bank", "cash", or "credit"
+  paymentAccountId: integer("payment_account_id"),
+  isCreditSale: boolean("is_credit_sale").default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertDraftPosSaleSchema = createInsertSchema(draftPosSales).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  userId: z.string().min(1, "User is required"),
+  locationId: z.number().min(1, "Location is required"),
+  paymentAccountType: z.enum(["bank", "cash", "credit"]).optional(),
+  paymentAccountId: z.number().optional(),
+  isCreditSale: z.boolean().optional(),
+  notes: z.string().optional(),
+});
+
+export type InsertDraftPosSale = z.infer<typeof insertDraftPosSaleSchema>;
+export type DraftPosSale = typeof draftPosSales.$inferSelect;
+
+// Draft POS Sale Items - line items for draft sales
+export const draftPosSaleItems = pgTable("draft_pos_sale_items", {
+  id: serial("id").primaryKey(),
+  draftId: integer("draft_id").notNull(),
+  stockItemId: integer("stock_item_id").notNull(),
+  quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+  rate: decimal("rate", { precision: 15, scale: 2 }).notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertDraftPosSaleItemSchema = createInsertSchema(draftPosSaleItems).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  draftId: z.number().min(1, "Draft is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  quantity: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Quantity must be positive"),
+  rate: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Rate must be non-negative"),
+  amount: z.string(),
+});
+
+export type InsertDraftPosSaleItem = z.infer<typeof insertDraftPosSaleItemSchema>;
+export type DraftPosSaleItem = typeof draftPosSaleItems.$inferSelect;
+
+// Customers - similar to suppliers but for container sales
+export const customers = pgTable("customers", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  ledgerAccountId: integer("ledger_account_id"),
+  code: varchar("code", { length: 50 }).notNull(),
+  legalName: text("legal_name").notNull(),
+  phone: text("phone"),
+  whatsapp: text("whatsapp"),
+  email: text("email"),
+  locationId: integer("location_id"),
+  customerType: text("customer_type"),
+  openingBalance: decimal("opening_balance", { precision: 15, scale: 2 }).default("0"),
+  openingBalanceSide: varchar("opening_balance_side", { length: 2 }).default("Dr"),
+  active: boolean("active").notNull().default(true),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyCode: uniqueIndex("customers_company_code_unique").on(t.companyId, t.code),
+}));
+
+export const insertCustomerSchema = createInsertSchema(customers).omit({
+  id: true,
+  createdAt: true,
+  code: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  legalName: z.string().min(1, "Full name is required"),
+  phone: z.string().optional(),
+  whatsapp: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  locationId: z.number().optional(),
+  customerType: z.string().optional(),
+  openingBalance: z.string().optional(),
+  openingBalanceSide: z.enum(["Dr", "Cr"]).optional(),
+  ledgerAccountId: z.number().optional(),
+});
+
+export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
+export type Customer = typeof customers.$inferSelect;
+
+// Bike Purchases - manually entered customer bike purchase records for service tracking
+export const bikePurchases = pgTable("bike_purchases", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").notNull(),
+  bikeModel: text("bike_model").notNull(),
+  color: varchar("color", { length: 50 }),
+  saleDate: date("sale_date").notNull(),
+  invoiceNumber: varchar("invoice_number", { length: 100 }),
+  warrantyStartDate: date("warranty_start_date"),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertBikePurchaseSchema = createInsertSchema(bikePurchases).omit({
+  id: true,
+  createdAt: true,
+  deletedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  customerId: z.number().min(1, "Customer is required"),
+  bikeModel: z.string().min(1, "Bike model is required"),
+  color: z.string().optional(),
+  saleDate: z.string().min(1, "Sale date is required"),
+  invoiceNumber: z.string().optional(),
+  warrantyStartDate: z.string().optional(),
+});
+
+export type InsertBikePurchase = z.infer<typeof insertBikePurchaseSchema>;
+export type BikePurchase = typeof bikePurchases.$inferSelect;
+
+// Part Purchases - manually entered customer part purchase records for service tracking
+export const partPurchases = pgTable("part_purchases", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").notNull(),
+  partName: text("part_name").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  price: decimal("price", { precision: 15, scale: 2 }).notNull(),
+  purchaseDate: date("purchase_date").notNull(),
+  linkedInvoice: varchar("linked_invoice", { length: 100 }),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPartPurchaseSchema = createInsertSchema(partPurchases).omit({
+  id: true,
+  createdAt: true,
+  deletedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  customerId: z.number().min(1, "Customer is required"),
+  partName: z.string().min(1, "Part name is required"),
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+  price: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Price must be non-negative"),
+  purchaseDate: z.string().min(1, "Purchase date is required"),
+  linkedInvoice: z.string().optional(),
+});
+
+export type InsertPartPurchase = z.infer<typeof insertPartPurchaseSchema>;
+export type PartPurchase = typeof partPurchases.$inferSelect;
+
+// Service History - manually entered customer service records
+export const serviceHistory = pgTable("service_history", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").notNull(),
+  serviceDate: date("service_date").notNull(),
+  bikeModel: text("bike_model").notNull(),
+  mileage: integer("mileage"),
+  serviceType: varchar("service_type", { length: 50 }).notNull(),
+  partsUsed: text("parts_used"),
+  technicianName: varchar("technician_name", { length: 100 }),
+  notes: text("notes"),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertServiceHistorySchema = createInsertSchema(serviceHistory).omit({
+  id: true,
+  createdAt: true,
+  deletedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  customerId: z.number().min(1, "Customer is required"),
+  serviceDate: z.string().min(1, "Service date is required"),
+  bikeModel: z.string().min(1, "Bike model is required"),
+  mileage: z.number().optional(),
+  serviceType: z.string().min(1, "Service type is required"),
+  partsUsed: z.string().optional(),
+  technicianName: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type InsertServiceHistory = z.infer<typeof insertServiceHistorySchema>;
+export type ServiceHistory = typeof serviceHistory.$inferSelect;
+
+// Warranty - manually entered customer warranty records
+export const warranties = pgTable("warranties", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").notNull(),
+  bikeModel: text("bike_model").notNull(),
+  warrantyStartDate: date("warranty_start_date").notNull(),
+  warrantyDuration: integer("warranty_duration").notNull(), // in months
+  warrantyStatus: varchar("warranty_status", { length: 20 }).notNull().default("Active"),
+  voidReason: text("void_reason"),
+  notes: text("notes"),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertWarrantySchema = createInsertSchema(warranties).omit({
+  id: true,
+  createdAt: true,
+  deletedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  customerId: z.number().min(1, "Customer is required"),
+  bikeModel: z.string().min(1, "Bike model is required"),
+  warrantyStartDate: z.string().min(1, "Warranty start date is required"),
+  warrantyDuration: z.number().min(1, "Warranty duration is required"),
+  warrantyStatus: z.enum(["Active", "Expired", "Void"]).default("Active"),
+  voidReason: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type InsertWarranty = z.infer<typeof insertWarrantySchema>;
+export type Warranty = typeof warranties.$inferSelect;
+
+// Communication Logs - manually entered customer communication records
+export const communicationLogs = pgTable("communication_logs", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").notNull(),
+  contactDate: date("contact_date").notNull(),
+  contactType: varchar("contact_type", { length: 20 }).notNull(),
+  notes: text("notes"),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertCommunicationLogSchema = createInsertSchema(communicationLogs).omit({
+  id: true,
+  createdAt: true,
+  deletedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  customerId: z.number().min(1, "Customer is required"),
+  contactDate: z.string().min(1, "Contact date is required"),
+  contactType: z.enum(["Call", "WhatsApp"]),
+  notes: z.string().optional(),
+});
+
+export type InsertCommunicationLog = z.infer<typeof insertCommunicationLogSchema>;
+export type CommunicationLog = typeof communicationLogs.$inferSelect;
+
+// Container Sales - tracks when containers are sold to customers
+export const containerSales = pgTable("container_sales", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  containerId: integer("container_id").notNull(),
+  customerId: integer("customer_id").notNull(),
+  saleDate: date("sale_date").notNull(),
+  containerCost: decimal("container_cost", { precision: 15, scale: 2 }).notNull(),
+  commission: decimal("commission", { precision: 15, scale: 2 }).notNull(),
+  commissionAccountId: integer("commission_account_id"),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("USD"),
+  invoiceNumber: varchar("invoice_number", { length: 100 }),
+  paymentStatus: text("payment_status").notNull().default("PENDING"),
+  paidAmount: decimal("paid_amount", { precision: 20, scale: 2 }).notNull().default("0"),
+  voucherId: integer("voucher_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyContainer: uniqueIndex("container_sales_company_container_unique").on(t.companyId, t.containerId),
+}));
+
+export const insertContainerSaleSchema = createInsertSchema(containerSales).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  containerId: z.number().min(1, "Container is required"),
+  customerId: z.number().min(1, "Customer is required"),
+  saleDate: z.string().min(1, "Sale date is required"),
+  containerCost: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Container cost must be non-negative"),
+  commission: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Commission must be non-negative"),
+  commissionAccountId: z.number().optional(),
+  totalAmount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Total amount must be positive"),
+  currency: z.string().min(1).default("USD"),
+  invoiceNumber: z.string().optional(),
+  paymentStatus: z.enum(["PENDING", "PARTIAL", "PAID"]).optional(),
+  paidAmount: z.string().optional(),
+  voucherId: z.number().optional(),
+});
+
+export type InsertContainerSale = z.infer<typeof insertContainerSaleSchema>;
+export type ContainerSale = typeof containerSales.$inferSelect;
+
+// Inter-Company Transfers - move money between companies owned by same person
+export const interCompanyTransfers = pgTable("inter_company_transfers", {
+  id: serial("id").primaryKey(),
+  transferType: text("transfer_type").notNull(),
+  fromCompanyId: integer("from_company_id").notNull(),
+  toCompanyId: integer("to_company_id").notNull(),
+  transferDate: date("transfer_date").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  fromLedgerAccountId: integer("from_ledger_account_id").notNull(),
+  toLedgerAccountId: integer("to_ledger_account_id").notNull(),
+  fromVoucherId: integer("from_voucher_id"),
+  toVoucherId: integer("to_voucher_id"),
+  description: text("description"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertInterCompanyTransferSchema = createInsertSchema(interCompanyTransfers).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  transferType: z.enum(["Cash", "Loan"]),
+  fromCompanyId: z.number().min(1, "From company is required"),
+  toCompanyId: z.number().min(1, "To company is required"),
+  transferDate: z.string().min(1, "Transfer date is required"),
+  amount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Amount must be positive"),
+  fromLedgerAccountId: z.number().min(1, "From account is required"),
+  toLedgerAccountId: z.number().min(1, "To account is required"),
+});
+
+export type InsertInterCompanyTransfer = z.infer<typeof insertInterCompanyTransferSchema>;
+export type InterCompanyTransfer = typeof interCompanyTransfers.$inferSelect;
+
+// Salary Advances - track advances given to employees
+export const salaryAdvances = pgTable("salary_advances", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  employeeId: integer("employee_id").notNull(),
+  advanceDate: date("advance_date").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  remainingBalance: decimal("remaining_balance", { precision: 15, scale: 2 }).notNull(),
+  voucherId: integer("voucher_id"),
+  notes: text("notes"),
+  fullyPaid: boolean("fully_paid").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertSalaryAdvanceSchema = createInsertSchema(salaryAdvances).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  employeeId: z.number().min(1, "Employee is required"),
+  advanceDate: z.string().min(1, "Advance date is required"),
+  amount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Amount must be positive"),
+  remainingBalance: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Remaining balance must be non-negative"),
+});
+
+export type InsertSalaryAdvance = z.infer<typeof insertSalaryAdvanceSchema>;
+export type SalaryAdvance = typeof salaryAdvances.$inferSelect;
+
+// Salary Advance Deductions - track deductions from employee salary
+export const salaryAdvanceDeductions = pgTable("salary_advance_deductions", {
+  id: serial("id").primaryKey(),
+  salaryAdvanceId: integer("salary_advance_id").notNull(),
+  payrollMonth: text("payroll_month").notNull(),
+  deductionAmount: decimal("deduction_amount", { precision: 15, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertSalaryAdvanceDeductionSchema = createInsertSchema(salaryAdvanceDeductions).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  salaryAdvanceId: z.number().min(1, "Salary advance is required"),
+  payrollMonth: z.string().min(1, "Payroll month is required"),
+  deductionAmount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Deduction amount must be positive"),
+});
+
+export type InsertSalaryAdvanceDeduction = z.infer<typeof insertSalaryAdvanceDeductionSchema>;
+export type SalaryAdvanceDeduction = typeof salaryAdvanceDeductions.$inferSelect;
+
+// Dashboard Cash Accounts - user-selected accounts to display in dashboard cash section
+export const dashboardCashAccounts = pgTable("dashboard_cash_accounts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  accountType: text("account_type").notNull(),
+  accountId: integer("account_id").notNull(),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertDashboardCashAccountSchema = createInsertSchema(dashboardCashAccounts).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  accountType: z.enum(["ledger", "bank"]),
+  accountId: z.number().min(1, "Account is required"),
+  displayOrder: z.number().optional(),
+});
+
+export type InsertDashboardCashAccount = z.infer<typeof insertDashboardCashAccountSchema>;
+export type DashboardCashAccount = typeof dashboardCashAccounts.$inferSelect;
+
+// Dashboard Payable Accounts - user-selected payable accounts to display in dashboard
+export const dashboardPayableAccounts = pgTable("dashboard_payable_accounts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  accountId: integer("account_id").notNull(),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertDashboardPayableAccountSchema = createInsertSchema(dashboardPayableAccounts).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  accountId: z.number().min(1, "Account is required"),
+  displayOrder: z.number().optional(),
+});
+
+export type InsertDashboardPayableAccount = z.infer<typeof insertDashboardPayableAccountSchema>;
+export type DashboardPayableAccount = typeof dashboardPayableAccounts.$inferSelect;
+
+// Company Settings - stores company-specific configuration like logos
+export const companySettings = pgTable("company_settings", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().unique(),
+  logoUrl: text("logo_url"),
+  logoFileName: text("logo_file_name"),
+  logoUpdatedAt: timestamp("logo_updated_at"),
+  invoiceFooter: text("invoice_footer"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCompanySettingsSchema = createInsertSchema(companySettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  logoUrl: z.string().optional(),
+  logoFileName: z.string().optional(),
+  invoiceFooter: z.string().optional(),
+});
+
+export type InsertCompanySettings = z.infer<typeof insertCompanySettingsSchema>;
+export type CompanySettings = typeof companySettings.$inferSelect;
+
+// Mix Batches - combines containers into batches for motorcycle allocation
+export const mixBatches = pgTable("mix_batches", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  batchCode: varchar("batch_code", { length: 50 }).notNull(),
+  targetCategory: text("target_category"),
+  targetGrade: text("target_grade"),
+  totalPlannedWeight: decimal("total_planned_weight", { precision: 15, scale: 3 }).notNull(),
+  totalActualWeight: decimal("total_actual_weight", { precision: 15, scale: 3 }).default("0"),
+  totalCost: decimal("total_cost", { precision: 20, scale: 2 }).notNull(),
+  costPerKg: decimal("cost_per_kg", { precision: 20, scale: 2 }).notNull(),
+  status: text("status").notNull().default("PLANNING"),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyBatchCode: uniqueIndex("mix_batches_company_batch_code_unique").on(t.companyId, t.batchCode),
+}));
+
+export const insertMixBatchSchema = createInsertSchema(mixBatches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  batchCode: z.string().min(1, "Batch code is required"),
+  targetCategory: z.string().optional(),
+  targetGrade: z.string().optional(),
+  totalPlannedWeight: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Total weight must be positive"),
+  totalCost: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Total cost must be non-negative"),
+  costPerKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Cost per kg must be non-negative"),
+  status: z.enum(["PLANNING", "IN_PROGRESS", "COMPLETED"]).optional(),
+  createdBy: z.string().min(1, "Creator is required"),
+});
+
+export type InsertMixBatch = z.infer<typeof insertMixBatchSchema>;
+export type MixBatch = typeof mixBatches.$inferSelect;
+
+// Mix Batch Sources - tracks which containers contribute to a mix batch
+export const mixBatchSources = pgTable("mix_batch_sources", {
+  id: serial("id").primaryKey(),
+  mixBatchId: integer("mix_batch_id").notNull(),
+  containerId: integer("container_id").notNull(),
+  weightKg: decimal("weight_kg", { precision: 15, scale: 3 }).notNull(),
+  costPerKg: decimal("cost_per_kg", { precision: 20, scale: 2 }).notNull(),
+  totalCost: decimal("total_cost", { precision: 20, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertMixBatchSourceSchema = createInsertSchema(mixBatchSources).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  mixBatchId: z.number().min(1, "Mix batch is required"),
+  containerId: z.number().min(1, "Container is required"),
+  weightKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Weight must be positive"),
+  costPerKg: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Cost per kg must be non-negative"),
+  totalCost: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Total cost must be non-negative"),
+});
+
+export type InsertMixBatchSource = z.infer<typeof insertMixBatchSourceSchema>;
+export type MixBatchSource = typeof mixBatchSources.$inferSelect;
+
+// Customer Balances - ledger of customer transactions
+export const customerBalances = pgTable("customer_balances", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").notNull(),
+  transactionDate: date("transaction_date").notNull(),
+  transactionType: text("transaction_type").notNull(),
+  referenceId: integer("reference_id"),
+  referenceType: text("reference_type"),
+  debitAmount: decimal("debit_amount", { precision: 20, scale: 2 }).notNull().default("0"),
+  creditAmount: decimal("credit_amount", { precision: 20, scale: 2 }).notNull().default("0"),
+  balance: decimal("balance", { precision: 20, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("USD"),
+  description: text("description"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  customerCompanyIdx: index("customer_balances_customer_company_idx").on(t.customerId, t.companyId),
+}));
+
+export const insertCustomerBalanceSchema = createInsertSchema(customerBalances).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  customerId: z.number().min(1, "Customer is required"),
+  transactionDate: z.string().min(1, "Transaction date is required"),
+  transactionType: z.enum(["SALE", "PAYMENT", "ADJUSTMENT"]),
+  referenceId: z.number().optional(),
+  referenceType: z.string().optional(),
+  debitAmount: z.string().optional(),
+  creditAmount: z.string().optional(),
+  balance: z.string().refine((val) => !isNaN(parseFloat(val)), "Balance must be a valid number"),
+  currency: z.string().min(1).default("USD"),
+  description: z.string().optional(),
+});
+
+export type InsertCustomerBalance = z.infer<typeof insertCustomerBalanceSchema>;
+export type CustomerBalance = typeof customerBalances.$inferSelect;
+
+// Stock Item Location Prices - allows different selling prices per location
+export const stockItemLocationPrices = pgTable("stock_item_location_prices", {
+  id: serial("id").primaryKey(),
+  stockItemId: integer("stock_item_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  sellingPrice: decimal("selling_price", { precision: 15, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueItemLocation: uniqueIndex("stock_item_location_prices_item_location_unique").on(t.stockItemId, t.locationId),
+}));
+
+export const insertStockItemLocationPriceSchema = createInsertSchema(stockItemLocationPrices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  stockItemId: z.number().min(1, "Stock item is required"),
+  locationId: z.number().min(1, "Location is required"),
+  sellingPrice: z.string().min(1, "Selling price is required"),
+});
+
+export type InsertStockItemLocationPrice = z.infer<typeof insertStockItemLocationPriceSchema>;
+export type StockItemLocationPrice = typeof stockItemLocationPrices.$inferSelect;
+
+// User Preferences - stores user-specific settings like date format
+export const userPreferences = pgTable("user_preferences", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  dateFormat: text("date_format").notNull().default("MM/DD/YYYY"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  userId: z.string().min(1, "User ID is required"),
+  dateFormat: z.enum(["MM/DD/YYYY", "DD/MM/YYYY"]).default("MM/DD/YYYY"),
+});
+
+export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type UserPreferences = typeof userPreferences.$inferSelect;
+
+// Chat Messages - stores AI chatbot conversation history
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  role: text("role").notNull(), // 'user' or 'assistant'
+  content: text("content").notNull(),
+  sessionId: varchar("session_id").notNull(), // Groups messages in a conversation
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  sessionIdx: index("chat_messages_session_idx").on(t.sessionId),
+  userIdx: index("chat_messages_user_idx").on(t.userId),
+  companyIdx: index("chat_messages_company_idx").on(t.companyId),
+}));
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  userId: z.string().min(1, "User ID is required"),
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1, "Content is required"),
+  sessionId: z.string().min(1, "Session ID is required"),
+});
+
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+
+// Dashboard Account Selections - stores user-selected accounts for dashboard widgets
+export const dashboardAccountSelections = pgTable("dashboard_account_selections", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  selectionType: text("selection_type").notNull(), // 'availableCash' or 'cashToPay'
+  accountIds: integer("account_ids").array().notNull().default([]),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyType: uniqueIndex("dashboard_account_selections_company_type_unique").on(t.companyId, t.selectionType),
+}));
+
+export const insertDashboardAccountSelectionSchema = createInsertSchema(dashboardAccountSelections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  selectionType: z.enum(["availableCash", "cashToPay"]),
+  accountIds: z.array(z.number()).default([]),
+});
+
+export type InsertDashboardAccountSelection = z.infer<typeof insertDashboardAccountSelectionSchema>;
+export type DashboardAccountSelection = typeof dashboardAccountSelections.$inferSelect;
+
+// Role Feature Permissions - controls which features are accessible by each role per company
+export const roleFeaturePermissions = pgTable("role_feature_permissions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  role: text("role").notNull(),
+  featureKey: text("feature_key").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyRoleFeature: uniqueIndex("role_feature_permissions_unique").on(t.companyId, t.role, t.featureKey),
+}));
+
+export const insertRoleFeaturePermissionSchema = createInsertSchema(roleFeaturePermissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  role: z.enum(["Admin", "Owner", "Manager", "POS1", "POS2", "POS3", "POS4", "POS5", "POS6"]),
+  featureKey: z.string().min(1, "Feature key is required"),
+  enabled: z.boolean().default(true),
+});
+
+export type InsertRoleFeaturePermission = z.infer<typeof insertRoleFeaturePermissionSchema>;
+export type RoleFeaturePermission = typeof roleFeaturePermissions.$inferSelect;
+
+// Moto Assemblies - tracks assembled motorcycles with parts and costs
+export const motoAssemblies = pgTable("moto_assemblies", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  assemblyCode: varchar("assembly_code", { length: 50 }).notNull(),
+  vin: varchar("vin", { length: 50 }),
+  motoModel: text("moto_model").notNull(),
+  status: text("status").notNull().default("in_progress"), // in_progress, completed, sold
+  totalPartsCost: decimal("total_parts_cost", { precision: 15, scale: 2 }).notNull().default("0"),
+  laborCost: decimal("labor_cost", { precision: 15, scale: 2 }).notNull().default("0"),
+  totalCost: decimal("total_cost", { precision: 15, scale: 2 }).notNull().default("0"),
+  notes: text("notes"),
+  assemblyDate: date("assembly_date").notNull(),
+  completedDate: date("completed_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueCompanyCode: uniqueIndex("moto_assemblies_company_code_unique").on(t.companyId, t.assemblyCode),
+}));
+
+export const insertMotoAssemblySchema = createInsertSchema(motoAssemblies).omit({
+  id: true,
+  createdAt: true,
+  totalPartsCost: true,
+  totalCost: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  locationId: z.number().min(1, "Location is required"),
+  assemblyCode: z.string().optional(),
+  vin: z.string().optional(),
+  motoModel: z.string().min(1, "Moto model is required"),
+  status: z.enum(["in_progress", "completed", "sold"]).default("in_progress"),
+  laborCost: z.string().optional(),
+  notes: z.string().optional(),
+  assemblyDate: z.string().min(1, "Assembly date is required"),
+  completedDate: z.string().optional(),
+});
+
+export type InsertMotoAssembly = z.infer<typeof insertMotoAssemblySchema>;
+export type MotoAssembly = typeof motoAssemblies.$inferSelect;
+
+// Moto Assembly Parts - links parts (stock items) to assemblies with quantities and costs
+export const motoAssemblyParts = pgTable("moto_assembly_parts", {
+  id: serial("id").primaryKey(),
+  motoAssemblyId: integer("moto_assembly_id").notNull(),
+  stockItemId: integer("stock_item_id").notNull(),
+  quantity: decimal("quantity", { precision: 15, scale: 3 }).notNull(),
+  unitCost: decimal("unit_cost", { precision: 15, scale: 2 }).notNull(),
+  totalCost: decimal("total_cost", { precision: 15, scale: 2 }).notNull(),
+  notes: text("notes"),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+});
+
+export const insertMotoAssemblyPartSchema = createInsertSchema(motoAssemblyParts).omit({
+  id: true,
+  addedAt: true,
+}).extend({
+  motoAssemblyId: z.number().min(1, "Moto assembly is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  quantity: z.string().min(1, "Quantity is required"),
+  unitCost: z.string().min(1, "Unit cost is required"),
+  totalCost: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type InsertMotoAssemblyPart = z.infer<typeof insertMotoAssemblyPartSchema>;
+export type MotoAssemblyPart = typeof motoAssemblyParts.$inferSelect;
+
+// Assembly Stages for tracking motorcycle production stages per location
+export const ASSEMBLY_STAGES = ["Full CKD", "Welded", "Painted", "Final Product"] as const;
+export type AssemblyStage = typeof ASSEMBLY_STAGES[number];
+
+// Assembly Inventory - tracks stock item quantities at each stage per location
+export const assemblyInventory = pgTable("assembly_inventory", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  stockItemId: integer("stock_item_id").notNull(),
+  stage: text("stage").notNull(), // Full CKD, Welded, Painted, Final Product
+  qty: integer("qty").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  uniqueLocationStageItem: uniqueIndex("assembly_inventory_unique").on(t.locationId, t.stage, t.stockItemId),
+}));
+
+export const insertAssemblyInventorySchema = createInsertSchema(assemblyInventory).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  locationId: z.number().min(1, "Location is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  stage: z.enum(["Full CKD", "Welded", "Painted", "Final Product"]),
+  qty: z.number().min(0, "Quantity must be 0 or greater"),
+});
+
+export type InsertAssemblyInventory = z.infer<typeof insertAssemblyInventorySchema>;
+export type AssemblyInventory = typeof assemblyInventory.$inferSelect;
+
+// Assembly History - automatic log of all qty saves and transfers
+export const assemblyHistory = pgTable("assembly_history", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  locationId: integer("location_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  username: text("username"),
+  stockItemId: integer("stock_item_id").notNull(),
+  stockItemName: text("stock_item_name"),
+  actionType: text("action_type").notNull(), // SAVE or TRANSFER
+  fromStage: text("from_stage"),
+  toStage: text("to_stage"),
+  qtyChanged: integer("qty_changed").notNull(),
+  description: text("description"),
+  technician: text("technician"), // manually editable
+  status: text("status").default("pending"), // pending or completed
+  completed: boolean("completed").default(false), // yes/no toggle
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertAssemblyHistorySchema = createInsertSchema(assemblyHistory).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  locationId: z.number().min(1, "Location is required"),
+  userId: z.string().min(1, "User ID is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  actionType: z.enum(["SAVE", "TRANSFER"]),
+  qtyChanged: z.number(),
+});
+
+export type InsertAssemblyHistory = z.infer<typeof insertAssemblyHistorySchema>;
+export type AssemblyHistory = typeof assemblyHistory.$inferSelect;
+
+// Assembly Tasks - for tracking bike assembly work assignments
+export const assemblyTasks = pgTable("assembly_tasks", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  stockItemId: integer("stock_item_id").notNull(), // bike model
+  stockItemName: text("stock_item_name"), // cached name for display
+  technician: text("technician"), // manually typed technician name
+  user: text("user"), // user who performed the action
+  action: text("action"), // action type (e.g., TRANSFER)
+  details: text("details"), // details (e.g., stage transition)
+  qty: integer("qty").default(1), // quantity
+  status: text("status").notNull().default("pending"), // auto-set to pending
+  completed: boolean("completed").notNull().default(false), // yes/no
+  date: date("date").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertAssemblyTaskSchema = createInsertSchema(assemblyTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  companyId: z.number().min(1, "Company is required"),
+  stockItemId: z.number().min(1, "Stock item is required"),
+  date: z.string().min(1, "Date is required"),
+});
+
+export type InsertAssemblyTask = z.infer<typeof insertAssemblyTaskSchema>;
+export type AssemblyTask = typeof assemblyTasks.$inferSelect;
+
+// List of all available features for permission control
+export const FEATURE_KEYS = [
+  "dashboard",
+  "pos",
+  "pos_daybook",
+  "stock_items",
+  "location_inventory",
+  "containers",
+  "stock_otw",
+  "moto_assembly",
+  "factory_production",
+  "analytics",
+  "accounts",
+  "suppliers",
+  "customers",
+  "vouchers",
+  "daybook",
+  "payroll",
+  "create",
+  "stock_query",
+  "location_summary",
+  "sales_report",
+  "settings",
+] as const;
+
+export type FeatureKey = typeof FEATURE_KEYS[number];
+
+// Login history table
+export const loginHistory = pgTable("login_history", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  username: text("username").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Map feature keys to their route paths
+export const FEATURE_ROUTES: Record<FeatureKey, string> = {
+  dashboard: "/",
+  pos: "/pos",
+  pos_daybook: "/pos-daybook",
+  stock_items: "/stock-items",
+  location_inventory: "/location-inventory",
+  containers: "/containers",
+  stock_otw: "/stock-otw",
+  moto_assembly: "/moto-assembly",
+  factory_production: "/factory-production",
+  analytics: "/analytics",
+  accounts: "/accounts",
+  suppliers: "/suppliers",
+  customers: "/customers",
+  vouchers: "/vouchers",
+  daybook: "/daybook",
+  payroll: "/payroll",
+  create: "/create",
+  stock_query: "/stock-query",
+  location_summary: "/location-summary",
+  sales_report: "/sales-report",
+  settings: "/settings",
+};
+
+// Map routes to feature keys (reverse lookup)
+export const ROUTE_TO_FEATURE: Record<string, FeatureKey> = Object.fromEntries(
+  Object.entries(FEATURE_ROUTES).map(([key, route]) => [route, key as FeatureKey])
+) as Record<string, FeatureKey>;
