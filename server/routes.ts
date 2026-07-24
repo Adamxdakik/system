@@ -11695,6 +11695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assets = await storage.getAllFixedAssets(companyId);
       const suppliers = await storage.getAllSuppliers();
       const employeesData = await storage.getAllEmployees(companyId);
+      const companyCustomers = await storage.getAllCustomers(companyId);
 
       // Get all voucher entries for this company's vouchers (excluding optional and deleted)
       const companyVouchers = await db
@@ -11749,27 +11750,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // For suppliers, calculate balance across ALL companies (matching /api/suppliers/stats)
+      // Supplier balance: compute from company-scoped allEntries (avoids N+1 queries)
       const supplierBalances = new Map<number, number>();
       for (const supplier of suppliers) {
-        const entries = await storage.getVoucherEntriesBySupplier(supplier.id);
-        const openingBalance = parseFloat(supplier.openingBalance || "0");
-        
-        const balance = entries.reduce((sum, entry) => {
+        supplierBalances.set(supplier.id, parseFloat(supplier.openingBalance || "0"));
+      }
+      for (const entry of allEntries) {
+        if (entry.supplierId) {
           const credit = parseFloat(entry.creditAmount || "0");
           const debit = parseFloat(entry.debitAmount || "0");
-          
-          // Only count pure credit or pure debit entries to prevent double-counting
           if (credit > 0 && debit === 0) {
-            return sum + credit; // Increase payable
+            supplierBalances.set(entry.supplierId, (supplierBalances.get(entry.supplierId) || 0) + credit);
           } else if (debit > 0 && credit === 0) {
-            return sum - debit; // Decrease payable
+            supplierBalances.set(entry.supplierId, (supplierBalances.get(entry.supplierId) || 0) - debit);
           }
-          return sum;
-        }, openingBalance);
-        
-        supplierBalances.set(supplier.id, balance);
+        }
       }
+
+      // Account types that are auto-created for double-entry balancing — hide from the chooser
+      const SYSTEM_ACCOUNT_TYPES = new Set(["Profit", "Accounts Payable"]);
 
       // Helper function to calculate signed balance (positive = Dr, negative = Cr)
       const calculateSignedBalance = (
@@ -11800,7 +11799,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             movements.debits,
             movements.credits,
           );
-
           return {
             id: account.id,
             type: "bank",
@@ -11809,61 +11807,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
             balance,
           };
         }),
-        // Ledger accounts
-        ...ledgers.map((account) => {
-          const movements = ledgerBalances.get(account.id) || { debits: 0, credits: 0 };
-          const balance = calculateSignedBalance(
-            account.openingBalance || "0",
-            account.openingBalanceSide,
-            movements.debits,
-            movements.credits,
-          );
-
-          return {
-            id: account.id,
-            type: "ledger",
-            name: account.name,
-            code: account.code,
-            balance,
-          };
-        }),
-        // Suppliers (balance already calculated across all companies)
-        // Negate balance so positive (we owe them) shows as credit in sidebar
-        ...suppliers.map((supplier) => {
-          const rawBalance = supplierBalances.get(supplier.id) || 0;
-          // Negate: positive payable becomes negative (shown as credit in sidebar)
-          const balance = -rawBalance;
-
-          return {
-            id: supplier.id,
-            type: "supplier",
-            name: supplier.legalName,
-            code: supplier.code,
-            balance,
-          };
-        }),
+        // Ledger accounts — system/balancing types excluded
+        ...ledgers
+          .filter((account) => !SYSTEM_ACCOUNT_TYPES.has(account.accountType))
+          .map((account) => {
+            const movements = ledgerBalances.get(account.id) || { debits: 0, credits: 0 };
+            const balance = calculateSignedBalance(
+              account.openingBalance || "0",
+              account.openingBalanceSide,
+              movements.debits,
+              movements.credits,
+            );
+            return {
+              id: account.id,
+              type: "ledger",
+              name: account.name,
+              code: account.code,
+              balance,
+              accountType: account.accountType,
+            };
+          }),
+        // Suppliers — negate so positive payable shows as credit
+        ...suppliers
+          .filter((supplier) => !supplier.deletedAt)
+          .map((supplier) => {
+            const rawBalance = supplierBalances.get(supplier.id) || 0;
+            return {
+              id: supplier.id,
+              type: "supplier",
+              name: supplier.legalName,
+              code: supplier.code,
+              balance: -rawBalance,
+            };
+          }),
         // Employees
-        ...employeesData.map((employee) => {
-          const balance = parseFloat(employee.currentBalance || "0");
-
-          return {
-            id: employee.id,
-            type: "employee",
-            name: `${employee.firstName} ${employee.lastName}`,
-            code: employee.code,
-            balance,
-          };
-        }),
+        ...employeesData.map((employee) => ({
+          id: employee.id,
+          type: "employee",
+          name: `${employee.firstName} ${employee.lastName}`,
+          code: employee.code,
+          balance: parseFloat(employee.currentBalance || "0"),
+        })),
         // Fixed Assets
         ...assets.map((asset) => {
           const movements = assetBalances.get(asset.id) || { debits: 0, credits: 0 };
           const balance = calculateSignedBalance(
             asset.openingBalance || "0",
-            "Dr", // Fixed assets are always debit balance
+            "Dr",
             movements.debits,
             movements.credits,
           );
-
           return {
             id: asset.id,
             type: "fixedAsset",
@@ -11872,6 +11865,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             balance,
           };
         }),
+        // Customers
+        ...companyCustomers
+          .filter((c) => c.active && !c.deletedAt)
+          .map((c) => {
+            const opening = parseFloat(c.openingBalance || "0");
+            const balance = (c.openingBalanceSide || "Dr") === "Cr" ? -opening : opening;
+            return {
+              id: c.id,
+              type: "customer",
+              name: c.legalName,
+              code: c.code,
+              balance,
+            };
+          }),
       ];
 
       res.json(accounts);

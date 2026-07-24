@@ -10,11 +10,17 @@ export type CombinedAccount = {
   code: string;
   openingBalance?: string;
   balance?: string;
+  accountType?: string;
 };
 
 export interface AccountAutocompleteProps {
   value: { type: string; id: number; name: string } | null;
-  onChange: (type: "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "factorySupplier" | "customer", id: number, name: string) => void;
+  onChange: (
+    type:
+      "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "factorySupplier" | "customer",
+    id: number,
+    name: string,
+  ) => void;
   allAccounts: CombinedAccount[];
   placeholder?: string;
   disabled?: boolean;
@@ -54,7 +60,7 @@ export const AccountAutocomplete = forwardRef<AccountAutocompleteHandle, Account
       testId,
       rowIndex = 0,
     },
-    ref
+    ref,
   ) => {
     const [open, setOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState<string | null>(null);
@@ -76,9 +82,10 @@ export const AccountAutocomplete = forwardRef<AccountAutocompleteHandle, Account
     const filteredAccounts = useMemo(() => {
       if (searchTerm === null || searchTerm === "") return allAccounts;
       const term = searchTerm.toLowerCase();
-      return allAccounts.filter((acc) =>
-        (acc.name || "").toLowerCase().includes(term) ||
-        (acc.code || "").toLowerCase().includes(term)
+      return allAccounts.filter(
+        (acc) =>
+          (acc.name || "").toLowerCase().includes(term) ||
+          (acc.code || "").toLowerCase().includes(term),
       );
     }, [allAccounts, searchTerm]);
 
@@ -90,7 +97,9 @@ export const AccountAutocomplete = forwardRef<AccountAutocompleteHandle, Account
     // Scroll highlighted item into view
     useEffect(() => {
       if (listRef.current && open && filteredAccounts.length > 0) {
-        const highlightedButton = listRef.current.querySelector(`[data-index="${highlightedIndex}"]`) as HTMLElement;
+        const highlightedButton = listRef.current.querySelector(
+          `[data-index="${highlightedIndex}"]`,
+        ) as HTMLElement;
         if (highlightedButton) {
           highlightedButton.scrollIntoView({ block: "nearest", behavior: "smooth" });
         }
@@ -157,9 +166,9 @@ export const AccountAutocomplete = forwardRef<AccountAutocompleteHandle, Account
       }
     };
 
-    // Show searchTerm if user has started editing (not null), otherwise show selected value  
-    const displayValue = searchTerm !== null ? searchTerm : (value?.name || "");
-    
+    // Show searchTerm if user has started editing (not null), otherwise show selected value
+    const displayValue = searchTerm !== null ? searchTerm : value?.name || "";
+
     // Unique IDs for accessibility
     const listboxId = `account-listbox-${rowIndex}`;
     const activeOptionId = `account-option-${rowIndex}-${highlightedIndex}`;
@@ -196,7 +205,7 @@ export const AccountAutocomplete = forwardRef<AccountAutocompleteHandle, Account
           data-testid={testId || `input-account-${rowIndex}`}
         />
         {open && filteredAccounts.length > 0 && (
-          <div 
+          <div
             ref={listRef}
             id={listboxId}
             className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border rounded-md shadow-md max-h-60 overflow-y-auto"
@@ -213,7 +222,7 @@ export const AccountAutocomplete = forwardRef<AccountAutocompleteHandle, Account
                 data-index={idx}
                 className={cn(
                   "w-full text-left px-3 py-2 flex items-center gap-2 hover-elevate active-elevate-2",
-                  idx === highlightedIndex && "bg-accent"
+                  idx === highlightedIndex && "bg-accent",
                 )}
                 data-testid={`account-option-${idx}`}
               >
@@ -222,13 +231,17 @@ export const AccountAutocomplete = forwardRef<AccountAutocompleteHandle, Account
                     "h-4 w-4 flex-shrink-0",
                     value?.type === account.type && value?.id === account.id
                       ? "opacity-100"
-                      : "opacity-0"
+                      : "opacity-0",
                   )}
                 />
                 <span className="flex-1">{account.name}</span>
                 {account.balance !== undefined && (
                   <span className="text-sm text-muted-foreground font-mono">
-                    ${parseFloat(account.balance || "0").toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    $
+                    {parseFloat(account.balance || "0").toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </span>
                 )}
               </button>
@@ -237,7 +250,7 @@ export const AccountAutocomplete = forwardRef<AccountAutocompleteHandle, Account
         )}
       </div>
     );
-  }
+  },
 );
 
 AccountAutocomplete.displayName = "AccountAutocomplete";

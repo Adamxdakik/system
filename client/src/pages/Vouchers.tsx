@@ -988,7 +988,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       ...customers.map((c: any) => ({
         type: "customer" as const,
         id: c.id,
-        name: c.name || "",
+        name: c.legalName || c.name || "",
         code: c.code || "",
         openingBalance: c.openingBalance,
       })),
@@ -1285,25 +1285,36 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const paymentAccountName = form.watch("paymentAccountName");
 
   // Fallback account list built from allAccounts when sidebar API fails/empty
+  // Account types auto-created for double-entry balancing — excluded from the chooser
+  const SYSTEM_ACCOUNT_TYPES = new Set(["Profit", "Accounts Payable"]);
+
   const allAccountsFallback = useMemo<Account[]>(() => {
     return allAccounts
-      .filter((acc) =>
-        [
-          "ledger",
-          "bank",
-          "supplier",
-          "employee",
-          "fixedAsset",
-          "customer",
-          "factorySupplier",
-        ].includes(acc.type),
-      )
+      .filter((acc) => {
+        if (
+          ![
+            "ledger",
+            "bank",
+            "supplier",
+            "employee",
+            "fixedAsset",
+            "customer",
+            "factorySupplier",
+          ].includes(acc.type)
+        )
+          return false;
+        // Hide system/balancing ledger accounts even in fallback mode
+        if (acc.type === "ledger" && acc.accountType && SYSTEM_ACCOUNT_TYPES.has(acc.accountType))
+          return false;
+        return true;
+      })
       .map((acc) => ({
         id: acc.id,
         type: acc.type as Account["type"],
         name: acc.name || "",
         code: acc.code || "",
         balance: undefined,
+        accountType: acc.accountType,
       }));
   }, [allAccounts]);
 
@@ -1325,6 +1336,8 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     const searchLower = sidebarSearchValue.toLowerCase().trim();
     return finalSidebarAccounts
       .filter((acc) => {
+        // Hide system/balancing account types (Profit, Accounts Payable)
+        if (acc.accountType && SYSTEM_ACCOUNT_TYPES.has(acc.accountType)) return false;
         // Exclude the currently selected payment account from the entries list
         if (
           paymentAccountId > 0 &&

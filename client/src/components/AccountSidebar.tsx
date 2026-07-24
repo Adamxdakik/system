@@ -15,6 +15,7 @@ export interface Account {
   name: string;
   code: string;
   balance?: number;
+  accountType?: string;
 }
 
 export interface VoucherEntry {
