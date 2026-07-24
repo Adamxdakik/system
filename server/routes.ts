@@ -301,29 +301,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ─── Login History ───────────────────────────────────────────────────────
-  app.get(
-    "/api/login-history",
-    requireAuth,
-    requireRole("Admin"),
-    async (req, res) => {
-      try {
-        const usernameFilter = (req.query.username as string) || "";
-        let rows = await db
-          .select()
-          .from(loginHistory)
-          .orderBy(desc(loginHistory.createdAt))
-          .limit(200);
-        if (usernameFilter) {
-          rows = rows.filter((r) =>
-            r.username.toLowerCase().includes(usernameFilter.toLowerCase()),
-          );
-        }
-        res.json(rows);
-      } catch (error: any) {
-        res.status(500).json({ message: error.message });
+  app.get("/api/login-history", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const usernameFilter = (req.query.username as string) || "";
+      let rows = await db
+        .select()
+        .from(loginHistory)
+        .orderBy(desc(loginHistory.createdAt))
+        .limit(200);
+      if (usernameFilter) {
+        rows = rows.filter((r) => r.username.toLowerCase().includes(usernameFilter.toLowerCase()));
       }
-    },
-  );
+      res.json(rows);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     if (!req.user) {
@@ -382,28 +375,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.patch(
-    "/api/users/:id",
-    requireAuth,
-    requireRole("Admin"),
-    async (req, res) => {
-      try {
-        const { id } = req.params;
-        const updates = updateUserSchema.parse(req.body);
+  app.patch("/api/users/:id", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = updateUserSchema.parse(req.body);
 
-        // If password is being updated, hash it with bcrypt
-        if (updates.password) {
-          updates.password = await hashPassword(updates.password);
-        }
-
-        const user = await storage.updateUser(id, updates);
-        const { password: _, ...userWithoutPassword } = user;
-        res.json(userWithoutPassword);
-      } catch (error: any) {
-        res.status(400).json({ message: error.message });
+      // If password is being updated, hash it with bcrypt
+      if (updates.password) {
+        updates.password = await hashPassword(updates.password);
       }
-    },
-  );
+
+      const user = await storage.updateUser(id, updates);
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
 
   app.delete("/api/users/:id", requireAuth, requireRole("Admin"), async (req, res) => {
     try {
