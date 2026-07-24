@@ -4280,7 +4280,8 @@ export class DbStorage implements IStorage {
       .where(and(
         eq(schema.inventory.stockItemId, stockItemId),
         eq(schema.locations.companyId, companyId),
-        sql`${schema.inventory.quantity}::numeric > 0` // Only show locations with positive inventory
+        sql`${schema.inventory.quantity}::numeric > 0`, // Only show locations with positive inventory
+        isNull(schema.locations.deletedAt),             // Exclude soft-deleted locations
       ))
       .orderBy(schema.locations.name);
 
