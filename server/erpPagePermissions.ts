@@ -4,6 +4,7 @@ import {
   type FeatureKey,
   type RoleFeaturePermission,
 } from "@shared/schema";
+import { sendNoCompanyAccess } from "./roleAuthorization";
 
 const POS_SAFE_FEATURE_KEYS = new Set<FeatureKey>([
   "pos",
@@ -83,11 +84,7 @@ export function createErpPageAccessHandler(
     const companyId = req.session.currentCompanyId;
     const role = req.user?.role || req.session.currentRole;
     if (!companyId || !role) {
-      return res.status(403).json({
-        message: "No company access",
-        code: "NO_COMPANY_ACCESS",
-        requestId: req.requestId,
-      });
+      return sendNoCompanyAccess(req, res);
     }
 
     const permissions = await getRoleFeaturePermissions(companyId);
