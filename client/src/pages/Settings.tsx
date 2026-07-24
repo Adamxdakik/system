@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -69,11 +70,15 @@ import {
   Clock,
   LogOut,
   Settings as SettingsIcon,
+  UserCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { insertUserSchema, insertCompanySchema, insertUserCompanyRoleSchema } from "@shared/schema";
 import { useCompany } from "@/contexts/CompanyContext";
+
+// ── Schemas ────────────────────────────────────────────────────────────────
 
 const userFormSchema = insertUserSchema;
 const companyFormSchema = insertCompanySchema;
@@ -96,12 +101,28 @@ type RoleAssignmentData = z.infer<typeof roleAssignmentSchema>;
 
 type SettingsSection = "companies" | "users-security" | "deleted-items";
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function friendlyPage(path: string): string {
+  if (!path) return "–";
+  if (path.startsWith("/pos")) return "New Sale";
+  if (path.startsWith("/daybook")) return "Transaction History";
+  if (path.startsWith("/accounts")) return "Accounts";
+  if (path.startsWith("/service") || path.startsWith("/customers")) return "Customer Center";
+  if (path.startsWith("/settings")) return "Settings";
+  return path;
+}
+
+// ── Component ──────────────────────────────────────────────────────────────
+
 export default function Settings() {
   const { toast } = useToast();
   const { selectedCompany } = useCompany();
 
+  // ── Tab state ──────────────────────────────────────────────────────────
   const [activeSettingsSection, setActiveSettingsSection] = useState<SettingsSection>("companies");
 
+  // ── UI state ───────────────────────────────────────────────────────────
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [isCompanyDialogOpen, setIsCompanyDialogOpen] = useState(false);
@@ -112,10 +133,24 @@ export default function Settings() {
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [sessionToLogOut, setSessionToLogOut] = useState<any>(null);
+
+  // User directory filters
+  const [userSearch, setUserSearch] = useState("");
+  const [userStatusFilter, setUserStatusFilter] = useState<"all" | "active" | "inactive">("all");
+
+  // Login history local filter
   const [loginHistoryFilter, setLoginHistoryFilter] = useState("");
 
+  // ── Queries ────────────────────────────────────────────────────────────
+
   // Companies — always loaded (also used in role-assignment dialog)
-  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<any[]>({
+  const {
+    data: companies = [],
+    isLoading: isLoadingCompanies,
+    isError: isCompaniesError,
+    refetch: refetchCompanies,
+  } = useQuery<any[]>({
     queryKey: ["/api/companies"],
   });
 
@@ -125,24 +160,38 @@ export default function Settings() {
   });
 
   // Users & Security queries — deferred until that tab is active
-  const { data: users = [], isLoading } = useQuery<any[]>({
+  const {
+    data: users = [],
+    isLoading: isLoadingUsers,
+    isError: isUsersError,
+    refetch: refetchUsers,
+  } = useQuery<any[]>({
     queryKey: ["/api/users"],
     enabled: activeSettingsSection === "users-security",
   });
 
-  const { data: activeUsersList = [], refetch: refetchActiveUsers } = useQuery<any[]>({
+  const {
+    data: activeUsersList = [],
+    isLoading: isLoadingActiveUsers,
+    isError: isActiveUsersError,
+    refetch: refetchActiveUsers,
+  } = useQuery<any[]>({
     queryKey: ["/api/active-users"],
     enabled: activeSettingsSection === "users-security",
     refetchInterval: activeSettingsSection === "users-security" ? 15000 : false,
   });
 
-  const { data: loginHistoryList = [] } = useQuery<any[]>({
-    queryKey: ["/api/login-history", loginHistoryFilter],
+  // Fetch once — local filter applied via useMemo
+  const {
+    data: loginHistoryList = [],
+    isLoading: isLoadingLoginHistory,
+    isError: isLoginHistoryError,
+    refetch: refetchLoginHistory,
+  } = useQuery<any[]>({
+    queryKey: ["/api/login-history"],
     queryFn: async () => {
-      const url = loginHistoryFilter
-        ? `/api/login-history?username=${encodeURIComponent(loginHistoryFilter)}`
-        : "/api/login-history";
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch("/api/login-history", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch login history");
       return res.json();
     },
     enabled: activeSettingsSection === "users-security",
@@ -151,6 +200,7 @@ export default function Settings() {
   const {
     data: activeSessions = [],
     isLoading: isLoadingSessions,
+    isError: isSessionsError,
     refetch: refetchSessions,
   } = useQuery<any[]>({
     queryKey: ["/api/admin/active-sessions"],
@@ -166,10 +216,6 @@ export default function Settings() {
   });
 
   // Role dialog: locations and accounts for the selected company
-  const selectedCompanyId = useForm<RoleAssignmentData>({
-    resolver: zodResolver(roleAssignmentSchema),
-  });
-
   const roleForm = useForm<RoleAssignmentData>({
     resolver: zodResolver(roleAssignmentSchema),
     defaultValues: {
@@ -193,17 +239,6 @@ export default function Settings() {
     enabled: !!selectedRoleCompanyId && isRoleDialogOpen,
   });
 
-  const { data: bankAccounts = [] } = useQuery<any[]>({
-    queryKey: ["/api/bank-accounts", { companyId: selectedRoleCompanyId }],
-    queryFn: async () => {
-      if (!selectedRoleCompanyId) return [];
-      const res = await fetch(`/api/bank-accounts?companyId=${selectedRoleCompanyId}`);
-      if (!res.ok) throw new Error("Failed to fetch bank accounts");
-      return res.json();
-    },
-    enabled: !!selectedRoleCompanyId && isRoleDialogOpen,
-  });
-
   const { data: roleDialogLedgerAccounts = [] } = useQuery<any[]>({
     queryKey: ["/api/ledger-accounts", { companyId: selectedRoleCompanyId }],
     queryFn: async () => {
@@ -219,7 +254,40 @@ export default function Settings() {
     (account: any) => account.accountType === "Cash",
   );
 
-  // ── Mutations ──────────────────────────────────────────────────────────────
+  // ── Derived data ───────────────────────────────────────────────────────
+
+  const summaryStats = useMemo(
+    () => ({
+      totalUsers: users.length,
+      activeAccounts: users.filter((u: any) => u.active).length,
+      onlineNow: activeUsersList.length,
+      activeSessions: activeSessions.length,
+    }),
+    [users, activeUsersList, activeSessions],
+  );
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((u: any) => {
+      const matchSearch =
+        !userSearch || u.username.toLowerCase().includes(userSearch.toLowerCase());
+      const matchStatus =
+        userStatusFilter === "all" ? true : userStatusFilter === "active" ? u.active : !u.active;
+      return matchSearch && matchStatus;
+    });
+  }, [users, userSearch, userStatusFilter]);
+
+  const filteredLoginHistory = useMemo(() => {
+    if (!loginHistoryFilter) return loginHistoryList;
+    const q = loginHistoryFilter.toLowerCase();
+    return loginHistoryList.filter(
+      (row: any) =>
+        (row.username || "").toLowerCase().includes(q) ||
+        (row.ipAddress || "").toLowerCase().includes(q) ||
+        (row.userAgent || "").toLowerCase().includes(q),
+    );
+  }, [loginHistoryList, loginHistoryFilter]);
+
+  // ── Mutations ──────────────────────────────────────────────────────────
 
   const createCompanyMutation = useMutation({
     mutationFn: async (data: CompanyFormData) => {
@@ -400,6 +468,7 @@ export default function Settings() {
     onSuccess: () => {
       toast({ title: "Session Terminated", description: "The user has been logged out." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/active-sessions"] });
+      setSessionToLogOut(null);
     },
     onError: (error: any) => {
       toast({
@@ -407,6 +476,7 @@ export default function Settings() {
         description: error.message || "Failed to terminate session",
         variant: "destructive",
       });
+      setSessionToLogOut(null);
     },
   });
 
@@ -469,7 +539,7 @@ export default function Settings() {
     },
   });
 
-  // ── Forms ──────────────────────────────────────────────────────────────────
+  // ── Forms ──────────────────────────────────────────────────────────────
 
   const companyForm = useForm<CompanyFormData>({
     resolver: zodResolver(companyFormSchema),
@@ -481,7 +551,14 @@ export default function Settings() {
     defaultValues: { username: "", password: "", active: true },
   });
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // ── Handlers ───────────────────────────────────────────────────────────
+
+  const handleRefreshAll = () => {
+    refetchUsers();
+    refetchActiveUsers();
+    if (currentUser?.role === "Admin") refetchSessions();
+    refetchLoginHistory();
+  };
 
   const handleEditCompany = (company: any) => {
     setEditingCompany(company);
@@ -555,7 +632,7 @@ export default function Settings() {
 
   const isPOSRole = selectedRole?.startsWith("POS");
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────
 
   return (
     <div className="p-3 md:p-6 space-y-6">
@@ -639,7 +716,6 @@ export default function Settings() {
                           </FormItem>
                         )}
                       />
-
                       <FormField
                         control={companyForm.control}
                         name="code"
@@ -657,7 +733,6 @@ export default function Settings() {
                           </FormItem>
                         )}
                       />
-
                       <FormField
                         control={companyForm.control}
                         name="active"
@@ -674,7 +749,6 @@ export default function Settings() {
                           </FormItem>
                         )}
                       />
-
                       <div className="flex gap-2 justify-end border-t pt-4">
                         <Button
                           type="button"
@@ -704,7 +778,22 @@ export default function Settings() {
 
             <Card className="p-6">
               {isLoadingCompanies ? (
-                <p className="text-center text-muted-foreground">Loading companies...</p>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading companies...</span>
+                </div>
+              ) : isCompaniesError ? (
+                <div className="text-center space-y-2 py-4">
+                  <p className="text-destructive text-sm">Could not load companies.</p>
+                  <Button variant="outline" size="sm" onClick={() => refetchCompanies()}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              ) : companies.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">
+                  No companies have been created.
+                </p>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -725,7 +814,9 @@ export default function Settings() {
                             {company.name}
                           </TableCell>
                           <TableCell data-testid={`text-company-status-${company.id}`}>
-                            {company.active ? "Active" : "Inactive"}
+                            <Badge variant={company.active ? "default" : "secondary"}>
+                              {company.active ? "Active" : "Inactive"}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex gap-1 justify-end">
@@ -803,17 +894,27 @@ export default function Settings() {
         </TabsContent>
 
         {/* ── Users & Security Tab ──────────────────────────────────────── */}
-        <TabsContent value="users-security" className="space-y-8">
-          {/* 1. User Management */}
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                <h2 className="text-xl font-semibold">User Management</h2>
+        <TabsContent value="users-security" className="space-y-6">
+          {/* Section header */}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Users className="h-6 w-6 text-primary" />
+              <div>
+                <h2 className="text-xl font-semibold">Users &amp; Security</h2>
+                <p className="text-sm text-muted-foreground">
+                  Manage user accounts, company access and login security.
+                </p>
               </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={handleRefreshAll}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button
+                    size="sm"
                     onClick={() => {
                       setEditingUser(null);
                       form.reset({ username: "", password: "", active: true });
@@ -824,9 +925,16 @@ export default function Settings() {
                     Add User
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="w-full max-w-md">
                   <DialogHeader>
-                    <DialogTitle>{editingUser ? "Edit User" : "Create New User"}</DialogTitle>
+                    <DialogTitle>
+                      {editingUser ? "Edit User Account" : "Create New User"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingUser
+                        ? "Update the user's credentials or status."
+                        : "Add a new user who can be assigned to companies."}
+                    </DialogDescription>
                   </DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -847,14 +955,13 @@ export default function Settings() {
                           </FormItem>
                         )}
                       />
-
                       <FormField
                         control={form.control}
                         name="password"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              Password {!editingUser && "*"}
+                              Password{!editingUser && " *"}
                               {editingUser && " (leave blank to keep current)"}
                             </FormLabel>
                             <FormControl>
@@ -871,7 +978,6 @@ export default function Settings() {
                           </FormItem>
                         )}
                       />
-
                       <FormField
                         control={form.control}
                         name="active"
@@ -884,15 +990,15 @@ export default function Settings() {
                                 data-testid="checkbox-active"
                               />
                             </FormControl>
-                            <FormLabel className="!mt-0">Active</FormLabel>
+                            <FormLabel className="!mt-0">Active account</FormLabel>
                           </FormItem>
                         )}
                       />
-
-                      <div className="flex gap-2 justify-end border-t pt-4">
+                      <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end border-t pt-4">
                         <Button
                           type="button"
                           variant="outline"
+                          className="w-full sm:w-auto"
                           onClick={() => {
                             setIsDialogOpen(false);
                             setEditingUser(null);
@@ -904,10 +1010,17 @@ export default function Settings() {
                         </Button>
                         <Button
                           type="submit"
+                          className="w-full sm:w-auto"
                           disabled={createUserMutation.isPending}
                           data-testid="button-save"
                         >
-                          {createUserMutation.isPending ? "Saving..." : "Save"}
+                          {createUserMutation.isPending
+                            ? editingUser
+                              ? "Saving changes..."
+                              : "Creating user..."
+                            : editingUser
+                              ? "Save Changes"
+                              : "Create User"}
                         </Button>
                       </div>
                     </form>
@@ -915,181 +1028,279 @@ export default function Settings() {
                 </DialogContent>
               </Dialog>
             </div>
+          </div>
 
-            <Card className="p-6">
-              {isLoading ? (
-                <p className="text-center text-muted-foreground">Loading users...</p>
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <Users className="h-4 w-4 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Users</p>
+                  <p className="text-2xl font-bold">{summaryStats.totalUsers}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <UserCheck className="h-4 w-4 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Active Accounts</p>
+                  <p className="text-2xl font-bold">{summaryStats.activeAccounts}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-violet-500/10 rounded-lg">
+                  <Eye className="h-4 w-4 text-violet-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Online Now</p>
+                  <p className="text-2xl font-bold">{summaryStats.onlineNow}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-500/10 rounded-lg">
+                  <Globe className="h-4 w-4 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Active Sessions</p>
+                  <p className="text-2xl font-bold">{summaryStats.activeSessions}</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* User Directory */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base font-semibold">User Directory</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Create users and assign their company access.
+                  </p>
+                </div>
+              </div>
+              {/* Toolbar */}
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Input
+                  placeholder="Search username..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-48"
+                />
+                <Select
+                  value={userStatusFilter}
+                  onValueChange={(v) => setUserStatusFilter(v as "all" | "active" | "inactive")}
+                >
+                  <SelectTrigger className="w-36">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoadingUsers ? (
+                <div className="flex items-center gap-2 text-muted-foreground p-6">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading users...</span>
+                </div>
+              ) : isUsersError ? (
+                <div className="text-center space-y-2 p-6">
+                  <p className="text-destructive text-sm">Could not load users.</p>
+                  <Button variant="outline" size="sm" onClick={() => refetchUsers()}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <p className="text-center text-muted-foreground p-6">
+                  {users.length === 0 ? "No users found." : "No users match your filters."}
+                </p>
               ) : (
-                <div className="space-y-2">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-12"></TableHead>
-                          <TableHead>Username</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Employee Inventory</TableHead>
-                          <TableHead>Company Assignments</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {users.flatMap((user: any) =>
-                          [
-                            <TableRow key={`${user.id}-main`}>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => toggleUserExpansion(user.id)}
-                                  data-testid={`button-expand-${user.id}`}
-                                >
-                                  {expandedUserId === user.id ? (
-                                    <ChevronUp className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronDown className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </TableCell>
-                              <TableCell
-                                className="font-medium"
-                                data-testid={`text-username-${user.id}`}
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Company Access</TableHead>
+                        <TableHead>Employee Inventory</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.flatMap((user: any) =>
+                        [
+                          <TableRow key={`${user.id}-main`}>
+                            <TableCell>
+                              <button
+                                className="font-medium text-left hover:underline focus:underline focus:outline-none"
+                                onClick={() => toggleUserExpansion(user.id)}
+                                aria-label={`Expand user ${user.username}`}
+                                data-testid={`button-expand-${user.id}`}
                               >
-                                {user.username}
-                              </TableCell>
-                              <TableCell data-testid={`text-status-${user.id}`}>
+                                <span className="flex items-center gap-1">
+                                  {user.username}
+                                  {expandedUserId === user.id ? (
+                                    <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                  )}
+                                </span>
+                              </button>
+                            </TableCell>
+                            <TableCell data-testid={`text-status-${user.id}`}>
+                              <Badge variant={user.active ? "default" : "secondary"}>
                                 {user.active ? "Active" : "Inactive"}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Switch
-                                    checked={user.employeeInventoryAccess || false}
-                                    onCheckedChange={(checked) =>
-                                      toggleEmployeeAccessMutation.mutate({
-                                        userId: user.id,
-                                        enabled: checked,
-                                      })
-                                    }
-                                    disabled={toggleEmployeeAccessMutation.isPending}
-                                    data-testid={`toggle-employee-access-${user.id}`}
-                                  />
-                                  <span className="text-xs text-muted-foreground">
-                                    {user.employeeInventoryAccess ? "Enabled" : "Disabled"}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => toggleUserExpansion(user.id)}
+                                data-testid={`button-view-roles-${user.id}`}
+                              >
+                                View Access
+                              </Button>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={user.employeeInventoryAccess || false}
+                                  onCheckedChange={(checked) =>
+                                    toggleEmployeeAccessMutation.mutate({
+                                      userId: user.id,
+                                      enabled: checked,
+                                    })
+                                  }
+                                  disabled={toggleEmployeeAccessMutation.isPending}
+                                  data-testid={`toggle-employee-access-${user.id}`}
+                                />
+                                <span className="text-xs text-muted-foreground">
+                                  {user.employeeInventoryAccess ? "On" : "Off"}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end">
                                 <Button
-                                  variant="outline"
                                   size="sm"
-                                  onClick={() => toggleUserExpansion(user.id)}
-                                  data-testid={`button-view-roles-${user.id}`}
+                                  variant="ghost"
+                                  aria-label={`Edit user ${user.username}`}
+                                  onClick={() => handleEdit(user)}
+                                  data-testid={`button-edit-${user.id}`}
                                 >
-                                  View Roles
+                                  <Edit className="h-4 w-4" />
                                 </Button>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex gap-1 justify-end">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    aria-label="Edit user"
-                                    onClick={() => handleEdit(user)}
-                                    data-testid={`button-edit-${user.id}`}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    aria-label="Delete user"
-                                    onClick={() => setUserToDelete(user)}
-                                    data-testid={`button-delete-${user.id}`}
-                                  >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>,
-                            expandedUserId === user.id && (
-                              <TableRow key={`${user.id}-detail`}>
-                                <TableCell colSpan={6} className="bg-muted/50">
-                                  <div className="p-4 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <h4 className="font-medium">Company Role Assignments</h4>
-                                      <Button
-                                        size="sm"
-                                        onClick={() => handleAddRole(user.id)}
-                                        data-testid={`button-add-role-${user.id}`}
-                                      >
-                                        <Plus className="h-3 w-3 mr-1" />
-                                        Add Role
-                                      </Button>
-                                    </div>
-                                    {userCompanyRoles.length === 0 ? (
-                                      <p className="text-sm text-muted-foreground">
-                                        No company assignments yet
-                                      </p>
-                                    ) : (
-                                      <div className="space-y-2">
-                                        {userCompanyRoles.map((role: any) => {
-                                          const company = companies.find(
-                                            (c: any) => c.id === role.companyId,
-                                          );
-                                          const location = locations.find(
-                                            (l: any) => l.id === role.assignedLocationId,
-                                          );
-                                          return (
-                                            <div
-                                              key={role.id}
-                                              className="p-3 bg-background rounded-md border space-y-3"
-                                              data-testid={`role-assignment-${role.id}`}
-                                            >
-                                              <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                  <div>
-                                                    <div className="font-medium">
-                                                      {company?.name || "Unknown Company"}
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                      <Badge variant="outline" className="mr-2">
-                                                        {role.role}
-                                                      </Badge>
-                                                      {location && (
-                                                        <span className="text-xs">
-                                                          Location: {location.name}
-                                                        </span>
-                                                      )}
-                                                      {role.posStation && (
-                                                        <span className="text-xs ml-2">
-                                                          Station: {role.posStation}
-                                                        </span>
-                                                      )}
-                                                    </div>
-                                                  </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  aria-label={`Delete user ${user.username}`}
+                                  onClick={() => setUserToDelete(user)}
+                                  data-testid={`button-delete-${user.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>,
+                          expandedUserId === user.id && (
+                            <TableRow key={`${user.id}-detail`}>
+                              <TableCell colSpan={5} className="bg-muted/30 p-0">
+                                <div className="p-4 space-y-3">
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <h4 className="font-medium text-sm">Company Access</h4>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleAddRole(user.id)}
+                                      data-testid={`button-add-role-${user.id}`}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Add Company Access
+                                    </Button>
+                                  </div>
+                                  {userCompanyRoles.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground">
+                                      No company access assigned yet.
+                                    </p>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      {userCompanyRoles.map((role: any) => {
+                                        const company = companies.find(
+                                          (c: any) => c.id === role.companyId,
+                                        );
+                                        const location = locations.find(
+                                          (l: any) => l.id === role.assignedLocationId,
+                                        );
+                                        return (
+                                          <div
+                                            key={role.id}
+                                            className="p-3 bg-background rounded-md border"
+                                            data-testid={`role-assignment-${role.id}`}
+                                          >
+                                            <div className="flex flex-wrap items-start justify-between gap-2">
+                                              <div className="space-y-1">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                  <span className="font-medium text-sm">
+                                                    {company?.name || "Unknown Company"}
+                                                  </span>
+                                                  <Badge variant="outline">{role.role}</Badge>
                                                 </div>
-                                                <div className="flex gap-1">
-                                                  <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => handleEditRole(role)}
-                                                    data-testid={`button-edit-role-${role.id}`}
-                                                  >
-                                                    <Edit className="h-3 w-3" />
-                                                  </Button>
-                                                  <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() =>
-                                                      handleDeleteRole(role.id, user.id)
-                                                    }
-                                                    data-testid={`button-delete-role-${role.id}`}
-                                                  >
-                                                    <Trash2 className="h-3 w-3" />
-                                                  </Button>
+                                                <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                                                  {location && (
+                                                    <span>Location: {location.name}</span>
+                                                  )}
+                                                  {role.posStation && (
+                                                    <span>POS Station: {role.posStation}</span>
+                                                  )}
+                                                  {role.cashAccountId && (
+                                                    <span>Cash Account assigned</span>
+                                                  )}
                                                 </div>
                                               </div>
-                                              <div className="flex gap-6 pl-1">
+                                              <div className="flex gap-1 shrink-0">
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  aria-label="Edit assignment"
+                                                  onClick={() => handleEditRole(role)}
+                                                  data-testid={`button-edit-role-${role.id}`}
+                                                >
+                                                  <Edit className="h-3 w-3" />
+                                                </Button>
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  aria-label="Remove assignment"
+                                                  onClick={() => handleDeleteRole(role.id, user.id)}
+                                                  data-testid={`button-delete-role-${role.id}`}
+                                                >
+                                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                                </Button>
+                                              </div>
+                                            </div>
+                                            <details className="mt-2">
+                                              <summary className="text-xs text-muted-foreground cursor-pointer select-none hover:text-foreground">
+                                                Advanced Access
+                                              </summary>
+                                              <div className="flex flex-wrap gap-4 mt-2 pl-1">
                                                 <div className="flex items-center gap-2">
                                                   <Switch
                                                     checked={
@@ -1113,7 +1324,7 @@ export default function Settings() {
                                                     data-testid={`toggle-can-sell-${role.id}`}
                                                   />
                                                   <Label className="text-sm cursor-pointer">
-                                                    Can Sell
+                                                    Can Sell (negative stock)
                                                   </Label>
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -1136,45 +1347,72 @@ export default function Settings() {
                                                   </Label>
                                                 </div>
                                               </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ),
-                          ].filter(Boolean),
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+                                            </details>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ),
+                        ].filter(Boolean),
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
-            </Card>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* 2. Online Users */}
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                Online Users
-              </h2>
-              <Button variant="outline" size="sm" onClick={() => refetchActiveUsers()}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-            </div>
-            <Card className="p-0 overflow-hidden">
-              {activeUsersList.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">No active users found.</div>
+          {/* Online Now */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Eye className="h-4 w-4" />
+                    Online Now
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Users currently active in the system.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label="Refresh online users"
+                  onClick={() => refetchActiveUsers()}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoadingActiveUsers ? (
+                <div className="flex items-center gap-2 text-muted-foreground p-6">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading online users...</span>
+                </div>
+              ) : isActiveUsersError ? (
+                <div className="text-center space-y-2 p-6">
+                  <p className="text-destructive text-sm">Could not load online users.</p>
+                  <Button variant="outline" size="sm" onClick={() => refetchActiveUsers()}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              ) : activeUsersList.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">
+                  No users are currently online.
+                </div>
               ) : (
                 <>
-                  <div className="p-3 border-b bg-muted/30 flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span className="font-medium text-sm">{activeUsersList.length} online</span>
+                  <div className="px-4 py-2 border-b bg-muted/30 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{activeUsersList.length} online</span>
                   </div>
                   <div className="overflow-x-auto">
                     <Table>
@@ -1193,8 +1431,8 @@ export default function Settings() {
                             <TableCell>
                               <Badge variant="secondary">{u.role}</Badge>
                             </TableCell>
-                            <TableCell className="font-mono text-sm text-muted-foreground">
-                              {u.currentPage}
+                            <TableCell className="text-sm text-muted-foreground">
+                              {friendlyPage(u.currentPage)}
                             </TableCell>
                             <TableCell className="text-right text-sm text-muted-foreground">
                               {u.lastActive
@@ -1210,36 +1448,53 @@ export default function Settings() {
                   </div>
                 </>
               )}
-            </Card>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* 3. Active Sessions (Admin only) */}
+          {/* Active Sessions — Admin only */}
           {currentUser?.role === "Admin" && (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  Active Sessions
-                </h2>
-                <Button variant="outline" size="sm" onClick={() => refetchSessions()}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
-                </Button>
-              </div>
-              <Card className="p-0 overflow-hidden">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Active Sessions
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      Signed-in sessions that can be terminated for security.
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => refetchSessions()}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
                 {isLoadingSessions ? (
-                  <div className="p-6 flex items-center gap-2 text-muted-foreground">
+                  <div className="flex items-center gap-2 text-muted-foreground p-6">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     <span>Loading sessions...</span>
                   </div>
+                ) : isSessionsError ? (
+                  <div className="text-center space-y-2 p-6">
+                    <p className="text-destructive text-sm">Could not load active sessions.</p>
+                    <Button variant="outline" size="sm" onClick={() => refetchSessions()}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry
+                    </Button>
+                  </div>
                 ) : activeSessions.length === 0 ? (
-                  <div className="p-6 text-muted-foreground text-sm">No active sessions found.</div>
+                  <div className="p-6 text-center text-sm text-muted-foreground">
+                    No active sessions found.
+                  </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Username</TableHead>
+                          <TableHead>User</TableHead>
                           <TableHead>Role</TableHead>
                           <TableHead>Company</TableHead>
                           <TableHead>Expires</TableHead>
@@ -1261,8 +1516,8 @@ export default function Settings() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                aria-label="Force logout this session"
-                                onClick={() => forceLogoutMutation.mutate(sess.sid)}
+                                aria-label={`Log out session for ${sess.username}`}
+                                onClick={() => setSessionToLogOut(sess)}
                                 disabled={forceLogoutMutation.isPending}
                               >
                                 <LogOut className="h-4 w-4 text-destructive" />
@@ -1274,40 +1529,64 @@ export default function Settings() {
                     </Table>
                   </div>
                 )}
-              </Card>
-            </div>
+              </CardContent>
+            </Card>
           )}
 
-          {/* 4. Login Activity */}
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Login Activity
-              </h2>
-              <Input
-                placeholder="Filter by username..."
-                value={loginHistoryFilter}
-                onChange={(e) => setLoginHistoryFilter(e.target.value)}
-                className="w-56"
-              />
-            </div>
-            <Card className="p-0 overflow-hidden">
-              {loginHistoryList.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">No login history found.</div>
+          {/* Login Activity */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Login Activity
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Recent sign-ins and device information.
+                  </p>
+                </div>
+                <Input
+                  placeholder="Filter by user, IP or device..."
+                  value={loginHistoryFilter}
+                  onChange={(e) => setLoginHistoryFilter(e.target.value)}
+                  className="w-60"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isLoadingLoginHistory ? (
+                <div className="flex items-center gap-2 text-muted-foreground p-6">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading login activity...</span>
+                </div>
+              ) : isLoginHistoryError ? (
+                <div className="text-center space-y-2 p-6">
+                  <p className="text-destructive text-sm">Could not load login activity.</p>
+                  <Button variant="outline" size="sm" onClick={() => refetchLoginHistory()}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
+                </div>
+              ) : filteredLoginHistory.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">
+                  {loginHistoryList.length === 0
+                    ? "No login activity found."
+                    : "No records match your filter."}
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Username</TableHead>
+                        <TableHead>User</TableHead>
                         <TableHead>IP Address</TableHead>
                         <TableHead>Device / Browser</TableHead>
                         <TableHead className="text-right">Time</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {loginHistoryList.map((row: any) => (
+                      {filteredLoginHistory.map((row: any) => (
                         <TableRow key={row.id}>
                           <TableCell className="font-medium">{row.username}</TableCell>
                           <TableCell className="font-mono text-sm text-muted-foreground">
@@ -1329,11 +1608,8 @@ export default function Settings() {
                   </Table>
                 </div>
               )}
-            </Card>
-            <p className="text-xs text-muted-foreground">
-              Showing last {loginHistoryList.length} login events.
-            </p>
-          </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ── Deleted Items Tab ──────────────────────────────────────────── */}
@@ -1343,6 +1619,12 @@ export default function Settings() {
             <p className="text-sm text-muted-foreground">
               View, restore or permanently remove deleted records.
             </p>
+          </div>
+          <div className="flex items-start gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md p-3">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              Restoring or permanently deleting records may affect historical information.
+            </span>
           </div>
           <Link href="/deleted-items">
             <Card className="p-6 hover-elevate cursor-pointer">
@@ -1367,7 +1649,9 @@ export default function Settings() {
         </TabsContent>
       </Tabs>
 
-      {/* User Delete Confirmation Dialog */}
+      {/* ── Dialogs outside Tabs ────────────────────────────────────────── */}
+
+      {/* User Delete Confirmation */}
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1391,6 +1675,32 @@ export default function Settings() {
               data-testid="button-confirm-delete-user"
             >
               {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Force Logout Confirmation */}
+      <AlertDialog
+        open={!!sessionToLogOut}
+        onOpenChange={(open) => !open && setSessionToLogOut(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log out this session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The user <strong>{sessionToLogOut?.username}</strong> will be signed out from this
+              device.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => sessionToLogOut && forceLogoutMutation.mutate(sessionToLogOut.sid)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={forceLogoutMutation.isPending}
+            >
+              {forceLogoutMutation.isPending ? "Signing out..." : "Log Out Session"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
