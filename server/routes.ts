@@ -294,7 +294,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ ok: true });
   });
 
-  app.get("/api/active-users", requireAuth, (_req, res) => {
+  app.get(
+    "/api/active-users",
+    requireAuth,
+    requireRole("Admin"),
+    (_req, res) => {
     const cutoff = new Date(Date.now() - ACTIVE_TIMEOUT_MS);
     const result: ActiveUserEntry[] = [];
     for (const [id, entry] of activeUsers) {
@@ -305,10 +309,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     res.json(result);
-  });
+    },
+  );
 
   // ─── Login History ───────────────────────────────────────────────────────
-  app.get("/api/login-history", requireAuth, async (req, res) => {
+  app.get(
+    "/api/login-history",
+    requireAuth,
+    requireRole("Admin"),
+    async (req, res) => {
     try {
       const usernameFilter = (req.query.username as string) || "";
       let rows = await db
@@ -323,7 +332,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  });
+    },
+  );
 
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     if (!req.user) {
@@ -2359,7 +2369,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== Round-4 follow-ups =====
   // A1: deep health check (auth'd — leaks schema metadata + row counts)
-  app.get("/api/health/deep", requireAuth, async (_req, res) => {
+  app.get(
+    "/api/health/deep",
+    requireAuth,
+    requireRole("Admin"),
+    async (_req, res) => {
     const startedAt = Date.now();
     const checks: any = { db: "unknown", migrations: "unknown", auditTable: "unknown" };
     try {
@@ -2389,7 +2403,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       nodeEnv: process.env.NODE_ENV,
       timestamp: new Date().toISOString(),
     });
-  });
+    },
+  );
 
   // A3: rate stats per location (for outlier warning)
   app.get("/api/locations/:id/moto-rate-stats", requireAuth, async (req, res) => {
