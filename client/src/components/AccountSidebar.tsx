@@ -193,10 +193,9 @@ export default function AccountSidebar({
 
   const inner = (
     <>
-      <div className={dialogMode ? "p-4" : "p-4 border-b"}>
+      <div className={dialogMode ? "p-3 pb-0" : "p-4 border-b"}>
         <div className="flex items-center justify-between mb-3">
           {!dialogMode && <h3 className="text-base font-semibold">Select Account</h3>}
-          {dialogMode && <div />}
           {onCreateAccount && (
             <Button
               type="button"

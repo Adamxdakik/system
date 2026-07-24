@@ -4,7 +4,6 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { useDateFormat } from "@/contexts/DateFormatContext";
 import { useCurrencyContext } from "@/contexts/CurrencyContext";
 import { ExchangeRateInput } from "@/components/ExchangeRateInput";
 import { formatNumber } from "@/lib/formatNumber";
@@ -754,7 +753,6 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   });
   const hideVoucherAmounts = (myErpPages?.hiddenErpCostFields ?? []).includes("voucher_amounts");
   const [isAutoCreating, setIsAutoCreating] = useState(false);
-  const { formatDisplayDate } = useDateFormat();
   const {
     formatAmount,
     selectedCurrency,
@@ -833,40 +831,59 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const [accountBrowserOpen, setAccountBrowserOpen] = useState(false);
   const [sidebarSearchValue, setSidebarSearchValue] = useState("");
   const [sidebarHighlightedIndex, setSidebarHighlightedIndex] = useState(0);
-  const [sidebarActiveTab, setSidebarActiveTab] = useState("bank");
-  const [mostUsedAccounts, setMostUsedAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [selectedAccountType, setSelectedAccountType] = useState<string | null>(null);
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
 
+  // Gate money-account queries: only run when the active tab needs them
+  const needsMoneyAccounts =
+    activeTab === "payment" ||
+    activeTab === "receipt" ||
+    activeTab === "journal" ||
+    !!voucherIdToEdit; // editing any voucher may require account data for hydration
+
+  // Gate inventory queries: only run when needed for transfer / adjustment / POS
+  const needsInventoryData =
+    isPOS ||
+    activeTab === "transfer" ||
+    activeTab === "adjustment" ||
+    tabParam === "transfer" ||
+    tabParam === "adjustment";
+
   // Fetch data - include selectedCompany?.id in query keys for proper cache invalidation on company switch
   const { data: bankAccounts = [] } = useQuery<BankAccount[]>({
     queryKey: ["/api/bank-accounts", selectedCompany?.id],
+    enabled: !!selectedCompany?.id && needsMoneyAccounts,
   });
 
   const { data: ledgerAccounts = [] } = useQuery<LedgerAccount[]>({
     queryKey: ["/api/ledger-accounts", selectedCompany?.id],
+    enabled: !!selectedCompany?.id && needsMoneyAccounts,
   });
 
   const { data: suppliers = [] } = useQuery<Supplier[]>({
     queryKey: ["/api/suppliers", selectedCompany?.id],
+    enabled: !!selectedCompany?.id && needsMoneyAccounts,
   });
 
   const { data: factorySuppliersList = [] } = useQuery<FactorySupplierBasic[]>({
     queryKey: ["/api/factory/suppliers", selectedCompany?.id],
-    enabled: isFactoryCompany,
+    enabled: isFactoryCompany && !!selectedCompany?.id && needsMoneyAccounts,
   });
 
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ["/api/customers", selectedCompany?.id],
+    enabled: !!selectedCompany?.id && needsMoneyAccounts,
   });
 
   const { data: stockItems = [] } = useQuery<StockItem[]>({
     queryKey: ["/api/stock-items", selectedCompany?.id],
+    enabled: !!selectedCompany?.id && needsInventoryData,
   });
 
   const { data: locations = [] } = useQuery<Location[]>({
     queryKey: ["/api/locations", selectedCompany?.id],
+    enabled: !!selectedCompany?.id && needsInventoryData,
   });
 
   // Get POS user's location name for auto-populating source location
@@ -875,10 +892,12 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ["/api/employees", selectedCompany?.id],
+    enabled: !!selectedCompany?.id && needsMoneyAccounts,
   });
 
   const { data: fixedAssets = [] } = useQuery<FixedAsset[]>({
     queryKey: ["/api/fixed-assets", selectedCompany?.id],
+    enabled: !!selectedCompany?.id && needsMoneyAccounts,
   });
 
   // Fetch accounts for sidebar (with balances) — named for loading/error states
@@ -1375,7 +1394,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   // Calculate balance for selected account
   const { data: accountBalance = 0 } = useQuery({
     queryKey: ["/api/accounts", paymentAccountType, paymentAccountId, "balance"],
-    enabled: paymentAccountId > 0,
+    enabled: paymentAccountId > 0 && (activeTab === "payment" || activeTab === "receipt"),
     queryFn: async () => {
       if (paymentAccountType === "bank") {
         const account = bankAccounts.find((b) => b.id === paymentAccountId);
