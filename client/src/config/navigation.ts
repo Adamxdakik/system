@@ -16,7 +16,6 @@ import {
   Store,
   Building2,
   Cog,
-  Shuffle,
   BadgeCheck,
   FolderPlus,
   Settings,
@@ -154,12 +153,6 @@ export const operationsItems: NavigationItem[] = [
     url: "/moto-assembly",
     icon: Cog,
     activePrefixes: ["/moto-assembly", "/assembly-history"],
-  },
-  {
-    title: "Stock Transfer",
-    url: "/stock-transfer-order",
-    icon: Shuffle,
-    activePrefixes: ["/stock-transfer-order"],
   },
 ];
 

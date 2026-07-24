@@ -68,7 +68,6 @@ const IncomeStatement = lazy(() => import("@/pages/IncomeStatement"));
 const Customers = lazy(() => import("@/pages/Customers"));
 const EmployeeInventory = lazy(() => import("@/pages/EmployeeInventory"));
 const Service = lazy(() => import("@/pages/Service"));
-const StockTransferOrderPage = lazy(() => import("@/pages/StockTransferOrder"));
 
 function PageLoader() {
   return (
@@ -185,7 +184,6 @@ function Router({ user }: { user: any }) {
         <Route path="/service-history">{() => <Service initialSection="services" />}</Route>
         <Route path="/warranty">{() => <Service initialSection="warranty" />}</Route>
         <Route path="/communication-log">{() => <Service initialSection="communications" />}</Route>
-        <Route path="/stock-transfer-order" component={StockTransferOrderPage} />
         <Route path="/offloads/:id" component={OffloadDetail} />
         {user?.role === "Admin" && <Route path="/settings" component={Settings} />}
         <Route component={NotFound} />
