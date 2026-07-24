@@ -17,7 +17,6 @@ import {
   Building2,
   Cog,
   BadgeCheck,
-  FolderPlus,
   Settings,
 } from "lucide-react";
 
@@ -163,11 +162,6 @@ export const adminItems: NavigationItem[] = [
     title: "Settings",
     url: "/settings",
     icon: Settings,
-  },
-  {
-    title: "Create Account",
-    url: "/create",
-    icon: FolderPlus,
   },
 ];
 
