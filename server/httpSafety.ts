@@ -130,5 +130,14 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     requestId: req.requestId,
   };
   if (err?.code) payload.code = err.code;
+  if (err?.requiresConfirmation !== undefined) {
+    payload.requiresConfirmation = err.requiresConfirmation;
+  }
+  if (err?.employeeBalance !== undefined) {
+    payload.employeeBalance = err.employeeBalance;
+  }
+  if (err?.ledgerBalance !== undefined) {
+    payload.ledgerBalance = err.ledgerBalance;
+  }
   return res.status(status).json(payload);
 };

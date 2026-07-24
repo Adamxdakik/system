@@ -166,7 +166,20 @@ describe("HTTP safety middleware", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { app } = safetyApp();
     app.get("/api/failure", () => {
-      throw new Error("database password is secret");
+      throw Object.assign(new Error("database password is secret"), {
+        code: "DB_FAILURE",
+        requiresConfirmation: true,
+        employeeBalance: 125,
+        ledgerBalance: -125,
+        query: "select password_hash from users",
+        params: ["secret"],
+        sql: "select * from users",
+        stack: "sensitive stack",
+        password: "secret",
+        passwordHash: "hashed-secret",
+        connectionString: "postgres://user:secret@example/db",
+        data: { rawDatabaseError: "connection refused" },
+      });
     });
     app.use(errorHandler);
 
@@ -178,6 +191,43 @@ describe("HTTP safety middleware", () => {
     expect(await response.json()).toEqual({
       message: "Internal Server Error",
       requestId: "failure-test",
+    });
+  });
+
+  it("preserves only approved compatibility fields for known client errors", async () => {
+    const { app } = safetyApp();
+    app.get("/api/confirmation", () => {
+      throw Object.assign(new Error("Confirmation required"), {
+        status: 409,
+        code: "EMPLOYEE_BALANCE_REMAINS",
+        requiresConfirmation: true,
+        employeeBalance: 125.5,
+        ledgerBalance: -125.5,
+        query: "select * from ledger_entries",
+        params: ["employee-1"],
+        sql: "delete from employees",
+        stack: "sensitive stack",
+        password: "secret",
+        passwordHash: "hashed-secret",
+        connectionString: "postgres://user:secret@example/db",
+        rawDatabaseError: { detail: "foreign key violation" },
+        data: { arbitrary: "nested value" },
+      });
+    });
+    app.use(errorHandler);
+
+    const response = await fetch(`${await listen(app)}/api/confirmation`, {
+      headers: { "X-Request-Id": "confirmation-test" },
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      message: "Confirmation required",
+      requestId: "confirmation-test",
+      code: "EMPLOYEE_BALANCE_REMAINS",
+      requiresConfirmation: true,
+      employeeBalance: 125.5,
+      ledgerBalance: -125.5,
     });
   });
 
