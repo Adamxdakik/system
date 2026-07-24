@@ -3,7 +3,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { ESLint } from "eslint";
 import prettier from "prettier";
-import os from "node:os";
 
 const mode = process.argv[2];
 if (!["format", "lint"].includes(mode)) {
@@ -54,103 +53,74 @@ function addedLines(file) {
   return lines;
 }
 
-function changedOutputLines(original, formatted) {
-  if (original === formatted) return new Set();
-  const temporary = path.join(
-    os.tmpdir(),
-    `prettier-${process.pid}-${Math.random().toString(16).slice(2)}`,
-  );
-  fs.mkdirSync(path.dirname(temporary), { recursive: true });
-  fs.writeFileSync(temporary, formatted);
-  try {
-    const output = execFileSync(
-      "git",
-      ["diff", "--no-index", "--unified=0", "--", fileForDiff(original), temporary],
-      { encoding: "utf8", maxBuffer: 50 * 1024 * 1024 },
-    );
-    return parseFormattedRanges(output);
-  } catch (error) {
-    if (error.status === 1) return parseFormattedRanges(error.stdout || "");
-    throw error;
-  } finally {
-    fs.rmSync(temporary, { force: true });
+function contiguousRanges(lines) {
+  const sorted = [...lines].sort((left, right) => left - right);
+  const ranges = [];
+  for (const line of sorted) {
+    const last = ranges.at(-1);
+    if (last && line === last.end + 1) last.end = line;
+    else ranges.push({ start: line, end: line });
   }
+  return ranges;
 }
 
-function fileForDiff(contents) {
-  const temporary = path.join(
-    os.tmpdir(),
-    `source-${process.pid}-${Math.random().toString(16).slice(2)}`,
-  );
-  fs.mkdirSync(path.dirname(temporary), { recursive: true });
-  fs.writeFileSync(temporary, contents);
-  temporaryFiles.push(temporary);
-  return temporary;
-}
-
-function parseFormattedRanges(output) {
-  const lines = new Set();
-  for (const match of output.matchAll(/^@@ -(\d+)(?:,(\d+))? \+\d+(?:,\d+)? @@/gm)) {
-    const start = Number(match[1]);
-    const count = match[2] === undefined ? 1 : Number(match[2]);
-    for (let line = start; line < start + count; line += 1) lines.add(line);
-  }
-  return lines;
-}
-
-const temporaryFiles = [];
 const files = changedFiles();
 
-try {
-  if (mode === "format") {
-    const failures = [];
-    for (const file of files) {
-      const info = await prettier.getFileInfo(file);
-      if (info.ignored || !info.inferredParser) continue;
-      const original = fs.readFileSync(file, "utf8");
-      const formatted = await prettier.format(original, {
-        ...(await prettier.resolveConfig(file)),
-        filepath: file,
-      });
-      const additions = addedLines(file);
-      const formattingChanges = changedOutputLines(original, formatted);
-      if ([...formattingChanges].some((line) => additions.has(line))) {
-        failures.push(file);
+if (mode === "format") {
+  const failures = [];
+  for (const file of files) {
+    const info = await prettier.getFileInfo(file, {
+      ignorePath: ".prettierignore",
+    });
+    if (info.ignored || !info.inferredParser) continue;
+    const original = fs.readFileSync(file, "utf8");
+    const config = await prettier.resolveConfig(file);
+    const formatted = await prettier.format(original, {
+      ...config,
+      filepath: file,
+    });
+    if (formatted === original) continue;
+    const originalLines = original.split(/\r?\n/);
+    for (const range of contiguousRanges(addedLines(file))) {
+      const changedLines = originalLines
+        .slice(range.start - 1, range.end)
+        .map((line) => line.trimEnd())
+        .filter((line) => line.trim().length > 0);
+      if (changedLines.some((line) => !formatted.includes(line))) {
+        failures.push(`${file}: ${range.start}-${range.end}`);
       }
-    }
-    if (failures.length) {
-      console.error(`Prettier changes are required on changed lines:\n${failures.join("\n")}`);
-      process.exitCode = 1;
-    } else {
-      console.log(`Changed-line formatting passed for ${files.length} changed files.`);
-    }
-  } else {
-    const lintFiles = files.filter((file) => lintExtensions.has(path.extname(file)));
-    if (lintFiles.length === 0) {
-      console.log("No changed source files require ESLint.");
-      process.exit(0);
-    }
-    const eslint = new ESLint();
-    const results = await eslint.lintFiles(lintFiles);
-    const failures = [];
-    for (const result of results) {
-      const relative = path.relative(process.cwd(), result.filePath).replaceAll("\\", "/");
-      const additions = addedLines(relative);
-      for (const message of result.messages) {
-        if (message.line && additions.has(message.line)) {
-          failures.push(
-            `${relative}:${message.line}:${message.column} ${message.message} (${message.ruleId ?? "fatal"})`,
-          );
-        }
-      }
-    }
-    if (failures.length) {
-      console.error(`ESLint errors or warnings occur on changed lines:\n${failures.join("\n")}`);
-      process.exitCode = 1;
-    } else {
-      console.log(`Changed-line lint passed for ${lintFiles.length} source files.`);
     }
   }
-} finally {
-  for (const file of temporaryFiles) fs.rmSync(file, { force: true });
+  if (failures.length) {
+    console.error(`Prettier changes are required on changed lines:\n${failures.join("\n")}`);
+    process.exitCode = 1;
+  } else {
+    console.log(`Changed-line formatting passed for ${files.length} changed files.`);
+  }
+} else {
+  const lintFiles = files.filter((file) => lintExtensions.has(path.extname(file)));
+  if (lintFiles.length === 0) {
+    console.log("No changed source files require ESLint.");
+    process.exit(0);
+  }
+  const eslint = new ESLint();
+  const results = await eslint.lintFiles(lintFiles);
+  const failures = [];
+  for (const result of results) {
+    const relative = path.relative(process.cwd(), result.filePath).replaceAll("\\", "/");
+    const additions = addedLines(relative);
+    for (const message of result.messages) {
+      if (message.line && additions.has(message.line)) {
+        failures.push(
+          `${relative}:${message.line}:${message.column} ${message.message} (${message.ruleId ?? "fatal"})`,
+        );
+      }
+    }
+  }
+  if (failures.length) {
+    console.error(`ESLint errors or warnings occur on changed lines:\n${failures.join("\n")}`);
+    process.exitCode = 1;
+  } else {
+    console.log(`Changed-line lint passed for ${lintFiles.length} source files.`);
+  }
 }

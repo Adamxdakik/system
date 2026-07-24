@@ -1,9 +1,5 @@
 import type { Request, Response } from "express";
-import {
-  FEATURE_KEYS,
-  type FeatureKey,
-  type RoleFeaturePermission,
-} from "@shared/schema";
+import { FEATURE_KEYS, type FeatureKey, type RoleFeaturePermission } from "@shared/schema";
 import { sendNoCompanyAccess } from "./roleAuthorization";
 
 const POS_SAFE_FEATURE_KEYS = new Set<FeatureKey>([
@@ -17,9 +13,7 @@ const POS_SAFE_FEATURE_KEYS = new Set<FeatureKey>([
   "sales_report",
 ]);
 
-const NON_ADMIN_FALLBACK_KEYS = FEATURE_KEYS.filter(
-  (key) => key !== "settings",
-);
+const NON_ADMIN_FALLBACK_KEYS = FEATURE_KEYS.filter((key) => key !== "settings");
 
 function isFeatureKey(value: string): value is FeatureKey {
   return (FEATURE_KEYS as readonly string[]).includes(value);
@@ -43,14 +37,9 @@ export function resolveErpPageAccess(
     };
   }
 
-  const rolePermissions = allPermissions.filter(
-    (permission) => permission.role === role,
-  );
+  const rolePermissions = allPermissions.filter((permission) => permission.role === role);
   const storedKeys = rolePermissions
-    .filter(
-      (permission) =>
-        permission.enabled && isFeatureKey(permission.featureKey),
-    )
+    .filter((permission) => permission.enabled && isFeatureKey(permission.featureKey))
     .map((permission) => permission.featureKey as FeatureKey);
 
   if (role.startsWith("POS")) {
@@ -63,10 +52,7 @@ export function resolveErpPageAccess(
 
   if (role === "Owner" || role === "Manager") {
     return {
-      pageKeys:
-        rolePermissions.length > 0
-          ? storedKeys
-          : [...NON_ADMIN_FALLBACK_KEYS],
+      pageKeys: rolePermissions.length > 0 ? storedKeys : [...NON_ADMIN_FALLBACK_KEYS],
       fullAccess: false,
       hiddenErpCostFields: [],
     };
@@ -76,9 +62,7 @@ export function resolveErpPageAccess(
 }
 
 export function createErpPageAccessHandler(
-  getRoleFeaturePermissions: (
-    companyId: number,
-  ) => Promise<RoleFeaturePermission[]>,
+  getRoleFeaturePermissions: (companyId: number) => Promise<RoleFeaturePermission[]>,
 ) {
   return async (req: Request, res: Response) => {
     const companyId = req.session.currentCompanyId;

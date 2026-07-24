@@ -67,8 +67,7 @@ function loginRateLimitKey(req: Request): string {
 }
 
 function normalizedUsernameHash(value: unknown): string {
-  const normalized =
-    typeof value === "string" ? value.trim().toLowerCase() : "";
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
   return createHash("sha256").update(normalized).digest("hex").slice(0, 16);
 }
 
@@ -79,8 +78,7 @@ export function createLoginRateLimiter(options?: {
 }) {
   const writeWarning =
     options?.writeWarning ??
-    ((metadata: Record<string, string>) =>
-      console.warn("[login-rate-limit]", metadata));
+    ((metadata: Record<string, string>) => console.warn("[login-rate-limit]", metadata));
 
   return rateLimit({
     windowMs: options?.windowMs ?? LOGIN_RATE_LIMIT_WINDOW_MS,
@@ -159,19 +157,13 @@ export function createLoginHandler(dependencies: LoginDependencies) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const { valid, needsMigration } = await verifyPassword(
-      password,
-      user.password,
-    );
+    const { valid, needsMigration } = await verifyPassword(password, user.password);
     if (!valid) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
     if (needsMigration) {
-      await dependencies.updateUserPassword(
-        user.id,
-        await hashPassword(password),
-      );
+      await dependencies.updateUserPassword(user.id, await hashPassword(password));
     }
 
     if (!user.active) {
@@ -207,9 +199,7 @@ export function createLoginHandler(dependencies: LoginDependencies) {
     try {
       await dependencies.resetRateLimit(req);
     } catch {
-      console.warn(
-        `[login-rate-limit] requestId=${req.requestId} reset failed`,
-      );
+      console.warn(`[login-rate-limit] requestId=${req.requestId} reset failed`);
     }
 
     const { password: _password, ...safeUser } = user;

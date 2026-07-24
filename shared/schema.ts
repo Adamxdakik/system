@@ -59,17 +59,17 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const userPasswordSchema = z
-  .string()
-  .min(10, "Password must be at least 10 characters");
+export const userPasswordSchema = z.string().min(10, "Password must be at least 10 characters");
 
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-}).extend({
-  username: z.string().min(1, "Username is required"),
-  password: userPasswordSchema,
-});
+export const insertUserSchema = createInsertSchema(users)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    username: z.string().min(1, "Username is required"),
+    password: userPasswordSchema,
+  });
 
 export const updateUserSchema = insertUserSchema.partial().extend({
   password: userPasswordSchema.optional(),

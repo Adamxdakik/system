@@ -232,10 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.execute(sql`SELECT 1 as test`);
       res.json(databaseHealthPayload("ok", req.requestId));
     } catch (error: unknown) {
-      console.error(
-        `[health/db] requestId=${req.requestId} database check failed`,
-        error,
-      );
+      console.error(`[health/db] requestId=${req.requestId} database check failed`, error);
       res.status(503).json(databaseHealthPayload("down", req.requestId));
     }
   });
@@ -247,10 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.execute(sql`SELECT 1`);
       dbStatus = "ok";
     } catch (error: unknown) {
-      console.error(
-        `[health] requestId=${req.requestId} database check failed`,
-        error,
-      );
+      console.error(`[health] requestId=${req.requestId} database check failed`, error);
     }
     res
       .status(dbStatus === "ok" ? 200 : 503)
@@ -265,20 +259,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     updateUserPassword: async (userId, password) => {
       await storage.updateUser(userId, { password });
     },
-    getUserCompaniesWithRoles: (userId) =>
-      storage.getUserCompaniesWithRoles(userId),
+    getUserCompaniesWithRoles: (userId) => storage.getUserCompaniesWithRoles(userId),
     recordLogin: async (input) => {
       await db.insert(loginHistory).values(input);
     },
     resetRateLimit: resetLoginRateLimit,
   });
 
-  app.post(
-    "/api/auth/login",
-    loginRateLimiter,
-    validate(loginSchema),
-    asyncHandler(loginHandler),
-  );
+  app.post("/api/auth/login", loginRateLimiter, validate(loginSchema), asyncHandler(loginHandler));
 
   app.post(
     "/api/auth/logout",
@@ -299,11 +287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ ok: true });
   });
 
-  app.get(
-    "/api/active-users",
-    requireAuth,
-    requireRole("Admin"),
-    (_req, res) => {
+  app.get("/api/active-users", requireAuth, requireRole("Admin"), (_req, res) => {
     const cutoff = new Date(Date.now() - ACTIVE_TIMEOUT_MS);
     const result: ActiveUserEntry[] = [];
     for (const [id, entry] of activeUsers) {
@@ -314,15 +298,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     res.json(result);
-    },
-  );
+  });
 
   // ─── Login History ───────────────────────────────────────────────────────
-  app.get(
-    "/api/login-history",
-    requireAuth,
-    requireRole("Admin"),
-    async (req, res) => {
+  app.get("/api/login-history", requireAuth, requireRole("Admin"), async (req, res) => {
     try {
       const usernameFilter = (req.query.username as string) || "";
       let rows = await db
@@ -331,14 +310,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(loginHistory.createdAt))
         .limit(200);
       if (usernameFilter) {
-        rows = rows.filter(r => r.username.toLowerCase().includes(usernameFilter.toLowerCase()));
+        rows = rows.filter((r) =>
+          r.username.toLowerCase().includes(usernameFilter.toLowerCase()),
+        );
       }
       res.json(rows);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-    },
-  );
+  });
 
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     if (!req.user) {
@@ -420,26 +400,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.delete(
-    "/api/users/:id",
-    requireAuth,
-    requireRole("Admin"),
-    async (req, res) => {
-      try {
-        const { id } = req.params;
-        
-        // Prevent deleting yourself
-        if (req.user?.id === id) {
-          return res.status(400).json({ message: "Cannot delete your own account" });
-        }
-        
-        await storage.deleteUser(id);
-        res.json({ message: "User deleted successfully" });
-      } catch (error: any) {
-        res.status(400).json({ message: error.message });
+  app.delete("/api/users/:id", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Prevent deleting yourself
+      if (req.user?.id === id) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
       }
-    },
-  );
+
+      await storage.deleteUser(id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
 
   // User-Company-Role management routes
   app.get(
@@ -2374,31 +2349,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== Round-4 follow-ups =====
   // A1: deep health check (auth'd — leaks schema metadata + row counts)
-  app.get(
-    "/api/health/deep",
-    requireAuth,
-    requireRole("Admin"),
-    async (_req, res) => {
+  app.get("/api/health/deep", requireAuth, requireRole("Admin"), async (_req, res) => {
     const startedAt = Date.now();
-    const checks: any = { db: "unknown", migrations: "unknown", auditTable: "unknown" };
+    const checks: any = {
+      db: "unknown",
+      migrations: "unknown",
+      auditTable: "unknown",
+    };
     try {
       const r: any = await db.execute(sql`SELECT 1 AS ok`);
       checks.db = (r.rows?.[0]?.ok ?? r[0]?.ok) === 1 ? "ok" : "down";
-    } catch (e: any) { checks.db = `error: ${e.message}`; }
+    } catch (e: any) {
+      checks.db = `error: ${e.message}`;
+    }
     try {
-      const r: any = await db.execute(sql`SELECT MAX(version)::text AS v FROM drizzle.__drizzle_migrations`);
+      const r: any = await db.execute(
+        sql`SELECT MAX(version)::text AS v FROM drizzle.__drizzle_migrations`,
+      );
       checks.migrations = r.rows?.[0]?.v ?? r[0]?.v ?? null;
     } catch (e: any) {
       // Migration runner uses a different table; fall back to file count
       try {
-        const r2: any = await db.execute(sql`SELECT COUNT(*)::int AS c FROM information_schema.tables WHERE table_schema = 'public'`);
+        const r2: any = await db.execute(
+          sql`SELECT COUNT(*)::int AS c FROM information_schema.tables WHERE table_schema = 'public'`,
+        );
         checks.migrations = `tables=${r2.rows?.[0]?.c ?? r2[0]?.c}`;
-      } catch { checks.migrations = "unknown"; }
+      } catch {
+        checks.migrations = "unknown";
+      }
     }
     try {
       const r: any = await db.execute(sql`SELECT COUNT(*)::int AS c FROM moto_rate_audit`);
       checks.auditTable = `rows=${r.rows?.[0]?.c ?? r[0]?.c}`;
-    } catch (e: any) { checks.auditTable = `error: ${e.message}`; }
+    } catch (e: any) {
+      checks.auditTable = `error: ${e.message}`;
+    }
     const allOk = checks.db === "ok" && !String(checks.auditTable).startsWith("error");
     res.status(allOk ? 200 : 503).json({
       status: allOk ? "ok" : "degraded",
@@ -2408,8 +2393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       nodeEnv: process.env.NODE_ENV,
       timestamp: new Date().toISOString(),
     });
-    },
-  );
+  });
 
   // A3: rate stats per location (for outlier warning)
   app.get("/api/locations/:id/moto-rate-stats", requireAuth, async (req, res) => {
@@ -27781,9 +27765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/my-erp-pages",
     requireAuth,
     asyncHandler(
-      createErpPageAccessHandler((companyId) =>
-        storage.getRoleFeaturePermissions(companyId),
-      ),
+      createErpPageAccessHandler((companyId) => storage.getRoleFeaturePermissions(companyId)),
     ),
   );
 
