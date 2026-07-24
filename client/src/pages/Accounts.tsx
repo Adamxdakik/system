@@ -45,8 +45,6 @@ import {
   ExternalLink,
   FileDown,
   ArrowLeft,
-  ArrowDownLeft,
-  ArrowUpRight,
   MoreHorizontal,
   BookOpen,
 } from "lucide-react";
@@ -95,7 +93,6 @@ import {
   getDefaultPeriodValue,
 } from "@/components/ui/period-filter";
 import { useEscapeBack } from "@/hooks/use-escape-back";
-import { QuickTransferDialog } from "@/components/QuickTransferDialog";
 
 interface Account {
   id: string;
@@ -173,10 +170,7 @@ export default function Accounts() {
   const urlYear = urlParams.get("year") || "";
 
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [manageAccountsOpen, setManageAccountsOpen] = useState(false);
-  type MoneyAction = "receive" | "pay";
-  const [moneyAction, setMoneyAction] = useState<MoneyAction>("receive");
   const [accountTypeFilter, setAccountTypeFilter] = useState("all");
 
   useEscapeBack(selectedAccount ? () => setSelectedAccount(null) : null);
@@ -1424,30 +1418,6 @@ export default function Accounts() {
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
-            data-testid="button-receive-money"
-            disabled={!selectedCompany}
-            onClick={() => {
-              setMoneyAction("receive");
-              setTransferDialogOpen(true);
-            }}
-          >
-            <ArrowDownLeft className="w-4 h-4 mr-2" />
-            Receive Money
-          </Button>
-          <Button
-            variant="outline"
-            data-testid="button-pay-money"
-            disabled={!selectedCompany}
-            onClick={() => {
-              setMoneyAction("pay");
-              setTransferDialogOpen(true);
-            }}
-          >
-            <ArrowUpRight className="w-4 h-4 mr-2" />
-            Pay Money
-          </Button>
-          <Button
-            variant="outline"
             data-testid="button-manage-accounts"
             disabled={!selectedCompany}
             onClick={() => setManageAccountsOpen(true)}
@@ -1464,14 +1434,6 @@ export default function Accounts() {
           </Button>
         </div>
       </div>
-
-      <QuickTransferDialog
-        open={transferDialogOpen}
-        onOpenChange={setTransferDialogOpen}
-        mode={moneyAction}
-        defaultFromKey={moneyAction === "pay" ? selectedTransferKey : undefined}
-        defaultToKey={moneyAction === "receive" ? selectedTransferKey : undefined}
-      />
 
       {/* Bank Account Edit Dialog */}
       <Dialog
