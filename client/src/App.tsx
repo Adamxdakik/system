@@ -182,8 +182,8 @@ function Router({ user }: { user: any }) {
         <Route path="/assembly-history">{() => <Assembly initialTab="history" />}</Route>
         <Route path="/income-statement" component={IncomeStatement} />
         <Route path="/customers" component={Customers} />
-        <Route path="/service" component={Service} />
-        <Route path="/purchase-history" component={PurchaseHistory} />
+        <Route path="/service">{() => <Service initialSection="overview" />}</Route>
+        <Route path="/purchase-history">{() => <Service initialSection="purchases" />}</Route>
         <Route path="/service-history" component={ServiceHistoryPage} />
         <Route path="/warranty" component={WarrantyPage} />
         <Route path="/communication-log" component={CommunicationLogPage} />

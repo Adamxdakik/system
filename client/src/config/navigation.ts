@@ -103,11 +103,18 @@ export const moreSections: NavigationSection[] = [
   {
     title: "Service",
     items: [
-      { title: "Customer Profiles", url: "/service", icon: Users },
-      { title: "Purchase History", url: "/purchase-history", icon: ShoppingBag },
-      { title: "Service History", url: "/service-history", icon: Wrench },
-      { title: "Warranty", url: "/warranty", icon: Shield },
-      { title: "Communication Log", url: "/communication-log", icon: MessageSquare },
+      {
+        title: "Customer Center",
+        url: "/service",
+        icon: Users,
+        activePrefixes: [
+          "/service",
+          "/purchase-history",
+          "/service-history",
+          "/warranty",
+          "/communication-log",
+        ],
+      },
     ],
   },
   {
