@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { ESLint } from "eslint";
 import prettier from "prettier";
+import os from "node:os";
 
 const mode = process.argv[2];
 if (!["format", "lint"].includes(mode)) {
@@ -56,7 +57,7 @@ function addedLines(file) {
 function changedOutputLines(original, formatted) {
   if (original === formatted) return new Set();
   const temporary = path.join(
-    ".typescript-build",
+    os.tmpdir(),
     `prettier-${process.pid}-${Math.random().toString(16).slice(2)}`,
   );
   fs.mkdirSync(path.dirname(temporary), { recursive: true });
@@ -65,7 +66,7 @@ function changedOutputLines(original, formatted) {
     const output = execFileSync(
       "git",
       ["diff", "--no-index", "--unified=0", "--", fileForDiff(original), temporary],
-      { encoding: "utf8" },
+      { encoding: "utf8", maxBuffer: 50 * 1024 * 1024 },
     );
     return parseFormattedRanges(output);
   } catch (error) {
@@ -78,7 +79,7 @@ function changedOutputLines(original, formatted) {
 
 function fileForDiff(contents) {
   const temporary = path.join(
-    ".typescript-build",
+    os.tmpdir(),
     `source-${process.pid}-${Math.random().toString(16).slice(2)}`,
   );
   fs.mkdirSync(path.dirname(temporary), { recursive: true });
