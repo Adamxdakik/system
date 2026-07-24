@@ -23,6 +23,7 @@ import {
   ArrowLeft,
   AlertCircle,
   Filter,
+  Landmark,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import {
@@ -88,6 +89,12 @@ interface Location {
   name: string;
   code: string;
 }
+
+// Extends Customer with stats fields returned by /api/customers/stats
+type CustomerWithStats = Customer & {
+  balance?: number | string;
+  balanceSide?: string | null;
+};
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -283,6 +290,59 @@ function CustomerForm({
             )}
           />
         </div>
+
+        <details className="mt-2">
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground select-none py-1">
+            Financial Details
+          </summary>
+          <div className="mt-3 space-y-4 border rounded-md p-3 bg-muted/20">
+            <p className="text-xs text-muted-foreground">
+              Use only when the customer already had a balance before being added to the system.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="openingBalance"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Opening Balance</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0"
+                        {...field}
+                        data-testid="input-customer-opening-balance"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="openingBalanceSide"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Balance Side</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || "Dr"}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-customer-opening-side">
+                          <SelectValue placeholder="Dr" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Dr">Dr (Debit)</SelectItem>
+                        <SelectItem value="Cr">Cr (Credit)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+        </details>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button
@@ -538,19 +598,22 @@ function PartPurchaseForm({
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type CustomerCenterSection = "overview" | "purchases" | "services" | "warranty" | "communications";
+type CustomerCenterSection =
+  "overview" | "purchases" | "services" | "warranty" | "communications" | "account";
 
 interface ServiceProps {
   initialSection?: CustomerCenterSection;
 }
 
-type SectionKey = "activity" | "motorcycles" | "parts" | "services" | "warranty" | "communications";
+type SectionKey =
+  "activity" | "account" | "motorcycles" | "parts" | "services" | "warranty" | "communications";
 
 // ── Section open/visited helpers ──────────────────────────────────────────────
 
 function getInitialOpenSections(section: CustomerCenterSection): Record<SectionKey, boolean> {
   return {
     activity: section === "overview",
+    account: section === "account",
     motorcycles: section === "overview" || section === "purchases",
     parts: section === "purchases",
     services: section === "services",
@@ -571,6 +634,8 @@ function getInitialVisitedKeys(section: CustomerCenterSection): SectionKey[] {
       return ["warranty"];
     case "communications":
       return ["communications"];
+    case "account":
+      return ["account"];
   }
 }
 
@@ -615,9 +680,10 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerWithStats | null>(null);
   const [deleteCustomerId, setDeleteCustomerId] = useState<number | null>(null);
   const [isBikeDialogOpen, setIsBikeDialogOpen] = useState(false);
   const [isPartDialogOpen, setIsPartDialogOpen] = useState(false);
@@ -659,6 +725,7 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
     const newOpen = getInitialOpenSections(initialSection);
     setOpenSections((prev) => ({
       activity: newOpen.activity || prev.activity,
+      account: newOpen.account || prev.account,
       motorcycles: newOpen.motorcycles || prev.motorcycles,
       parts: newOpen.parts || prev.parts,
       services: newOpen.services || prev.services,
@@ -673,6 +740,7 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
   useEffect(() => {
     setSelectedCustomerId(null);
     setSearchQuery("");
+    setCustomerTypeFilter("all");
     setIsCreateOpen(false);
     setIsEditOpen(false);
     setEditingCustomer(null);
@@ -690,13 +758,15 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
   }, [selectedCompany?.id]);
 
   // ── Queries ───────────────────────────────────────────────────────────────
+  // /api/customers/stats is the canonical list — it returns Customer rows with
+  // balance and balanceSide pre-computed so no extra queries are needed.
   const {
     data: customers = [],
     isLoading: customersLoading,
     isError: customersError,
     refetch: refetchCustomers,
-  } = useQuery<Customer[]>({
-    queryKey: ["/api/customers", selectedCompany?.id],
+  } = useQuery<CustomerWithStats[]>({
+    queryKey: ["/api/customers/stats", selectedCompany?.id],
     enabled: !!selectedCompany?.id,
   });
 
@@ -758,16 +828,24 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
   );
 
   const filteredCustomers = useMemo(() => {
+    let list = customers;
+    // Type filter
+    if (customerTypeFilter !== "all") {
+      list = list.filter((c) => c.customerType === customerTypeFilter);
+    }
+    // Text search — case-insensitive, matches name / phone / whatsapp / email / type / code
     const q = searchQuery.toLowerCase();
-    if (!q) return customers;
-    return customers.filter(
+    if (!q) return list;
+    return list.filter(
       (c) =>
         c.legalName.toLowerCase().includes(q) ||
         c.phone?.toLowerCase().includes(q) ||
         c.whatsapp?.toLowerCase().includes(q) ||
-        c.email?.toLowerCase().includes(q),
+        c.email?.toLowerCase().includes(q) ||
+        c.customerType?.toLowerCase().includes(q) ||
+        (c.code ? c.code.toLowerCase().includes(q) : false),
     );
-  }, [customers, searchQuery]);
+  }, [customers, searchQuery, customerTypeFilter]);
 
   const getLocationName = (locationId: number | null | undefined) => {
     if (!locationId) return null;
@@ -936,7 +1014,9 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
     mutationFn: (data: CustomerFormValues) => apiRequest("POST", "/api/customers", data),
     onSuccess: () => {
       toast({ title: "Success", description: "Customer profile created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers/stats", selectedCompany?.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/customers", selectedCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ledger-accounts", selectedCompany?.id] });
       setIsCreateOpen(false);
       form.reset(blankCustomer());
     },
@@ -949,7 +1029,9 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
       apiRequest("PUT", `/api/customers/${data.id}`, data),
     onSuccess: () => {
       toast({ title: "Success", description: "Customer profile updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers/stats", selectedCompany?.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/customers", selectedCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ledger-accounts", selectedCompany?.id] });
       setIsEditOpen(false);
       setEditingCustomer(null);
     },
@@ -961,7 +1043,9 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
     mutationFn: (id: number) => apiRequest("DELETE", `/api/customers/${id}`),
     onSuccess: (_, id) => {
       toast({ title: "Success", description: "Customer profile deleted" });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers/stats", selectedCompany?.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/customers", selectedCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ledger-accounts", selectedCompany?.id] });
       if (selectedCustomerId === id) setSelectedCustomerId(null);
       setDeleteCustomerId(null);
     },
@@ -1062,7 +1146,7 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
     }
   };
 
-  const handleEdit = (customer: Customer) => {
+  const handleEdit = (customer: CustomerWithStats) => {
     setEditingCustomer(customer);
     form.reset({
       companyId: customer.companyId,
@@ -1278,12 +1362,27 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
         <div className="relative mt-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search customer name, phone or email..."
+            placeholder="Search name, phone, type or code..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
             data-testid="input-search-customers"
           />
+        </div>
+        <div className="mt-2">
+          <Select value={customerTypeFilter} onValueChange={setCustomerTypeFilter}>
+            <SelectTrigger className="h-8 text-xs" data-testid="select-customer-type-filter">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="Individual">Individual</SelectItem>
+              <SelectItem value="Business">Business</SelectItem>
+              <SelectItem value="Dealer">Dealer</SelectItem>
+              <SelectItem value="Fleet">Fleet</SelectItem>
+              <SelectItem value="Walk-in">Walk-in</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </CardHeader>
 
@@ -1297,7 +1396,7 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
         ) : customersError ? (
           <div className="flex flex-col items-center gap-3 py-10 text-center px-4">
             <AlertCircle className="h-6 w-6 text-destructive" />
-            <p className="text-sm text-muted-foreground">Could not load customers.</p>
+            <p className="text-sm text-muted-foreground">Could not load customers and balances.</p>
             <Button variant="outline" size="sm" onClick={() => refetchCustomers()}>
               Retry
             </Button>
@@ -1317,13 +1416,17 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
           </div>
         ) : filteredCustomers.length === 0 ? (
           <div className="py-10 text-center px-4">
-            <p className="text-sm text-muted-foreground">No customers match your search.</p>
+            <p className="text-sm text-muted-foreground">No customers match your filters.</p>
           </div>
         ) : (
           <div className="divide-y">
             {filteredCustomers.map((customer) => {
               const isSelected = selectedCustomerId === customer.id;
-              const branch = getLocationName(customer.locationId);
+              const numericBalance = customer.balance != null ? Number(customer.balance) : null;
+              const balanceLabel =
+                numericBalance != null
+                  ? `${numericBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${customer.balanceSide || "Dr"}`
+                  : null;
               return (
                 <div
                   key={customer.id}
@@ -1336,12 +1439,16 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{customer.legalName}</p>
                     <p className="text-xs text-muted-foreground truncate">
+                      {customer.customerType ? `${customer.customerType} · ` : ""}
                       {customer.phone || customer.whatsapp || "—"}
-                      {customer.customerType ? ` · ${customer.customerType}` : ""}
-                      {branch ? ` · ${branch}` : ""}
                     </p>
                   </div>
-                  <div className="flex items-center gap-0.5 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
+                    {balanceLabel !== null && (
+                      <p className="text-xs font-mono text-right text-muted-foreground min-w-[4.5rem]">
+                        {balanceLabel}
+                      </p>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -1420,6 +1527,18 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
           </div>
         </CardHeader>
         <CardContent className="pt-0">
+          {/* Current balance pill */}
+          {selectedCustomer.balance != null && (
+            <div className="flex items-center gap-2 mt-3 mb-1">
+              <span className="text-xs text-muted-foreground">Current Balance:</span>
+              <span className="text-sm font-mono font-semibold">
+                {Number(selectedCustomer.balance).toLocaleString(undefined, {
+                  maximumFractionDigits: 2,
+                })}{" "}
+                {selectedCustomer.balanceSide || "Dr"}
+              </span>
+            </div>
+          )}
           {/* Summary counts — 5 tiles */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-2">
             {[
@@ -1445,6 +1564,64 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
             ))}
           </div>
         </CardContent>
+      </Card>
+
+      {/* ── Customer Account section ─────────────────────────────────────── */}
+      <Card>
+        <SectionHeader sectionKey="account" icon={Landmark} title="Customer Account" />
+        {openSections.account && visitedSections.has("account") && (
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Current Balance */}
+              <div className="rounded-md border p-3">
+                <p className="text-xs text-muted-foreground mb-1">Current Balance</p>
+                {selectedCustomer.balance != null ? (
+                  <p className="text-sm font-mono font-semibold">
+                    {Number(selectedCustomer.balance).toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    <span className="text-muted-foreground font-normal">
+                      {selectedCustomer.balanceSide || "Dr"}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">—</p>
+                )}
+              </div>
+
+              {/* Opening Balance */}
+              {selectedCustomer.openingBalance && (
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Opening Balance</p>
+                  <p className="text-sm font-mono font-semibold">
+                    {Number(selectedCustomer.openingBalance).toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    <span className="text-muted-foreground font-normal">
+                      {selectedCustomer.openingBalanceSide || "Dr"}
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              {/* Customer Type */}
+              {selectedCustomer.customerType && (
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Customer Type</p>
+                  <p className="text-sm font-semibold">{selectedCustomer.customerType}</p>
+                </div>
+              )}
+
+              {/* Customer Code */}
+              {(selectedCustomer as any).code && (
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Customer Code</p>
+                  <p className="text-sm font-mono">{(selectedCustomer as any).code}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        )}
       </Card>
 
       {/* ── Activity section ─────────────────────────────────────────────── */}

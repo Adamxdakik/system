@@ -13,7 +13,6 @@ import {
   CreditCard,
   BarChart3,
   HeartHandshake,
-  Store,
   Building2,
   Cog,
   BadgeCheck,
@@ -125,17 +124,12 @@ export const customerSectionItems: NavigationItem[] = [
     icon: HeartHandshake,
     activePrefixes: [
       "/service",
+      "/customers",
       "/purchase-history",
       "/service-history",
       "/warranty",
       "/communication-log",
     ],
-  },
-  {
-    title: "Revendeurs",
-    url: "/customers",
-    icon: Store,
-    activePrefixes: ["/customers"],
   },
   {
     title: "Suppliers",

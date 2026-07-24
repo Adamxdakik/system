@@ -65,7 +65,6 @@ const LedgerVouchers = lazy(() => import("@/pages/LedgerVouchers"));
 const VoucherDetail = lazy(() => import("@/pages/VoucherDetail"));
 const Assembly = lazy(() => import("@/pages/Assembly"));
 const IncomeStatement = lazy(() => import("@/pages/IncomeStatement"));
-const Customers = lazy(() => import("@/pages/Customers"));
 const EmployeeInventory = lazy(() => import("@/pages/EmployeeInventory"));
 const Service = lazy(() => import("@/pages/Service"));
 
@@ -178,7 +177,7 @@ function Router({ user }: { user: any }) {
         <Route path="/moto-assembly">{() => <Assembly initialTab="assembly" />}</Route>
         <Route path="/assembly-history">{() => <Assembly initialTab="history" />}</Route>
         <Route path="/income-statement" component={IncomeStatement} />
-        <Route path="/customers" component={Customers} />
+        <Route path="/customers">{() => <Service initialSection="account" />}</Route>
         <Route path="/service">{() => <Service initialSection="overview" />}</Route>
         <Route path="/purchase-history">{() => <Service initialSection="purchases" />}</Route>
         <Route path="/service-history">{() => <Service initialSection="services" />}</Route>
