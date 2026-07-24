@@ -1,5 +1,13 @@
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, Package, MoreHorizontal, ChevronDown } from "lucide-react";
+import {
+  ShoppingCart,
+  Package,
+  Landmark,
+  UsersRound,
+  Cog,
+  BadgeCheck,
+  ChevronDown,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +21,7 @@ import {
   SidebarMenuSubButton,
   SidebarHeader,
   SidebarFooter,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,7 +32,10 @@ import {
   primaryItems,
   salesItems,
   inventoryItems,
-  moreSections,
+  financeItems,
+  customerSectionItems,
+  operationsItems,
+  adminItems,
   type NavigationItem,
 } from "@/config/navigation";
 
@@ -31,13 +43,87 @@ import {
 
 function matchesNavigationItem(currentPath: string, item: NavigationItem): boolean {
   const prefixes = item.activePrefixes ?? [item.url];
-
   return prefixes.some((prefix) => {
-    if (prefix === "/") {
-      return currentPath === "/";
-    }
+    if (prefix === "/") return currentPath === "/";
     return currentPath === prefix || currentPath.startsWith(`${prefix}/`);
   });
+}
+
+// ── Section colours ───────────────────────────────────────────────────────────
+
+const sectionColors = {
+  sales: "text-blue-500",
+  inventory: "text-amber-500",
+  finance: "text-emerald-500",
+  customers: "text-violet-500",
+  operations: "text-orange-500",
+  admin: "text-slate-400",
+} as const;
+
+// ── Collapsible nav group ─────────────────────────────────────────────────────
+
+interface NavGroupProps {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconClass: string;
+  items: NavigationItem[];
+  isActive: boolean;
+  isVisible: (item: { url: string }) => boolean;
+  currentPath: string;
+}
+
+function NavGroup({
+  id,
+  label,
+  icon: Icon,
+  iconClass,
+  items,
+  isActive,
+  isVisible,
+  currentPath,
+}: NavGroupProps) {
+  const visible = items.filter(isVisible);
+  if (visible.length === 0) return null;
+
+  return (
+    <Collapsible defaultOpen={isActive} className={`group/${id}`}>
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton isActive={isActive} className="gap-2.5 font-medium">
+            <span
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md ${iconClass}/15`}
+            >
+              <Icon className={`h-3.5 w-3.5 ${iconClass}`} />
+            </span>
+            <span>{label}</span>
+            <ChevronDown
+              className={`ml-auto h-3.5 w-3.5 text-sidebar-foreground/40 transition-transform group-data-[state=open]/${id}:rotate-180`}
+            />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {visible.map((item) => (
+              <SidebarMenuSubItem key={item.url}>
+                <SidebarMenuSubButton
+                  asChild
+                  isActive={matchesNavigationItem(currentPath, item)}
+                  className="gap-2"
+                >
+                  <Link href={item.url} data-testid={`link-${item.url}`}>
+                    <item.icon className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/60" />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -50,7 +136,7 @@ export function AppSidebar({ user }: { user?: any }) {
     enabled: !!user,
   });
 
-  // ── Permission check ───────────────────────────────────────────────────────
+  // ── Permission check ──────────────────────────────────────────────────────
 
   const isItemVisible = (item: { url: string }): boolean => {
     const isPOSUser = user?.role?.startsWith("POS");
@@ -81,164 +167,134 @@ export function AppSidebar({ user }: { user?: any }) {
     return true;
   };
 
-  // ── Filtered lists ─────────────────────────────────────────────────────────
+  // ── Active-state helpers ──────────────────────────────────────────────────
 
-  const visibleSales = salesItems.filter(isItemVisible);
-  const visibleInventory = inventoryItems.filter(isItemVisible);
-
-  // For "More": filter each section's items; skip admin-only sections for non-admins
-  const visibleMoreSections = moreSections
-    .filter((s) => !s.adminOnly || user?.role === "Admin")
-    .map((s) => ({ ...s, items: s.items.filter(isItemVisible) }))
-    .filter((s) => s.items.length > 0);
-
-  // ── Active-state helpers ───────────────────────────────────────────────────
-
-  const isSalesActive = visibleSales.some((i) => matchesNavigationItem(location, i));
-  const isInventoryActive = visibleInventory.some((i) => matchesNavigationItem(location, i));
-  const isMoreActive = visibleMoreSections.some((s) =>
-    s.items.some((i) => matchesNavigationItem(location, i)),
-  );
+  const isGroupActive = (items: NavigationItem[]) =>
+    items.some((i) => matchesNavigationItem(location, i));
 
   const initials = user?.username ? user.username.substring(0, 2).toUpperCase() : "AD";
 
   return (
-    <Sidebar>
+    <Sidebar className="border-r border-sidebar-border/60">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden bg-white p-1 shrink-0">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg overflow-hidden bg-white p-1 shadow-sm">
             <img src={huangheLogo} alt="Huanghe Motors" className="h-full w-full object-contain" />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-base font-bold tracking-tight leading-tight">Huanghe Motors</span>
-            <span className="text-xs text-sidebar-foreground/50 leading-tight">
-              Motorcycle Business Management
+            <span className="text-sm font-bold tracking-tight leading-tight">Huanghe Motors</span>
+            <span className="text-[10px] text-sidebar-foreground/40 leading-tight">
+              Business Management
             </span>
           </div>
         </div>
       </SidebarHeader>
 
+      <SidebarSeparator className="mx-0 opacity-50" />
+
       {/* ── Content ────────────────────────────────────────────────────────── */}
-      <SidebarContent className="overflow-y-auto overscroll-contain">
-        <SidebarGroup>
+      <SidebarContent className="overflow-y-auto overscroll-contain px-2 py-2">
+        <SidebarGroup className="p-0">
           <SidebarGroupContent>
-            <SidebarMenu>
-              {/* Dashboard — direct link */}
+            <SidebarMenu className="gap-0.5">
+              {/* Dashboard */}
               {primaryItems.filter(isItemVisible).map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={matchesNavigationItem(location, item)}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={matchesNavigationItem(location, item)}
+                    className="gap-2.5 font-medium"
+                  >
                     <Link href={item.url} data-testid={`link-${item.url}`}>
-                      <item.icon className="h-5 w-5" />
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                        <item.icon className="h-3.5 w-3.5 text-primary" />
+                      </span>
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
 
+              <div className="my-1" />
+
               {/* Sales */}
-              {visibleSales.length > 0 && (
-                <Collapsible defaultOpen={isSalesActive} className="group/sales">
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton isActive={isSalesActive}>
-                        <ShoppingCart className="h-5 w-5" />
-                        <span>Sales</span>
-                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/sales:rotate-180" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {visibleSales.map((item) => (
-                          <SidebarMenuSubItem key={item.url}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={matchesNavigationItem(location, item)}
-                            >
-                              <Link href={item.url} data-testid={`link-${item.url}`}>
-                                <item.icon className="h-4 w-4" />
-                                <span>{item.title}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              )}
+              <NavGroup
+                id="sales"
+                label="Sales"
+                icon={ShoppingCart}
+                iconClass={sectionColors.sales}
+                items={salesItems}
+                isActive={isGroupActive(salesItems)}
+                isVisible={isItemVisible}
+                currentPath={location}
+              />
 
               {/* Inventory */}
-              {visibleInventory.length > 0 && (
-                <Collapsible defaultOpen={isInventoryActive} className="group/inventory">
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton isActive={isInventoryActive}>
-                        <Package className="h-5 w-5" />
-                        <span>Inventory</span>
-                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/inventory:rotate-180" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {visibleInventory.map((item) => (
-                          <SidebarMenuSubItem key={item.url}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={matchesNavigationItem(location, item)}
-                            >
-                              <Link href={item.url} data-testid={`link-${item.url}`}>
-                                <item.icon className="h-4 w-4" />
-                                <span>{item.title}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              )}
+              <NavGroup
+                id="inventory"
+                label="Inventory"
+                icon={Package}
+                iconClass={sectionColors.inventory}
+                items={inventoryItems}
+                isActive={isGroupActive(inventoryItems)}
+                isVisible={isItemVisible}
+                currentPath={location}
+              />
 
-              {/* More */}
-              {visibleMoreSections.length > 0 && (
-                <Collapsible defaultOpen={isMoreActive} className="group/more">
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton isActive={isMoreActive}>
-                        <MoreHorizontal className="h-5 w-5" />
-                        <span>More</span>
-                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/more:rotate-180" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="ml-2 mt-1 space-y-3">
-                        {visibleMoreSections.map((section) => (
-                          <div key={section.title}>
-                            <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 select-none">
-                              {section.title}
-                            </p>
-                            <SidebarMenuSub>
-                              {section.items.map((item) => (
-                                <SidebarMenuSubItem key={item.url}>
-                                  <SidebarMenuSubButton
-                                    asChild
-                                    isActive={matchesNavigationItem(location, item)}
-                                  >
-                                    <Link href={item.url} data-testid={`link-${item.url}`}>
-                                      <item.icon className="h-4 w-4" />
-                                      <span>{item.title}</span>
-                                    </Link>
-                                  </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                              ))}
-                            </SidebarMenuSub>
-                          </div>
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
+              <SidebarSeparator className="my-2 opacity-40" />
+
+              {/* Finance */}
+              <NavGroup
+                id="finance"
+                label="Finance"
+                icon={Landmark}
+                iconClass={sectionColors.finance}
+                items={financeItems}
+                isActive={isGroupActive(financeItems)}
+                isVisible={isItemVisible}
+                currentPath={location}
+              />
+
+              {/* Customers */}
+              <NavGroup
+                id="customers"
+                label="Customers"
+                icon={UsersRound}
+                iconClass={sectionColors.customers}
+                items={customerSectionItems}
+                isActive={isGroupActive(customerSectionItems)}
+                isVisible={isItemVisible}
+                currentPath={location}
+              />
+
+              {/* Operations */}
+              <NavGroup
+                id="operations"
+                label="Operations"
+                icon={Cog}
+                iconClass={sectionColors.operations}
+                items={operationsItems}
+                isActive={isGroupActive(operationsItems)}
+                isVisible={isItemVisible}
+                currentPath={location}
+              />
+
+              {/* Administration (admin only) */}
+              {user?.role === "Admin" && (
+                <>
+                  <SidebarSeparator className="my-2 opacity-40" />
+                  <NavGroup
+                    id="admin"
+                    label="Administration"
+                    icon={BadgeCheck}
+                    iconClass={sectionColors.admin}
+                    items={adminItems}
+                    isActive={isGroupActive(adminItems)}
+                    isVisible={isItemVisible}
+                    currentPath={location}
+                  />
+                </>
               )}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -246,14 +302,17 @@ export function AppSidebar({ user }: { user?: any }) {
       </SidebarContent>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <SidebarFooter className="p-4">
+      <SidebarSeparator className="mx-0 opacity-50" />
+      <SidebarFooter className="px-4 py-3">
         <div className="flex items-center gap-3">
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarFallback>{initials}</AvatarFallback>
+          <Avatar className="h-8 w-8 shrink-0">
+            <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+              {initials}
+            </AvatarFallback>
           </Avatar>
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-sm font-medium truncate">{user?.username || "User"}</span>
-            <span className="text-xs text-sidebar-foreground/50 truncate">
+            <span className="text-xs font-semibold truncate">{user?.username || "User"}</span>
+            <span className="text-[10px] text-sidebar-foreground/50 truncate">
               {user?.role || "Role"}
             </span>
           </div>

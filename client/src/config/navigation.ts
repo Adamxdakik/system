@@ -2,22 +2,24 @@ import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   ShoppingCart,
-  History,
+  ReceiptText,
   Package,
-  Container,
+  Layers,
+  Truck,
   MapPin,
-  Wallet,
-  UserCheck,
-  ArrowLeftRight,
-  Book,
-  FileSpreadsheet,
-  Users,
-  ShoppingBag,
-  Wrench,
-  Shield,
-  MessageSquare,
-  Settings,
+  Landmark,
+  ArrowRightLeft,
+  ClipboardList,
+  CreditCard,
+  BarChart3,
+  HeartHandshake,
+  Store,
+  Building2,
+  Cog,
+  Shuffle,
+  BadgeCheck,
   FolderPlus,
+  Settings,
 } from "lucide-react";
 
 export interface NavigationItem {
@@ -33,7 +35,7 @@ export interface NavigationSection {
   adminOnly?: boolean;
 }
 
-// ── Top-level groups ─────────────────────────────────────────────────────────
+// ── Primary ───────────────────────────────────────────────────────────────────
 
 export const primaryItems: NavigationItem[] = [
   {
@@ -43,6 +45,8 @@ export const primaryItems: NavigationItem[] = [
     activePrefixes: ["/"],
   },
 ];
+
+// ── Sales ─────────────────────────────────────────────────────────────────────
 
 export const salesItems: NavigationItem[] = [
   {
@@ -54,91 +58,127 @@ export const salesItems: NavigationItem[] = [
   {
     title: "Sales History",
     url: "/sales-report",
-    icon: History,
+    icon: ReceiptText,
     activePrefixes: ["/sales-report"],
   },
 ];
+
+// ── Inventory ─────────────────────────────────────────────────────────────────
 
 export const inventoryItems: NavigationItem[] = [
   {
     title: "Parts & Stock",
     url: "/stock-items",
-    icon: Package,
+    icon: Layers,
     activePrefixes: ["/stock-items", "/stock-query"],
   },
   {
     title: "Shipments",
     url: "/containers",
-    icon: Container,
+    icon: Truck,
     activePrefixes: ["/containers"],
   },
   {
     title: "Location Details",
     url: "/location-insights",
     icon: MapPin,
-    activePrefixes: ["/location-insights"],
+    activePrefixes: ["/location-insights", "/location-summary"],
   },
 ];
 
-// ── "More" sections ───────────────────────────────────────────────────────────
+// ── Finance ───────────────────────────────────────────────────────────────────
 
-export const moreSections: NavigationSection[] = [
+export const financeItems: NavigationItem[] = [
   {
-    title: "Finance",
-    items: [
-      { title: "Accounts", url: "/accounts", icon: Wallet },
-      { title: "Payroll", url: "/payroll", icon: UserCheck },
-      { title: "Transactions", url: "/vouchers", icon: ArrowLeftRight },
-      { title: "Daybook", url: "/daybook", icon: Book },
-      { title: "Income Statement", url: "/income-statement", icon: FileSpreadsheet },
-    ],
+    title: "Accounts",
+    url: "/accounts",
+    icon: Landmark,
   },
   {
-    title: "Customers & Suppliers",
-    items: [
-      { title: "Suppliers", url: "/suppliers", icon: Users },
-      { title: "Revendeurs", url: "/customers", icon: Users },
-    ],
+    title: "Transactions",
+    url: "/vouchers",
+    icon: ArrowRightLeft,
+    activePrefixes: ["/vouchers"],
   },
   {
-    title: "Service",
-    items: [
-      {
-        title: "Customer Center",
-        url: "/service",
-        icon: Users,
-        activePrefixes: [
-          "/service",
-          "/purchase-history",
-          "/service-history",
-          "/warranty",
-          "/communication-log",
-        ],
-      },
-    ],
+    title: "Daybook",
+    url: "/daybook",
+    icon: ClipboardList,
   },
   {
-    title: "Assembly",
-    items: [
-      {
-        title: "Moto Assembly",
-        url: "/moto-assembly",
-        icon: Wrench,
-        activePrefixes: ["/moto-assembly", "/assembly-history"],
-      },
-    ],
+    title: "Payroll",
+    url: "/payroll",
+    icon: CreditCard,
   },
   {
-    title: "Administration",
-    adminOnly: true,
-    items: [
-      { title: "Settings", url: "/settings", icon: Settings },
-      { title: "Create", url: "/create", icon: FolderPlus },
-    ],
+    title: "Income Statement",
+    url: "/income-statement",
+    icon: BarChart3,
   },
 ];
 
-// ── Flattened list for the command palette ────────────────────────────────────
+// ── Customers ─────────────────────────────────────────────────────────────────
+
+export const customerSectionItems: NavigationItem[] = [
+  {
+    title: "Customer Center",
+    url: "/service",
+    icon: HeartHandshake,
+    activePrefixes: [
+      "/service",
+      "/purchase-history",
+      "/service-history",
+      "/warranty",
+      "/communication-log",
+    ],
+  },
+  {
+    title: "Revendeurs",
+    url: "/customers",
+    icon: Store,
+    activePrefixes: ["/customers"],
+  },
+  {
+    title: "Suppliers",
+    url: "/suppliers",
+    icon: Building2,
+    activePrefixes: ["/suppliers"],
+  },
+];
+
+// ── Operations ────────────────────────────────────────────────────────────────
+
+export const operationsItems: NavigationItem[] = [
+  {
+    title: "Moto Assembly",
+    url: "/moto-assembly",
+    icon: Cog,
+    activePrefixes: ["/moto-assembly", "/assembly-history"],
+  },
+  {
+    title: "Stock Transfer",
+    url: "/stock-transfer-order",
+    icon: Shuffle,
+    activePrefixes: ["/stock-transfer-order"],
+  },
+];
+
+// ── Administration ────────────────────────────────────────────────────────────
+
+export const adminItems: NavigationItem[] = [
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
+  {
+    title: "Create Account",
+    url: "/create",
+    icon: FolderPlus,
+  },
+];
+
+// ── Command palette (flattened) ───────────────────────────────────────────────
 
 export interface CommandItem extends NavigationItem {
   group: string;
@@ -148,5 +188,12 @@ export const commandItems: CommandItem[] = [
   ...primaryItems.map((i) => ({ ...i, group: "Main" })),
   ...salesItems.map((i) => ({ ...i, group: "Sales" })),
   ...inventoryItems.map((i) => ({ ...i, group: "Inventory" })),
-  ...moreSections.flatMap((s) => s.items.map((i) => ({ ...i, group: s.title }))),
+  ...financeItems.map((i) => ({ ...i, group: "Finance" })),
+  ...customerSectionItems.map((i) => ({ ...i, group: "Customers" })),
+  ...operationsItems.map((i) => ({ ...i, group: "Operations" })),
+  ...adminItems.map((i) => ({ ...i, group: "Administration" })),
 ];
+
+// ── Legacy export kept for any remaining consumers ────────────────────────────
+
+export const moreSections: NavigationSection[] = [];
