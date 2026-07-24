@@ -179,7 +179,9 @@ export function VoucherEntriesTable({
       <table className="w-full">
         <thead className="bg-muted/50">
           <tr>
-            <th className="text-left p-3 font-medium w-[60%]">Account</th>
+            <th className="text-left p-3 font-medium w-[60%]">
+              {mode === "payment" ? "Paid To" : "Account"}
+            </th>
             <th className="text-right p-3 font-medium w-[35%]">Amount</th>
             <th className="w-[5%]"></th>
           </tr>
@@ -292,7 +294,7 @@ export function VoucherEntriesTable({
                 data-testid="button-add-row"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Row
+                {mode === "payment" ? "Add Payment Line" : "Add Row"}
               </Button>
             </td>
             <td className="p-3">

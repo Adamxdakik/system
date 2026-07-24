@@ -830,6 +830,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   // Sidebar state management
   const [originalPaymentTotal, setOriginalPaymentTotal] = useState(0);
+  const [accountBrowserOpen, setAccountBrowserOpen] = useState(false);
   const [sidebarSearchValue, setSidebarSearchValue] = useState("");
   const [sidebarHighlightedIndex, setSidebarHighlightedIndex] = useState(0);
   const [sidebarActiveTab, setSidebarActiveTab] = useState("bank");
@@ -4326,18 +4327,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
         <div className="flex-1 min-w-0">
           {!isPOS && activeTab === "payment" && (
-            <div className="space-y-4">
-              {/* Exchange Rate Input for multi-currency transactions */}
-              {selectedCurrency === "CFA" && (
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 bg-muted/30 rounded-md">
-                  <span className="text-sm text-muted-foreground">Transaction Rate:</span>
-                  <ExchangeRateInput
-                    value={transactionRate}
-                    onChange={setTransactionRate}
-                    selectedCurrency={selectedCurrency}
-                  />
-                </div>
-              )}
+            <div>
               <PaymentVoucherTab
                 form={form}
                 fieldArray={fieldArray}
@@ -4377,6 +4367,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                 isFactoryCompany={isFactoryCompany}
                 onAutoCreateAccount={handleAutoCreateAccount}
                 isAutoCreating={isAutoCreating}
+                accountBrowserOpen={accountBrowserOpen}
+                setAccountBrowserOpen={setAccountBrowserOpen}
+                isMutationPending={saveMutation.isPending}
+                selectedCurrency={selectedCurrency}
+                transactionRate={transactionRate}
+                setTransactionRate={setTransactionRate}
+                hideVoucherAmounts={hideVoucherAmounts}
               />
             </div>
           )}

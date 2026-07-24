@@ -48,6 +48,7 @@ interface AccountSidebarProps {
   errorMessage?: string;
   onRetry?: () => void;
   usingFallback?: boolean;
+  dialogMode?: boolean;
 }
 
 export default function AccountSidebar({
@@ -74,6 +75,7 @@ export default function AccountSidebar({
   errorMessage,
   onRetry,
   usingFallback = false,
+  dialogMode = false,
 }: AccountSidebarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -189,11 +191,12 @@ export default function AccountSidebar({
     return "text-muted-foreground";
   };
 
-  return (
-    <Card className="flex flex-col h-full">
-      <div className="p-4 border-b">
+  const inner = (
+    <>
+      <div className={dialogMode ? "p-4" : "p-4 border-b"}>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-semibold">Select Account</h3>
+          {!dialogMode && <h3 className="text-base font-semibold">Select Account</h3>}
+          {dialogMode && <div />}
           {onCreateAccount && (
             <Button
               type="button"
@@ -216,7 +219,9 @@ export default function AccountSidebar({
           )}
           <Input
             ref={searchInputRef}
-            placeholder={isFactoryCompany ? "Type expense name & Enter..." : "Search accounts..."}
+            placeholder={
+              isFactoryCompany ? "Type expense name & Enter..." : "Search name or code..."
+            }
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -234,7 +239,14 @@ export default function AccountSidebar({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-3" ref={listRef}>
+      <div
+        className={
+          dialogMode
+            ? "max-h-[55vh] overflow-y-auto overscroll-contain p-3"
+            : "flex-1 overflow-y-auto p-3"
+        }
+        ref={listRef}
+      >
         <div className="space-y-1">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-10 gap-2 text-sm text-muted-foreground">
@@ -306,6 +318,11 @@ export default function AccountSidebar({
           )}
         </div>
       </div>
-    </Card>
+    </>
   );
+
+  if (dialogMode) {
+    return <div className="flex flex-col">{inner}</div>;
+  }
+  return <Card className="flex flex-col h-full">{inner}</Card>;
 }
