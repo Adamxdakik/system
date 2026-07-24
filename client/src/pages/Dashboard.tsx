@@ -3,20 +3,23 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { DollarSign, TrendingUp, Package, Wallet, ShoppingCart, Wrench, BarChart3, Activity, CalendarIcon } from "lucide-react";
+import {
+  DollarSign, TrendingUp, Package, Wallet,
+  ShoppingCart, Wrench, BarChart3, Activity, CalendarIcon,
+  ArrowUpRight, Bike,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useState } from "react";
 import { formatNumber } from "@/lib/utils";
-import { format, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  format, startOfDay, endOfDay,
+  startOfMonth, endOfMonth, startOfYear, endOfYear,
+} from "date-fns";
+import {
+  AreaChart, Area, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, defs, linearGradient, stop,
 } from "recharts";
 
 type DashboardMetrics = {
@@ -46,13 +49,87 @@ type DashboardMetrics = {
 };
 
 const months = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
 ];
-
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
 
+// ── Shared chart tooltip ───────────────────────────────────────────────────
+const ChartTooltip = ({ active, payload, label, currency = false }: any) => {
+  if (!active || !payload?.length) return null;
+  const value = payload[0]?.value ?? 0;
+  return (
+    <div className="rounded-lg border bg-card/95 backdrop-blur px-3 py-2 shadow-xl text-sm">
+      <p className="text-muted-foreground text-xs mb-1">{label}</p>
+      <p className="font-bold text-foreground">
+        {currency ? `$${formatNumber(value)}` : formatNumber(value)}
+      </p>
+    </div>
+  );
+};
+
+// ── Reusable trend card ────────────────────────────────────────────────────
+function TrendCard({
+  title, icon: Icon, dataKey, data, color, gradientId, currency = false,
+}: {
+  title: string;
+  icon: React.ElementType;
+  dataKey: string;
+  data: any[];
+  color: string;
+  gradientId: string;
+  currency?: boolean;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-2 pt-4 px-5">
+        <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+          <Icon className="h-4 w-4" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-2 pb-4">
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              axisLine={false}
+              tickLine={false}
+              width={42}
+              tickFormatter={(v) => currency ? `$${formatNumber(v)}` : formatNumber(v)}
+            />
+            <Tooltip content={<ChartTooltip currency={currency} />} />
+            <Area
+              type="monotone"
+              dataKey={dataKey}
+              stroke={color}
+              strokeWidth={2.5}
+              fill={`url(#${gradientId})`}
+              dot={false}
+              activeDot={{ r: 5, strokeWidth: 0, fill: color }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { selectedCompany } = useCompany();
   const [period, setPeriod] = useState<"day" | "month" | "year">("month");
@@ -88,37 +165,42 @@ export default function Dashboard() {
   const dateRange = getDateRange();
 
   const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
-    queryKey: [`/api/stats/dashboard-metrics?fromDate=${dateRange.from}&toDate=${dateRange.to}&period=${period}`, selectedCompany?.id],
+    queryKey: [
+      `/api/stats/dashboard-metrics?fromDate=${dateRange.from}&toDate=${dateRange.to}&period=${period}`,
+      selectedCompany?.id,
+    ],
     enabled: !!selectedCompany,
   });
 
-  const formatCurrency = (value: number) => {
-    return `$${formatNumber(value)}`;
-  };
+  const fmt = (v: number) => `$${formatNumber(v)}`;
 
   const getDisplayLabel = () => {
     switch (period) {
-      case "day":
-        return format(selectedDate, "MMM d, yyyy");
-      case "month":
-        return `${months[selectedMonth]} ${selectedYear}`;
-      case "year":
-        return `${selectedYear}`;
+      case "day":   return format(selectedDate, "MMM d, yyyy");
+      case "month": return `${months[selectedMonth]} ${selectedYear}`;
+      case "year":  return `${selectedYear}`;
     }
   };
 
+  const netProfitPositive = (metrics?.netProfit || 0) >= 0;
+
   return (
     <div className="space-y-6">
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-semibold" data-testid="text-page-title">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Business performance - {getDisplayLabel()}
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
+            Dashboard
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Business performance — <span className="text-foreground/70 font-medium">{getDisplayLabel()}</span>
           </p>
         </div>
+
+        {/* Period controls */}
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={period} onValueChange={(v) => setPeriod(v as "day" | "month" | "year")}>
-            <SelectTrigger className="w-[120px]" data-testid="select-period-type">
+            <SelectTrigger className="w-[130px] font-medium" data-testid="select-period-type">
               <SelectValue placeholder="Select period" />
             </SelectTrigger>
             <SelectContent>
@@ -140,12 +222,7 @@ export default function Dashboard() {
                 <Calendar
                   mode="single"
                   selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedDate(date);
-                      setCalendarOpen(false);
-                    }
-                  }}
+                  onSelect={(date) => { if (date) { setSelectedDate(date); setCalendarOpen(false); } }}
                   initialFocus
                 />
               </PopoverContent>
@@ -159,9 +236,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Month" />
                 </SelectTrigger>
                 <SelectContent>
-                  {months.map((month, idx) => (
-                    <SelectItem key={idx} value={idx.toString()}>{month}</SelectItem>
-                  ))}
+                  {months.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
@@ -169,9 +244,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Year" />
                 </SelectTrigger>
                 <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                  ))}
+                  {years.map((y) => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
                 </SelectContent>
               </Select>
             </>
@@ -183,9 +256,7 @@ export default function Dashboard() {
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent>
-                {years.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                ))}
+                {years.map((y) => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -196,242 +267,285 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse">
-              <CardContent className="pt-6">
-                <div className="h-20 bg-muted rounded" />
-              </CardContent>
+              <CardContent className="pt-6"><div className="h-24 bg-muted rounded" /></CardContent>
             </Card>
           ))}
         </div>
       ) : (
         <>
-          {/* First Row: Total Sales, Gross Profit, Net Profit */}
+          {/* ── Primary KPIs ─────────────────────────────────────────── */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                    <ShoppingCart className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Sales (POS)</p>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-total-sales">
-                      {formatCurrency(metrics?.totalSales || 0)}
+            {/* Total Sales */}
+            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-950/80 to-emerald-900/40 ring-1 ring-emerald-800/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent" />
+              <CardContent className="pt-6 pb-5 relative">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-emerald-400/80 uppercase tracking-widest">
+                      Total Sales
                     </p>
+                    <p
+                      className="text-3xl font-bold text-emerald-300 tracking-tight"
+                      data-testid="text-total-sales"
+                    >
+                      {fmt(metrics?.totalSales || 0)}
+                    </p>
+                    <p className="text-xs text-emerald-500/60">Point of Sale</p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-emerald-500/15 ring-1 ring-emerald-500/30">
+                    <ShoppingCart className="h-5 w-5 text-emerald-400" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                    <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Gross Profit</p>
-                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-gross-profit">
-                      {formatCurrency(metrics?.grossProfit || 0)}
+            {/* Gross Profit */}
+            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-950/80 to-blue-900/40 ring-1 ring-blue-800/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
+              <CardContent className="pt-6 pb-5 relative">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-blue-400/80 uppercase tracking-widest">
+                      Gross Profit
                     </p>
-                    <p className="text-xs text-muted-foreground">Sales - COGS</p>
+                    <p
+                      className="text-3xl font-bold text-blue-300 tracking-tight"
+                      data-testid="text-gross-profit"
+                    >
+                      {fmt(metrics?.grossProfit || 0)}
+                    </p>
+                    <p className="text-xs text-blue-500/60">Sales — COGS</p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-blue-500/15 ring-1 ring-blue-500/30">
+                    <TrendingUp className="h-5 w-5 text-blue-400" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${(metrics?.netProfit || 0) >= 0 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                    <DollarSign className={`h-5 w-5 ${(metrics?.netProfit || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Net Profit</p>
-                    <p className={`text-2xl font-bold ${(metrics?.netProfit || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`} data-testid="text-net-profit">
-                      {formatCurrency(metrics?.netProfit || 0)}
+            {/* Net Profit */}
+            <Card
+              className={`relative overflow-hidden border-0 ring-1 ${
+                netProfitPositive
+                  ? "bg-gradient-to-br from-violet-950/80 to-violet-900/40 ring-violet-800/50"
+                  : "bg-gradient-to-br from-red-950/80 to-red-900/40 ring-red-800/50"
+              }`}
+            >
+              <div
+                className={`absolute inset-0 bg-gradient-to-br to-transparent ${
+                  netProfitPositive ? "from-violet-500/5" : "from-red-500/5"
+                }`}
+              />
+              <CardContent className="pt-6 pb-5 relative">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p
+                      className={`text-xs font-medium uppercase tracking-widest ${
+                        netProfitPositive ? "text-violet-400/80" : "text-red-400/80"
+                      }`}
+                    >
+                      Net Profit
                     </p>
+                    <p
+                      className={`text-3xl font-bold tracking-tight ${
+                        netProfitPositive ? "text-violet-300" : "text-red-300"
+                      }`}
+                      data-testid="text-net-profit"
+                    >
+                      {fmt(metrics?.netProfit || 0)}
+                    </p>
+                    <p
+                      className={`text-xs ${
+                        netProfitPositive ? "text-violet-500/60" : "text-red-500/60"
+                      }`}
+                    >
+                      Gross Profit — OpEx
+                    </p>
+                  </div>
+                  <div
+                    className={`p-2.5 rounded-xl ring-1 ${
+                      netProfitPositive
+                        ? "bg-violet-500/15 ring-violet-500/30"
+                        : "bg-red-500/15 ring-red-500/30"
+                    }`}
+                  >
+                    <DollarSign
+                      className={`h-5 w-5 ${netProfitPositive ? "text-violet-400" : "text-red-400"}`}
+                    />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Second Row: COGS, Operating Expenses, Cash in Hand, Inventory Value, Units Sold */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card>
-              <CardContent className="pt-4 pb-4">
-                <p className="text-xs text-muted-foreground mb-1">Cost of Goods Sold</p>
-                <p className="text-lg font-semibold text-red-600 dark:text-red-400" data-testid="text-cogs">
-                  {formatCurrency(metrics?.cogs || 0)}
+          {/* ── Secondary metrics ────────────────────────────────────── */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {/* COGS */}
+            <Card className="border-border/60">
+              <CardContent className="pt-4 pb-4 px-4">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                  Cost of Goods Sold
+                </p>
+                <p
+                  className="text-xl font-bold text-red-500 dark:text-red-400 font-mono"
+                  data-testid="text-cogs"
+                >
+                  {fmt(metrics?.cogs || 0)}
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="pt-4 pb-4">
-                <p className="text-xs text-muted-foreground mb-1">Operating Expenses</p>
-                <p className="text-lg font-semibold text-orange-600 dark:text-orange-400" data-testid="text-operating-expenses">
-                  {formatCurrency(metrics?.operatingExpenses || 0)}
+            {/* Operating Expenses */}
+            <Card className="border-border/60">
+              <CardContent className="pt-4 pb-4 px-4">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                  Operating Expenses
+                </p>
+                <p
+                  className="text-xl font-bold text-orange-500 dark:text-orange-400 font-mono"
+                  data-testid="text-operating-expenses"
+                >
+                  {fmt(metrics?.operatingExpenses || 0)}
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Wallet className="h-3 w-3 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Cash in Hand</p>
+            {/* Cash in Hand */}
+            <Card className="border-border/60">
+              <CardContent className="pt-4 pb-4 px-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Cash in Hand
+                  </p>
                 </div>
-                <p className="text-lg font-semibold text-green-600 dark:text-green-400" data-testid="text-cash-in-hand">
-                  {formatCurrency(metrics?.cashInHand || 0)}
+                <p
+                  className="text-xl font-bold text-green-500 dark:text-green-400 font-mono"
+                  data-testid="text-cash-in-hand"
+                >
+                  {fmt(metrics?.cashInHand || 0)}
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Package className="h-3 w-3 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Inventory Value</p>
+            {/* Inventory Value */}
+            <Card className="border-border/60">
+              <CardContent className="pt-4 pb-4 px-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Inventory Value
+                  </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Moto</p>
-                    <p className="text-lg font-semibold text-cyan-600 dark:text-cyan-400" data-testid="text-inventory-motos-value">
-                      {formatCurrency(metrics?.motosInventoryValue || 0)}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Moto</p>
+                    <p
+                      className="text-base font-bold text-cyan-500 dark:text-cyan-400 font-mono"
+                      data-testid="text-inventory-motos-value"
+                    >
+                      {fmt(metrics?.motosInventoryValue || 0)}
                     </p>
-                    <p className="text-xs text-muted-foreground">{formatNumber(metrics?.totalMotosQty || 0)} units</p>
-                  </div>
-                  <div className="h-8 w-px bg-border" />
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Parts</p>
-                    <p className="text-lg font-semibold text-cyan-600 dark:text-cyan-400" data-testid="text-inventory-parts-value">
-                      {formatCurrency(metrics?.partsInventoryValue || 0)}
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatNumber(metrics?.totalMotosQty || 0)} units
                     </p>
-                    <p className="text-xs text-muted-foreground">{formatNumber(metrics?.totalPartsQty || 0)} items</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Parts</p>
+                    <p
+                      className="text-base font-bold text-cyan-500 dark:text-cyan-400 font-mono"
+                      data-testid="text-inventory-parts-value"
+                    >
+                      {fmt(metrics?.partsInventoryValue || 0)}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatNumber(metrics?.totalPartsQty || 0)} items
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="pt-4 pb-4">
-                <p className="text-xs text-muted-foreground mb-1">Units Sold</p>
-                <div className="flex items-center gap-3">
-                  <div className="text-center">
-                    <p className="text-lg font-semibold text-violet-600 dark:text-violet-400" data-testid="text-motos-sold">
+            {/* Units Sold */}
+            <Card className="border-border/60">
+              <CardContent className="pt-4 pb-4 px-4">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                  Units Sold
+                </p>
+                <div className="flex items-end gap-4">
+                  <div>
+                    <p
+                      className="text-2xl font-bold text-violet-500 dark:text-violet-400"
+                      data-testid="text-motos-sold"
+                    >
                       {formatNumber(metrics?.motosSold || 0)}
                     </p>
-                    <p className="text-xs text-muted-foreground">Motos</p>
+                    <p className="text-[10px] text-muted-foreground">Motos</p>
                   </div>
-                  <div className="h-8 w-px bg-border" />
-                  <div className="text-center">
-                    <p className="text-lg font-semibold text-violet-600 dark:text-violet-400" data-testid="text-parts-sold">
+                  <div className="h-8 w-px bg-border self-center" />
+                  <div>
+                    <p
+                      className="text-2xl font-bold text-violet-500 dark:text-violet-400"
+                      data-testid="text-parts-sold"
+                    >
                       {formatNumber(metrics?.partsSold || 0)}
                     </p>
-                    <p className="text-xs text-muted-foreground">Parts</p>
+                    <p className="text-[10px] text-muted-foreground">Parts</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Trend Graphs */}
+          {/* ── Trend Charts ─────────────────────────────────────────── */}
           {metrics?.trendData && metrics.trendData.length > 1 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Sales Trend */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                    Sales Trend
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={metrics.trendData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="label" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                      <Line type="monotone" dataKey="sales" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={{ r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              {/* Units Sold Trend */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Wrench className="h-4 w-4 text-muted-foreground" />
-                    Units Sold Trend
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={metrics.trendData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="label" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="unitsSold" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              {/* Net Profit Trend */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                    Net Profit Trend
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={metrics.trendData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="label" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                      <Line type="monotone" dataKey="netProfit" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={{ r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              {/* Inventory Value Trend */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    Inventory Value Trend
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={metrics.trendData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis dataKey="label" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                      <Line type="monotone" dataKey="inventoryValue" stroke="hsl(var(--chart-4))" strokeWidth={2} dot={{ r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <TrendCard
+                title="Sales Trend"
+                icon={BarChart3}
+                dataKey="sales"
+                data={metrics.trendData}
+                color="#10b981"
+                gradientId="grad-sales"
+                currency
+              />
+              <TrendCard
+                title="Units Sold Trend"
+                icon={Wrench}
+                dataKey="unitsSold"
+                data={metrics.trendData}
+                color="#8b5cf6"
+                gradientId="grad-units"
+              />
+              <TrendCard
+                title="Net Profit Trend"
+                icon={Activity}
+                dataKey="netProfit"
+                data={metrics.trendData}
+                color="#3b82f6"
+                gradientId="grad-profit"
+                currency
+              />
+              <TrendCard
+                title="Inventory Value Trend"
+                icon={Package}
+                dataKey="inventoryValue"
+                data={metrics.trendData}
+                color="#06b6d4"
+                gradientId="grad-inventory"
+                currency
+              />
             </div>
           )}
 
-          {/* Show message when only one data point */}
           {metrics?.trendData && metrics.trendData.length <= 1 && (
             <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>Trend charts will appear when there's more data.</p>
-                <p className="text-sm">Try selecting a longer period (Month or Year) to see trends.</p>
+              <CardContent className="py-10 text-center text-muted-foreground">
+                <BarChart3 className="h-9 w-9 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">No trend data yet</p>
+                <p className="text-sm mt-1">
+                  Trend charts appear when there's more data. Try selecting a Month or Year view.
+                </p>
               </CardContent>
             </Card>
           )}
