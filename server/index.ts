@@ -16,6 +16,7 @@ import {
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
 } from "./authSecurity";
+import { securityHeaders } from "./securityHeaders";
 
 // Build version for cache busting and deployment tracking
 const BUILD_VERSION = process.env.BUILD_VERSION || 
@@ -60,6 +61,7 @@ declare module 'express-session' {
 }
 
 app.use(requestIdMiddleware);
+app.use(securityHeaders());
 app.use(requestBodyParsers());
 
 // Trust proxy for HTTPS termination
