@@ -2246,7 +2246,7 @@ export default function Accounts() {
                 ))}
               </div>
             ) : (
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-2 px-2">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain -mx-2 px-2">
                 {BROWSER_CATEGORIES.map((cat) => {
                   const catAccounts = groupedBrowserAccounts.groups[cat];
                   if (!catAccounts || catAccounts.length === 0) return null;
