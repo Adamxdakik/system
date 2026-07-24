@@ -38,6 +38,8 @@ import {
   Download,
   ChevronDown,
   ChevronRight,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -139,6 +141,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
   const [overviewSearch, setOverviewSearch] = useState("");
   const [overviewGroup, setOverviewGroup] = useState("all");
   const [overviewStatus, setOverviewStatus] = useState("all");
+  const [hideZeroStock, setHideZeroStock] = useState(true);
 
   // ── Manage state (all existing, preserved) ──────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
@@ -326,9 +329,12 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
       const status = getItemStatus(item);
       const matchesStatus = overviewStatus === "all" || overviewStatus === status;
 
-      return matchesSearch && matchesGroup && matchesStatus;
+      const totals = productTotals.get(item.id);
+      const matchesZero = !hideZeroStock || (totals?.totalQuantity ?? 0) > 0;
+
+      return matchesSearch && matchesGroup && matchesStatus && matchesZero;
     });
-  }, [stockItems, overviewSearch, overviewGroup, overviewStatus, productTotals]);
+  }, [stockItems, overviewSearch, overviewGroup, overviewStatus, hideZeroStock, productTotals]);
 
   // Manage filtered (existing logic)
   const filteredManageItems = stockItems
@@ -505,6 +511,24 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                   </Select>
                 </div>
                 <div className="flex gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setHideZeroStock((prev) => !prev)}
+                    data-testid="button-toggle-zero-stock"
+                  >
+                    {hideZeroStock ? (
+                      <>
+                        <Eye className="h-4 w-4" />
+                        Show 0 Stock
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="h-4 w-4" />
+                        Hide 0 Stock
+                      </>
+                    )}
+                  </Button>
                   <Button
                     className="gap-2"
                     onClick={() => {
