@@ -2,6 +2,7 @@
 dist
 tmp
 out-tsc
+.typescript-build/
 *.tsbuildinfo
 .expo
 .expo-shared

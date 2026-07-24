@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": ".typescript-build/server",
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["shared/*"]
+    }
+  },
+  "include": ["server/**/*.ts", "vite.config.ts"],
+  "exclude": [
+    "server/**/*.test.ts",
+    "server/**/__tests__/**",
+    "node_modules",
+    "dist",
+    "attached_assets",
+    ".cache",
+    "_trash"
+  ],
+  "references": [{ "path": "./tsconfig.shared.json" }]
+}

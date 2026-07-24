@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": ".typescript-build/shared",
+    "types": ["node"]
+  },
+  "include": ["shared/**/*.ts"],
+  "exclude": ["node_modules", "dist", ".cache", "_trash"]
+}

@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": ".typescript-build/client",
+    "jsx": "react-jsx",
+    "lib": ["dom", "dom.iterable", "es2022"],
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["client/src/*"],
+      "@shared/*": ["shared/*"],
+      "@assets/*": ["attached_assets/*"]
+    }
+  },
+  "include": ["client/src/**/*.ts", "client/src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "client/dist", "attached_assets", ".cache", "_trash"],
+  "references": [{ "path": "./tsconfig.shared.json" }]
+}

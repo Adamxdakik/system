@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": ".typescript-build/integration-tests",
+    "types": ["node", "vitest/globals"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["client/src/*"],
+      "@shared/*": ["shared/*"]
+    }
+  },
+  "include": [
+    "server/__tests__/moto-rates-authed.test.ts",
+    "server/__tests__/moto-rates-routes.test.ts",
+    "server/__tests__/moto-rates-storage.test.ts",
+    "server/__tests__/testTypes.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", ".cache", "_trash"],
+  "references": [{ "path": "./tsconfig.server.json" }, { "path": "./tsconfig.shared.json" }]
+}
