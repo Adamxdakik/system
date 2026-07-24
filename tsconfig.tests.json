@@ -22,6 +22,8 @@
     "server/authSecurity.ts",
     "server/erpPagePermissions.ts",
     "server/httpSafety.ts",
+    "server/financialAuditCore.ts",
+    "server/__tests__/financialAudit.characterization.test.ts",
     "server/roleAuthorization.ts",
     "server/securityHeaders.ts",
     "server/lib/asyncHandler.ts",
