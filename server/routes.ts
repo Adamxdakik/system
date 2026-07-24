@@ -38,6 +38,7 @@ import {
   updateStockTransferSchema,
   updateStockAdjustmentSchema,
   insertUserSchema,
+  updateUserSchema,
   insertUserCompanyRoleSchema,
   InsertPurchaseOrder,
   insertCustomerSchema,
@@ -93,6 +94,7 @@ import {
 import { eq, and, inArray, sql, like, ne, desc, asc, or, isNotNull, lt, gte, lte, isNull } from "drizzle-orm";
 import { format } from "date-fns";
 import {
+  createLogoutHandler,
   createLoginHandler,
   hashPassword,
   loginRateLimiter,
@@ -273,15 +275,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     asyncHandler(loginHandler),
   );
 
-  app.post("/api/auth/logout", (req, res) => {
-    if (req.session?.userId) activeUsers.delete(req.session.userId);
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Failed to logout" });
-      }
-      res.json({ message: "Logged out successfully" });
-    });
-  });
+  app.post(
+    "/api/auth/logout",
+    createLogoutHandler((userId) => activeUsers.delete(userId)),
+  );
 
   // ─── Active Users heartbeat ──────────────────────────────────────────────
   app.post("/api/users/heartbeat", requireAuth, (req, res) => {
@@ -392,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res) => {
       try {
         const { id } = req.params;
-        const updates = req.body;
+        const updates = updateUserSchema.parse(req.body);
 
         // If password is being updated, hash it with bcrypt
         if (updates.password) {

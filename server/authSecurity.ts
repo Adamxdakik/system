@@ -2,11 +2,27 @@ import bcrypt from "bcryptjs";
 import CryptoJS from "crypto-js";
 import { createHash } from "crypto";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
-import type { Request, Response } from "express";
+import type { CookieOptions, Request, Response } from "express";
 import { z } from "zod";
 
 export const LOGIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 export const LOGIN_RATE_LIMIT_ATTEMPTS = 10;
+export const SESSION_COOKIE_NAME = "erp.session";
+
+export function sessionCookieOptions(): CookieOptions {
+  return {
+    secure: process.env.NODE_ENV === "production" || !!process.env.REPL_ID,
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    path: "/",
+    sameSite: "lax",
+  };
+}
+
+function clearSessionCookieOptions(): CookieOptions {
+  const { maxAge: _maxAge, ...options } = sessionCookieOptions();
+  return options;
+}
 
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required").max(255),
@@ -203,4 +219,18 @@ export function createLoginHandler(dependencies: LoginDependencies) {
 
 export function resetLoginRateLimit(req: Request): Promise<void> {
   return Promise.resolve(loginRateLimiter.resetKey(loginRateLimitKey(req)));
+}
+
+export function createLogoutHandler(removeActiveUser: (userId: string) => void) {
+  return (req: Request, res: Response) => {
+    const userId = req.session?.userId;
+    req.session.destroy((error) => {
+      if (error) {
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      if (userId) removeActiveUser(userId);
+      res.clearCookie(SESSION_COOKIE_NAME, clearSessionCookieOptions());
+      return res.json({ message: "Logged out successfully" });
+    });
+  };
 }

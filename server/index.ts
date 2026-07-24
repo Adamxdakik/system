@@ -12,6 +12,10 @@ import {
   requestBodyParsers,
   requestIdMiddleware,
 } from "./httpSafety";
+import {
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+} from "./authSecurity";
 
 // Build version for cache busting and deployment tracking
 const BUILD_VERSION = process.env.BUILD_VERSION || 
@@ -77,18 +81,11 @@ const SESSION_SECRET =
   process.env.SESSION_SECRET || "dev-only-insecure-secret-change-me";
 
 const sessionConfig: session.SessionOptions = {
-  name: 'erp.session', // Explicit cookie name
+  name: SESSION_COOKIE_NAME,
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    // Replit serves over HTTPS even in dev mode, so we need secure cookies
-    secure: process.env.NODE_ENV === "production" || !!process.env.REPL_ID,
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    path: '/', // Explicit path
-    sameSite: 'lax', // Lax allows same-site requests and top-level navigation
-  },
+  cookie: sessionCookieOptions(),
 };
 
 // Use PostgreSQL session store when a database is available

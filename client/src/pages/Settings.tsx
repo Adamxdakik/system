@@ -80,7 +80,9 @@ import { useCompany } from "@/contexts/CompanyContext";
 
 // ── Schemas ────────────────────────────────────────────────────────────────
 
-const userFormSchema = insertUserSchema;
+const userFormSchema = insertUserSchema.extend({
+  password: insertUserSchema.shape.password.or(z.literal("")),
+});
 const companyFormSchema = insertCompanySchema;
 const roleAssignmentSchema = insertUserCompanyRoleSchema.refine(
   (data) => {
@@ -577,6 +579,13 @@ export default function Settings() {
   };
 
   const handleSubmit = (data: UserFormData) => {
+    if (!editingUser && !data.password) {
+      form.setError("password", {
+        message: "Password must be at least 10 characters",
+      });
+      return;
+    }
+
     if (editingUser && !data.password) {
       const { password, ...dataWithoutPassword } = data;
       createUserMutation.mutate(dataWithoutPassword as UserFormData);
