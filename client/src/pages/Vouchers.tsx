@@ -19,12 +19,7 @@ import { ReceiptVoucherTab } from "@/components/vouchers/ReceiptVoucherTab";
 import { CreditNoteTab } from "@/components/vouchers/CreditNoteTab";
 import { CreateAccountModal } from "@/components/vouchers/CreateAccountModal";
 import { PageHeader } from "@/components/PageHeader";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LucideIcon } from "lucide-react";
 import {
   Form,
@@ -41,11 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -70,7 +61,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Check, ChevronsUpDown, Upload, FileSpreadsheet, Download, CheckCircle, XCircle, X, Search, ChevronDown, FileDown, Loader2, ArrowDownCircle, ArrowLeftRight, SlidersHorizontal, LayoutGrid } from "lucide-react";
+import {
+  Plus,
+  Check,
+  ChevronsUpDown,
+  Upload,
+  FileSpreadsheet,
+  Download,
+  CheckCircle,
+  XCircle,
+  X,
+  Search,
+  ChevronDown,
+  FileDown,
+  Loader2,
+  ArrowDownCircle,
+  ArrowLeftRight,
+  SlidersHorizontal,
+  LayoutGrid,
+} from "lucide-react";
 import { utils, writeFile } from "@/lib/excelHelper";
 import {
   DropdownMenu,
@@ -147,7 +156,8 @@ interface FactorySupplierBasic {
 }
 
 interface VoucherEntry {
-  accountType: "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier";
+  accountType:
+    "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier";
   accountId: number;
   accountName: string;
   amount: string;
@@ -155,7 +165,8 @@ interface VoucherEntry {
 
 interface JournalEntry {
   type: "DR" | "CR";
-  accountType: "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier";
+  accountType:
+    "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier";
   accountId: number;
   accountName: string;
   amount: string;
@@ -193,10 +204,19 @@ interface StockAdjustmentEntry {
 }
 
 const voucherEntrySchema = z.object({
-  accountType: z.enum(["ledger", "bank", "supplier", "employee", "fixedAsset", "customer", "factorySupplier"]),
+  accountType: z.enum([
+    "ledger",
+    "bank",
+    "supplier",
+    "employee",
+    "fixedAsset",
+    "customer",
+    "factorySupplier",
+  ]),
   accountId: z.number().min(1, "Please select an account"),
   accountName: z.string(),
-  amount: z.string()
+  amount: z
+    .string()
     .min(1, "Amount required")
     .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
       message: "Amount must be a positive number",
@@ -205,10 +225,19 @@ const voucherEntrySchema = z.object({
 
 const journalEntrySchema = z.object({
   type: z.enum(["DR", "CR"]),
-  accountType: z.enum(["ledger", "bank", "supplier", "employee", "fixedAsset", "customer", "factorySupplier"]),
+  accountType: z.enum([
+    "ledger",
+    "bank",
+    "supplier",
+    "employee",
+    "fixedAsset",
+    "customer",
+    "factorySupplier",
+  ]),
   accountId: z.number().min(1, "Please select an account"),
   accountName: z.string(),
-  amount: z.string()
+  amount: z
+    .string()
     .min(1, "Amount required")
     .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
       message: "Amount must be a positive number",
@@ -216,7 +245,15 @@ const journalEntrySchema = z.object({
 });
 
 const voucherFormSchema = z.object({
-  paymentAccountType: z.enum(["ledger", "bank", "supplier", "employee", "fixedAsset", "customer", "factorySupplier"]),
+  paymentAccountType: z.enum([
+    "ledger",
+    "bank",
+    "supplier",
+    "employee",
+    "fixedAsset",
+    "customer",
+    "factorySupplier",
+  ]),
   paymentAccountId: z.number().min(1, "Please select an account"),
   paymentAccountName: z.string(),
   voucherDate: z.date(),
@@ -255,8 +292,12 @@ const stockAdjustmentEntrySchema = z.object({
   stockItemId: z.number().min(1, "Please select a stock item"),
   stockItemCode: z.string().default(""),
   stockItemName: z.string(),
-  quantity: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) !== 0, "Quantity cannot be zero"),
-  rate: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Rate must be non-negative"),
+  quantity: z
+    .string()
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) !== 0, "Quantity cannot be zero"),
+  rate: z
+    .string()
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Rate must be non-negative"),
 });
 
 const stockAdjustmentFormSchema = z.object({
@@ -319,7 +360,7 @@ function AccountCombobox({
       id: c.id,
       name: c.name,
     })),
-  ].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  ].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -339,7 +380,10 @@ function AccountCombobox({
       </PopoverTrigger>
       <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[400px] p-0 bg-popover text-popover-foreground">
         <Command className="bg-popover text-popover-foreground">
-          <CommandInput placeholder="Search accounts..." className="bg-popover text-popover-foreground" />
+          <CommandInput
+            placeholder="Search accounts..."
+            className="bg-popover text-popover-foreground"
+          />
           <CommandList className="bg-popover text-popover-foreground">
             <CommandEmpty>No account found.</CommandEmpty>
             <CommandGroup>
@@ -358,7 +402,7 @@ function AccountCombobox({
                       "mr-2 h-4 w-4",
                       value?.type === account.type && value?.id === account.id
                         ? "opacity-100"
-                        : "opacity-0"
+                        : "opacity-0",
                     )}
                   />
                   {account.name}
@@ -392,7 +436,9 @@ function StockItemCombobox({
 }) {
   const [open, setOpen] = useState(false);
 
-  const sortedStockItems = [...stockItems].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const sortedStockItems = [...stockItems].sort((a, b) =>
+    (a.name || "").localeCompare(b.name || ""),
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -412,7 +458,10 @@ function StockItemCombobox({
       </PopoverTrigger>
       <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[400px] p-0 bg-popover text-popover-foreground">
         <Command className="bg-popover text-popover-foreground">
-          <CommandInput placeholder="Search stock items..." className="bg-popover text-popover-foreground" />
+          <CommandInput
+            placeholder="Search stock items..."
+            className="bg-popover text-popover-foreground"
+          />
           <CommandList className="bg-popover text-popover-foreground">
             <CommandEmpty>No stock item found.</CommandEmpty>
             <CommandGroup>
@@ -429,7 +478,7 @@ function StockItemCombobox({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value?.id === item.id ? "opacity-100" : "opacity-0"
+                      value?.id === item.id ? "opacity-100" : "opacity-0",
                     )}
                   />
                   {item.name}
@@ -465,30 +514,77 @@ const PrintTemplate = ({
 }) => {
   const voucherRef = `${voucherType === "Payment" ? "PV" : "RV"}-${format(date, "yyyyMMdd")}-${Date.now().toString().slice(-4)}`;
   return (
-    <div style={{ fontFamily: "Arial, sans-serif", padding: "32px", maxWidth: "720px", margin: "0 auto", background: "#fff", color: "#000" }}>
+    <div
+      style={{
+        fontFamily: "Arial, sans-serif",
+        padding: "32px",
+        maxWidth: "720px",
+        margin: "0 auto",
+        background: "#fff",
+        color: "#000",
+      }}
+    >
       <div style={{ border: "1px solid #000" }}>
-
         {/* Header */}
-        <div style={{ background: "#1a1a2e", color: "#fff", padding: "20px 28px", textAlign: "center" }}>
+        <div
+          style={{
+            background: "#1a1a2e",
+            color: "#fff",
+            padding: "20px 28px",
+            textAlign: "center",
+          }}
+        >
           {companyName && (
-            <div style={{ fontSize: "22px", fontWeight: "700", letterSpacing: "0.5px", marginBottom: "4px" }}>
+            <div
+              style={{
+                fontSize: "22px",
+                fontWeight: "700",
+                letterSpacing: "0.5px",
+                marginBottom: "4px",
+              }}
+            >
               {companyName}
             </div>
           )}
-          <div style={{ fontSize: "13px", letterSpacing: "3px", textTransform: "uppercase", opacity: 0.8 }}>
+          <div
+            style={{
+              fontSize: "13px",
+              letterSpacing: "3px",
+              textTransform: "uppercase",
+              opacity: 0.8,
+            }}
+          >
             {voucherType} Voucher
           </div>
         </div>
 
         {/* Meta row */}
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "14px 28px", borderBottom: "1px solid #ddd", background: "#f9f9f9", fontSize: "13px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            padding: "14px 28px",
+            borderBottom: "1px solid #ddd",
+            background: "#f9f9f9",
+            fontSize: "13px",
+          }}
+        >
           <div>
-            <span style={{ color: "#555" }}>{voucherType === "Payment" ? "Paid From:" : "Received In:"}</span>
-            <span style={{ fontWeight: "600", marginLeft: "8px" }}>{paymentAccountName || "—"}</span>
+            <span style={{ color: "#555" }}>
+              {voucherType === "Payment" ? "Paid From:" : "Received In:"}
+            </span>
+            <span style={{ fontWeight: "600", marginLeft: "8px" }}>
+              {paymentAccountName || "—"}
+            </span>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div><span style={{ color: "#555" }}>Date:</span> <strong>{format(date, "dd MMM yyyy")}</strong></div>
-            <div style={{ fontSize: "11px", color: "#777", marginTop: "2px" }}>Ref: {voucherRef}</div>
+            <div>
+              <span style={{ color: "#555" }}>Date:</span>{" "}
+              <strong>{format(date, "dd MMM yyyy")}</strong>
+            </div>
+            <div style={{ fontSize: "11px", color: "#777", marginTop: "2px" }}>
+              Ref: {voucherRef}
+            </div>
           </div>
         </div>
 
@@ -497,17 +593,46 @@ const PrintTemplate = ({
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr style={{ background: "#f0f0f0" }}>
-                <th style={{ border: "1px solid #ccc", padding: "8px 10px", textAlign: "left", width: "40px" }}>#</th>
-                <th style={{ border: "1px solid #ccc", padding: "8px 10px", textAlign: "left" }}>Account / Description</th>
-                <th style={{ border: "1px solid #ccc", padding: "8px 10px", textAlign: "right", width: "130px" }}>Amount</th>
+                <th
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "8px 10px",
+                    textAlign: "left",
+                    width: "40px",
+                  }}
+                >
+                  #
+                </th>
+                <th style={{ border: "1px solid #ccc", padding: "8px 10px", textAlign: "left" }}>
+                  Account / Description
+                </th>
+                <th
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "8px 10px",
+                    textAlign: "right",
+                    width: "130px",
+                  }}
+                >
+                  Amount
+                </th>
               </tr>
             </thead>
             <tbody>
               {entries.map((entry, index) => (
                 <tr key={index} style={{ background: index % 2 === 1 ? "#fafafa" : "#fff" }}>
                   <td style={{ border: "1px solid #ccc", padding: "8px 10px" }}>{index + 1}</td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px 10px" }}>{entry.accountName}</td>
-                  <td style={{ border: "1px solid #ccc", padding: "8px 10px", textAlign: "right", fontFamily: "monospace" }}>
+                  <td style={{ border: "1px solid #ccc", padding: "8px 10px" }}>
+                    {entry.accountName}
+                  </td>
+                  <td
+                    style={{
+                      border: "1px solid #ccc",
+                      padding: "8px 10px",
+                      textAlign: "right",
+                      fontFamily: "monospace",
+                    }}
+                  >
                     {formatAmount(entry.amount || "0")}
                   </td>
                 </tr>
@@ -515,10 +640,26 @@ const PrintTemplate = ({
             </tbody>
             <tfoot>
               <tr style={{ background: "#1a1a2e", color: "#fff", fontWeight: "700" }}>
-                <td colSpan={2} style={{ border: "1px solid #000", padding: "9px 10px", textAlign: "right", letterSpacing: "0.5px" }}>
+                <td
+                  colSpan={2}
+                  style={{
+                    border: "1px solid #000",
+                    padding: "9px 10px",
+                    textAlign: "right",
+                    letterSpacing: "0.5px",
+                  }}
+                >
                   TOTAL
                 </td>
-                <td style={{ border: "1px solid #000", padding: "9px 10px", textAlign: "right", fontFamily: "monospace", fontSize: "14px" }}>
+                <td
+                  style={{
+                    border: "1px solid #000",
+                    padding: "9px 10px",
+                    textAlign: "right",
+                    fontFamily: "monospace",
+                    fontSize: "14px",
+                  }}
+                >
                   {formatAmount(total)}
                 </td>
               </tr>
@@ -529,7 +670,14 @@ const PrintTemplate = ({
         {/* Notes */}
         {notes && (
           <div style={{ padding: "0 28px 20px", fontSize: "12px" }}>
-            <div style={{ background: "#f9f9f9", border: "1px solid #ddd", borderRadius: "4px", padding: "10px 14px" }}>
+            <div
+              style={{
+                background: "#f9f9f9",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+                padding: "10px 14px",
+              }}
+            >
               <strong>Notes:</strong>
               <span style={{ marginLeft: "8px", whiteSpace: "pre-wrap" }}>{notes}</span>
             </div>
@@ -537,26 +685,47 @@ const PrintTemplate = ({
         )}
 
         {/* Signature section */}
-        <div style={{ borderTop: "1px solid #ddd", padding: "24px 28px 28px", display: "flex", justifyContent: "space-between", gap: "16px" }}>
+        <div
+          style={{
+            borderTop: "1px solid #ddd",
+            padding: "24px 28px 28px",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "16px",
+          }}
+        >
           {[
             { label: "Prepared By", sub: "Name & Signature" },
             { label: "Received By", sub: "Name & Signature" },
             { label: "Authorized By", sub: "Name & Signature" },
           ].map(({ label, sub }) => (
             <div key={label} style={{ flex: 1, textAlign: "center" }}>
-              <div style={{ height: "56px", borderBottom: "1px solid #000", marginBottom: "6px" }} />
+              <div
+                style={{ height: "56px", borderBottom: "1px solid #000", marginBottom: "6px" }}
+              />
               <div style={{ fontSize: "12px", fontWeight: "600" }}>{label}</div>
               <div style={{ fontSize: "10px", color: "#777", marginTop: "2px" }}>{sub}</div>
-              <div style={{ fontSize: "10px", color: "#777", marginTop: "6px" }}>Date: _______________</div>
+              <div style={{ fontSize: "10px", color: "#777", marginTop: "6px" }}>
+                Date: _______________
+              </div>
             </div>
           ))}
         </div>
 
         {/* Footer strip */}
-        <div style={{ background: "#1a1a2e", color: "#aaa", fontSize: "10px", textAlign: "center", padding: "6px", letterSpacing: "0.5px" }}>
-          {companyName ? `${companyName} — ` : ""}{voucherType} Voucher · {format(date, "dd MMM yyyy")} · {voucherRef}
+        <div
+          style={{
+            background: "#1a1a2e",
+            color: "#aaa",
+            fontSize: "10px",
+            textAlign: "center",
+            padding: "6px",
+            letterSpacing: "0.5px",
+          }}
+        >
+          {companyName ? `${companyName} — ` : ""}
+          {voucherType} Voucher · {format(date, "dd MMM yyyy")} · {voucherRef}
         </div>
-
       </div>
     </div>
   );
@@ -580,11 +749,18 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const appMode: string = "erp";
   const modeApiRequest = apiRequest;
   const isFactoryCompany = selectedCompany?.companyType === "factory";
-  const { data: myErpPages } = useQuery<{ hiddenErpCostFields?: string[] }>({ queryKey: ["/api/my-erp-pages"] });
+  const { data: myErpPages } = useQuery<{ hiddenErpCostFields?: string[] }>({
+    queryKey: ["/api/my-erp-pages"],
+  });
   const hideVoucherAmounts = (myErpPages?.hiddenErpCostFields ?? []).includes("voucher_amounts");
   const [isAutoCreating, setIsAutoCreating] = useState(false);
   const { formatDisplayDate } = useDateFormat();
-  const { formatAmount, selectedCurrency, convertToUSD, exchangeRate: dailyExchangeRate } = useCurrencyContext();
+  const {
+    formatAmount,
+    selectedCurrency,
+    convertToUSD,
+    exchangeRate: dailyExchangeRate,
+  } = useCurrencyContext();
   // Transaction-specific exchange rate (allows override of daily rate for rate-locking)
   const [transactionRate, setTransactionRate] = useState<number | null>(null);
   // Use transaction rate if set, otherwise fall back to daily rate
@@ -595,7 +771,10 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const isPOS = !!posUser;
   const posLocationId = posUser?.assignedLocationId;
 
-  const sidebarGroups: { label: string; items: { key: string; label: string; icon: LucideIcon }[] }[] = [
+  const sidebarGroups: {
+    label: string;
+    items: { key: string; label: string; icon: LucideIcon }[];
+  }[] = [
     {
       label: "Transactions",
       items: [
@@ -608,13 +787,22 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   // Parse URL parameters for edit mode (use window.location.search since wouter doesn't include query params)
   const searchParams = new URLSearchParams(window.location.search);
-  const editParam = searchParams.get('edit');
-  const tabParam = searchParams.get('tab');
+  const editParam = searchParams.get("edit");
+  const tabParam = searchParams.get("tab");
   const voucherIdToEdit = editParam ? parseInt(editParam) : null;
-  
-  const [activeTab, setActiveTab] = useState<"payment" | "receipt" | "journal" | "transfer" | "transferorder" | "adjustment" | "creditnote">(
-    (tabParam as any) || "payment"
-  );
+
+  const visibleTransactionTabs = new Set(["payment", "transfer", "adjustment"]);
+
+  const sanitiseTab = (tab: string | null, editId: number | null): typeof activeTab => {
+    if (!tab) return "payment";
+    if (visibleTransactionTabs.has(tab)) return tab as typeof activeTab;
+    if (tab === "receipt" && editId) return "receipt";
+    return "payment";
+  };
+
+  const [activeTab, setActiveTab] = useState<
+    "payment" | "receipt" | "journal" | "transfer" | "transferorder" | "adjustment" | "creditnote"
+  >(sanitiseTab(tabParam, voucherIdToEdit));
   const [editVoucherId, setEditVoucherId] = useState<number | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
@@ -628,13 +816,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   // Synchronize activeTab and editVoucherId with URL parameters
   useEffect(() => {
-    // Update tab: use URL param if present, otherwise reset to default "payment"
-    if (tabParam) {
-      setActiveTab(tabParam as any);
-    } else {
-      setActiveTab("payment");
-    }
-    
+    // Update tab: sanitise visible tabs; keep hidden receipt only for legacy edits
+    setActiveTab(sanitiseTab(tabParam, voucherIdToEdit));
+
     // Update edit voucher ID: use URL param if present, otherwise clear it
     if (voucherIdToEdit) {
       setEditVoucherId(voucherIdToEdit);
@@ -645,6 +829,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   }, [tabParam, voucherIdToEdit]);
 
   // Sidebar state management
+  const [originalPaymentTotal, setOriginalPaymentTotal] = useState(0);
   const [sidebarSearchValue, setSidebarSearchValue] = useState("");
   const [sidebarHighlightedIndex, setSidebarHighlightedIndex] = useState(0);
   const [sidebarActiveTab, setSidebarActiveTab] = useState("bank");
@@ -684,7 +869,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   });
 
   // Get POS user's location name for auto-populating source location
-  const posLocation = isPOS && posLocationId ? locations.find(l => l.id === posLocationId) : null;
+  const posLocation = isPOS && posLocationId ? locations.find((l) => l.id === posLocationId) : null;
   const posLocationName = posLocation?.name || "";
 
   const { data: employees = [] } = useQuery<Employee[]>({
@@ -695,10 +880,20 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     queryKey: ["/api/fixed-assets", selectedCompany?.id],
   });
 
-  // Fetch accounts for sidebar (with balances)
-  const { data: sidebarAccounts = [] } = useQuery<Account[]>({
+  // Fetch accounts for sidebar (with balances) — named for loading/error states
+  const sidebarAccountsQuery = useQuery<Account[]>({
     queryKey: ["/api/accounts/voucher-sidebar", selectedCompany?.id],
+    enabled:
+      !!selectedCompany?.id &&
+      (activeTab === "payment" || activeTab === "receipt" || activeTab === "journal"),
   });
+
+  const normalisedSidebarAccounts = useMemo(() => {
+    const raw = sidebarAccountsQuery.data as any;
+    if (Array.isArray(raw)) return raw as Account[];
+    if (Array.isArray(raw?.accounts)) return raw.accounts as Account[];
+    return [] as Account[];
+  }, [sidebarAccountsQuery.data]);
 
   // Fetch voucher data for editing if voucherIdToEdit is present
   const { data: voucherToEdit, isLoading: loadingVoucher } = useQuery({
@@ -784,8 +979,16 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         code: String(s.id),
       })),
     ];
-    return accounts.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [ledgerAccounts, bankAccounts, suppliers, employees, fixedAssets, customers, factorySuppliersList]);
+    return accounts.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  }, [
+    ledgerAccounts,
+    bankAccounts,
+    suppliers,
+    employees,
+    fixedAssets,
+    customers,
+    factorySuppliersList,
+  ]);
 
   const form = useForm<VoucherFormData>({
     resolver: zodResolver(voucherFormSchema),
@@ -815,10 +1018,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   // Calculate total
   const entries = form.watch("entries");
-  const total = entries.reduce(
-    (sum, entry) => sum + (parseFloat(entry.amount) || 0),
-    0
-  );
+  const total = entries.reduce((sum, entry) => sum + (parseFloat(entry.amount) || 0), 0);
 
   // Pre-populate form when editing
   useEffect(() => {
@@ -840,7 +1040,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       // In a standard voucher, entries come in pairs. The payment account entry is:
       // - For Payment: the entry with CR > 0 (or DR > 0 if supplier/employee)
       // - For Receipt: the entry with DR > 0 (or CR > 0 if supplier/employee)
-      // Since we can't easily distinguish, use the heuristic: for each pair, 
+      // Since we can't easily distinguish, use the heuristic: for each pair,
       // the payment account tends to be bank/cash or the one that appears in both entries of a pair.
       // Simpler approach: find entries where the amount appears exactly twice (a pair),
       // and pick based on account type priority (bank > ledger > supplier > employee)
@@ -888,32 +1088,32 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       if (paymentEntry.bankAccountId) {
         paymentType = "bank";
         paymentId = paymentEntry.bankAccountId;
-        const account = bankAccounts.find(b => b.id === paymentId);
+        const account = bankAccounts.find((b) => b.id === paymentId);
         paymentName = account?.bankName || "";
       } else if (paymentEntry.ledgerAccountId) {
         paymentType = "ledger";
         paymentId = paymentEntry.ledgerAccountId;
-        const account = ledgerAccounts.find(l => l.id === paymentId);
+        const account = ledgerAccounts.find((l) => l.id === paymentId);
         paymentName = account?.name || "";
       } else if (paymentEntry.supplierId) {
         paymentType = "supplier";
         paymentId = paymentEntry.supplierId;
-        const supplier = suppliers.find(s => s.id === paymentId);
+        const supplier = suppliers.find((s) => s.id === paymentId);
         paymentName = supplier?.legalName || "";
       } else if (paymentEntry.factorySupplierId) {
         paymentType = "factorySupplier";
         paymentId = paymentEntry.factorySupplierId;
-        const fs = factorySuppliersList.find(s => s.id === paymentId);
+        const fs = factorySuppliersList.find((s) => s.id === paymentId);
         paymentName = fs?.name || "";
       } else if (paymentEntry.employeeId) {
         paymentType = "employee";
         paymentId = paymentEntry.employeeId;
-        const employee = employees.find(e => e.id === paymentId);
+        const employee = employees.find((e) => e.id === paymentId);
         paymentName = employee ? `${employee.firstName} ${employee.lastName}` : "";
       } else if (paymentEntry.fixedAssetId) {
         paymentType = "fixedAsset";
         paymentId = paymentEntry.fixedAssetId;
-        const asset = fixedAssets.find(f => f.id === paymentId);
+        const asset = fixedAssets.find((f) => f.id === paymentId);
         paymentName = asset?.name || "";
       }
 
@@ -933,72 +1133,84 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           if (payFromLedgerId && entry.ledgerAccountId === payFromLedgerId) return false;
           if (payFromBankId && entry.bankAccountId === payFromBankId) return false;
           if (payFromSupplierId && entry.supplierId === payFromSupplierId) return false;
-          if (payFromFactorySupplierId && entry.factorySupplierId === payFromFactorySupplierId) return false;
+          if (payFromFactorySupplierId && entry.factorySupplierId === payFromFactorySupplierId)
+            return false;
           if (payFromEmployeeId && entry.employeeId === payFromEmployeeId) return false;
           if (payFromCustomerId && entry.customerId === payFromCustomerId) return false;
           return true;
         })
         .map((entry: any) => {
-        let accountType: "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier" = "ledger";
-        let accountId = 0;
-        let accountName = "";
-        let amount = "0";
+          let accountType:
+            | "ledger"
+            | "bank"
+            | "supplier"
+            | "employee"
+            | "fixedAsset"
+            | "customer"
+            | "factorySupplier" = "ledger";
+          let accountId = 0;
+          let accountName = "";
+          let amount = "0";
 
-        if (entry.ledgerAccountId) {
-          accountType = "ledger";
-          accountId = entry.ledgerAccountId;
-          const account = ledgerAccounts.find(l => l.id === accountId);
-          accountName = account?.name || "";
-        } else if (entry.bankAccountId) {
-          accountType = "bank";
-          accountId = entry.bankAccountId;
-          const account = bankAccounts.find(b => b.id === accountId);
-          accountName = account?.bankName || "";
-        } else if (entry.supplierId) {
-          accountType = "supplier";
-          accountId = entry.supplierId;
-          const supplier = suppliers.find(s => s.id === accountId);
-          accountName = supplier?.legalName || "";
-        } else if (entry.factorySupplierId) {
-          accountType = "factorySupplier";
-          accountId = entry.factorySupplierId;
-          const fs = factorySuppliersList.find(s => s.id === accountId);
-          accountName = fs?.name || "";
-        } else if (entry.employeeId) {
-          accountType = "employee";
-          accountId = entry.employeeId;
-          const employee = employees.find(e => e.id === accountId);
-          accountName = employee ? `${employee.firstName} ${employee.lastName}` : "";
-        } else if (entry.fixedAssetId) {
-          accountType = "fixedAsset";
-          accountId = entry.fixedAssetId;
-          const asset = fixedAssets.find(f => f.id === accountId);
-          accountName = asset?.name || "";
-        } else if (entry.customerId) {
-          accountType = "customer";
-          accountId = entry.customerId;
-          const customer = customers.find(c => c.id === accountId);
-          accountName = customer?.name || "";
-        }
+          if (entry.ledgerAccountId) {
+            accountType = "ledger";
+            accountId = entry.ledgerAccountId;
+            const account = ledgerAccounts.find((l) => l.id === accountId);
+            accountName = account?.name || "";
+          } else if (entry.bankAccountId) {
+            accountType = "bank";
+            accountId = entry.bankAccountId;
+            const account = bankAccounts.find((b) => b.id === accountId);
+            accountName = account?.bankName || "";
+          } else if (entry.supplierId) {
+            accountType = "supplier";
+            accountId = entry.supplierId;
+            const supplier = suppliers.find((s) => s.id === accountId);
+            accountName = supplier?.legalName || "";
+          } else if (entry.factorySupplierId) {
+            accountType = "factorySupplier";
+            accountId = entry.factorySupplierId;
+            const fs = factorySuppliersList.find((s) => s.id === accountId);
+            accountName = fs?.name || "";
+          } else if (entry.employeeId) {
+            accountType = "employee";
+            accountId = entry.employeeId;
+            const employee = employees.find((e) => e.id === accountId);
+            accountName = employee ? `${employee.firstName} ${employee.lastName}` : "";
+          } else if (entry.fixedAssetId) {
+            accountType = "fixedAsset";
+            accountId = entry.fixedAssetId;
+            const asset = fixedAssets.find((f) => f.id === accountId);
+            accountName = asset?.name || "";
+          } else if (entry.customerId) {
+            accountType = "customer";
+            accountId = entry.customerId;
+            const customer = customers.find((c) => c.id === accountId);
+            accountName = customer?.name || "";
+          }
 
-        // Extract the amount from the contra entry
-        // For asset payment accounts: Payment contra=DR, Receipt contra=CR
-        // For liability payment accounts: Payment contra=CR, Receipt contra=DR
-        const isLiabilityPayment = paymentEntry.supplierId || paymentEntry.employeeId || paymentEntry.customerId || paymentEntry.factorySupplierId;
-        if (voucherToEdit.voucherType === "Payment") {
-          amount = isLiabilityPayment ? (entry.creditAmount || "0") : (entry.debitAmount || "0");
-        } else if (voucherToEdit.voucherType === "Receipt") {
-          amount = isLiabilityPayment ? (entry.debitAmount || "0") : (entry.creditAmount || "0");
-        }
+          // Extract the amount from the contra entry
+          // For asset payment accounts: Payment contra=DR, Receipt contra=CR
+          // For liability payment accounts: Payment contra=CR, Receipt contra=DR
+          const isLiabilityPayment =
+            paymentEntry.supplierId ||
+            paymentEntry.employeeId ||
+            paymentEntry.customerId ||
+            paymentEntry.factorySupplierId;
+          if (voucherToEdit.voucherType === "Payment") {
+            amount = isLiabilityPayment ? entry.creditAmount || "0" : entry.debitAmount || "0";
+          } else if (voucherToEdit.voucherType === "Receipt") {
+            amount = isLiabilityPayment ? entry.debitAmount || "0" : entry.creditAmount || "0";
+          }
 
-        return {
-          accountType,
-          accountId,
-          accountName,
-          amount,
-        };
-      })
-      .filter((entry: any) => parseFloat(entry.amount || "0") > 0); // exclude zero-amount entries
+          return {
+            accountType,
+            accountId,
+            accountName,
+            amount,
+          };
+        })
+        .filter((entry: any) => parseFloat(entry.amount || "0") > 0); // exclude zero-amount entries
 
       // Reset form with voucher data
       form.reset({
@@ -1006,57 +1218,118 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         paymentAccountId: paymentId,
         paymentAccountName: paymentName,
         voucherDate: parseDateLocal(voucherToEdit.voucherDate),
-        entries: formEntries.length > 0 ? formEntries : [{
-          accountType: "ledger",
-          accountId: 0,
-          accountName: "",
-          amount: "",
-        }],
+        entries:
+          formEntries.length > 0
+            ? formEntries
+            : [
+                {
+                  accountType: "ledger",
+                  accountId: 0,
+                  accountName: "",
+                  amount: "",
+                },
+              ],
         notes: voucherToEdit.description || "",
         optional: voucherToEdit.optional || false,
       });
-      
+
+      const hydratedTotal = formEntries.reduce(
+        (sum: number, entry: any) => sum + (parseFloat(entry.amount || "0") || 0),
+        0,
+      );
+      setOriginalPaymentTotal(hydratedTotal);
+
       hydratedVoucherIdRef.current = voucherToEdit.id;
-      
+
       // Initialize transaction rate from voucher's rate-locked exchange rate
       if (voucherToEdit.exchangeRate) {
         setTransactionRate(parseFloat(voucherToEdit.exchangeRate));
       }
     }
-  }, [voucherToEdit, allAccounts, bankAccounts, ledgerAccounts, suppliers, employees, fixedAssets, customers, factorySuppliersList, form]);
+  }, [
+    voucherToEdit,
+    allAccounts,
+    bankAccounts,
+    ledgerAccounts,
+    suppliers,
+    employees,
+    fixedAssets,
+    customers,
+    factorySuppliersList,
+    form,
+  ]);
 
   // Get selected payment account - moved up to use in filtered accounts
   const paymentAccountType = form.watch("paymentAccountType");
   const paymentAccountId = form.watch("paymentAccountId");
   const paymentAccountName = form.watch("paymentAccountName");
 
+  // Fallback account list built from allAccounts when sidebar API fails/empty
+  const allAccountsFallback = useMemo<Account[]>(() => {
+    return allAccounts
+      .filter((acc) =>
+        [
+          "ledger",
+          "bank",
+          "supplier",
+          "employee",
+          "fixedAsset",
+          "customer",
+          "factorySupplier",
+        ].includes(acc.type),
+      )
+      .map((acc) => ({
+        id: acc.id,
+        type: acc.type as Account["type"],
+        name: acc.name || "",
+        code: acc.code || "",
+        balance: undefined,
+      }));
+  }, [allAccounts]);
+
+  const finalSidebarAccounts = useMemo<Account[]>(() => {
+    if (normalisedSidebarAccounts.length > 0) return normalisedSidebarAccounts;
+    if (!sidebarAccountsQuery.isLoading && allAccountsFallback.length > 0)
+      return allAccountsFallback;
+    return [];
+  }, [normalisedSidebarAccounts, allAccountsFallback, sidebarAccountsQuery.isLoading]);
+
+  const usingFallback =
+    normalisedSidebarAccounts.length === 0 &&
+    !sidebarAccountsQuery.isLoading &&
+    allAccountsFallback.length > 0;
+
   // Compute filtered accounts based on search (lifted from AccountSidebar)
   // Also exclude the currently selected payment account to prevent duplicate entries
   const filteredSidebarAccounts = useMemo(() => {
     const searchLower = sidebarSearchValue.toLowerCase().trim();
-    return sidebarAccounts
+    return finalSidebarAccounts
       .filter((acc) => {
         // Exclude the currently selected payment account from the entries list
-        if (paymentAccountId > 0 && acc.id === paymentAccountId && acc.type === paymentAccountType) {
+        if (
+          paymentAccountId > 0 &&
+          acc.id === paymentAccountId &&
+          acc.type === paymentAccountType
+        ) {
           return false;
         }
         // Only show employees when user is actively searching for them
         if (acc.type === "employee" && !searchLower) {
           return false;
         }
-        return (acc.name || '').toLowerCase().includes(searchLower) ||
-          (acc.code || '').toLowerCase().includes(searchLower);
+        return (
+          (acc.name || "").toLowerCase().includes(searchLower) ||
+          (acc.code || "").toLowerCase().includes(searchLower)
+        );
       })
-      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [sidebarAccounts, sidebarSearchValue, paymentAccountId, paymentAccountType]);
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  }, [finalSidebarAccounts, sidebarSearchValue, paymentAccountId, paymentAccountType]);
 
   // Track active row's account for sync
-  const activeRowAccountId = activeRowIndex !== null && entries[activeRowIndex] 
-    ? entries[activeRowIndex].accountId 
-    : null;
-  const activeRowAccountType = activeRowIndex !== null && entries[activeRowIndex]
-    ? entries[activeRowIndex].accountType
-    : null;
+  const activeRowAccountId =
+    activeRowIndex !== null && entries[activeRowIndex] ? entries[activeRowIndex].accountId : null;
+  const activeRowAccountType =
+    activeRowIndex !== null && entries[activeRowIndex] ? entries[activeRowIndex].accountType : null;
 
   // Sync highlighted index only when search changes or active row changes
   useEffect(() => {
@@ -1064,18 +1337,18 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       setSidebarHighlightedIndex(-1);
       return;
     }
-    
+
     // If there's an active row with an account, try to highlight that account
     if (activeRowAccountId && activeRowAccountType) {
       const accountIndex = filteredSidebarAccounts.findIndex(
-        (acc) => acc.id === activeRowAccountId && acc.type === activeRowAccountType
+        (acc) => acc.id === activeRowAccountId && acc.type === activeRowAccountType,
       );
       if (accountIndex >= 0) {
         setSidebarHighlightedIndex(accountIndex);
         return;
       }
     }
-    
+
     // Otherwise reset to first item when search changes
     setSidebarHighlightedIndex(0);
   }, [sidebarSearchValue, activeRowIndex, activeRowAccountId, activeRowAccountType]);
@@ -1093,9 +1366,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   // Find the selected account in allAccounts to get openingBalance
   const selectedAccount = useMemo(() => {
-    return allAccounts.find(acc => acc.type === paymentAccountType && acc.id === paymentAccountId);
+    return allAccounts.find(
+      (acc) => acc.type === paymentAccountType && acc.id === paymentAccountId,
+    );
   }, [allAccounts, paymentAccountType, paymentAccountId]);
-  
+
   // Calculate balance for selected account
   const { data: accountBalance = 0 } = useQuery({
     queryKey: ["/api/accounts", paymentAccountType, paymentAccountId, "balance"],
@@ -1108,17 +1383,17 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         // Fetch the ledger account details to get opening balance
         const accountRes = await fetch(`/api/ledger-accounts/${paymentAccountId}`);
         const account = await accountRes.json();
-        
+
         // Fetch transactions
         const transRes = await fetch(`/api/accounts/ledger/${paymentAccountId}/transactions`);
         const transactions = await transRes.json();
-        
+
         // Calculate opening balance with side
         let openingBalance = parseFloat(account.openingBalance || "0");
         if (account.openingBalanceSide === "Cr") {
           openingBalance = -openingBalance;
         }
-        
+
         // Sum transactions starting from opening balance
         const balance = transactions.reduce((sum: number, t: any) => {
           const debit = parseFloat(t.debitAmount || "0");
@@ -1130,14 +1405,14 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         // Fetch the supplier details to get opening balance
         const supplierRes = await fetch(`/api/suppliers/${paymentAccountId}`);
         const supplier = await supplierRes.json();
-        
+
         // Fetch transactions
         const transRes = await fetch(`/api/accounts/supplier/${paymentAccountId}/transactions`);
         const transactions = await transRes.json();
-        
+
         // Opening balance: Positive = we owe them, Negative = they owe us/prepaid
         const openingBalance = parseFloat(supplier.openingBalance || "0");
-        
+
         // Sum transactions starting from opening balance
         // Credits increase payable, Debits decrease payable
         const balance = transactions.reduce((sum: number, t: any) => {
@@ -1149,11 +1424,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       } else if (paymentAccountType === "employee") {
         // Use opening balance from selected account
         const openingBalance = parseFloat(selectedAccount?.openingBalance || "0");
-        
+
         // Fetch transactions
         const transRes = await fetch(`/api/accounts/employee/${paymentAccountId}/transactions`);
         const transactions = await transRes.json();
-        
+
         // Sum transactions starting from opening balance
         // Credits increase payable (we owe them), Debits decrease payable (we paid them)
         const balance = transactions.reduce((sum: number, t: any) => {
@@ -1165,11 +1440,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       } else if (paymentAccountType === "fixedAsset") {
         // Use opening balance from selected account
         const openingBalance = parseFloat(selectedAccount?.openingBalance || "0");
-        
+
         // Fetch transactions
         const transRes = await fetch(`/api/accounts/fixed-asset/${paymentAccountId}/transactions`);
         const transactions = await transRes.json();
-        
+
         // Sum transactions starting from opening balance
         // Debits increase asset value, Credits decrease (depreciation)
         const balance = transactions.reduce((sum: number, t: any) => {
@@ -1228,7 +1503,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
       // Use batch endpoint for both create and update
       if (isEditMode) {
-        const res = await modeApiRequest("PATCH", `/api/vouchers/${voucherIdToEdit}/payment-receipt`, payload);
+        const res = await modeApiRequest(
+          "PATCH",
+          `/api/vouchers/${voucherIdToEdit}/payment-receipt`,
+          payload,
+        );
         return await res.json();
       } else {
         const res = await modeApiRequest("POST", "/api/vouchers/payment-receipt", payload);
@@ -1241,16 +1520,20 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         title: "Success",
         description: `${activeTab === "payment" ? "Payment" : "Receipt"} voucher ${isEditMode ? "updated" : "created"} successfully`,
       });
-      
+
+      setOriginalPaymentTotal(0);
+
       // Invalidate only essential queries for faster saves
       // Balances are updated via voucher-sidebar, full account lists don't change
       queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/daybook"] });
       queryClient.invalidateQueries({ queryKey: ["/api/accounts/voucher-sidebar"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts", paymentAccountType, paymentAccountId, "balance"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/accounts", paymentAccountType, paymentAccountId, "balance"],
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ledger-accounts"] });
-      
+
       // Clear edit mode and navigate back to daybook
       if (isEditMode) {
         setLocation(isFactoryMode ? "/factory/daybook" : "/daybook");
@@ -1291,7 +1574,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const handleSidebarAccountSelect = (account: Account) => {
     // Get the current entries from form state
     const currentEntries = form.getValues("entries");
-    
+
     let targetRowIndex: number;
 
     // If there's an active row (user is typing in that row), fill it
@@ -1300,11 +1583,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       form.setValue(`entries.${activeRowIndex}.accountType`, account.type);
       form.setValue(`entries.${activeRowIndex}.accountId`, account.id);
       form.setValue(`entries.${activeRowIndex}.accountName`, account.name);
-      
+
       // Focus the amount input for that row
       requestAnimationFrame(() => {
         const amountInput = document.querySelector(
-          `[data-testid="input-amount-${activeRowIndex}"]`
+          `[data-testid="input-amount-${activeRowIndex}"]`,
         ) as HTMLInputElement;
         if (amountInput) {
           amountInput.focus();
@@ -1314,7 +1597,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     } else {
       // Find if there's an empty entry to populate
       const emptyEntryIndex = currentEntries.findIndex(
-        (e: any) => e.accountId === 0 || !e.accountName
+        (e: any) => e.accountId === 0 || !e.accountName,
       );
 
       if (emptyEntryIndex >= 0) {
@@ -1323,11 +1606,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         form.setValue(`entries.${emptyEntryIndex}.accountType`, account.type);
         form.setValue(`entries.${emptyEntryIndex}.accountId`, account.id);
         form.setValue(`entries.${emptyEntryIndex}.accountName`, account.name);
-        
+
         // Focus the amount input for that row
         requestAnimationFrame(() => {
           const amountInput = document.querySelector(
-            `[data-testid="input-amount-${emptyEntryIndex}"]`
+            `[data-testid="input-amount-${emptyEntryIndex}"]`,
           ) as HTMLInputElement;
           if (amountInput) {
             amountInput.focus();
@@ -1343,11 +1626,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           accountName: account.name,
           amount: "",
         });
-        
+
         // Focus the amount input for the new row after it's been added
         requestAnimationFrame(() => {
           const amountInput = document.querySelector(
-            `[data-testid="input-amount-${targetRowIndex}"]`
+            `[data-testid="input-amount-${targetRowIndex}"]`,
           ) as HTMLInputElement;
           if (amountInput) {
             amountInput.focus();
@@ -1356,13 +1639,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         });
       }
     }
-    
+
     // Set selected account and active row for sidebar highlighting
     setSelectedAccountId(account.id);
     setSelectedAccountType(account.type);
     setActiveRowIndex(targetRowIndex);
   };
-  
+
   // Clear selection when amount is committed (blur or Enter with amount > 0)
   const handleAmountCommit = (rowIndex: number) => {
     // Only clear if this is the active row
@@ -1372,11 +1655,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       setActiveRowIndex(null);
       setSidebarSearchValue("");
       setSidebarHighlightedIndex(0);
-      
+
       // Refocus sidebar search to support auto-focus workflow
       requestAnimationFrame(() => {
         const searchInput = document.querySelector(
-          '[data-testid="input-search-account"]'
+          '[data-testid="input-search-account"]',
         ) as HTMLInputElement;
         if (searchInput) {
           searchInput.focus();
@@ -1386,7 +1669,10 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   };
 
   // Handle opening the create account modal
-  const handleOpenCreateAccountModal = (tab: "payment" | "receipt" | "journal", rowIndex?: number) => {
+  const handleOpenCreateAccountModal = (
+    tab: "payment" | "receipt" | "journal",
+    rowIndex?: number,
+  ) => {
     setCreateAccountContext({ tab, rowIndex });
     setShowCreateAccountModal(true);
   };
@@ -1400,11 +1686,15 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       const accountObj: Account = {
         id: account.id,
         name: account.name,
-        type: account.type as "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "factorySupplier",
+        type: account.type as
+          "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "factorySupplier",
         code: "",
       };
       handleSidebarAccountSelect(accountObj);
-    } else if (createAccountContext.tab === "journal" && createAccountContext.rowIndex !== undefined) {
+    } else if (
+      createAccountContext.tab === "journal" &&
+      createAccountContext.rowIndex !== undefined
+    ) {
       // For Journal tab, update the specific row
       const rowIndex = createAccountContext.rowIndex;
       // Newly created accounts are always ledger type
@@ -1412,11 +1702,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       journalForm.setValue(`entries.${rowIndex}.accountId`, account.id);
       journalForm.setValue(`entries.${rowIndex}.accountName`, account.name);
       setShowAccountSidebar(false);
-      
+
       // Focus the amount input
       requestAnimationFrame(() => {
         const amountInput = document.querySelector(
-          `[data-testid="input-journal-amount-${rowIndex}"]`
+          `[data-testid="input-journal-amount-${rowIndex}"]`,
         ) as HTMLInputElement;
         if (amountInput) {
           amountInput.focus();
@@ -1437,8 +1727,8 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     try {
       // Check if account already exists (case-insensitive search in sidebar accounts)
       const normalizedName = name.trim().toLowerCase();
-      const existingAccount = sidebarAccounts.find(
-        (acc) => acc.name.toLowerCase() === normalizedName
+      const existingAccount = finalSidebarAccounts.find(
+        (acc) => acc.name.toLowerCase() === normalizedName,
       );
 
       if (existingAccount) {
@@ -1468,8 +1758,12 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       const newAccount = await response.json();
 
       // Invalidate cache to refresh account lists
-      await queryClient.invalidateQueries({ queryKey: ["/api/accounts/voucher-sidebar", selectedCompany.id] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/ledger-accounts", selectedCompany.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/accounts/voucher-sidebar", selectedCompany.id],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/ledger-accounts", selectedCompany.id],
+      });
 
       toast({
         title: "Account created",
@@ -1512,7 +1806,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     contentRef: printRef,
     documentTitle: `${activeTab === "payment" ? "Payment" : "Receipt"}-Voucher-${format(
       form.watch("voucherDate"),
-      "yyyy-MM-dd"
+      "yyyy-MM-dd",
     )}`,
   });
 
@@ -1520,9 +1814,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const handleExportVoucher = (detailed: boolean) => {
     const formData = form.getValues();
     const voucherType = activeTab === "payment" ? "Payment" : "Receipt";
-    const voucherDate = formData.voucherDate ? format(formData.voucherDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
-    const validEntries = formData.entries.filter((e: any) => e.accountId > 0 && parseFloat(e.amount) > 0);
-    
+    const voucherDate = formData.voucherDate
+      ? format(formData.voucherDate, "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd");
+    const validEntries = formData.entries.filter(
+      (e: any) => e.accountId > 0 && parseFloat(e.amount) > 0,
+    );
+
     if (validEntries.length === 0) {
       toast({
         title: "No data to export",
@@ -1531,50 +1829,55 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       });
       return;
     }
-    
-    const total = validEntries.reduce((sum: number, e: any) => sum + (parseFloat(e.amount) || 0), 0);
-    
+
+    const total = validEntries.reduce(
+      (sum: number, e: any) => sum + (parseFloat(e.amount) || 0),
+      0,
+    );
+
     if (detailed) {
       // Detailed export - one row per entry
       const exportData = validEntries.map((entry: any) => ({
         "Voucher Type": voucherType,
-        "Date": voucherDate,
+        Date: voucherDate,
         "Pay From/Receive In": formData.paymentAccountName || "",
-        "Account": entry.accountName || "",
+        Account: entry.accountName || "",
         "Account Type": entry.accountType || "",
-        "Amount": parseFloat(entry.amount).toFixed(2),
-        "Notes": formData.notes || "",
-        "Optional": formData.optional ? "Yes" : "No",
+        Amount: parseFloat(entry.amount).toFixed(2),
+        Notes: formData.notes || "",
+        Optional: formData.optional ? "Yes" : "No",
       }));
-      
+
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, `${voucherType} Detailed`);
       const fileName = `${voucherType}_Voucher_Detailed_${voucherDate}.xlsx`;
       writeFile(workbook, fileName);
-      
+
       toast({
         title: "Export successful",
         description: `Downloaded ${fileName} with ${validEntries.length} entries.`,
       });
     } else {
       // Summary export - one row for the voucher
-      const exportData = [{
-        "Voucher Type": voucherType,
-        "Date": voucherDate,
-        "Pay From/Receive In": formData.paymentAccountName || "",
-        "Total Amount": total.toFixed(2),
-        "Number of Entries": validEntries.length,
-        "Notes": formData.notes || "",
-        "Optional": formData.optional ? "Yes" : "No",
-      }];
-      
+      const exportData = [
+        {
+          "Voucher Type": voucherType,
+          Date: voucherDate,
+          "Pay From/Receive In": formData.paymentAccountName || "",
+          "Total Amount": total.toFixed(2),
+          "Number of Entries": validEntries.length,
+          Notes: formData.notes || "",
+          Optional: formData.optional ? "Yes" : "No",
+        },
+      ];
+
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, `${voucherType} Summary`);
       const fileName = `${voucherType}_Voucher_Summary_${voucherDate}.xlsx`;
       writeFile(workbook, fileName);
-      
+
       toast({
         title: "Export successful",
         description: `Downloaded ${fileName}.`,
@@ -1584,7 +1887,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   const onSubmit = (data: VoucherFormData) => {
     // Validate that all amounts are numeric and positive
-    const validEntries = data.entries.filter(entry => entry.accountId > 0 && entry.amount);
+    const validEntries = data.entries.filter((entry) => entry.accountId > 0 && entry.amount);
     if (validEntries.length === 0) {
       toast({
         title: "Validation Error",
@@ -1599,7 +1902,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       const amount = parseFloat(entry.amount);
       return sum + (isNaN(amount) ? 0 : amount);
     }, 0);
-    
+
     const totalCredits = totalDebits; // In our model, each entry creates matching debit/credit pairs
 
     // Validate numeric totals
@@ -1645,12 +1948,12 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   const journalEntries = journalForm.watch("entries");
   const totalDebit = journalEntries.reduce(
-    (sum, entry) => sum + (entry.type === "DR" ? (parseFloat(entry.amount) || 0) : 0),
-    0
+    (sum, entry) => sum + (entry.type === "DR" ? parseFloat(entry.amount) || 0 : 0),
+    0,
   );
   const totalCredit = journalEntries.reduce(
-    (sum, entry) => sum + (entry.type === "CR" ? (parseFloat(entry.amount) || 0) : 0),
-    0
+    (sum, entry) => sum + (entry.type === "CR" ? parseFloat(entry.amount) || 0 : 0),
+    0,
   );
 
   // Journal sidebar state for account selection (like Stock Transfer's item sidebar)
@@ -1671,9 +1974,10 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const filteredJournalAccounts = useMemo(() => {
     if (!journalAccountSearchTerm.trim()) return allAccounts;
     const term = journalAccountSearchTerm.toLowerCase();
-    return allAccounts.filter((acc) =>
-      (acc.name || '').toLowerCase().includes(term) ||
-      (acc.code || '').toLowerCase().includes(term)
+    return allAccounts.filter(
+      (acc) =>
+        (acc.name || "").toLowerCase().includes(term) ||
+        (acc.code || "").toLowerCase().includes(term),
     );
   }, [allAccounts, journalAccountSearchTerm]);
 
@@ -1683,11 +1987,12 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       journalForm.setValue(`entries.${activeJournalRow}.accountType`, account.type);
       journalForm.setValue(`entries.${activeJournalRow}.accountId`, account.id);
       journalForm.setValue(`entries.${activeJournalRow}.accountName`, account.name);
-      
-      
+
       // Focus the amount field after selection
       setTimeout(() => {
-        const amountInput = document.querySelector(`[data-testid="input-journal-amount-${activeJournalRow}"]`) as HTMLInputElement;
+        const amountInput = document.querySelector(
+          `[data-testid="input-journal-amount-${activeJournalRow}"]`,
+        ) as HTMLInputElement;
         if (amountInput) {
           amountInput.focus();
           amountInput.select();
@@ -1698,9 +2003,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   // Helper function to get account balance from sidebarAccounts
   const getAccountBalance = (accountType: string, accountId: number): number => {
-    const account = sidebarAccounts.find(
-      (acc) => acc.type === accountType && acc.id === accountId
-    );
+    const account = sidebarAccounts.find((acc) => acc.type === accountType && acc.id === accountId);
     return account?.balance ?? 0;
   };
 
@@ -1712,40 +2015,43 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     // Get fresh values from form, not from watched values which may be stale
     const currentEntries = journalForm.getValues("entries");
     const currentAmount = parseFloat(currentEntries[index]?.amount || "0");
-    
+
     // Set the new type first
     journalForm.setValue(`entries.${index}.type`, newType);
-    
+
     // If switching to CR and there's a balance to fill, auto-fill the remaining amount
     if (newType === "CR") {
       // Create a modified entries array that reflects the type change we just made
-      const updatedEntries = currentEntries.map((entry, i) => 
-        i === index ? { ...entry, type: newType } : entry
+      const updatedEntries = currentEntries.map((entry, i) =>
+        i === index ? { ...entry, type: newType } : entry,
       );
-      
+
       // Calculate total debits from all entries (now that current row is CR, it won't be counted)
       const totalDebits = updatedEntries.reduce(
-        (sum, entry) => sum + (entry.type === "DR" ? (parseFloat(entry.amount) || 0) : 0),
-        0
+        (sum, entry) => sum + (entry.type === "DR" ? parseFloat(entry.amount) || 0 : 0),
+        0,
       );
-      
+
       // Calculate credits from other rows only (not the current row being changed)
       const otherCredits = updatedEntries.reduce(
-        (sum, entry, i) => i !== index && entry.type === "CR" ? sum + (parseFloat(entry.amount) || 0) : sum,
-        0
+        (sum, entry, i) =>
+          i !== index && entry.type === "CR" ? sum + (parseFloat(entry.amount) || 0) : sum,
+        0,
       );
-      
+
       const remainingToBalance = totalDebits - otherCredits;
-      
+
       // Only auto-fill if current amount is 0 and there's a positive remaining amount
       if (currentAmount === 0 && remainingToBalance > 0) {
         journalForm.setValue(`entries.${index}.amount`, formatNumber(remainingToBalance));
       }
     }
-    
+
     // Focus the account field after type change
     setTimeout(() => {
-      const accountInput = document.querySelector(`[data-testid="input-journal-account-${index}"]`) as HTMLInputElement;
+      const accountInput = document.querySelector(
+        `[data-testid="input-journal-account-${index}"]`,
+      ) as HTMLInputElement;
       if (accountInput) {
         accountInput.focus();
       }
@@ -1754,13 +2060,25 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   // Pre-populate journal form when editing
   useEffect(() => {
-    if (voucherToEdit && voucherToEdit.voucherType === "Journal" && voucherToEdit.entries && allAccounts.length > 0) {
+    if (
+      voucherToEdit &&
+      voucherToEdit.voucherType === "Journal" &&
+      voucherToEdit.entries &&
+      allAccounts.length > 0
+    ) {
       if (hydratedVoucherIdRef.current === voucherToEdit.id) return;
       // Wait for factorySuppliersList to load if any entry references one
       const needsFactorySuppliers = voucherToEdit.entries.some((e: any) => e.factorySupplierId);
       if (needsFactorySuppliers && factorySuppliersList.length === 0) return;
       const formEntries = voucherToEdit.entries.map((entry: any) => {
-        let accountType: "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier" = "ledger";
+        let accountType:
+          | "ledger"
+          | "bank"
+          | "supplier"
+          | "employee"
+          | "fixedAsset"
+          | "customer"
+          | "factorySupplier" = "ledger";
         let accountId = 0;
         let accountName = "";
         let type: "DR" | "CR" = "DR";
@@ -1770,44 +2088,44 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         if (entry.bankAccountId) {
           accountType = "bank";
           accountId = entry.bankAccountId;
-          const account = bankAccounts.find(b => b.id === accountId);
+          const account = bankAccounts.find((b) => b.id === accountId);
           accountName = account?.bankName || "";
         } else if (entry.ledgerAccountId) {
           accountType = "ledger";
           accountId = entry.ledgerAccountId;
-          const account = ledgerAccounts.find(l => l.id === accountId);
+          const account = ledgerAccounts.find((l) => l.id === accountId);
           accountName = account?.name || "";
         } else if (entry.supplierId) {
           accountType = "supplier";
           accountId = entry.supplierId;
-          const supplier = suppliers.find(s => s.id === accountId);
+          const supplier = suppliers.find((s) => s.id === accountId);
           accountName = supplier?.legalName || "";
         } else if (entry.factorySupplierId) {
           accountType = "factorySupplier";
           accountId = entry.factorySupplierId;
-          const fs = factorySuppliersList.find(s => s.id === accountId);
+          const fs = factorySuppliersList.find((s) => s.id === accountId);
           accountName = fs?.name || "";
         } else if (entry.employeeId) {
           accountType = "employee";
           accountId = entry.employeeId;
-          const employee = employees.find(e => e.id === accountId);
+          const employee = employees.find((e) => e.id === accountId);
           accountName = employee ? `${employee.firstName} ${employee.lastName}` : "";
         } else if (entry.fixedAssetId) {
           accountType = "fixedAsset";
           accountId = entry.fixedAssetId;
-          const asset = fixedAssets.find(f => f.id === accountId);
+          const asset = fixedAssets.find((f) => f.id === accountId);
           accountName = asset?.name || "";
         } else if (entry.customerId) {
           accountType = "customer";
           accountId = entry.customerId;
-          const customer = customers.find(c => c.id === accountId);
+          const customer = customers.find((c) => c.id === accountId);
           accountName = customer?.name || "";
         }
 
         // Determine DR/CR and amount
         const debitAmt = parseFloat(entry.debitAmount || "0");
         const creditAmt = parseFloat(entry.creditAmount || "0");
-        
+
         if (debitAmt > 0) {
           type = "DR";
           amount = entry.debitAmount;
@@ -1827,19 +2145,35 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
       journalForm.reset({
         voucherDate: parseDateLocal(voucherToEdit.voucherDate),
-        entries: formEntries.length > 0 ? formEntries : [{
-          type: "DR",
-          accountType: "ledger",
-          accountId: 0,
-          accountName: "",
-          amount: "",
-        }],
+        entries:
+          formEntries.length > 0
+            ? formEntries
+            : [
+                {
+                  type: "DR",
+                  accountType: "ledger",
+                  accountId: 0,
+                  accountName: "",
+                  amount: "",
+                },
+              ],
         notes: voucherToEdit.notes || "",
         optional: voucherToEdit.optional || false,
       });
       hydratedVoucherIdRef.current = voucherToEdit.id;
     }
-  }, [voucherToEdit, allAccounts, bankAccounts, ledgerAccounts, suppliers, employees, fixedAssets, customers, factorySuppliersList, journalForm]);
+  }, [
+    voucherToEdit,
+    allAccounts,
+    bankAccounts,
+    ledgerAccounts,
+    suppliers,
+    employees,
+    fixedAssets,
+    customers,
+    factorySuppliersList,
+    journalForm,
+  ]);
 
   // Journal save mutation (handles both create and update) - OPTIMIZED to use batch endpoint
   const journalMutation = useMutation({
@@ -1862,7 +2196,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
       // Use batch endpoint for both create and update
       if (isEditMode) {
-        const res = await modeApiRequest("PATCH", `/api/vouchers/${voucherIdToEdit}/journal`, payload);
+        const res = await modeApiRequest(
+          "PATCH",
+          `/api/vouchers/${voucherIdToEdit}/journal`,
+          payload,
+        );
         return await res.json();
       } else {
         const res = await modeApiRequest("POST", "/api/vouchers/journal", payload);
@@ -1875,15 +2213,17 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         title: "Success",
         description: `Journal voucher ${isEditMode ? "updated" : "created"} successfully`,
       });
-      
+
       // Invalidate only essential queries for faster saves
       queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/daybook"] });
       queryClient.invalidateQueries({ queryKey: ["/api/accounts/voucher-sidebar"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts", paymentAccountType, paymentAccountId, "balance"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/accounts", paymentAccountType, paymentAccountId, "balance"],
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/ledger-accounts"] });
-      
+
       // Clear edit mode and navigate back to daybook or reset form
       if (isEditMode) {
         setLocation(isFactoryMode ? "/factory/daybook" : "/daybook");
@@ -1912,7 +2252,8 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       const isEditMode = !!voucherIdToEdit;
       toast({
         title: "Error",
-        description: error.message || `Failed to ${isEditMode ? "update" : "create"} journal voucher`,
+        description:
+          error.message || `Failed to ${isEditMode ? "update" : "create"} journal voucher`,
         variant: "destructive",
       });
     },
@@ -1921,9 +2262,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   // Export current Journal voucher to Excel
   const handleExportJournalVoucher = (detailed: boolean) => {
     const formData = journalForm.getValues();
-    const voucherDate = formData.voucherDate ? format(formData.voucherDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
-    const validEntries = formData.entries.filter((e: any) => e.accountId > 0 && parseFloat(e.amount) > 0);
-    
+    const voucherDate = formData.voucherDate
+      ? format(formData.voucherDate, "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd");
+    const validEntries = formData.entries.filter(
+      (e: any) => e.accountId > 0 && parseFloat(e.amount) > 0,
+    );
+
     if (validEntries.length === 0) {
       toast({
         title: "No data to export",
@@ -1932,51 +2277,57 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       });
       return;
     }
-    
+
     if (detailed) {
       // Detailed export - one row per entry
       const exportData = validEntries.map((entry: any) => ({
         "Voucher Type": "Journal",
-        "Date": voucherDate,
+        Date: voucherDate,
         "DR/CR": entry.type,
-        "Account": entry.accountName || "",
+        Account: entry.accountName || "",
         "Account Type": entry.accountType || "",
-        "Amount": parseFloat(entry.amount).toFixed(2),
-        "Notes": formData.notes || "",
-        "Optional": formData.optional ? "Yes" : "No",
+        Amount: parseFloat(entry.amount).toFixed(2),
+        Notes: formData.notes || "",
+        Optional: formData.optional ? "Yes" : "No",
       }));
-      
+
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Journal Detailed");
       const fileName = `Journal_Voucher_Detailed_${voucherDate}.xlsx`;
       writeFile(workbook, fileName);
-      
+
       toast({
         title: "Export successful",
         description: `Downloaded ${fileName} with ${validEntries.length} entries.`,
       });
     } else {
       // Summary export
-      const totalDr = validEntries.filter((e: any) => e.type === "DR").reduce((sum: number, e: any) => sum + (parseFloat(e.amount) || 0), 0);
-      const totalCr = validEntries.filter((e: any) => e.type === "CR").reduce((sum: number, e: any) => sum + (parseFloat(e.amount) || 0), 0);
-      
-      const exportData = [{
-        "Voucher Type": "Journal",
-        "Date": voucherDate,
-        "Total Debit": totalDr.toFixed(2),
-        "Total Credit": totalCr.toFixed(2),
-        "Number of Entries": validEntries.length,
-        "Notes": formData.notes || "",
-        "Optional": formData.optional ? "Yes" : "No",
-      }];
-      
+      const totalDr = validEntries
+        .filter((e: any) => e.type === "DR")
+        .reduce((sum: number, e: any) => sum + (parseFloat(e.amount) || 0), 0);
+      const totalCr = validEntries
+        .filter((e: any) => e.type === "CR")
+        .reduce((sum: number, e: any) => sum + (parseFloat(e.amount) || 0), 0);
+
+      const exportData = [
+        {
+          "Voucher Type": "Journal",
+          Date: voucherDate,
+          "Total Debit": totalDr.toFixed(2),
+          "Total Credit": totalCr.toFixed(2),
+          "Number of Entries": validEntries.length,
+          Notes: formData.notes || "",
+          Optional: formData.optional ? "Yes" : "No",
+        },
+      ];
+
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Journal Summary");
       const fileName = `Journal_Voucher_Summary_${voucherDate}.xlsx`;
       writeFile(workbook, fileName);
-      
+
       toast({
         title: "Export successful",
         description: `Downloaded ${fileName}.`,
@@ -1987,7 +2338,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const onJournalSubmit = (data: JournalFormData) => {
     // Validate that all entries have valid accounts
     const validEntries = data.entries.filter(
-      (entry) => entry.accountId > 0 && parseFloat(entry.amount) > 0
+      (entry) => entry.accountId > 0 && parseFloat(entry.amount) > 0,
     );
 
     if (validEntries.length === 0) {
@@ -2002,7 +2353,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     // Validate that we have both DR and CR entries
     const hasDebit = validEntries.some((entry) => entry.type === "DR");
     const hasCredit = validEntries.some((entry) => entry.type === "CR");
-    
+
     if (!hasDebit || !hasCredit) {
       toast({
         title: "Validation Error",
@@ -2058,20 +2409,22 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   const transferEntries = stockTransferForm.watch("entries");
   const transferTotal = transferEntries.reduce(
-    (sum, entry) => sum + (parseFloat(entry.quantity || "0") * parseFloat(entry.rate || "0")),
-    0
+    (sum, entry) => sum + parseFloat(entry.quantity || "0") * parseFloat(entry.rate || "0"),
+    0,
   );
 
   // Track active transfer row for showing suggestions
   const [activeTransferRow, setActiveTransferRow] = useState<number | null>(null);
-  const [transferInventorySource, setTransferInventorySource] = useState<number | null>(isPOS && posLocationId ? posLocationId : null);
+  const [transferInventorySource, setTransferInventorySource] = useState<number | null>(
+    isPOS && posLocationId ? posLocationId : null,
+  );
   const [transferSearchTerm, setTransferSearchTerm] = useState("");
   const [transferHighlightedIndex, setTransferHighlightedIndex] = useState(0);
   const [transferSourceSearchTerm, setTransferSourceSearchTerm] = useState("");
   const [transferSourceHighlightedIndex, setTransferSourceHighlightedIndex] = useState(0);
   const [showSourceSidebar, setShowSourceSidebar] = useState(false);
   const [showItemSidebar, setShowItemSidebar] = useState(false);
-  const [activeFieldType, setActiveFieldType] = useState<'source' | 'item' | null>(null);
+  const [activeFieldType, setActiveFieldType] = useState<"source" | "item" | null>(null);
   const transferSidebarRef = useRef<HTMLDivElement>(null);
   const transferFocusIdRef = useRef(0);
 
@@ -2130,7 +2483,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   const importValidateMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await modeApiRequest("POST", "/api/stock-transfer-import/validate-multi-source", data);
+      const res = await modeApiRequest(
+        "POST",
+        "/api/stock-transfer-import/validate-multi-source",
+        data,
+      );
       return await res.json();
     },
     onSuccess: (data) => {
@@ -2160,7 +2517,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   const importMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await modeApiRequest("POST", "/api/stock-transfer-import/import-multi-source", data);
+      const res = await modeApiRequest(
+        "POST",
+        "/api/stock-transfer-import/import-multi-source",
+        data,
+      );
       return await res.json();
     },
     onSuccess: (data) => {
@@ -2243,16 +2604,16 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       });
       return;
     }
-    
+
     // Filter valid items (those without errors)
     const validItems = importValidationResult.validatedItems.filter((item: any) => !item.error);
-    
+
     // If there are validation errors, show confirmation dialog
     if (importValidationResult?.errors?.length > 0) {
       setImportConfirmDialogOpen(true);
       return;
     }
-    
+
     // No errors - proceed directly
     importMutation.mutate({
       destinationLocationId: parseInt(importDestLocation),
@@ -2261,14 +2622,15 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       items: validItems,
     });
   };
-  
+
   const handleConfirmedImport = () => {
     // Filter valid items and proceed with import
-    const validItems = importValidationResult?.validatedItems?.filter((item: any) => !item.error) || [];
-    
+    const validItems =
+      importValidationResult?.validatedItems?.filter((item: any) => !item.error) || [];
+
     // Close confirmation dialog first
     setImportConfirmDialogOpen(false);
-    
+
     if (validItems.length === 0) {
       // Close the import dialog and reset all state
       setImportDialogOpen(false);
@@ -2281,11 +2643,12 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       // Show informational message
       toast({
         title: "No items imported",
-        description: "All items had validation errors. No transfer was created. You can try again with a different file.",
+        description:
+          "All items had validation errors. No transfer was created. You can try again with a different file.",
       });
       return;
     }
-    
+
     importMutation.mutate({
       destinationLocationId: parseInt(importDestLocation),
       transferDate: importDate,
@@ -2299,19 +2662,23 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   };
 
   const importIsValidated = importValidationResult !== null;
-  const importHasErrors = importValidationResult?.errors && importValidationResult.errors.length > 0;
-  
+  const importHasErrors =
+    importValidationResult?.errors && importValidationResult.errors.length > 0;
+
   // Calculate valid items (items without errors)
-  const importValidItems = importValidationResult?.validatedItems?.filter((item: any) => !item.error) || [];
+  const importValidItems =
+    importValidationResult?.validatedItems?.filter((item: any) => !item.error) || [];
   const importValidItemsCount = importValidItems.length;
   const importTotalItemsCount = importValidationResult?.validatedItems?.length || 0;
-  
+
   // Confirmation dialog state for import with errors
   const [importConfirmDialogOpen, setImportConfirmDialogOpen] = useState(false);
 
   // Fetch inventory for the source location of the active row
   const { data: transferInventory = [] } = useQuery<any[]>({
-    queryKey: transferInventorySource ? [`/api/locations/${transferInventorySource}/inventory`] : [],
+    queryKey: transferInventorySource
+      ? [`/api/locations/${transferInventorySource}/inventory`]
+      : [],
     enabled: !!transferInventorySource && transferInventorySource > 0,
   });
 
@@ -2321,27 +2688,35 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       if (entry.sourceLocationId > 0 && entry.stockItemId > 0 && !entry.rate) {
         // Fetch inventory for source location and auto-fill rate
         fetch(`/api/locations/${entry.sourceLocationId}/inventory`)
-          .then(res => res.json())
-          .then(inventory => {
-            const inventoryItem = inventory.find((item: any) => item.stockItemId === entry.stockItemId);
+          .then((res) => res.json())
+          .then((inventory) => {
+            const inventoryItem = inventory.find(
+              (item: any) => item.stockItemId === entry.stockItemId,
+            );
             if (inventoryItem && inventoryItem.averageRate) {
               stockTransferForm.setValue(`entries.${index}.rate`, inventoryItem.averageRate);
             }
           })
-          .catch(err => console.error('Failed to fetch inventory:', err));
+          .catch((err) => console.error("Failed to fetch inventory:", err));
       }
     });
-  }, [transferEntries.map(e => `${e.sourceLocationId}-${e.stockItemId}`).join(',')]);
+  }, [transferEntries.map((e) => `${e.sourceLocationId}-${e.stockItemId}`).join(",")]);
 
   // Pre-populate stock transfer form when editing
   useEffect(() => {
-    if (stockTransferToEdit && stockTransferToEdit.items && voucherToEdit && locations.length > 0 && stockItems.length > 0) {
+    if (
+      stockTransferToEdit &&
+      stockTransferToEdit.items &&
+      voucherToEdit &&
+      locations.length > 0 &&
+      stockItems.length > 0
+    ) {
       if (hydratedVoucherIdRef.current === voucherIdToEdit) return;
       // Map stock transfer items to form entries
       const formEntries = stockTransferToEdit.items.map((item: any) => {
-        const sourceLocation = locations.find(l => l.id === item.sourceLocationId);
-        const stockItem = stockItems.find(s => s.id === item.stockItemId);
-        
+        const sourceLocation = locations.find((l) => l.id === item.sourceLocationId);
+        const stockItem = stockItems.find((s) => s.id === item.stockItemId);
+
         return {
           sourceLocationId: item.sourceLocationId || 0,
           sourceLocationName: sourceLocation?.name || "",
@@ -2357,15 +2732,20 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       stockTransferForm.reset({
         voucherDate: voucherToEdit ? parseDateLocal(voucherToEdit.voucherDate) : new Date(),
         destinationLocationId: stockTransferToEdit.destinationLocationId || 0,
-        entries: formEntries.length > 0 ? formEntries : [{
-          sourceLocationId: 0,
-          sourceLocationName: "",
-          stockItemId: 0,
-          stockItemCode: "",
-          stockItemName: "",
-          quantity: "",
-          rate: "",
-        }],
+        entries:
+          formEntries.length > 0
+            ? formEntries
+            : [
+                {
+                  sourceLocationId: 0,
+                  sourceLocationName: "",
+                  stockItemId: 0,
+                  stockItemCode: "",
+                  stockItemName: "",
+                  quantity: "",
+                  rate: "",
+                },
+              ],
         notes: stockTransferToEdit.notes || "",
         optional: voucherToEdit?.optional || false,
       });
@@ -2374,15 +2754,15 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   }, [stockTransferToEdit, voucherToEdit, locations, stockItems, stockTransferForm]);
 
   // Helper function to lookup account by code
-  const lookupAccountByCode = (code: string): { type: "ledger" | "bank" | "supplier"; id: number; name: string } | null => {
+  const lookupAccountByCode = (
+    code: string,
+  ): { type: "ledger" | "bank" | "supplier"; id: number; name: string } | null => {
     if (!code || code.trim() === "") return null;
-    
+
     const searchCode = code.trim().toLowerCase();
-    
+
     // Search ledger accounts by code
-    const ledgerAccount = ledgerAccounts.find(
-      (a) => a.code && a.code.toLowerCase() === searchCode
-    );
+    const ledgerAccount = ledgerAccounts.find((a) => a.code && a.code.toLowerCase() === searchCode);
     if (ledgerAccount) {
       return {
         type: "ledger",
@@ -2390,10 +2770,10 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         name: ledgerAccount.name,
       };
     }
-    
+
     // Search bank accounts by accountNumber
     const bankAccount = bankAccounts.find(
-      (a) => a.accountNumber && a.accountNumber.toLowerCase() === searchCode
+      (a) => a.accountNumber && a.accountNumber.toLowerCase() === searchCode,
     );
     if (bankAccount) {
       return {
@@ -2402,11 +2782,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         name: bankAccount.bankName,
       };
     }
-    
+
     // Search suppliers by code
-    const supplier = suppliers.find(
-      (s) => s.code && s.code.toLowerCase() === searchCode
-    );
+    const supplier = suppliers.find((s) => s.code && s.code.toLowerCase() === searchCode);
     if (supplier) {
       return {
         type: "supplier",
@@ -2414,23 +2792,19 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         name: supplier.legalName,
       };
     }
-    
+
     return null;
   };
 
   // Helper function to lookup location by code
   const lookupLocationByCode = (code: string) => {
-    const location = locations.find(
-      (l) => l.code && l.code.toLowerCase() === code.toLowerCase()
-    );
+    const location = locations.find((l) => l.code && l.code.toLowerCase() === code.toLowerCase());
     return location;
   };
 
   // Helper function to lookup stock item by code
   const lookupStockItemByCode = (code: string) => {
-    const item = stockItems.find(
-      (s) => s.code && s.code.toLowerCase() === code.toLowerCase()
-    );
+    const item = stockItems.find((s) => s.code && s.code.toLowerCase() === code.toLowerCase());
     return item;
   };
 
@@ -2450,20 +2824,23 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       console.log("[StockTransfer] MUTATION STEP A: mutationFn started with input:", input);
       try {
         // Extract all data from input (not from closures)
-        const { 
-          allowNegativeInventory, 
+        const {
+          allowNegativeInventory,
           _companyId,
           _transferTotal,
           _voucherIdToEdit,
           _stockTransferToEditId,
           _locations,
-          ...data 
+          ...data
         } = input;
-        
-        console.log("[StockTransfer] MUTATION STEP B: Extracted data, isEditMode:", !!_voucherIdToEdit);
-        
+
+        console.log(
+          "[StockTransfer] MUTATION STEP B: Extracted data, isEditMode:",
+          !!_voucherIdToEdit,
+        );
+
         const isEditMode = !!_voucherIdToEdit;
-        
+
         // Validate required data before proceeding
         if (!data.entries || !Array.isArray(data.entries)) {
           throw new Error("Invalid form data: entries is missing or not an array");
@@ -2474,36 +2851,42 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         if (!_companyId && !isEditMode) {
           throw new Error("No company selected");
         }
-        
+
         console.log("[StockTransfer] MUTATION STEP C: Validation passed, preparing entries");
-        
+
         // Get unique source locations for description
-        const validEntries = data.entries.filter(e => e.sourceLocationId > 0 && e.stockItemId > 0);
-        const uniqueSources = Array.from(new Set(validEntries.map(e => e.sourceLocationId)));
-        const sourceNames = uniqueSources.map(id => _locations.find(l => l.id === id)?.name).filter(Boolean).join(", ") || "Unknown";
-        const destName = _locations.find(l => l.id === data.destinationLocationId)?.name || "Unknown";
-        
+        const validEntries = data.entries.filter(
+          (e) => e.sourceLocationId > 0 && e.stockItemId > 0,
+        );
+        const uniqueSources = Array.from(new Set(validEntries.map((e) => e.sourceLocationId)));
+        const sourceNames =
+          uniqueSources
+            .map((id) => _locations.find((l) => l.id === id)?.name)
+            .filter(Boolean)
+            .join(", ") || "Unknown";
+        const destName =
+          _locations.find((l) => l.id === data.destinationLocationId)?.name || "Unknown";
+
         if (isEditMode) {
           // UPDATE MODE: Use PATCH to update existing voucher and stock transfer
           // Ensure voucherDate is a Date object before formatting
-          const editVoucherDateObj = data.voucherDate instanceof Date 
-            ? data.voucherDate 
-            : new Date(data.voucherDate);
+          const editVoucherDateObj =
+            data.voucherDate instanceof Date ? data.voucherDate : new Date(data.voucherDate);
           const editFormattedVoucherDate = format(editVoucherDateObj, "yyyy-MM-dd");
-          
+
           const voucherRes = await modeApiRequest("PATCH", `/api/vouchers/${_voucherIdToEdit}`, {
             voucherDate: editFormattedVoucherDate,
             description: `Stock transfer from ${sourceNames} to ${destName}`,
             totalAmount: _transferTotal.toString(),
             optional: data.optional,
           });
-          
+
           // Update stock transfer
           if (_stockTransferToEditId) {
             await modeApiRequest("PUT", `/api/stock-transfers/${_stockTransferToEditId}`, {
               destinationLocationId: data.destinationLocationId,
               notes: data.notes || "",
-              items: validEntries.map(entry => ({
+              items: validEntries.map((entry) => ({
                 sourceLocationId: entry.sourceLocationId,
                 stockItemId: entry.stockItemId,
                 quantity: entry.quantity,
@@ -2511,16 +2894,15 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
               })),
             });
           }
-          
+
           return await voucherRes.json();
         } else {
           // CREATE MODE: Create new voucher and stock transfer
           // Ensure voucherDate is a Date object before formatting
-          const voucherDateObj = data.voucherDate instanceof Date 
-            ? data.voucherDate 
-            : new Date(data.voucherDate);
+          const voucherDateObj =
+            data.voucherDate instanceof Date ? data.voucherDate : new Date(data.voucherDate);
           const formattedVoucherDate = format(voucherDateObj, "yyyy-MM-dd");
-          
+
           const voucherPayload = {
             companyId: _companyId,
             voucherType: "StockTransfer",
@@ -2533,13 +2915,19 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
             exchangeRate: exchangeRate ? exchangeRate.toString() : undefined,
           };
           console.log("[StockTransfer] MUTATION STEP D: Creating voucher with:", voucherPayload);
-          console.log("[StockTransfer] MUTATION STEP D2: Payload JSON test:", JSON.stringify(voucherPayload));
-          
+          console.log(
+            "[StockTransfer] MUTATION STEP D2: Payload JSON test:",
+            JSON.stringify(voucherPayload),
+          );
+
           let voucherRes;
           try {
             console.log("[StockTransfer] MUTATION STEP D3: About to call apiRequest");
             voucherRes = await modeApiRequest("POST", "/api/vouchers", voucherPayload);
-            console.log("[StockTransfer] MUTATION STEP D4: apiRequest completed, response:", voucherRes);
+            console.log(
+              "[StockTransfer] MUTATION STEP D4: apiRequest completed, response:",
+              voucherRes,
+            );
           } catch (apiError: any) {
             console.error("[StockTransfer] MUTATION STEP D-ERROR: apiRequest failed:", apiError);
             console.error("[StockTransfer] Error message:", apiError?.message);
@@ -2557,7 +2945,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
             destinationLocationId: data.destinationLocationId,
             notes: data.notes || "",
             allowNegativeInventory: allowNegativeInventory || false,
-            items: validEntries.map(entry => ({
+            items: validEntries.map((entry) => ({
               sourceLocationId: entry.sourceLocationId,
               stockItemId: entry.stockItemId,
               quantity: entry.quantity,
@@ -2584,7 +2972,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       queryClient.invalidateQueries({ queryKey: ["/api/stock-transfers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory-by-location"] });
       queryClient.invalidateQueries({ queryKey: ["/api/location-summary"] });
-      
+
       // Clear edit mode and navigate back to daybook or reset form
       if (isEditMode) {
         setLocation(isFactoryMode ? "/factory/daybook" : "/daybook");
@@ -2611,7 +2999,8 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       const isEditMode = !!voucherIdToEdit;
       toast({
         title: "Error",
-        description: error.message || `Failed to ${isEditMode ? "update" : "create"} stock transfer`,
+        description:
+          error.message || `Failed to ${isEditMode ? "update" : "create"} stock transfer`,
         variant: "destructive",
       });
     },
@@ -2619,7 +3008,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   const onStockTransferSubmit = async (data: StockTransferFormData) => {
     console.log("[StockTransfer] STEP 1: onStockTransferSubmit called with data:", data);
-    
+
     // Validate destination location
     if (!data.destinationLocationId || data.destinationLocationId <= 0) {
       console.log("[StockTransfer] VALIDATION FAILED: No destination location");
@@ -2630,10 +3019,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       });
       return;
     }
-    
+
     // Validate entries
     const validEntries = data.entries.filter(
-      (entry) => entry.stockItemId > 0 && entry.sourceLocationId > 0 && parseFloat(entry.quantity || "0") > 0
+      (entry) =>
+        entry.stockItemId > 0 &&
+        entry.sourceLocationId > 0 &&
+        parseFloat(entry.quantity || "0") > 0,
     );
 
     if (validEntries.length === 0) {
@@ -2645,25 +3037,32 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       });
       return;
     }
-    
+
     console.log("[StockTransfer] STEP 2: Valid entries found:", validEntries.length);
 
     // Auto-fill missing rates from inventory before proceeding
-    const entriesWithMissingRates = validEntries.filter(entry => !entry.rate || entry.rate === "" || entry.rate === "0");
+    const entriesWithMissingRates = validEntries.filter(
+      (entry) => !entry.rate || entry.rate === "" || entry.rate === "0",
+    );
     if (entriesWithMissingRates.length > 0) {
-      console.log("[StockTransfer] Fetching rates for entries with missing rates:", entriesWithMissingRates.length);
-      
+      console.log(
+        "[StockTransfer] Fetching rates for entries with missing rates:",
+        entriesWithMissingRates.length,
+      );
+
       // Fetch rates from inventory for each entry with missing rate
       const ratePromises = entriesWithMissingRates.map(async (entry) => {
         try {
           const res = await fetch(`/api/locations/${entry.sourceLocationId}/inventory`);
           if (res.ok) {
             const inventory = await res.json();
-            const inventoryItem = inventory.find((item: any) => item.stockItemId === entry.stockItemId);
+            const inventoryItem = inventory.find(
+              (item: any) => item.stockItemId === entry.stockItemId,
+            );
             return {
               stockItemId: entry.stockItemId,
               sourceLocationId: entry.sourceLocationId,
-              rate: inventoryItem?.averageRate || "0"
+              rate: inventoryItem?.averageRate || "0",
             };
           }
         } catch (err) {
@@ -2672,34 +3071,39 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         return {
           stockItemId: entry.stockItemId,
           sourceLocationId: entry.sourceLocationId,
-          rate: "0"
+          rate: "0",
         };
       });
 
       const fetchedRates = await Promise.all(ratePromises);
-      
+
       // Update validEntries with fetched rates
       for (const entry of validEntries) {
         if (!entry.rate || entry.rate === "" || entry.rate === "0") {
           const fetchedRate = fetchedRates.find(
-            r => r.stockItemId === entry.stockItemId && r.sourceLocationId === entry.sourceLocationId
+            (r) =>
+              r.stockItemId === entry.stockItemId && r.sourceLocationId === entry.sourceLocationId,
           );
           if (fetchedRate) {
             entry.rate = fetchedRate.rate;
           }
         }
       }
-      
-      console.log("[StockTransfer] Rates after auto-fill:", validEntries.map(e => ({ stockItemId: e.stockItemId, rate: e.rate })));
+
+      console.log(
+        "[StockTransfer] Rates after auto-fill:",
+        validEntries.map((e) => ({ stockItemId: e.stockItemId, rate: e.rate })),
+      );
     }
 
     console.log("[StockTransfer] STEP 3: Checking for zero qty entries");
     // Check for zero quantity entries
     const zeroQtyEntry = data.entries.find(
-      (entry) => entry.stockItemId > 0 && entry.sourceLocationId > 0 && parseFloat(entry.quantity) === 0
+      (entry) =>
+        entry.stockItemId > 0 && entry.sourceLocationId > 0 && parseFloat(entry.quantity) === 0,
     );
     if (zeroQtyEntry) {
-      const item = stockItems.find(s => s.id === zeroQtyEntry.stockItemId);
+      const item = stockItems.find((s) => s.id === zeroQtyEntry.stockItemId);
       console.log("[StockTransfer] VALIDATION FAILED: Zero quantity entry");
       toast({
         title: "Validation Error",
@@ -2712,7 +3116,12 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     // Validate quantities against available inventory
     // When editing, we need to add back the original transfer quantities to available stock
     const isEditMode = !!voucherIdToEdit;
-    console.log("[StockTransfer] STEP 4: isEditMode =", isEditMode, "voucherIdToEdit =", voucherIdToEdit);
+    console.log(
+      "[StockTransfer] STEP 4: isEditMode =",
+      isEditMode,
+      "voucherIdToEdit =",
+      voucherIdToEdit,
+    );
 
     // IMPORTANT: in edit mode, make sure we actually have the original stock transfer loaded.
     // If it's not in cache yet (common when you only change destination and submit quickly),
@@ -2734,48 +3143,49 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       }
 
       originalItems = st?.items || [];
-      
+
       if (!originalItems.length) {
         toast({
           title: "Loading",
-          description: "Original stock transfer details are still loading. Please try again in a moment.",
+          description:
+            "Original stock transfer details are still loading. Please try again in a moment.",
         });
         return;
       }
     }
-    
+
     // Build a map of original quantities: key = "stockItemId" or "stockItemId-sourceLocationId"
     // This aggregates ALL original quantities per stockItemId for proper restoration
     const originalQtyMap = new Map<string, number>();
     const originalQtyByStockItemOnly = new Map<number, number>();
-    
+
     originalItems.forEach((orig: any) => {
       const qty = parseFloat(orig.quantity || "0");
       const stockItemId = Number(orig.stockItemId);
       const sourceLocId = orig.sourceLocationId != null ? Number(orig.sourceLocationId) : null;
-      
+
       // Always aggregate by stockItemId alone (for fallback matching)
       originalQtyByStockItemOnly.set(
-        stockItemId, 
-        (originalQtyByStockItemOnly.get(stockItemId) || 0) + qty
+        stockItemId,
+        (originalQtyByStockItemOnly.get(stockItemId) || 0) + qty,
       );
-      
+
       // Also aggregate by stockItemId + sourceLocationId (for precise matching)
       if (sourceLocId && sourceLocId > 0) {
         const key = `${stockItemId}-${sourceLocId}`;
         originalQtyMap.set(key, (originalQtyMap.get(key) || 0) + qty);
       }
     });
-    
+
     // Use DELTA-based validation: only check for the NET INCREASE over original quantity
     // This allows edits without increasing quantity to always succeed, even with negative inventory
     // IMPORTANT: Only use original qty if source location matches exactly (precise key match)
     // If source location changed, treat as a new transfer requiring full inventory check
-    const inventoryValidationPromises = validEntries.map(entry => {
+    const inventoryValidationPromises = validEntries.map((entry) => {
       const entryStockItemId = Number(entry.stockItemId);
       const entrySourceLocId = Number(entry.sourceLocationId);
       const requestedQty = parseFloat(entry.quantity);
-      
+
       // Get the original quantity for this EXACT item + source location combination
       // Only use precise match - if source location changed, treat as new (delta = full qty)
       let originalQtyForItem = 0;
@@ -2788,57 +3198,59 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         // If no precise match (source location changed or new item), originalQtyForItem stays 0
         // This means delta = requestedQty, requiring full inventory check
       }
-      
+
       // Calculate delta: how much MORE are we requesting than the original?
       const delta = requestedQty - originalQtyForItem;
-      
+
       return fetch(`/api/locations/${entry.sourceLocationId}/inventory`)
-        .then(res => res.json())
-        .then(inventory => {
-          const availableItem = inventory.find((item: any) => Number(item.stockItemId) === entryStockItemId);
+        .then((res) => res.json())
+        .then((inventory) => {
+          const availableItem = inventory.find(
+            (item: any) => Number(item.stockItemId) === entryStockItemId,
+          );
           const currentInventory = availableItem ? parseFloat(availableItem.quantity || "0") : 0;
-          
+
           // If delta <= 0, we're requesting same or less than original - ALWAYS allow
           if (delta <= 0) {
             return { success: true };
           }
-          
+
           // If delta > 0, we need additional inventory for the increase
           // Check if we have enough for the delta
           if (currentInventory >= delta) {
             return { success: true };
           }
-          
+
           // Not enough inventory for the increase - but allow with warning
           // Calculate what the resulting inventory would be
           const resultingInventory = currentInventory - delta;
-          const item = stockItems.find(s => s.id === entryStockItemId);
-          const sourceLocation = locations.find(l => l.id === entrySourceLocId);
-          
+          const item = stockItems.find((s) => s.id === entryStockItemId);
+          const sourceLocation = locations.find((l) => l.id === entrySourceLocId);
+
           return {
             success: false,
             warning: true,
-            itemName: item?.name || 'Unknown Item',
-            locationName: sourceLocation?.name || 'Unknown Location',
+            itemName: item?.name || "Unknown Item",
+            locationName: sourceLocation?.name || "Unknown Location",
             currentInventory,
             delta,
             resultingInventory,
-            error: `${item?.name} will have ${formatNumber(resultingInventory)} in ${sourceLocation?.name} after this transfer (currently ${formatNumber(currentInventory)}, need ${formatNumber(delta)} more)`
+            error: `${item?.name} will have ${formatNumber(resultingInventory)} in ${sourceLocation?.name} after this transfer (currently ${formatNumber(currentInventory)}, need ${formatNumber(delta)} more)`,
           };
         })
-        .catch(err => ({
+        .catch((err) => ({
           success: false,
           warning: false,
-          error: `Failed to validate inventory: ${err.message}`
+          error: `Failed to validate inventory: ${err.message}`,
         }));
     });
 
     console.log("[StockTransfer] STEP 5: Starting inventory validation promises");
     const results = await Promise.all(inventoryValidationPromises);
     console.log("[StockTransfer] STEP 6: Inventory validation results:", results);
-    const failedValidation = results.find(r => !r.success && !(r as any).warning);
-    const warningValidation = results.find(r => !r.success && (r as any).warning);
-    
+    const failedValidation = results.find((r) => !r.success && !(r as any).warning);
+    const warningValidation = results.find((r) => !r.success && (r as any).warning);
+
     // Hard failures (not warnings) - block the transfer
     if (failedValidation) {
       console.log("[StockTransfer] VALIDATION FAILED: Hard failure", failedValidation);
@@ -2849,13 +3261,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       });
       return;
     }
-    
+
     // Warnings - ask user to confirm
     let userConfirmedNegativeInventory = false;
     if (warningValidation) {
       console.log("[StockTransfer] STEP 7: Warning validation, showing confirm dialog");
       const confirmProceed = window.confirm(
-        `Warning: ${warningValidation.error}\n\nThis will result in negative inventory. Do you want to proceed anyway?`
+        `Warning: ${warningValidation.error}\n\nThis will result in negative inventory. Do you want to proceed anyway?`,
       );
       if (!confirmProceed) {
         console.log("[StockTransfer] User declined negative inventory");
@@ -2866,7 +3278,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
     console.log("[StockTransfer] STEP 8: Checking source !== destination");
     // Validate that each row's sourceLocationId !== destinationLocationId
-    const invalidEntry = validEntries.find(entry => entry.sourceLocationId === data.destinationLocationId);
+    const invalidEntry = validEntries.find(
+      (entry) => entry.sourceLocationId === data.destinationLocationId,
+    );
     if (invalidEntry) {
       console.log("[StockTransfer] VALIDATION FAILED: Source === Destination");
       toast({
@@ -2880,7 +3294,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     console.log("[StockTransfer] STEP 9: Calling mutation.mutate()");
     // Pass all required data explicitly to avoid stale closure issues
     // Use validEntries which has auto-filled rates
-    stockTransferMutation.mutate({ 
+    stockTransferMutation.mutate({
       ...data,
       entries: validEntries, // Use entries with auto-filled rates
       allowNegativeInventory: userConfirmedNegativeInventory,
@@ -2906,7 +3320,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           stockItemName: "",
           quantity: "",
           rate: "",
-        }
+        },
       ],
       notes: "",
       optional: false,
@@ -2924,21 +3338,27 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   const adjustmentEntries = stockAdjustmentForm.watch("entries") || [];
   const adjustmentLocationId = stockAdjustmentForm.watch("locationId") || 0;
-  
+
   const consumptionTotal = adjustmentEntries
-    .filter(entry => entry.type === "CONSUME")
-    .reduce((sum, entry) => sum + (parseFloat(entry.quantity || "0") * parseFloat(entry.rate || "0")), 0);
+    .filter((entry) => entry.type === "CONSUME")
+    .reduce(
+      (sum, entry) => sum + parseFloat(entry.quantity || "0") * parseFloat(entry.rate || "0"),
+      0,
+    );
   const productionTotal = adjustmentEntries
-    .filter(entry => entry.type === "PRODUCE")
-    .reduce((sum, entry) => sum + (parseFloat(entry.quantity || "0") * parseFloat(entry.rate || "0")), 0);
+    .filter((entry) => entry.type === "PRODUCE")
+    .reduce(
+      (sum, entry) => sum + parseFloat(entry.quantity || "0") * parseFloat(entry.rate || "0"),
+      0,
+    );
 
   // Fetch location inventory for auto-filling rates in adjustments
   const { data: locationInventory = [] } = useQuery<any[]>({
-    queryKey: ['/api/adjustment-location-inventory', adjustmentLocationId],
+    queryKey: ["/api/adjustment-location-inventory", adjustmentLocationId],
     enabled: adjustmentLocationId > 0,
     queryFn: async () => {
       const response = await fetch(`/api/locations/${adjustmentLocationId}/inventory`);
-      if (!response.ok) throw new Error('Failed to fetch inventory');
+      if (!response.ok) throw new Error("Failed to fetch inventory");
       return response.json();
     },
   });
@@ -2954,26 +3374,29 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   // Create combined list of all stock items with their location quantities
   const adjustmentItemsWithInventory = useMemo(() => {
     if (!stockItems.length) return [];
-    
-    return stockItems.map(item => {
-      const inventoryItem = locationInventory.find((inv: any) => inv.stockItemId === item.id);
-      return {
-        stockItemId: item.id,
-        stockItemCode: item.code,
-        stockItemName: item.name,
-        quantity: inventoryItem?.quantity || "0",
-        averageRate: inventoryItem?.averageRate || "0",
-      };
-    }).sort((a, b) => a.stockItemName.localeCompare(b.stockItemName));
+
+    return stockItems
+      .map((item) => {
+        const inventoryItem = locationInventory.find((inv: any) => inv.stockItemId === item.id);
+        return {
+          stockItemId: item.id,
+          stockItemCode: item.code,
+          stockItemName: item.name,
+          quantity: inventoryItem?.quantity || "0",
+          averageRate: inventoryItem?.averageRate || "0",
+        };
+      })
+      .sort((a, b) => a.stockItemName.localeCompare(b.stockItemName));
   }, [stockItems, locationInventory]);
 
   // Filtered adjustment items based on search
   const filteredAdjustmentItems = useMemo(() => {
     if (!adjustmentSearchTerm.trim()) return adjustmentItemsWithInventory;
     const term = adjustmentSearchTerm.toLowerCase();
-    return adjustmentItemsWithInventory.filter(item =>
-      item.stockItemName?.toLowerCase().includes(term) ||
-      item.stockItemCode?.toLowerCase().includes(term)
+    return adjustmentItemsWithInventory.filter(
+      (item) =>
+        item.stockItemName?.toLowerCase().includes(term) ||
+        item.stockItemCode?.toLowerCase().includes(term),
     );
   }, [adjustmentItemsWithInventory, adjustmentSearchTerm]);
 
@@ -2981,26 +3404,33 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   useEffect(() => {
     if (showAdjustmentSidebar && adjustmentSidebarRef.current) {
       const container = adjustmentSidebarRef.current;
-      const highlightedItem = container.querySelector(`[data-adjustment-idx="${adjustmentHighlightedIndex}"]`);
+      const highlightedItem = container.querySelector(
+        `[data-adjustment-idx="${adjustmentHighlightedIndex}"]`,
+      );
       if (highlightedItem) {
-        highlightedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        highlightedItem.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
     }
   }, [adjustmentHighlightedIndex, showAdjustmentSidebar]);
 
   // Pre-populate stock adjustment form when editing
   useEffect(() => {
-    if (stockAdjustmentToEdit && stockAdjustmentToEdit.items && voucherToEdit && stockItems.length > 0) {
+    if (
+      stockAdjustmentToEdit &&
+      stockAdjustmentToEdit.items &&
+      voucherToEdit &&
+      stockItems.length > 0
+    ) {
       if (hydratedVoucherIdRef.current === voucherIdToEdit) return;
       // Map stock adjustment items to form entries
       const formEntries = stockAdjustmentToEdit.items.map((item: any) => {
-        const stockItem = stockItems.find(s => s.id === item.stockItemId);
+        const stockItem = stockItems.find((s) => s.id === item.stockItemId);
         const quantity = parseFloat(item.quantity || "0");
-        
+
         // Determine type: negative quantities are CONSUME, positive are PRODUCE
         const type = quantity < 0 ? "CONSUME" : "PRODUCE";
         const absQuantity = Math.abs(quantity).toString();
-        
+
         return {
           type,
           stockItemId: item.stockItemId || 0,
@@ -3015,14 +3445,19 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       stockAdjustmentForm.reset({
         voucherDate: voucherToEdit ? parseDateLocal(voucherToEdit.voucherDate) : new Date(),
         locationId: stockAdjustmentToEdit.locationId || 0,
-        entries: formEntries.length > 0 ? formEntries : [{
-          type: "PRODUCE",
-          stockItemId: 0,
-          stockItemCode: "",
-          stockItemName: "",
-          quantity: "",
-          rate: "",
-        }],
+        entries:
+          formEntries.length > 0
+            ? formEntries
+            : [
+                {
+                  type: "PRODUCE",
+                  stockItemId: 0,
+                  stockItemCode: "",
+                  stockItemName: "",
+                  quantity: "",
+                  rate: "",
+                },
+              ],
         notes: stockAdjustmentToEdit.notes || "",
         optional: voucherToEdit?.optional || false,
       });
@@ -3035,36 +3470,32 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     mutationFn: async (formData: StockAdjustmentFormData) => {
       const data = formData;
       const isEditMode = !!voucherIdToEdit;
-      
+
       // Determine adjustment type based on entry types
-      const hasConsumption = data.entries.some(e => e.type === "CONSUME");
-      const hasProduction = data.entries.some(e => e.type === "PRODUCE");
-      const adjustmentType = hasConsumption && hasProduction 
-        ? "Mixed" 
-        : hasProduction 
-          ? "Production" 
-          : "Consumption";
-      
+      const hasConsumption = data.entries.some((e) => e.type === "CONSUME");
+      const hasProduction = data.entries.some((e) => e.type === "PRODUCE");
+      const adjustmentType =
+        hasConsumption && hasProduction ? "Mixed" : hasProduction ? "Production" : "Consumption";
+
       // Map entries with consumption quantities negated
-      const items = data.entries.map(entry => ({
+      const items = data.entries.map((entry) => ({
         stockItemId: entry.stockItemId,
-        quantity: entry.type === "CONSUME" 
-          ? (-parseFloat(entry.quantity)).toString() 
-          : entry.quantity,
+        quantity:
+          entry.type === "CONSUME" ? (-parseFloat(entry.quantity)).toString() : entry.quantity,
         rate: entry.rate,
       }));
 
       const totalAmount = consumptionTotal + productionTotal;
-      
+
       if (isEditMode) {
         // UPDATE MODE: Use PATCH to update existing voucher and stock adjustment
         const voucherRes = await modeApiRequest("PATCH", `/api/vouchers/${voucherIdToEdit}`, {
           voucherDate: format(data.voucherDate, "yyyy-MM-dd"),
-          description: `Stock ${adjustmentType.toLowerCase()} at ${locations.find(l => l.id === data.locationId)?.name}`,
+          description: `Stock ${adjustmentType.toLowerCase()} at ${locations.find((l) => l.id === data.locationId)?.name}`,
           totalAmount: totalAmount.toString(),
           optional: data.optional,
         });
-        
+
         // Update stock adjustment (assuming stockAdjustmentToEdit has an id)
         if (stockAdjustmentToEdit?.id) {
           await modeApiRequest("PUT", `/api/stock-adjustments/${stockAdjustmentToEdit.id}`, {
@@ -3074,7 +3505,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
             items: items,
           });
         }
-        
+
         return await voucherRes.json();
       } else {
         // CREATE MODE: Create new voucher and stock adjustment
@@ -3083,7 +3514,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           voucherType: adjustmentType,
           voucherNumber: `${adjustmentType.toUpperCase()}-${Date.now()}`,
           voucherDate: format(data.voucherDate, "yyyy-MM-dd"),
-          description: `Stock ${adjustmentType.toLowerCase()} at ${locations.find(l => l.id === data.locationId)?.name}`,
+          description: `Stock ${adjustmentType.toLowerCase()} at ${locations.find((l) => l.id === data.locationId)?.name}`,
           totalAmount: totalAmount.toString(),
           optional: data.optional,
           currency: selectedCurrency,
@@ -3113,7 +3544,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       queryClient.invalidateQueries({ queryKey: ["/api/daybook"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stock-adjustments"] });
-      
+
       // Clear edit mode and navigate back to daybook or reset form
       if (isEditMode) {
         setLocation(isFactoryMode ? "/factory/daybook" : "/daybook");
@@ -3139,7 +3570,8 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       const isEditMode = !!voucherIdToEdit;
       toast({
         title: "Error",
-        description: error.message || `Failed to ${isEditMode ? "update" : "create"} stock adjustment`,
+        description:
+          error.message || `Failed to ${isEditMode ? "update" : "create"} stock adjustment`,
         variant: "destructive",
       });
     },
@@ -3148,9 +3580,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   // Export current Production/Consumption voucher to Excel
   const handleExportProductionConsumptionVoucher = (detailed: boolean) => {
     const formData = stockAdjustmentForm.getValues();
-    const voucherDate = formData.voucherDate ? format(formData.voucherDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
-    const validEntries = formData.entries.filter((e: any) => e.stockItemId > 0 && parseFloat(e.quantity) > 0);
-    
+    const voucherDate = formData.voucherDate
+      ? format(formData.voucherDate, "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd");
+    const validEntries = formData.entries.filter(
+      (e: any) => e.stockItemId > 0 && parseFloat(e.quantity) > 0,
+    );
+
     if (validEntries.length === 0) {
       toast({
         title: "No data to export",
@@ -3159,57 +3595,69 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       });
       return;
     }
-    
+
     const selectedLocation = locations?.find((l: any) => l.id === formData.locationId);
     const locationName = selectedLocation?.name || "";
-    
+
     if (detailed) {
       // Detailed export - one row per entry
       const exportData = validEntries.map((entry: any) => ({
         "Entry Type": entry.type?.toUpperCase() === "CONSUME" ? "Consumption" : "Production",
-        "Date": voucherDate,
-        "Location": locationName,
+        Date: voucherDate,
+        Location: locationName,
         "Item Code": entry.stockItemCode || "",
         "Item Name": entry.stockItemName || "",
-        "Quantity": parseFloat(entry.quantity).toFixed(2),
-        "Rate": parseFloat(entry.rate || "0").toFixed(2),
-        "Amount": (parseFloat(entry.quantity) * parseFloat(entry.rate || "0")).toFixed(2),
-        "Notes": formData.notes || "",
-        "Optional": formData.optional ? "Yes" : "No",
+        Quantity: parseFloat(entry.quantity).toFixed(2),
+        Rate: parseFloat(entry.rate || "0").toFixed(2),
+        Amount: (parseFloat(entry.quantity) * parseFloat(entry.rate || "0")).toFixed(2),
+        Notes: formData.notes || "",
+        Optional: formData.optional ? "Yes" : "No",
       }));
-      
+
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Production-Consumption Detailed");
       const fileName = `Production_Consumption_Detailed_${voucherDate}.xlsx`;
       writeFile(workbook, fileName);
-      
+
       toast({
         title: "Export successful",
         description: `Downloaded ${fileName} with ${validEntries.length} items.`,
       });
     } else {
       // Summary export
-      const consumeTotal = validEntries.filter((e: any) => e.type?.toUpperCase() === "CONSUME").reduce((sum: number, e: any) => sum + (parseFloat(e.quantity) * parseFloat(e.rate || "0")), 0);
-      const produceTotal = validEntries.filter((e: any) => e.type?.toUpperCase() === "PRODUCE").reduce((sum: number, e: any) => sum + (parseFloat(e.quantity) * parseFloat(e.rate || "0")), 0);
-      
-      const exportData = [{
-        "Voucher Type": "Production/Consumption",
-        "Date": voucherDate,
-        "Location": locationName,
-        "Consumption Total": consumeTotal.toFixed(2),
-        "Production Total": produceTotal.toFixed(2),
-        "Number of Items": validEntries.length,
-        "Notes": formData.notes || "",
-        "Optional": formData.optional ? "Yes" : "No",
-      }];
-      
+      const consumeTotal = validEntries
+        .filter((e: any) => e.type?.toUpperCase() === "CONSUME")
+        .reduce(
+          (sum: number, e: any) => sum + parseFloat(e.quantity) * parseFloat(e.rate || "0"),
+          0,
+        );
+      const produceTotal = validEntries
+        .filter((e: any) => e.type?.toUpperCase() === "PRODUCE")
+        .reduce(
+          (sum: number, e: any) => sum + parseFloat(e.quantity) * parseFloat(e.rate || "0"),
+          0,
+        );
+
+      const exportData = [
+        {
+          "Voucher Type": "Production/Consumption",
+          Date: voucherDate,
+          Location: locationName,
+          "Consumption Total": consumeTotal.toFixed(2),
+          "Production Total": produceTotal.toFixed(2),
+          "Number of Items": validEntries.length,
+          Notes: formData.notes || "",
+          Optional: formData.optional ? "Yes" : "No",
+        },
+      ];
+
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Production-Consumption Summary");
       const fileName = `Production_Consumption_Summary_${voucherDate}.xlsx`;
       writeFile(workbook, fileName);
-      
+
       toast({
         title: "Export successful",
         description: `Downloaded ${fileName}.`,
@@ -3220,9 +3668,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   // Export current Stock Transfer voucher to Excel
   const handleExportStockTransfer = (detailed: boolean) => {
     const formData = stockTransferForm.getValues();
-    const voucherDate = formData.voucherDate ? format(formData.voucherDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
-    const validEntries = formData.entries.filter((e: any) => e.stockItemId > 0 && parseFloat(e.quantity) > 0);
-    
+    const voucherDate = formData.voucherDate
+      ? format(formData.voucherDate, "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd");
+    const validEntries = formData.entries.filter(
+      (e: any) => e.stockItemId > 0 && parseFloat(e.quantity) > 0,
+    );
+
     if (validEntries.length === 0) {
       toast({
         title: "No data to export",
@@ -3231,55 +3683,63 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       });
       return;
     }
-    
+
     const destLocation = locations?.find((l: any) => l.id === formData.destinationLocationId);
     const destLocationName = destLocation?.name || "";
-    
+
     if (detailed) {
       const exportData = validEntries.map((entry: any) => ({
-        "Date": voucherDate,
+        Date: voucherDate,
         "Source Location": entry.sourceLocationName || "",
         "Destination Location": destLocationName,
         "Item Code": entry.stockItemCode || "",
         "Item Name": entry.stockItemName || "",
-        "Quantity": parseFloat(entry.quantity).toFixed(2),
-        "Rate": parseFloat(entry.rate || "0").toFixed(2),
-        "Amount": (parseFloat(entry.quantity) * parseFloat(entry.rate || "0")).toFixed(2),
-        "Notes": formData.notes || "",
-        "Optional": formData.optional ? "Yes" : "No",
+        Quantity: parseFloat(entry.quantity).toFixed(2),
+        Rate: parseFloat(entry.rate || "0").toFixed(2),
+        Amount: (parseFloat(entry.quantity) * parseFloat(entry.rate || "0")).toFixed(2),
+        Notes: formData.notes || "",
+        Optional: formData.optional ? "Yes" : "No",
       }));
-      
+
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Stock Transfer Detailed");
       const fileName = `Stock_Transfer_Detailed_${voucherDate}.xlsx`;
       writeFile(workbook, fileName);
-      
+
       toast({
         title: "Export successful",
         description: `Downloaded ${fileName} with ${validEntries.length} items.`,
       });
     } else {
-      const totalQty = validEntries.reduce((sum: number, e: any) => sum + parseFloat(e.quantity), 0);
-      const totalAmount = validEntries.reduce((sum: number, e: any) => sum + (parseFloat(e.quantity) * parseFloat(e.rate || "0")), 0);
-      
-      const exportData = [{
-        "Voucher Type": "Stock Transfer",
-        "Date": voucherDate,
-        "Destination Location": destLocationName,
-        "Total Items": validEntries.length,
-        "Total Quantity": totalQty.toFixed(2),
-        "Total Amount": totalAmount.toFixed(2),
-        "Notes": formData.notes || "",
-        "Optional": formData.optional ? "Yes" : "No",
-      }];
-      
+      const totalQty = validEntries.reduce(
+        (sum: number, e: any) => sum + parseFloat(e.quantity),
+        0,
+      );
+      const totalAmount = validEntries.reduce(
+        (sum: number, e: any) => sum + parseFloat(e.quantity) * parseFloat(e.rate || "0"),
+        0,
+      );
+
+      const exportData = [
+        {
+          "Voucher Type": "Stock Transfer",
+          Date: voucherDate,
+          "Destination Location": destLocationName,
+          "Total Items": validEntries.length,
+          "Total Quantity": totalQty.toFixed(2),
+          "Total Amount": totalAmount.toFixed(2),
+          Notes: formData.notes || "",
+          Optional: formData.optional ? "Yes" : "No",
+        },
+      ];
+
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Stock Transfer Summary");
       const fileName = `Stock_Transfer_Summary_${voucherDate}.xlsx`;
       writeFile(workbook, fileName);
-      
+
       toast({
         title: "Export successful",
         description: `Downloaded ${fileName}.`,
@@ -3290,7 +3750,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const onStockAdjustmentSubmit = (data: StockAdjustmentFormData) => {
     // Validate entries
     const validEntries = data.entries.filter(
-      (entry) => entry.stockItemId > 0 && parseFloat(entry.quantity) > 0
+      (entry) => entry.stockItemId > 0 && parseFloat(entry.quantity) > 0,
     );
 
     if (validEntries.length === 0) {
@@ -3309,29 +3769,33 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const handleKeyDown = (
     e: React.KeyboardEvent,
     rowIndex: number,
-    fieldName: "account" | "amount"
+    fieldName: "account" | "amount",
   ) => {
     const isLastRow = rowIndex === fields.length - 1;
-    
+
     // Handle Tab for navigation on comboboxes (let Enter activate them naturally)
     if (fieldName === "account" && e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
       setTimeout(() => {
-        const amountInput = document.querySelector(`[data-testid="input-amount-${rowIndex}"]`) as HTMLInputElement;
+        const amountInput = document.querySelector(
+          `[data-testid="input-amount-${rowIndex}"]`,
+        ) as HTMLInputElement;
         if (amountInput) {
           amountInput.focus();
           amountInput.select();
         }
       }, 50);
     }
-    
+
     // Arrow key navigation for amount field
     if (fieldName === "amount") {
       if (e.key === "ArrowUp") {
         e.preventDefault();
         if (rowIndex > 0) {
           setTimeout(() => {
-            const prevAmountInput = document.querySelector(`[data-testid="input-amount-${rowIndex - 1}"]`) as HTMLInputElement;
+            const prevAmountInput = document.querySelector(
+              `[data-testid="input-amount-${rowIndex - 1}"]`,
+            ) as HTMLInputElement;
             if (prevAmountInput) {
               prevAmountInput.focus();
               prevAmountInput.select();
@@ -3343,7 +3807,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         e.preventDefault();
         if (rowIndex < fields.length - 1) {
           setTimeout(() => {
-            const nextAmountInput = document.querySelector(`[data-testid="input-amount-${rowIndex + 1}"]`) as HTMLInputElement;
+            const nextAmountInput = document.querySelector(
+              `[data-testid="input-amount-${rowIndex + 1}"]`,
+            ) as HTMLInputElement;
             if (nextAmountInput) {
               nextAmountInput.focus();
               nextAmountInput.select();
@@ -3354,7 +3820,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         setTimeout(() => {
-          const accountInput = document.querySelector(`[data-testid="input-account-${rowIndex}"]`) as HTMLInputElement;
+          const accountInput = document.querySelector(
+            `[data-testid="input-account-${rowIndex}"]`,
+          ) as HTMLInputElement;
           if (accountInput) accountInput.focus();
         }, 50);
         return;
@@ -3362,14 +3830,16 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         e.preventDefault();
         if (rowIndex < fields.length - 1) {
           setTimeout(() => {
-            const nextAccountInput = document.querySelector(`[data-testid="input-account-${rowIndex + 1}"]`) as HTMLInputElement;
+            const nextAccountInput = document.querySelector(
+              `[data-testid="input-account-${rowIndex + 1}"]`,
+            ) as HTMLInputElement;
             if (nextAccountInput) nextAccountInput.focus();
           }, 50);
         }
         return;
       }
     }
-    
+
     // Handle both Tab and Enter for navigation on input fields
     if (fieldName === "amount" && ((e.key === "Tab" && !e.shiftKey) || e.key === "Enter")) {
       e.preventDefault();
@@ -3383,7 +3853,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         });
       }
       setTimeout(() => {
-        const newRowInput = document.querySelector(`[data-testid="input-account-${rowIndex + 1}"]`) as HTMLInputElement;
+        const newRowInput = document.querySelector(
+          `[data-testid="input-account-${rowIndex + 1}"]`,
+        ) as HTMLInputElement;
         if (newRowInput) {
           newRowInput.focus();
         }
@@ -3395,17 +3867,19 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const handleJournalKeyDown = (
     e: React.KeyboardEvent,
     rowIndex: number,
-    fieldName: "type" | "account" | "amount"
+    fieldName: "type" | "account" | "amount",
   ) => {
     const isLastRow = rowIndex === journalFields.length - 1;
-    
+
     // Arrow key navigation for amount field
     if (fieldName === "amount") {
       if (e.key === "ArrowUp") {
         e.preventDefault();
         if (rowIndex > 0) {
           setTimeout(() => {
-            const prevAmountInput = document.querySelector(`[data-testid="input-journal-amount-${rowIndex - 1}"]`) as HTMLInputElement;
+            const prevAmountInput = document.querySelector(
+              `[data-testid="input-journal-amount-${rowIndex - 1}"]`,
+            ) as HTMLInputElement;
             if (prevAmountInput) {
               prevAmountInput.focus();
               prevAmountInput.select();
@@ -3417,7 +3891,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         e.preventDefault();
         if (rowIndex < journalFields.length - 1) {
           setTimeout(() => {
-            const nextAmountInput = document.querySelector(`[data-testid="input-journal-amount-${rowIndex + 1}"]`) as HTMLInputElement;
+            const nextAmountInput = document.querySelector(
+              `[data-testid="input-journal-amount-${rowIndex + 1}"]`,
+            ) as HTMLInputElement;
             if (nextAmountInput) {
               nextAmountInput.focus();
               nextAmountInput.select();
@@ -3428,7 +3904,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         setTimeout(() => {
-          const accountInput = document.querySelector(`[data-testid="input-journal-account-${rowIndex}"]`) as HTMLInputElement;
+          const accountInput = document.querySelector(
+            `[data-testid="input-journal-account-${rowIndex}"]`,
+          ) as HTMLInputElement;
           if (accountInput) accountInput.focus();
         }, 50);
         return;
@@ -3436,7 +3914,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         e.preventDefault();
         if (rowIndex < journalFields.length - 1) {
           setTimeout(() => {
-            const nextTypeInput = document.querySelector(`[data-testid="input-journal-type-${rowIndex + 1}"]`) as HTMLElement;
+            const nextTypeInput = document.querySelector(
+              `[data-testid="input-journal-type-${rowIndex + 1}"]`,
+            ) as HTMLElement;
             if (nextTypeInput) {
               nextTypeInput.focus();
             }
@@ -3445,7 +3925,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         return;
       }
     }
-    
+
     // Handle Tab on Amount - move to DR/CR of next row or create new row
     if (fieldName === "amount" && e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
@@ -3460,13 +3940,15 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         });
       }
       setTimeout(() => {
-        const nextRowInput = document.querySelector(`[data-testid="input-journal-type-${rowIndex + 1}"]`) as HTMLElement;
+        const nextRowInput = document.querySelector(
+          `[data-testid="input-journal-type-${rowIndex + 1}"]`,
+        ) as HTMLElement;
         if (nextRowInput) {
           nextRowInput.focus();
         }
       }, 100);
     }
-    
+
     // Handle Enter on Amount - create new row if last row, then focus DR/CR of new row
     if (fieldName === "amount" && e.key === "Enter") {
       e.preventDefault();
@@ -3480,7 +3962,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           amount: "",
         });
         setTimeout(() => {
-          const newRowInput = document.querySelector(`[data-testid="input-journal-type-${rowIndex + 1}"]`) as HTMLElement;
+          const newRowInput = document.querySelector(
+            `[data-testid="input-journal-type-${rowIndex + 1}"]`,
+          ) as HTMLElement;
           if (newRowInput) {
             newRowInput.focus();
           }
@@ -3488,7 +3972,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       } else {
         // Not last row - move to DR/CR of next row
         setTimeout(() => {
-          const nextRowInput = document.querySelector(`[data-testid="input-journal-type-${rowIndex + 1}"]`) as HTMLElement;
+          const nextRowInput = document.querySelector(
+            `[data-testid="input-journal-type-${rowIndex + 1}"]`,
+          ) as HTMLElement;
           if (nextRowInput) {
             nextRowInput.focus();
           }
@@ -3501,17 +3987,19 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const handleTransferKeyDown = (
     e: React.KeyboardEvent,
     rowIndex: number,
-    fieldName: "quantity" | "rate"
+    fieldName: "quantity" | "rate",
   ) => {
     const isLastRow = rowIndex === transferFields.length - 1;
-    
+
     // Arrow key navigation for quantity field
     if (fieldName === "quantity") {
       if (e.key === "ArrowUp") {
         e.preventDefault();
         if (rowIndex > 0) {
           setTimeout(() => {
-            const prevInput = document.querySelector(`[data-testid="input-transfer-quantity-${rowIndex - 1}"]`) as HTMLInputElement;
+            const prevInput = document.querySelector(
+              `[data-testid="input-transfer-quantity-${rowIndex - 1}"]`,
+            ) as HTMLInputElement;
             if (prevInput) {
               prevInput.focus();
               prevInput.select();
@@ -3523,7 +4011,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         e.preventDefault();
         if (rowIndex < transferFields.length - 1) {
           setTimeout(() => {
-            const nextInput = document.querySelector(`[data-testid="input-transfer-quantity-${rowIndex + 1}"]`) as HTMLInputElement;
+            const nextInput = document.querySelector(
+              `[data-testid="input-transfer-quantity-${rowIndex + 1}"]`,
+            ) as HTMLInputElement;
             if (nextInput) {
               nextInput.focus();
               nextInput.select();
@@ -3534,7 +4024,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         setTimeout(() => {
-          const stockItemInput = document.querySelector(`[data-testid="input-stock-item-${rowIndex}"]`) as HTMLInputElement;
+          const stockItemInput = document.querySelector(
+            `[data-testid="input-stock-item-${rowIndex}"]`,
+          ) as HTMLInputElement;
           if (stockItemInput) {
             stockItemInput.focus();
             stockItemInput.select();
@@ -3544,7 +4036,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
         setTimeout(() => {
-          const rateInput = document.querySelector(`[data-testid="input-transfer-rate-${rowIndex}"]`) as HTMLInputElement;
+          const rateInput = document.querySelector(
+            `[data-testid="input-transfer-rate-${rowIndex}"]`,
+          ) as HTMLInputElement;
           if (rateInput) {
             rateInput.focus();
             rateInput.select();
@@ -3554,7 +4048,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       } else if (e.key === "Tab" && !e.shiftKey) {
         e.preventDefault();
         setTimeout(() => {
-          const rateInput = document.querySelector(`[data-testid="input-transfer-rate-${rowIndex}"]`) as HTMLInputElement;
+          const rateInput = document.querySelector(
+            `[data-testid="input-transfer-rate-${rowIndex}"]`,
+          ) as HTMLInputElement;
           if (rateInput) {
             rateInput.focus();
             rateInput.select();
@@ -3563,14 +4059,16 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         return;
       }
     }
-    
+
     // Arrow key navigation for rate field
     if (fieldName === "rate") {
       if (e.key === "ArrowUp") {
         e.preventDefault();
         if (rowIndex > 0) {
           setTimeout(() => {
-            const prevInput = document.querySelector(`[data-testid="input-transfer-rate-${rowIndex - 1}"]`) as HTMLInputElement;
+            const prevInput = document.querySelector(
+              `[data-testid="input-transfer-rate-${rowIndex - 1}"]`,
+            ) as HTMLInputElement;
             if (prevInput) {
               prevInput.focus();
               prevInput.select();
@@ -3582,7 +4080,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         e.preventDefault();
         if (rowIndex < transferFields.length - 1) {
           setTimeout(() => {
-            const nextInput = document.querySelector(`[data-testid="input-transfer-rate-${rowIndex + 1}"]`) as HTMLInputElement;
+            const nextInput = document.querySelector(
+              `[data-testid="input-transfer-rate-${rowIndex + 1}"]`,
+            ) as HTMLInputElement;
             if (nextInput) {
               nextInput.focus();
               nextInput.select();
@@ -3593,7 +4093,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         setTimeout(() => {
-          const quantityInput = document.querySelector(`[data-testid="input-transfer-quantity-${rowIndex}"]`) as HTMLInputElement;
+          const quantityInput = document.querySelector(
+            `[data-testid="input-transfer-quantity-${rowIndex}"]`,
+          ) as HTMLInputElement;
           if (quantityInput) {
             quantityInput.focus();
             quantityInput.select();
@@ -3604,7 +4106,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         e.preventDefault();
         if (rowIndex < transferFields.length - 1) {
           setTimeout(() => {
-            const nextSourceInput = document.querySelector(`[data-testid="input-source-location-${rowIndex + 1}"]`) as HTMLInputElement;
+            const nextSourceInput = document.querySelector(
+              `[data-testid="input-source-location-${rowIndex + 1}"]`,
+            ) as HTMLInputElement;
             if (nextSourceInput) {
               nextSourceInput.focus();
               nextSourceInput.select();
@@ -3627,7 +4131,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           });
         }
         setTimeout(() => {
-          const nextRowInput = document.querySelector(`[data-testid="input-source-location-${rowIndex + 1}"]`) as HTMLInputElement;
+          const nextRowInput = document.querySelector(
+            `[data-testid="input-source-location-${rowIndex + 1}"]`,
+          ) as HTMLInputElement;
           if (nextRowInput) {
             nextRowInput.focus();
             nextRowInput.select();
@@ -3649,7 +4155,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           });
         }
         setTimeout(() => {
-          const nextRowInput = document.querySelector(`[data-testid="input-source-location-${rowIndex + 1}"]`) as HTMLInputElement;
+          const nextRowInput = document.querySelector(
+            `[data-testid="input-source-location-${rowIndex + 1}"]`,
+          ) as HTMLInputElement;
           if (nextRowInput) {
             nextRowInput.focus();
             nextRowInput.select();
@@ -3664,24 +4172,28 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const handleAdjustmentKeyDown = (
     e: React.KeyboardEvent,
     rowIndex: number,
-    fieldName: "type" | "stockItem" | "quantity" | "rate"
+    fieldName: "type" | "stockItem" | "quantity" | "rate",
   ) => {
     const isLastRow = rowIndex === adjustmentFields.length - 1;
-    
+
     // Handle Tab for navigation
     if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
-      
+
       if (fieldName === "type") {
         setTimeout(() => {
-          const stockItemButton = document.querySelector(`[data-testid="button-adjustment-stock-${rowIndex}"]`) as HTMLButtonElement;
+          const stockItemButton = document.querySelector(
+            `[data-testid="button-adjustment-stock-${rowIndex}"]`,
+          ) as HTMLButtonElement;
           if (stockItemButton) {
             stockItemButton.focus();
           }
         }, 50);
       } else if (fieldName === "stockItem") {
         setTimeout(() => {
-          const quantityInput = document.querySelector(`[data-testid="input-adjustment-quantity-${rowIndex}"]`) as HTMLInputElement;
+          const quantityInput = document.querySelector(
+            `[data-testid="input-adjustment-quantity-${rowIndex}"]`,
+          ) as HTMLInputElement;
           if (quantityInput) {
             quantityInput.focus();
             quantityInput.select();
@@ -3689,7 +4201,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         }, 50);
       } else if (fieldName === "quantity") {
         setTimeout(() => {
-          const rateInput = document.querySelector(`[data-testid="input-adjustment-rate-${rowIndex}"]`) as HTMLInputElement;
+          const rateInput = document.querySelector(
+            `[data-testid="input-adjustment-rate-${rowIndex}"]`,
+          ) as HTMLInputElement;
           if (rateInput) {
             rateInput.focus();
             rateInput.select();
@@ -3697,7 +4211,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         }, 50);
       }
     }
-    
+
     // Handle Enter on Rate - create new row and focus Type of new row
     if (fieldName === "rate" && e.key === "Enter") {
       e.preventDefault();
@@ -3712,7 +4226,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         });
       }
       setTimeout(() => {
-        const newRowSelect = document.querySelector(`[data-testid="select-adjustment-type-${rowIndex + 1}"]`) as HTMLButtonElement;
+        const newRowSelect = document.querySelector(
+          `[data-testid="select-adjustment-type-${rowIndex + 1}"]`,
+        ) as HTMLButtonElement;
         if (newRowSelect) {
           newRowSelect.focus();
         }
@@ -3722,9 +4238,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <PageHeader 
-        title={isPOS ? "Stock Transfer" : "Vouchers"}
-        subtitle={isPOS ? "Transfer stock between locations" : "Create payment and receipt vouchers"}
+      <PageHeader
+        title={isPOS ? "Stock Transfer" : "Transactions"}
+        subtitle={
+          isPOS ? "Transfer stock between locations" : "Record payments and stock movements."
+        }
       />
 
       {/* Hidden print template */}
@@ -3748,25 +4266,27 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       {/* Mobile horizontal tab bar — visible on small screens only */}
       {!isPOS && (
         <div className="sm:hidden flex overflow-x-auto gap-1 pb-1 -mx-1 px-1">
-          {sidebarGroups.flatMap((g) => g.items).map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.key;
-            return (
-              <button
-                key={item.key}
-                onClick={() => setActiveTab(item.key as typeof activeTab)}
-                data-testid={`tab-mobile-${item.key}`}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md whitespace-nowrap flex-shrink-0 transition-colors ${
-                  isActive
-                    ? "bg-background shadow-sm font-medium"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {item.label}
-              </button>
-            );
-          })}
+          {sidebarGroups
+            .flatMap((g) => g.items)
+            .map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setActiveTab(item.key as typeof activeTab)}
+                  data-testid={`tab-mobile-${item.key}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md whitespace-nowrap flex-shrink-0 transition-colors ${
+                    isActive
+                      ? "bg-background shadow-sm font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {item.label}
+                </button>
+              );
+            })}
         </div>
       )}
 
@@ -3805,1128 +4325,1395 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         )}
 
         <div className="flex-1 min-w-0">
-        {!isPOS && activeTab === "payment" && (
-          <div className="space-y-4">
-            {/* Exchange Rate Input for multi-currency transactions */}
-            {selectedCurrency === "CFA" && (
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 bg-muted/30 rounded-md">
-                <span className="text-sm text-muted-foreground">Transaction Rate:</span>
-                <ExchangeRateInput
-                  value={transactionRate}
-                  onChange={setTransactionRate}
-                  selectedCurrency={selectedCurrency}
-                />
-              </div>
-            )}
-            <PaymentVoucherTab
-              form={form}
-              fieldArray={fieldArray}
-              entries={entries}
-              total={total}
-              paymentAccountId={paymentAccountId}
-              paymentAccountType={paymentAccountType}
-              paymentAccountName={paymentAccountName}
-              accountBalance={accountBalance}
-              allAccounts={allAccounts}
-              sidebarAccounts={sidebarAccounts}
-              isEditMode={!!voucherIdToEdit}
-              filteredSidebarAccounts={filteredSidebarAccounts}
-              sidebarSearchValue={sidebarSearchValue}
-              setSidebarSearchValue={setSidebarSearchValue}
-              sidebarHighlightedIndex={sidebarHighlightedIndex}
-              setSidebarHighlightedIndex={setSidebarHighlightedIndex}
-              selectedAccountId={selectedAccountId}
-              selectedAccountType={selectedAccountType}
-              handleSidebarAccountSelect={handleSidebarAccountSelect}
-              handleAmountCommit={handleAmountCommit}
-              handlePrint={handlePrint}
-              handleExportVoucher={handleExportVoucher}
-              onSubmit={onSubmit}
-              activeTab="payment"
-              activeRowIndex={activeRowIndex}
-              setActiveRowIndex={setActiveRowIndex}
-              onCreateAccount={() => handleOpenCreateAccountModal("payment", activeRowIndex ?? undefined)}
-              isFactoryCompany={isFactoryCompany}
-              onAutoCreateAccount={handleAutoCreateAccount}
-              isAutoCreating={isAutoCreating}
-            />
-          </div>
-        )}
-
-        {!isPOS && activeTab === "receipt" && (
-          <div className="space-y-4">
-            {/* Exchange Rate Input for multi-currency transactions */}
-            {selectedCurrency === "CFA" && (
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 bg-muted/30 rounded-md">
-                <span className="text-sm text-muted-foreground">Transaction Rate:</span>
-                <ExchangeRateInput
-                  value={transactionRate}
-                  onChange={setTransactionRate}
-                  selectedCurrency={selectedCurrency}
-                />
-              </div>
-            )}
-            <ReceiptVoucherTab
-              form={form}
-              fieldArray={fieldArray}
-              entries={entries}
-              total={total}
-              paymentAccountId={paymentAccountId}
-              paymentAccountType={paymentAccountType}
-              paymentAccountName={paymentAccountName}
-              accountBalance={accountBalance}
-              allAccounts={allAccounts}
-              sidebarAccounts={sidebarAccounts}
-              isEditMode={!!voucherIdToEdit}
-              filteredSidebarAccounts={filteredSidebarAccounts}
-              sidebarSearchValue={sidebarSearchValue}
-              setSidebarSearchValue={setSidebarSearchValue}
-              sidebarHighlightedIndex={sidebarHighlightedIndex}
-              setSidebarHighlightedIndex={setSidebarHighlightedIndex}
-              selectedAccountId={selectedAccountId}
-              selectedAccountType={selectedAccountType}
-              handleSidebarAccountSelect={handleSidebarAccountSelect}
-              handleAmountCommit={handleAmountCommit}
-              handlePrint={handlePrint}
-              handleExportVoucher={handleExportVoucher}
-              onSubmit={onSubmit}
-              activeTab="receipt"
-              activeRowIndex={activeRowIndex}
-              setActiveRowIndex={setActiveRowIndex}
-              onCreateAccount={() => handleOpenCreateAccountModal("receipt", activeRowIndex ?? undefined)}
-              isFactoryCompany={isFactoryCompany}
-              onAutoCreateAccount={handleAutoCreateAccount}
-              isAutoCreating={isAutoCreating}
-            />
-          </div>
-        )}
-
-        {/* Journal Voucher Tab */}
-        {!isPOS && activeTab === "journal" && (
-          <div className="space-y-4">
-            {/* Exchange Rate Input for multi-currency transactions */}
-            {selectedCurrency === "CFA" && (
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 bg-muted/30 rounded-md">
-                <span className="text-sm text-muted-foreground">Transaction Rate:</span>
-                <ExchangeRateInput
-                  value={transactionRate}
-                  onChange={setTransactionRate}
-                  selectedCurrency={selectedCurrency}
-                />
-              </div>
-            )}
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Left Panel - Form */}
-              <Card className="flex-1 min-w-0">
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="text-base sm:text-lg">Journal Voucher</CardTitle>
-                </CardHeader>
-                <CardContent>
-                <Form {...journalForm}>
-                  <form onSubmit={journalForm.handleSubmit(onJournalSubmit)} className="space-y-6">
-                    {/* Header section */}
-                    <div className="flex flex-col sm:flex-row items-start sm:justify-end gap-4">
-                    <FormField
-                      control={journalForm.control}
-                      name="voucherDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              value={field.value instanceof Date ? format(field.value, "yyyy-MM-dd") : (typeof field.value === "string" ? field.value : "")}
-                              onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value + "T00:00:00") : new Date())}
-                              className="w-full sm:w-[200px]"
-                              data-testid="input-journal-date"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* Spreadsheet table */}
-                  <div className="border rounded-md overflow-hidden overflow-x-auto">
-                    <table className="w-full min-w-[500px]">
-                      <thead className="bg-muted/50 sticky top-0 z-10">
-                        <tr>
-                          <th className="text-left p-3 font-medium w-[10%]">DR/CR</th>
-                          <th className="text-left p-3 font-medium w-[50%]">Account</th>
-                          <th className="text-right p-3 font-medium w-[25%]">Amount</th>
-                          <th className="w-[10%]"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {journalFields.map((field, index) => (
-                          <tr key={field.id} className="border-t">
-                            <td className="p-2">
-                              <FormField
-                                control={journalForm.control}
-                                name={`entries.${index}.type`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <Select
-                                      value={field.value}
-                                      onValueChange={(value: "DR" | "CR") => handleJournalTypeChange(index, value)}
-                                    >
-                                      <FormControl>
-                                        <SelectTrigger 
-                                          className="w-20 text-center font-medium"
-                                          data-testid={`input-journal-type-${index}`}
-                                          onKeyDown={(e) => {
-                                            if (e.key === "Tab" && !e.shiftKey) {
-                                              e.preventDefault();
-                                              setTimeout(() => {
-                                                const accountInput = document.querySelector(`[data-testid="input-journal-account-${index}"]`) as HTMLInputElement;
-                                                if (accountInput) accountInput.focus();
-                                              }, 50);
-                                            } else if (e.key === "ArrowRight") {
-                                              e.preventDefault();
-                                              setTimeout(() => {
-                                                const accountInput = document.querySelector(`[data-testid="input-journal-account-${index}"]`) as HTMLInputElement;
-                                                if (accountInput) accountInput.focus();
-                                              }, 50);
-                                            } else if (e.key === "ArrowLeft") {
-                                              e.preventDefault();
-                                              setTimeout(() => {
-                                                const amountInput = document.querySelector(`[data-testid="input-journal-amount-${index}"]`) as HTMLInputElement;
-                                                if (amountInput) {
-                                                  amountInput.focus();
-                                                  amountInput.select();
-                                                }
-                                              }, 50);
-                                            } else if (e.key === "ArrowUp" && index > 0) {
-                                              e.preventDefault();
-                                              setTimeout(() => {
-                                                const prevTypeInput = document.querySelector(`[data-testid="input-journal-type-${index - 1}"]`) as HTMLElement;
-                                                if (prevTypeInput) prevTypeInput.focus();
-                                              }, 50);
-                                            } else if (e.key === "ArrowDown" && index < journalFields.length - 1) {
-                                              e.preventDefault();
-                                              setTimeout(() => {
-                                                const nextTypeInput = document.querySelector(`[data-testid="input-journal-type-${index + 1}"]`) as HTMLElement;
-                                                if (nextTypeInput) nextTypeInput.focus();
-                                              }, 50);
-                                            }
-                                          }}
-                                        >
-                                          <SelectValue placeholder="DR" />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        <SelectItem value="DR">DR</SelectItem>
-                                        <SelectItem value="CR">CR</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </td>
-                            <td className="p-2">
-                              <FormField
-                                control={journalForm.control}
-                                name={`entries.${index}.accountId`}
-                                render={({ field }) => {
-                                  const entry = journalEntries[index];
-                                  const currentBalance = entry?.accountId > 0 
-                                    ? getAccountBalance(entry.accountType, entry.accountId) 
-                                    : 0;
-                                  const entryAmount = parseFloat(entry?.amount || "0");
-                                  const isDebit = entry?.type === "DR";
-                                  // In the signed balance system: positive = Dr, negative = Cr
-                                  // DR always adds to balance, CR always subtracts — same for all account types
-                                  const projectedBalance = isDebit 
-                                    ? currentBalance + entryAmount 
-                                    : currentBalance - entryAmount;
-                                  const displayBalance = projectedBalance;
-                                    
-                                  return (
-                                    <FormItem>
-                                      <FormControl>
-                                        <div className="space-y-1">
-                                          <Input
-                                            value={activeJournalRow === index ? journalAccountSearchTerm : (entry?.accountName || "")}
-                                            onChange={(e) => {
-                                              setJournalAccountSearchTerm(e.target.value);
-                                              setJournalAccountHighlightedIndex(0);
-                                            }}
-                                            onFocus={() => {
-                                              setActiveJournalRow(index);
-                                              setShowAccountSidebar(true);
-                                              setJournalAccountSearchTerm("");
-                                            }}
-                                            onBlur={() => {
-                                              setTimeout(() => {
-                                                if (activeJournalRow === index) {
-                                                  setJournalAccountSearchTerm("");
-                                                  setActiveJournalRow(null);
-                                                }
-                                              }, 200);
-                                            }}
-                                            placeholder="Type to search..."
-                                            data-testid={`input-journal-account-${index}`}
-                                            onKeyDown={(e) => {
-                                              // If sidebar is open, use arrow keys to navigate accounts
-                                              if (showAccountSidebar) {
-                                                if (e.key === "ArrowUp") {
-                                                  e.preventDefault();
-                                                  setJournalAccountHighlightedIndex(prev => 
-                                                    prev > 0 ? prev - 1 : Math.max(0, filteredJournalAccounts.length - 1)
-                                                  );
-                                                  // Scroll highlighted item into view
-                                                  setTimeout(() => {
-                                                    const button = document.querySelector(`[data-testid="journal-account-option-${Math.max(0, journalAccountHighlightedIndex - 1)}"]`) as HTMLElement;
-                                                    if (button) button.scrollIntoView({ block: "nearest" });
-                                                  }, 0);
-                                                } else if (e.key === "ArrowDown") {
-                                                  e.preventDefault();
-                                                  setJournalAccountHighlightedIndex(prev => 
-                                                    prev < filteredJournalAccounts.length - 1 ? prev + 1 : 0
-                                                  );
-                                                  // Scroll highlighted item into view
-                                                  setTimeout(() => {
-                                                    const button = document.querySelector(`[data-testid="journal-account-option-${Math.min(journalAccountHighlightedIndex + 1, filteredJournalAccounts.length - 1)}"]`) as HTMLElement;
-                                                    if (button) button.scrollIntoView({ block: "nearest" });
-                                                  }, 0);
-                                                } else if (e.key === "Enter") {
-                                                  e.preventDefault();
-                                                  e.stopPropagation();
-                                                  const selectedAccount = filteredJournalAccounts[journalAccountHighlightedIndex];
-                                                  if (selectedAccount) {
-                                                    handleJournalAccountSelect(selectedAccount);
-                                                    setShowAccountSidebar(false);
-                                                  }
-                                                }
-                                                return;
-                                              }
-
-                                              // Normal row navigation when sidebar is not open
-                                              if (e.key === "Tab" && !e.shiftKey) {
-                                                e.preventDefault();
-                                                setTimeout(() => {
-                                                  const amountInput = document.querySelector(`[data-testid="input-journal-amount-${index}"]`) as HTMLInputElement;
-                                                  if (amountInput) {
-                                                    amountInput.focus();
-                                                    amountInput.select();
-                                                  }
-                                                }, 50);
-                                              } else if (e.key === "ArrowUp" && index > 0) {
-                                                e.preventDefault();
-                                                setTimeout(() => {
-                                                  const prevInput = document.querySelector(`[data-testid="input-journal-account-${index - 1}"]`) as HTMLInputElement;
-                                                  if (prevInput) prevInput.focus();
-                                                }, 50);
-                                              } else if (e.key === "ArrowDown" && index < journalFields.length - 1) {
-                                                e.preventDefault();
-                                                setTimeout(() => {
-                                                  const nextInput = document.querySelector(`[data-testid="input-journal-account-${index + 1}"]`) as HTMLInputElement;
-                                                  if (nextInput) nextInput.focus();
-                                                }, 50);
-                                              } else if (e.key === "ArrowRight") {
-                                                e.preventDefault();
-                                                setTimeout(() => {
-                                                  const amountInput = document.querySelector(`[data-testid="input-journal-amount-${index}"]`) as HTMLInputElement;
-                                                  if (amountInput) {
-                                                    amountInput.focus();
-                                                    amountInput.select();
-                                                  }
-                                                }, 50);
-                                              } else if (e.key === "ArrowLeft") {
-                                                e.preventDefault();
-                                                setTimeout(() => {
-                                                  const typeInput = document.querySelector(`[data-testid="input-journal-type-${index}"]`) as HTMLElement;
-                                                  if (typeInput) typeInput.focus();
-                                                }, 50);
-                                              }
-                                            }}
-                                          />
-                                          {entry?.accountId > 0 && (
-                                            <div className="text-xs text-muted-foreground pl-1">
-                                              <span>New Bal: <span className={cn("font-mono", displayBalance >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                                                {formatAmount(Math.abs(displayBalance))} {displayBalance >= 0 ? "Dr" : "Cr"}
-                                              </span></span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  );
-                                }}
-                              />
-                            </td>
-                            <td className="p-2">
-                              <FormField
-                                control={journalForm.control}
-                                name={`entries.${index}.amount`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input
-                                        {...field}
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder="0.00"
-                                        className="font-mono text-right"
-                                        data-testid={`input-journal-amount-${index}`}
-                                        onKeyDown={(e) => handleJournalKeyDown(e, index, "amount")}
-                                        onBlur={(e) => {
-                                          const enteredAmount = Number(e.target.value);
-                                          if (!isNaN(enteredAmount) && enteredAmount > 0 && selectedCurrency !== "USD") {
-                                            const usdAmount = convertToUSD(enteredAmount);
-                                            journalForm.setValue(`entries.${index}.amount`, usdAmount.toFixed(2));
-                                          }
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </td>
-                            <td className="p-2">
-                              {journalFields.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeJournal(index)}
-                                  data-testid={`button-journal-remove-${index}`}
-                                >
-                                  ×
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="bg-muted/30 border-t-2">
-                        <tr>
-                          <td className="p-3">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                appendJournal({
-                                  type: "DR",
-                                  accountType: "ledger",
-                                  accountId: 0,
-                                  accountName: "",
-                                  amount: "",
-                                })
-                              }
-                              data-testid="button-journal-add-row"
-                            >
-                              <Plus className="h-4 w-4 mr-2" />
-                              Add Row
-                            </Button>
-                          </td>
-                          <td className="p-3 text-right text-sm text-muted-foreground">
-                            DR: {formatAmount(totalDebit)} | CR: {formatAmount(totalCredit)}
-                          </td>
-                          <td className="p-3">
-                            <div className="text-right font-bold font-mono">
-                              {formatAmount(Math.max(totalDebit, totalCredit))}
-                            </div>
-                          </td>
-                          <td></td>
-                        </tr>
-                        {Math.abs(totalDebit - totalCredit) > 0.01 && (
-                          <tr>
-                            <td colSpan={4} className="p-3">
-                              <div className="text-center text-sm text-destructive">
-                                ⚠️ Debits and Credits must be equal. Difference: {formatAmount(Math.abs(totalDebit - totalCredit))}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </tfoot>
-                    </table>
-                  </div>
-
-                  {/* Notes field */}
-                  <FormField
-                    control={journalForm.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Notes</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Additional notes..."
-                            rows={3}
-                            data-testid="input-journal-notes"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+          {!isPOS && activeTab === "payment" && (
+            <div className="space-y-4">
+              {/* Exchange Rate Input for multi-currency transactions */}
+              {selectedCurrency === "CFA" && (
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 bg-muted/30 rounded-md">
+                  <span className="text-sm text-muted-foreground">Transaction Rate:</span>
+                  <ExchangeRateInput
+                    value={transactionRate}
+                    onChange={setTransactionRate}
+                    selectedCurrency={selectedCurrency}
                   />
+                </div>
+              )}
+              <PaymentVoucherTab
+                form={form}
+                fieldArray={fieldArray}
+                entries={entries}
+                total={total}
+                paymentAccountId={paymentAccountId}
+                paymentAccountType={paymentAccountType}
+                paymentAccountName={paymentAccountName}
+                accountBalance={accountBalance}
+                allAccounts={allAccounts}
+                sidebarAccounts={finalSidebarAccounts}
+                isEditMode={!!voucherIdToEdit}
+                originalTotal={originalPaymentTotal}
+                sidebarIsLoading={sidebarAccountsQuery.isLoading}
+                sidebarIsError={sidebarAccountsQuery.isError}
+                sidebarErrorMessage={(sidebarAccountsQuery.error as Error)?.message}
+                sidebarOnRetry={() => sidebarAccountsQuery.refetch()}
+                sidebarUsingFallback={usingFallback}
+                filteredSidebarAccounts={filteredSidebarAccounts}
+                sidebarSearchValue={sidebarSearchValue}
+                setSidebarSearchValue={setSidebarSearchValue}
+                sidebarHighlightedIndex={sidebarHighlightedIndex}
+                setSidebarHighlightedIndex={setSidebarHighlightedIndex}
+                selectedAccountId={selectedAccountId}
+                selectedAccountType={selectedAccountType}
+                handleSidebarAccountSelect={handleSidebarAccountSelect}
+                handleAmountCommit={handleAmountCommit}
+                handlePrint={handlePrint}
+                handleExportVoucher={handleExportVoucher}
+                onSubmit={onSubmit}
+                activeTab="payment"
+                activeRowIndex={activeRowIndex}
+                setActiveRowIndex={setActiveRowIndex}
+                onCreateAccount={() =>
+                  handleOpenCreateAccountModal("payment", activeRowIndex ?? undefined)
+                }
+                isFactoryCompany={isFactoryCompany}
+                onAutoCreateAccount={handleAutoCreateAccount}
+                isAutoCreating={isAutoCreating}
+              />
+            </div>
+          )}
 
-                  {/* Optional checkbox */}
-                  <FormField
-                    control={journalForm.control}
-                    name="optional"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="checkbox-journal-optional"
+          {!isPOS && activeTab === "receipt" && (
+            <div className="space-y-4">
+              {/* Exchange Rate Input for multi-currency transactions */}
+              {selectedCurrency === "CFA" && (
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 bg-muted/30 rounded-md">
+                  <span className="text-sm text-muted-foreground">Transaction Rate:</span>
+                  <ExchangeRateInput
+                    value={transactionRate}
+                    onChange={setTransactionRate}
+                    selectedCurrency={selectedCurrency}
+                  />
+                </div>
+              )}
+              <ReceiptVoucherTab
+                form={form}
+                fieldArray={fieldArray}
+                entries={entries}
+                total={total}
+                paymentAccountId={paymentAccountId}
+                paymentAccountType={paymentAccountType}
+                paymentAccountName={paymentAccountName}
+                accountBalance={accountBalance}
+                allAccounts={allAccounts}
+                sidebarAccounts={finalSidebarAccounts}
+                isEditMode={!!voucherIdToEdit}
+                filteredSidebarAccounts={filteredSidebarAccounts}
+                sidebarSearchValue={sidebarSearchValue}
+                setSidebarSearchValue={setSidebarSearchValue}
+                sidebarHighlightedIndex={sidebarHighlightedIndex}
+                setSidebarHighlightedIndex={setSidebarHighlightedIndex}
+                selectedAccountId={selectedAccountId}
+                selectedAccountType={selectedAccountType}
+                handleSidebarAccountSelect={handleSidebarAccountSelect}
+                handleAmountCommit={handleAmountCommit}
+                handlePrint={handlePrint}
+                handleExportVoucher={handleExportVoucher}
+                onSubmit={onSubmit}
+                activeTab="receipt"
+                activeRowIndex={activeRowIndex}
+                setActiveRowIndex={setActiveRowIndex}
+                onCreateAccount={() =>
+                  handleOpenCreateAccountModal("receipt", activeRowIndex ?? undefined)
+                }
+                isFactoryCompany={isFactoryCompany}
+                onAutoCreateAccount={handleAutoCreateAccount}
+                isAutoCreating={isAutoCreating}
+              />
+            </div>
+          )}
+
+          {/* Journal Voucher Tab */}
+          {!isPOS && activeTab === "journal" && (
+            <div className="space-y-4">
+              {/* Exchange Rate Input for multi-currency transactions */}
+              {selectedCurrency === "CFA" && (
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 bg-muted/30 rounded-md">
+                  <span className="text-sm text-muted-foreground">Transaction Rate:</span>
+                  <ExchangeRateInput
+                    value={transactionRate}
+                    onChange={setTransactionRate}
+                    selectedCurrency={selectedCurrency}
+                  />
+                </div>
+              )}
+              <div className="flex flex-col lg:flex-row gap-4">
+                {/* Left Panel - Form */}
+                <Card className="flex-1 min-w-0">
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="text-base sm:text-lg">Journal Voucher</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Form {...journalForm}>
+                      <form
+                        onSubmit={journalForm.handleSubmit(onJournalSubmit)}
+                        className="space-y-6"
+                      >
+                        {/* Header section */}
+                        <div className="flex flex-col sm:flex-row items-start sm:justify-end gap-4">
+                          <FormField
+                            control={journalForm.control}
+                            name="voucherDate"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Date</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="date"
+                                    value={
+                                      field.value instanceof Date
+                                        ? format(field.value, "yyyy-MM-dd")
+                                        : typeof field.value === "string"
+                                          ? field.value
+                                          : ""
+                                    }
+                                    onChange={(e) =>
+                                      field.onChange(
+                                        e.target.value
+                                          ? new Date(e.target.value + "T00:00:00")
+                                          : new Date(),
+                                      )
+                                    }
+                                    className="w-full sm:w-[200px]"
+                                    data-testid="input-journal-date"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Mark as Optional
-                          </FormLabel>
                         </div>
-                      </FormItem>
-                    )}
-                  />
 
-                    {/* Submit and Export buttons */}
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        {/* Spreadsheet table */}
+                        <div className="border rounded-md overflow-hidden overflow-x-auto">
+                          <table className="w-full min-w-[500px]">
+                            <thead className="bg-muted/50 sticky top-0 z-10">
+                              <tr>
+                                <th className="text-left p-3 font-medium w-[10%]">DR/CR</th>
+                                <th className="text-left p-3 font-medium w-[50%]">Account</th>
+                                <th className="text-right p-3 font-medium w-[25%]">Amount</th>
+                                <th className="w-[10%]"></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {journalFields.map((field, index) => (
+                                <tr key={field.id} className="border-t">
+                                  <td className="p-2">
+                                    <FormField
+                                      control={journalForm.control}
+                                      name={`entries.${index}.type`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <Select
+                                            value={field.value}
+                                            onValueChange={(value: "DR" | "CR") =>
+                                              handleJournalTypeChange(index, value)
+                                            }
+                                          >
+                                            <FormControl>
+                                              <SelectTrigger
+                                                className="w-20 text-center font-medium"
+                                                data-testid={`input-journal-type-${index}`}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === "Tab" && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    setTimeout(() => {
+                                                      const accountInput = document.querySelector(
+                                                        `[data-testid="input-journal-account-${index}"]`,
+                                                      ) as HTMLInputElement;
+                                                      if (accountInput) accountInput.focus();
+                                                    }, 50);
+                                                  } else if (e.key === "ArrowRight") {
+                                                    e.preventDefault();
+                                                    setTimeout(() => {
+                                                      const accountInput = document.querySelector(
+                                                        `[data-testid="input-journal-account-${index}"]`,
+                                                      ) as HTMLInputElement;
+                                                      if (accountInput) accountInput.focus();
+                                                    }, 50);
+                                                  } else if (e.key === "ArrowLeft") {
+                                                    e.preventDefault();
+                                                    setTimeout(() => {
+                                                      const amountInput = document.querySelector(
+                                                        `[data-testid="input-journal-amount-${index}"]`,
+                                                      ) as HTMLInputElement;
+                                                      if (amountInput) {
+                                                        amountInput.focus();
+                                                        amountInput.select();
+                                                      }
+                                                    }, 50);
+                                                  } else if (e.key === "ArrowUp" && index > 0) {
+                                                    e.preventDefault();
+                                                    setTimeout(() => {
+                                                      const prevTypeInput = document.querySelector(
+                                                        `[data-testid="input-journal-type-${index - 1}"]`,
+                                                      ) as HTMLElement;
+                                                      if (prevTypeInput) prevTypeInput.focus();
+                                                    }, 50);
+                                                  } else if (
+                                                    e.key === "ArrowDown" &&
+                                                    index < journalFields.length - 1
+                                                  ) {
+                                                    e.preventDefault();
+                                                    setTimeout(() => {
+                                                      const nextTypeInput = document.querySelector(
+                                                        `[data-testid="input-journal-type-${index + 1}"]`,
+                                                      ) as HTMLElement;
+                                                      if (nextTypeInput) nextTypeInput.focus();
+                                                    }, 50);
+                                                  }
+                                                }}
+                                              >
+                                                <SelectValue placeholder="DR" />
+                                              </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                              <SelectItem value="DR">DR</SelectItem>
+                                              <SelectItem value="CR">CR</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <FormField
+                                      control={journalForm.control}
+                                      name={`entries.${index}.accountId`}
+                                      render={({ field }) => {
+                                        const entry = journalEntries[index];
+                                        const currentBalance =
+                                          entry?.accountId > 0
+                                            ? getAccountBalance(entry.accountType, entry.accountId)
+                                            : 0;
+                                        const entryAmount = parseFloat(entry?.amount || "0");
+                                        const isDebit = entry?.type === "DR";
+                                        // In the signed balance system: positive = Dr, negative = Cr
+                                        // DR always adds to balance, CR always subtracts — same for all account types
+                                        const projectedBalance = isDebit
+                                          ? currentBalance + entryAmount
+                                          : currentBalance - entryAmount;
+                                        const displayBalance = projectedBalance;
+
+                                        return (
+                                          <FormItem>
+                                            <FormControl>
+                                              <div className="space-y-1">
+                                                <Input
+                                                  value={
+                                                    activeJournalRow === index
+                                                      ? journalAccountSearchTerm
+                                                      : entry?.accountName || ""
+                                                  }
+                                                  onChange={(e) => {
+                                                    setJournalAccountSearchTerm(e.target.value);
+                                                    setJournalAccountHighlightedIndex(0);
+                                                  }}
+                                                  onFocus={() => {
+                                                    setActiveJournalRow(index);
+                                                    setShowAccountSidebar(true);
+                                                    setJournalAccountSearchTerm("");
+                                                  }}
+                                                  onBlur={() => {
+                                                    setTimeout(() => {
+                                                      if (activeJournalRow === index) {
+                                                        setJournalAccountSearchTerm("");
+                                                        setActiveJournalRow(null);
+                                                      }
+                                                    }, 200);
+                                                  }}
+                                                  placeholder="Type to search..."
+                                                  data-testid={`input-journal-account-${index}`}
+                                                  onKeyDown={(e) => {
+                                                    // If sidebar is open, use arrow keys to navigate accounts
+                                                    if (showAccountSidebar) {
+                                                      if (e.key === "ArrowUp") {
+                                                        e.preventDefault();
+                                                        setJournalAccountHighlightedIndex((prev) =>
+                                                          prev > 0
+                                                            ? prev - 1
+                                                            : Math.max(
+                                                                0,
+                                                                filteredJournalAccounts.length - 1,
+                                                              ),
+                                                        );
+                                                        // Scroll highlighted item into view
+                                                        setTimeout(() => {
+                                                          const button = document.querySelector(
+                                                            `[data-testid="journal-account-option-${Math.max(0, journalAccountHighlightedIndex - 1)}"]`,
+                                                          ) as HTMLElement;
+                                                          if (button)
+                                                            button.scrollIntoView({
+                                                              block: "nearest",
+                                                            });
+                                                        }, 0);
+                                                      } else if (e.key === "ArrowDown") {
+                                                        e.preventDefault();
+                                                        setJournalAccountHighlightedIndex((prev) =>
+                                                          prev < filteredJournalAccounts.length - 1
+                                                            ? prev + 1
+                                                            : 0,
+                                                        );
+                                                        // Scroll highlighted item into view
+                                                        setTimeout(() => {
+                                                          const button = document.querySelector(
+                                                            `[data-testid="journal-account-option-${Math.min(journalAccountHighlightedIndex + 1, filteredJournalAccounts.length - 1)}"]`,
+                                                          ) as HTMLElement;
+                                                          if (button)
+                                                            button.scrollIntoView({
+                                                              block: "nearest",
+                                                            });
+                                                        }, 0);
+                                                      } else if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        const selectedAccount =
+                                                          filteredJournalAccounts[
+                                                            journalAccountHighlightedIndex
+                                                          ];
+                                                        if (selectedAccount) {
+                                                          handleJournalAccountSelect(
+                                                            selectedAccount,
+                                                          );
+                                                          setShowAccountSidebar(false);
+                                                        }
+                                                      }
+                                                      return;
+                                                    }
+
+                                                    // Normal row navigation when sidebar is not open
+                                                    if (e.key === "Tab" && !e.shiftKey) {
+                                                      e.preventDefault();
+                                                      setTimeout(() => {
+                                                        const amountInput = document.querySelector(
+                                                          `[data-testid="input-journal-amount-${index}"]`,
+                                                        ) as HTMLInputElement;
+                                                        if (amountInput) {
+                                                          amountInput.focus();
+                                                          amountInput.select();
+                                                        }
+                                                      }, 50);
+                                                    } else if (e.key === "ArrowUp" && index > 0) {
+                                                      e.preventDefault();
+                                                      setTimeout(() => {
+                                                        const prevInput = document.querySelector(
+                                                          `[data-testid="input-journal-account-${index - 1}"]`,
+                                                        ) as HTMLInputElement;
+                                                        if (prevInput) prevInput.focus();
+                                                      }, 50);
+                                                    } else if (
+                                                      e.key === "ArrowDown" &&
+                                                      index < journalFields.length - 1
+                                                    ) {
+                                                      e.preventDefault();
+                                                      setTimeout(() => {
+                                                        const nextInput = document.querySelector(
+                                                          `[data-testid="input-journal-account-${index + 1}"]`,
+                                                        ) as HTMLInputElement;
+                                                        if (nextInput) nextInput.focus();
+                                                      }, 50);
+                                                    } else if (e.key === "ArrowRight") {
+                                                      e.preventDefault();
+                                                      setTimeout(() => {
+                                                        const amountInput = document.querySelector(
+                                                          `[data-testid="input-journal-amount-${index}"]`,
+                                                        ) as HTMLInputElement;
+                                                        if (amountInput) {
+                                                          amountInput.focus();
+                                                          amountInput.select();
+                                                        }
+                                                      }, 50);
+                                                    } else if (e.key === "ArrowLeft") {
+                                                      e.preventDefault();
+                                                      setTimeout(() => {
+                                                        const typeInput = document.querySelector(
+                                                          `[data-testid="input-journal-type-${index}"]`,
+                                                        ) as HTMLElement;
+                                                        if (typeInput) typeInput.focus();
+                                                      }, 50);
+                                                    }
+                                                  }}
+                                                />
+                                                {entry?.accountId > 0 && (
+                                                  <div className="text-xs text-muted-foreground pl-1">
+                                                    <span>
+                                                      New Bal:{" "}
+                                                      <span
+                                                        className={cn(
+                                                          "font-mono",
+                                                          displayBalance >= 0
+                                                            ? "text-emerald-600 dark:text-emerald-400"
+                                                            : "text-red-600 dark:text-red-400",
+                                                        )}
+                                                      >
+                                                        {formatAmount(Math.abs(displayBalance))}{" "}
+                                                        {displayBalance >= 0 ? "Dr" : "Cr"}
+                                                      </span>
+                                                    </span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        );
+                                      }}
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    <FormField
+                                      control={journalForm.control}
+                                      name={`entries.${index}.amount`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              type="number"
+                                              step="0.01"
+                                              min="0"
+                                              placeholder="0.00"
+                                              className="font-mono text-right"
+                                              data-testid={`input-journal-amount-${index}`}
+                                              onKeyDown={(e) =>
+                                                handleJournalKeyDown(e, index, "amount")
+                                              }
+                                              onBlur={(e) => {
+                                                const enteredAmount = Number(e.target.value);
+                                                if (
+                                                  !isNaN(enteredAmount) &&
+                                                  enteredAmount > 0 &&
+                                                  selectedCurrency !== "USD"
+                                                ) {
+                                                  const usdAmount = convertToUSD(enteredAmount);
+                                                  journalForm.setValue(
+                                                    `entries.${index}.amount`,
+                                                    usdAmount.toFixed(2),
+                                                  );
+                                                }
+                                              }}
+                                            />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </td>
+                                  <td className="p-2">
+                                    {journalFields.length > 1 && (
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeJournal(index)}
+                                        data-testid={`button-journal-remove-${index}`}
+                                      >
+                                        ×
+                                      </Button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot className="bg-muted/30 border-t-2">
+                              <tr>
+                                <td className="p-3">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      appendJournal({
+                                        type: "DR",
+                                        accountType: "ledger",
+                                        accountId: 0,
+                                        accountName: "",
+                                        amount: "",
+                                      })
+                                    }
+                                    data-testid="button-journal-add-row"
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Row
+                                  </Button>
+                                </td>
+                                <td className="p-3 text-right text-sm text-muted-foreground">
+                                  DR: {formatAmount(totalDebit)} | CR: {formatAmount(totalCredit)}
+                                </td>
+                                <td className="p-3">
+                                  <div className="text-right font-bold font-mono">
+                                    {formatAmount(Math.max(totalDebit, totalCredit))}
+                                  </div>
+                                </td>
+                                <td></td>
+                              </tr>
+                              {Math.abs(totalDebit - totalCredit) > 0.01 && (
+                                <tr>
+                                  <td colSpan={4} className="p-3">
+                                    <div className="text-center text-sm text-destructive">
+                                      ⚠️ Debits and Credits must be equal. Difference:{" "}
+                                      {formatAmount(Math.abs(totalDebit - totalCredit))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </tfoot>
+                          </table>
+                        </div>
+
+                        {/* Notes field */}
+                        <FormField
+                          control={journalForm.control}
+                          name="notes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Notes</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder="Additional notes..."
+                                  rows={3}
+                                  data-testid="input-journal-notes"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Optional checkbox */}
+                        <FormField
+                          control={journalForm.control}
+                          name="optional"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  data-testid="checkbox-journal-optional"
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>Mark as Optional</FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Submit and Export buttons */}
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled={
+                                  journalEntries.filter(
+                                    (e) => e.accountId > 0 && parseFloat(e.amount) > 0,
+                                  ).length === 0
+                                }
+                                data-testid="button-export-journal-voucher"
+                              >
+                                <FileDown className="h-4 w-4 mr-2" />
+                                Export
+                                <ChevronDown className="h-4 w-4 ml-1" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleExportJournalVoucher(false)}
+                                data-testid="export-journal-summary"
+                              >
+                                Summary Export
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleExportJournalVoucher(true)}
+                                data-testid="export-journal-detailed"
+                              >
+                                Detailed Export
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <Button
+                            type="submit"
+                            disabled={
+                              journalMutation.isPending || Math.abs(totalDebit - totalCredit) > 0.01
+                            }
+                            data-testid="button-save-journal-voucher"
+                          >
+                            {journalMutation.isPending ? "Saving..." : "Save Journal Voucher"}
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </Card>
+
+                {/* Right Panel - Account Search Sidebar */}
+                {showAccountSidebar && (
+                  <Card className="w-full lg:w-80 flex flex-col lg:sticky lg:top-4 max-h-[60vh] lg:max-h-[calc(100vh-12rem)] self-start">
+                    <div className="p-4 border-b">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <h3 className="text-sm font-semibold">Search Accounts</h3>
+                        <div className="flex items-center gap-2">
                           <Button
                             type="button"
                             variant="outline"
-                            disabled={journalEntries.filter((e) => e.accountId > 0 && parseFloat(e.amount) > 0).length === 0}
-                            data-testid="button-export-journal-voucher"
+                            size="sm"
+                            onClick={() =>
+                              handleOpenCreateAccountModal("journal", activeJournalRow ?? undefined)
+                            }
+                            data-testid="button-journal-create-account"
                           >
-                            <FileDown className="h-4 w-4 mr-2" />
-                            Export
-                            <ChevronDown className="h-4 w-4 ml-1" />
+                            <Plus className="h-4 w-4 mr-1" />
+                            New
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleExportJournalVoucher(false)} data-testid="export-journal-summary">
-                            Summary Export
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleExportJournalVoucher(true)} data-testid="export-journal-detailed">
-                            Detailed Export
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Button
-                        type="submit"
-                        disabled={journalMutation.isPending || Math.abs(totalDebit - totalCredit) > 0.01}
-                        data-testid="button-save-journal-voucher"
-                      >
-                        {journalMutation.isPending ? "Saving..." : "Save Journal Voucher"}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-                </CardContent>
-              </Card>
-
-              {/* Right Panel - Account Search Sidebar */}
-              {showAccountSidebar && (
-                <Card className="w-full lg:w-80 flex flex-col lg:sticky lg:top-4 max-h-[60vh] lg:max-h-[calc(100vh-12rem)] self-start">
-                  <div className="p-4 border-b">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <h3 className="text-sm font-semibold">Search Accounts</h3>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenCreateAccountModal("journal", activeJournalRow ?? undefined)}
-                          data-testid="button-journal-create-account"
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          New
-                        </Button>
-                        <button 
-                          onClick={() => setShowAccountSidebar(false)} 
-                          className="text-xs text-muted-foreground hover:text-foreground" 
-                          data-testid="button-close-account-sidebar"
-                        >
-                          ✕
-                        </button>
+                          <button
+                            onClick={() => setShowAccountSidebar(false)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                            data-testid="button-close-account-sidebar"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                      <div className="relative">
+                        {isAutoCreating ? (
+                          <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+                        ) : (
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        )}
+                        <Input
+                          placeholder="Search by name or code..."
+                          value={journalAccountSearchTerm}
+                          onChange={(e) => {
+                            setJournalAccountSearchTerm(e.target.value);
+                            setJournalAccountHighlightedIndex(0);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "ArrowDown") {
+                              e.preventDefault();
+                              if (filteredJournalAccounts.length > 0) {
+                                setJournalAccountHighlightedIndex(
+                                  Math.min(
+                                    journalAccountHighlightedIndex + 1,
+                                    filteredJournalAccounts.length - 1,
+                                  ),
+                                );
+                              }
+                            } else if (e.key === "ArrowUp") {
+                              e.preventDefault();
+                              if (filteredJournalAccounts.length > 0) {
+                                setJournalAccountHighlightedIndex(
+                                  Math.max(journalAccountHighlightedIndex - 1, 0),
+                                );
+                              }
+                            } else if (e.key === "Enter") {
+                              if (
+                                filteredJournalAccounts.length > 0 &&
+                                journalAccountHighlightedIndex >= 0 &&
+                                journalAccountHighlightedIndex < filteredJournalAccounts.length
+                              ) {
+                                e.preventDefault();
+                                handleJournalAccountSelect(
+                                  filteredJournalAccounts[journalAccountHighlightedIndex],
+                                );
+                              }
+                            }
+                          }}
+                          className="pl-9"
+                          data-testid="input-journal-sidebar-search"
+                          disabled={isAutoCreating}
+                        />
                       </div>
                     </div>
-                    <div className="relative">
-                      {isAutoCreating ? (
-                        <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-                      ) : (
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      )}
-                      <Input
-                        placeholder="Search by name or code..."
-                        value={journalAccountSearchTerm}
-                        onChange={(e) => {
-                          setJournalAccountSearchTerm(e.target.value);
-                          setJournalAccountHighlightedIndex(0);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "ArrowDown") {
-                            e.preventDefault();
-                            if (filteredJournalAccounts.length > 0) {
-                              setJournalAccountHighlightedIndex(Math.min(journalAccountHighlightedIndex + 1, filteredJournalAccounts.length - 1));
-                            }
-                          } else if (e.key === "ArrowUp") {
-                            e.preventDefault();
-                            if (filteredJournalAccounts.length > 0) {
-                              setJournalAccountHighlightedIndex(Math.max(journalAccountHighlightedIndex - 1, 0));
-                            }
-                          } else if (e.key === "Enter") {
-                            if (filteredJournalAccounts.length > 0 && journalAccountHighlightedIndex >= 0 && journalAccountHighlightedIndex < filteredJournalAccounts.length) {
-                              e.preventDefault();
-                              handleJournalAccountSelect(filteredJournalAccounts[journalAccountHighlightedIndex]);
-                            }
-                          }
-                        }}
-                        className="pl-9"
-                        data-testid="input-journal-sidebar-search"
-                        disabled={isAutoCreating}
-                      />
+                    <div className="flex-1 overflow-y-auto p-2" ref={journalSidebarRef}>
+                      <div className="space-y-1">
+                        {filteredJournalAccounts.length === 0 ? (
+                          <div className="text-center py-8 text-sm text-muted-foreground">
+                            No accounts found
+                          </div>
+                        ) : (
+                          filteredJournalAccounts.map((account, idx) => {
+                            const isHighlighted =
+                              idx === journalAccountHighlightedIndex && activeJournalRow !== null;
+                            const isSelected =
+                              journalEntries[activeJournalRow ?? 0]?.accountId === account.id &&
+                              journalEntries[activeJournalRow ?? 0]?.accountType === account.type;
+                            const balance = getAccountBalance(account.type, account.id);
+
+                            return (
+                              <button
+                                key={`${account.type}-${account.id}`}
+                                type="button"
+                                onClick={() => handleJournalAccountSelect(account)}
+                                className={cn(
+                                  "w-full text-left px-3 py-2 rounded-md text-sm hover-elevate active-elevate-2 flex items-center justify-between gap-2",
+                                  isHighlighted && "bg-accent",
+                                  isSelected && "bg-primary/10",
+                                )}
+                                data-testid={`journal-account-option-${idx}`}
+                              >
+                                <div className="flex-1 truncate">
+                                  <div className="font-medium truncate">{account.name}</div>
+                                </div>
+                                <div
+                                  className={cn(
+                                    "text-xs font-mono",
+                                    // For liability accounts (employee/supplier), flip the color logic
+                                    // Positive balance = Cr (we owe them) = Red, Negative = Dr (they owe us) = Green
+                                    account.type === "employee" || account.type === "supplier"
+                                      ? balance >= 0
+                                        ? "text-red-600 dark:text-red-400"
+                                        : "text-emerald-600 dark:text-emerald-400"
+                                      : balance >= 0
+                                        ? "text-emerald-600 dark:text-emerald-400"
+                                        : "text-red-600 dark:text-red-400",
+                                  )}
+                                >
+                                  {formatAmount(Math.abs(balance))}
+                                </div>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-2" ref={journalSidebarRef}>
-                    <div className="space-y-1">
-                      {filteredJournalAccounts.length === 0 ? (
-                        <div className="text-center py-8 text-sm text-muted-foreground">
-                          No accounts found
-                        </div>
-                      ) : (
-                        filteredJournalAccounts.map((account, idx) => {
-                          const isHighlighted = idx === journalAccountHighlightedIndex && activeJournalRow !== null;
-                          const isSelected = journalEntries[activeJournalRow ?? 0]?.accountId === account.id &&
-                                            journalEntries[activeJournalRow ?? 0]?.accountType === account.type;
-                          const balance = getAccountBalance(account.type, account.id);
-                          
-                          return (
-                            <button
-                              key={`${account.type}-${account.id}`}
-                              type="button"
-                              onClick={() => handleJournalAccountSelect(account)}
-                              className={cn(
-                                "w-full text-left px-3 py-2 rounded-md text-sm hover-elevate active-elevate-2 flex items-center justify-between gap-2",
-                                isHighlighted && "bg-accent",
-                                isSelected && "bg-primary/10"
-                              )}
-                              data-testid={`journal-account-option-${idx}`}
-                            >
-                              <div className="flex-1 truncate">
-                                <div className="font-medium truncate">{account.name}</div>
-                              </div>
-                              <div className={cn(
-                                "text-xs font-mono",
-                                // For liability accounts (employee/supplier), flip the color logic
-                                // Positive balance = Cr (we owe them) = Red, Negative = Dr (they owe us) = Green
-                                (account.type === "employee" || account.type === "supplier")
-                                  ? (balance >= 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400")
-                                  : (balance >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")
-                              )}>
-                                {formatAmount(Math.abs(balance))}
-                              </div>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              )}
-            </div>
-          </div>
-        )}
-
-        {(isPOS || activeTab === "transfer") && (
-          <div className="space-y-4">
-          <Form {...stockTransferForm}>
-            <form onSubmit={stockTransferForm.handleSubmit(onStockTransferSubmit, (errors) => {
-              console.error("Stock Transfer Form Validation Errors:", errors);
-              toast({
-                title: "Form Validation Error",
-                description: Object.values(errors).map((e: any) => e?.message || JSON.stringify(e)).join(", ") || "Please check all fields",
-                variant: "destructive",
-              });
-            })}>
-              {/* Header Row */}
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4">
-                {isPOS && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">From:</span>
-                    <span className="font-medium">{posLocationName}</span>
-                  </div>
-                )}
-                
-                <FormField
-                  control={stockTransferForm.control}
-                  name="destinationLocationId"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormLabel className="text-sm text-muted-foreground whitespace-nowrap">To:</FormLabel>
-                      <Select
-                        value={field.value > 0 ? field.value.toString() : ""}
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-destination-location">
-                            <SelectValue placeholder="Select destination..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {[...locations]
-                            .filter(l => l.id !== transferInventorySource)
-                            .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                            .map((location) => (
-                              <SelectItem key={location.id} value={location.id.toString()}>
-                                {location.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={stockTransferForm.control}
-                  name="voucherDate"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormLabel className="text-sm text-muted-foreground whitespace-nowrap">Date:</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          value={field.value instanceof Date ? format(field.value, "yyyy-MM-dd") : (typeof field.value === "string" ? field.value : "")}
-                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value + "T00:00:00") : new Date())}
-                          className="w-full sm:w-[160px]"
-                          data-testid="input-transfer-date"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex-1" />
-
-                {!isPOS && voucherIdToEdit && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLocation(`/stock-transfer-order?edit=${voucherIdToEdit}`)}
-                    data-testid="button-switch-to-order-view"
-                  >
-                    <LayoutGrid className="h-4 w-4 mr-2" />
-                    Order View
-                  </Button>
-                )}
-
-                {!isPOS && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setImportDialogOpen(true)}
-                    data-testid="button-open-import-dialog"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import
-                  </Button>
+                  </Card>
                 )}
               </div>
+            </div>
+          )}
 
-              <div className="flex flex-col lg:flex-row gap-4">
-                {/* Main Spreadsheet Area */}
-                <Card className="flex-1 overflow-hidden min-w-0">
-                  <div className="overflow-x-auto">
-                    <div className="min-w-[400px]">
-                      {/* Header */}
-                      <div className="flex bg-muted/50 border-b sticky top-0 z-10">
-                        <div className="w-10 sm:w-12 flex items-center justify-center border-r h-9 sm:h-10 font-medium text-xs">
-                          #
-                        </div>
-                        {!isPOS && (
-                          <div className="w-28 sm:w-40 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
-                            Source
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-[120px] flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
-                          Item
-                        </div>
-                        <div className="w-16 sm:w-24 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
-                          Qty
-                        </div>
-                        {!isPOS && (
-                          <>
-                            <div className="w-16 sm:w-24 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
-                              Rate
-                            </div>
-                            <div className="w-20 sm:w-28 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm bg-muted/30">
-                              Amt
-                            </div>
-                          </>
-                        )}
-                        <div className="w-10 sm:w-12 flex items-center justify-center h-9 sm:h-10" />
+          {(isPOS || activeTab === "transfer") && (
+            <div className="space-y-4">
+              <Form {...stockTransferForm}>
+                <form
+                  onSubmit={stockTransferForm.handleSubmit(onStockTransferSubmit, (errors) => {
+                    console.error("Stock Transfer Form Validation Errors:", errors);
+                    toast({
+                      title: "Form Validation Error",
+                      description:
+                        Object.values(errors)
+                          .map((e: any) => e?.message || JSON.stringify(e))
+                          .join(", ") || "Please check all fields",
+                      variant: "destructive",
+                    });
+                  })}
+                >
+                  {/* Header Row */}
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-4">
+                    {isPOS && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">From:</span>
+                        <span className="font-medium">{posLocationName}</span>
                       </div>
+                    )}
 
-                      {/* Rows */}
-                      <div className="max-h-[calc(100vh-24rem)] overflow-y-auto">
-                        {transferFields.map((field, index) => (
-                          <div key={field.id} className="flex border-b hover-elevate">
-                            <div className="w-10 sm:w-12 flex items-center justify-center border-r h-9 sm:h-10 text-xs text-muted-foreground">
-                              {index + 1}
+                    <FormField
+                      control={stockTransferForm.control}
+                      name="destinationLocationId"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-2 space-y-0">
+                          <FormLabel className="text-sm text-muted-foreground whitespace-nowrap">
+                            To:
+                          </FormLabel>
+                          <Select
+                            value={field.value > 0 ? field.value.toString() : ""}
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                          >
+                            <FormControl>
+                              <SelectTrigger
+                                className="w-full sm:w-[200px]"
+                                data-testid="select-destination-location"
+                              >
+                                <SelectValue placeholder="Select destination..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {[...locations]
+                                .filter((l) => l.id !== transferInventorySource)
+                                .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                                .map((location) => (
+                                  <SelectItem key={location.id} value={location.id.toString()}>
+                                    {location.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={stockTransferForm.control}
+                      name="voucherDate"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-2 space-y-0">
+                          <FormLabel className="text-sm text-muted-foreground whitespace-nowrap">
+                            Date:
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              value={
+                                field.value instanceof Date
+                                  ? format(field.value, "yyyy-MM-dd")
+                                  : typeof field.value === "string"
+                                    ? field.value
+                                    : ""
+                              }
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value
+                                    ? new Date(e.target.value + "T00:00:00")
+                                    : new Date(),
+                                )
+                              }
+                              className="w-full sm:w-[160px]"
+                              data-testid="input-transfer-date"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex-1" />
+
+                    {!isPOS && voucherIdToEdit && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setLocation(`/stock-transfer-order?edit=${voucherIdToEdit}`)}
+                        data-testid="button-switch-to-order-view"
+                      >
+                        <LayoutGrid className="h-4 w-4 mr-2" />
+                        Order View
+                      </Button>
+                    )}
+
+                    {!isPOS && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setImportDialogOpen(true)}
+                        data-testid="button-open-import-dialog"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col lg:flex-row gap-4">
+                    {/* Main Spreadsheet Area */}
+                    <Card className="flex-1 overflow-hidden min-w-0">
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[400px]">
+                          {/* Header */}
+                          <div className="flex bg-muted/50 border-b sticky top-0 z-10">
+                            <div className="w-10 sm:w-12 flex items-center justify-center border-r h-9 sm:h-10 font-medium text-xs">
+                              #
                             </div>
                             {!isPOS && (
-                              <div className="w-28 sm:w-40 border-r h-9 sm:h-10">
-                                <input
-                                  type="text"
-                                  value={activeTransferRow === index && activeFieldType === 'source' ? transferSourceSearchTerm : (transferEntries[index]?.sourceLocationName || "")}
-                                  onChange={(e) => {
-                                    setTransferSourceSearchTerm(e.target.value);
-                                    setTransferSourceHighlightedIndex(0);
-                                  }}
-                                  onFocus={() => {
-                                    transferFocusIdRef.current += 1;
-                                    setActiveTransferRow(index);
-                                    setActiveFieldType('source');
-                                    setTransferSourceSearchTerm(transferEntries[index]?.sourceLocationName || "");
-                                    setTransferSourceHighlightedIndex(0);
-                                    setShowSourceSidebar(true);
-                                    setShowItemSidebar(false);
-                                  }}
-                                  onBlur={() => {
-                                    const focusIdAtBlur = transferFocusIdRef.current;
-                                    setTimeout(() => {
-                                      if (transferFocusIdRef.current === focusIdAtBlur) {
-                                        setActiveTransferRow(null);
-                                        setActiveFieldType(null);
-                                        setTransferSourceSearchTerm("");
-                                        setShowSourceSidebar(false);
-                                      }
-                                    }, 250);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    const filteredLocs = locations
-                                      .filter(loc => {
-                                        if (!transferSourceSearchTerm.trim()) return true;
-                                        const term = transferSourceSearchTerm.toLowerCase();
-                                        return (loc.name || '').toLowerCase().includes(term) || (loc.code && loc.code.toLowerCase().includes(term));
-                                      })
-                                      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-                                    
-                                    if (e.key === "Enter" && filteredLocs.length > 0) {
-                                      e.preventDefault();
-                                      const selectedLoc = filteredLocs[transferSourceHighlightedIndex] || filteredLocs[0];
-                                      stockTransferForm.setValue(`entries.${index}.sourceLocationId`, selectedLoc.id);
-                                      stockTransferForm.setValue(`entries.${index}.sourceLocationName`, selectedLoc.name);
-                                      setTransferInventorySource(selectedLoc.id);
-                                      setTransferSourceSearchTerm("");
-                                      setShowSourceSidebar(false);
-                                      setTimeout(() => {
-                                        const itemInput = document.querySelector(`[data-testid="input-item-name-${index}"]`) as HTMLInputElement;
-                                        if (itemInput) { itemInput.focus(); itemInput.select(); }
-                                      }, 50);
-                                    } else if (e.key === "ArrowUp") {
-                                      e.preventDefault();
-                                      if (showSourceSidebar && filteredLocs.length > 0) {
-                                        setTransferSourceHighlightedIndex(Math.max(0, transferSourceHighlightedIndex - 1));
-                                      } else if (index > 0) {
-                                        setTimeout(() => {
-                                          const prevInput = document.querySelector(`[data-testid="input-source-${index - 1}"]`) as HTMLInputElement;
-                                          if (prevInput) { prevInput.focus(); prevInput.select(); }
-                                        }, 50);
-                                      }
-                                    } else if (e.key === "ArrowDown") {
-                                      e.preventDefault();
-                                      if (showSourceSidebar && filteredLocs.length > 0) {
-                                        setTransferSourceHighlightedIndex(Math.min(filteredLocs.length - 1, transferSourceHighlightedIndex + 1));
-                                      } else if (index < transferFields.length - 1) {
-                                        setTimeout(() => {
-                                          const nextInput = document.querySelector(`[data-testid="input-source-${index + 1}"]`) as HTMLInputElement;
-                                          if (nextInput) { nextInput.focus(); nextInput.select(); }
-                                        }, 50);
-                                      }
-                                    } else if (e.key === "ArrowRight" || (e.key === "Tab" && !e.shiftKey)) {
-                                      e.preventDefault();
-                                      setTimeout(() => {
-                                        const itemInput = document.querySelector(`[data-testid="input-item-name-${index}"]`) as HTMLInputElement;
-                                        if (itemInput) { itemInput.focus(); itemInput.select(); }
-                                      }, 50);
-                                    }
-                                  }}
-                                  placeholder="Type location..."
-                                  className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20"
-                                  data-testid={`input-source-${index}`}
-                                />
+                              <div className="w-28 sm:w-40 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
+                                Source
                               </div>
                             )}
-                            <div className="flex-1 min-w-[120px] border-r h-9 sm:h-10">
-                              <input
-                                type="text"
-                                value={activeTransferRow === index && activeFieldType === 'item' ? transferSearchTerm : (transferEntries[index]?.stockItemName || "")}
-                                onChange={(e) => {
-                                  setTransferSearchTerm(e.target.value);
-                                  setTransferHighlightedIndex(0);
-                                  if (!e.target.value) {
-                                    stockTransferForm.setValue(`entries.${index}.stockItemId`, 0);
-                                    stockTransferForm.setValue(`entries.${index}.stockItemCode`, "");
-                                    stockTransferForm.setValue(`entries.${index}.stockItemName`, "");
-                                  }
-                                }}
-                                onFocus={() => {
-                                  transferFocusIdRef.current += 1;
-                                  setActiveTransferRow(index);
-                                  setActiveFieldType('item');
-                                  setTransferHighlightedIndex(0);
-                                  setTransferSearchTerm(transferEntries[index]?.stockItemName || "");
-                                  setShowItemSidebar(true);
-                                  setShowSourceSidebar(false);
-                                  if (transferEntries[index]?.sourceLocationId > 0) {
-                                    setTransferInventorySource(transferEntries[index].sourceLocationId);
-                                  } else if (isPOS && posLocationId) {
-                                    setTransferInventorySource(posLocationId);
-                                  } else {
-                                    setTransferInventorySource(0);
-                                  }
-                                }}
-                                onBlur={() => {
-                                  const focusIdAtBlur = transferFocusIdRef.current;
-                                  setTimeout(() => {
-                                    if (transferFocusIdRef.current === focusIdAtBlur) {
-                                      setActiveTransferRow(null);
-                                      setActiveFieldType(null);
-                                      setTransferSearchTerm("");
-                                      setShowItemSidebar(false);
-                                    }
-                                  }, 200);
-                                }}
-                                onKeyDown={(e) => {
-                                  const filteredInventory = transferInventory
-                                    .filter((item: any) => {
-                                      if (!transferSearchTerm.trim()) return true;
-                                      const term = transferSearchTerm.toLowerCase();
-                                      return (
-                                        item.stockItemName?.toLowerCase().includes(term) ||
-                                        item.stockItemCode?.toLowerCase().includes(term)
-                                      );
-                                    })
-                                    .sort((a: any, b: any) => (a.stockItemName || '').localeCompare(b.stockItemName || ''));
-
-                                  if (e.key === "ArrowUp" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    if (showItemSidebar && filteredInventory.length > 0) {
-                                      setTransferHighlightedIndex(Math.max(0, transferHighlightedIndex - 1));
-                                    } else if (index > 0) {
-                                      setTimeout(() => {
-                                        const prevInput = document.querySelector(`[data-testid="input-item-name-${index - 1}"]`) as HTMLInputElement;
-                                        if (prevInput) { prevInput.focus(); prevInput.select(); }
-                                      }, 50);
-                                    }
-                                  } else if (e.key === "ArrowDown" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    if (showItemSidebar && filteredInventory.length > 0) {
-                                      setTransferHighlightedIndex(Math.min(filteredInventory.length - 1, transferHighlightedIndex + 1));
-                                    } else if (index < transferFields.length - 1) {
-                                      setTimeout(() => {
-                                        const nextInput = document.querySelector(`[data-testid="input-item-name-${index + 1}"]`) as HTMLInputElement;
-                                        if (nextInput) { nextInput.focus(); nextInput.select(); }
-                                      }, 50);
-                                    }
-                                  } else if (e.key === "ArrowLeft" && !isPOS) {
-                                    e.preventDefault();
-                                    setShowItemSidebar(false);
-                                    setTransferSearchTerm("");
-                                    setTimeout(() => {
-                                      const sourceInput = document.querySelector(`[data-testid="input-source-${index}"]`) as HTMLInputElement;
-                                      if (sourceInput) { sourceInput.focus(); sourceInput.select(); }
-                                    }, 50);
-                                  } else if (e.key === "ArrowRight") {
-                                    e.preventDefault();
-                                    setTimeout(() => {
-                                      const qtyInput = document.querySelector(`[data-testid="input-transfer-quantity-${index}"]`) as HTMLInputElement;
-                                      if (qtyInput) { qtyInput.focus(); qtyInput.select(); }
-                                    }, 50);
-                                  } else if (e.key === "Tab" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    setTimeout(() => {
-                                      const qtyInput = document.querySelector(`[data-testid="input-transfer-quantity-${index}"]`) as HTMLInputElement;
-                                      if (qtyInput) { qtyInput.focus(); qtyInput.select(); }
-                                    }, 50);
-                                  } else if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    const filteredInventory = transferInventory
-                                      .filter((item: any) => {
-                                        if (!transferSearchTerm.trim()) return true;
-                                        const term = transferSearchTerm.toLowerCase();
-                                        return (
-                                          item.stockItemName?.toLowerCase().includes(term) ||
-                                          item.stockItemCode?.toLowerCase().includes(term)
-                                        );
-                                      })
-                                      .sort((a: any, b: any) => (a.stockItemName || '').localeCompare(b.stockItemName || ''));
-                                    
-                                    if (filteredInventory.length > 0) {
-                                      const item = filteredInventory[transferHighlightedIndex] || filteredInventory[0];
-                                      const stockItem = stockItems.find(s => s.id === item.stockItemId);
-                                      if (stockItem) {
-                                        // Ensure we have a valid source location
-                                        const sourceId = Number(transferInventorySource);
-                                        if (!(sourceId > 0)) {
-                                          toast({
-                                            title: "Select a source location first",
-                                            description: "Please select a source location from the inventory sidebar before adding items.",
-                                            variant: "destructive",
-                                          });
-                                          return;
-                                        }
-                                        
-                                        // Set source location - always set it from the current inventory source
-                                        const sourceLocation = locations.find(l => l.id === sourceId);
-                                        stockTransferForm.setValue(`entries.${index}.sourceLocationId`, sourceId, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-                                        stockTransferForm.setValue(`entries.${index}.sourceLocationName`, sourceLocation?.name || "");
-                                        
-                                        // Set item details
-                                        stockTransferForm.setValue(`entries.${index}.stockItemId`, item.stockItemId, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-                                        stockTransferForm.setValue(`entries.${index}.stockItemCode`, stockItem.code || "");
-                                        stockTransferForm.setValue(`entries.${index}.stockItemName`, stockItem.name);
-                                        stockTransferForm.setValue(`entries.${index}.rate`, item.averageRate || "0");
-                                        setTransferSearchTerm("");
-                                        
-                                        setTimeout(() => {
-                                          const quantityInput = document.querySelector(`[data-testid="input-transfer-quantity-${index}"]`) as HTMLInputElement;
-                                          if (quantityInput) {
-                                            quantityInput.focus();
-                                            quantityInput.select();
-                                          }
-                                        }, 50);
-                                      }
-                                    }
-                                  }
-                                }}
-                                placeholder="Type to search..."
-                                className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20"
-                                data-testid={`input-item-name-${index}`}
-                              />
+                            <div className="flex-1 min-w-[120px] flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
+                              Item
                             </div>
-                            <div className="w-16 sm:w-24 border-r h-9 sm:h-10">
-                              <input
-                                type="number"
-                                step="0.001"
-                                value={transferEntries[index]?.quantity || ""}
-                                onChange={(e) => {
-                                  stockTransferForm.setValue(`entries.${index}.quantity`, e.target.value);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "ArrowUp") {
-                                    e.preventDefault();
-                                    if (index > 0) {
-                                      setTimeout(() => {
-                                        const prevInput = document.querySelector(`[data-testid="input-transfer-quantity-${index - 1}"]`) as HTMLInputElement;
-                                        if (prevInput) { prevInput.focus(); prevInput.select(); }
-                                      }, 50);
-                                    }
-                                  } else if (e.key === "ArrowDown") {
-                                    e.preventDefault();
-                                    if (index < transferFields.length - 1) {
-                                      setTimeout(() => {
-                                        const nextInput = document.querySelector(`[data-testid="input-transfer-quantity-${index + 1}"]`) as HTMLInputElement;
-                                        if (nextInput) { nextInput.focus(); nextInput.select(); }
-                                      }, 50);
-                                    }
-                                  } else if (e.key === "ArrowLeft") {
-                                    e.preventDefault();
-                                    setTimeout(() => {
-                                      const nameInput = document.querySelector(`[data-testid="input-item-name-${index}"]`) as HTMLInputElement;
-                                      if (nameInput) { nameInput.focus(); nameInput.select(); }
-                                    }, 50);
-                                  } else if (e.key === "ArrowRight" && !isPOS) {
-                                    e.preventDefault();
-                                    setTimeout(() => {
-                                      const rateInput = document.querySelector(`[data-testid="input-transfer-rate-${index}"]`) as HTMLInputElement;
-                                      if (rateInput) { rateInput.focus(); rateInput.select(); }
-                                    }, 50);
-                                  } else if (e.key === "Tab" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    if (!isPOS) {
-                                      setTimeout(() => {
-                                        const rateInput = document.querySelector(`[data-testid="input-transfer-rate-${index}"]`) as HTMLInputElement;
-                                        if (rateInput) { rateInput.focus(); rateInput.select(); }
-                                      }, 50);
-                                    } else if (index < transferFields.length - 1) {
-                                      setTimeout(() => {
-                                        const nextNameInput = document.querySelector(`[data-testid="input-item-name-${index + 1}"]`) as HTMLInputElement;
-                                        if (nextNameInput) { nextNameInput.focus(); nextNameInput.select(); }
-                                      }, 50);
-                                    }
-                                  } else if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    if (index === transferFields.length - 1) {
-                                      appendTransfer({
-                                        sourceLocationId: 0,
-                                        sourceLocationName: "",
-                                        stockItemId: 0,
-                                        stockItemCode: "",
-                                        stockItemName: "",
-                                        quantity: "",
-                                        rate: "",
-                                      });
-                                      setTimeout(() => {
-                                        const newInput = isPOS 
-                                          ? document.querySelector(`[data-testid="input-item-name-${index + 1}"]`) as HTMLInputElement
-                                          : document.querySelector(`[data-testid="input-source-${index + 1}"]`) as HTMLInputElement;
-                                        if (newInput) newInput.focus();
-                                      }, 100);
-                                    }
-                                  }
-                                }}
-                                placeholder="0"
-                                className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20 font-mono text-right"
-                                data-testid={`input-transfer-quantity-${index}`}
-                              />
+                            <div className="w-16 sm:w-24 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
+                              Qty
                             </div>
                             {!isPOS && (
                               <>
+                                <div className="w-16 sm:w-24 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
+                                  Rate
+                                </div>
+                                <div className="w-20 sm:w-28 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm bg-muted/30">
+                                  Amt
+                                </div>
+                              </>
+                            )}
+                            <div className="w-10 sm:w-12 flex items-center justify-center h-9 sm:h-10" />
+                          </div>
+
+                          {/* Rows */}
+                          <div className="max-h-[calc(100vh-24rem)] overflow-y-auto">
+                            {transferFields.map((field, index) => (
+                              <div key={field.id} className="flex border-b hover-elevate">
+                                <div className="w-10 sm:w-12 flex items-center justify-center border-r h-9 sm:h-10 text-xs text-muted-foreground">
+                                  {index + 1}
+                                </div>
+                                {!isPOS && (
+                                  <div className="w-28 sm:w-40 border-r h-9 sm:h-10">
+                                    <input
+                                      type="text"
+                                      value={
+                                        activeTransferRow === index && activeFieldType === "source"
+                                          ? transferSourceSearchTerm
+                                          : transferEntries[index]?.sourceLocationName || ""
+                                      }
+                                      onChange={(e) => {
+                                        setTransferSourceSearchTerm(e.target.value);
+                                        setTransferSourceHighlightedIndex(0);
+                                      }}
+                                      onFocus={() => {
+                                        transferFocusIdRef.current += 1;
+                                        setActiveTransferRow(index);
+                                        setActiveFieldType("source");
+                                        setTransferSourceSearchTerm(
+                                          transferEntries[index]?.sourceLocationName || "",
+                                        );
+                                        setTransferSourceHighlightedIndex(0);
+                                        setShowSourceSidebar(true);
+                                        setShowItemSidebar(false);
+                                      }}
+                                      onBlur={() => {
+                                        const focusIdAtBlur = transferFocusIdRef.current;
+                                        setTimeout(() => {
+                                          if (transferFocusIdRef.current === focusIdAtBlur) {
+                                            setActiveTransferRow(null);
+                                            setActiveFieldType(null);
+                                            setTransferSourceSearchTerm("");
+                                            setShowSourceSidebar(false);
+                                          }
+                                        }, 250);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        const filteredLocs = locations
+                                          .filter((loc) => {
+                                            if (!transferSourceSearchTerm.trim()) return true;
+                                            const term = transferSourceSearchTerm.toLowerCase();
+                                            return (
+                                              (loc.name || "").toLowerCase().includes(term) ||
+                                              (loc.code && loc.code.toLowerCase().includes(term))
+                                            );
+                                          })
+                                          .sort((a, b) =>
+                                            (a.name || "").localeCompare(b.name || ""),
+                                          );
+
+                                        if (e.key === "Enter" && filteredLocs.length > 0) {
+                                          e.preventDefault();
+                                          const selectedLoc =
+                                            filteredLocs[transferSourceHighlightedIndex] ||
+                                            filteredLocs[0];
+                                          stockTransferForm.setValue(
+                                            `entries.${index}.sourceLocationId`,
+                                            selectedLoc.id,
+                                          );
+                                          stockTransferForm.setValue(
+                                            `entries.${index}.sourceLocationName`,
+                                            selectedLoc.name,
+                                          );
+                                          setTransferInventorySource(selectedLoc.id);
+                                          setTransferSourceSearchTerm("");
+                                          setShowSourceSidebar(false);
+                                          setTimeout(() => {
+                                            const itemInput = document.querySelector(
+                                              `[data-testid="input-item-name-${index}"]`,
+                                            ) as HTMLInputElement;
+                                            if (itemInput) {
+                                              itemInput.focus();
+                                              itemInput.select();
+                                            }
+                                          }, 50);
+                                        } else if (e.key === "ArrowUp") {
+                                          e.preventDefault();
+                                          if (showSourceSidebar && filteredLocs.length > 0) {
+                                            setTransferSourceHighlightedIndex(
+                                              Math.max(0, transferSourceHighlightedIndex - 1),
+                                            );
+                                          } else if (index > 0) {
+                                            setTimeout(() => {
+                                              const prevInput = document.querySelector(
+                                                `[data-testid="input-source-${index - 1}"]`,
+                                              ) as HTMLInputElement;
+                                              if (prevInput) {
+                                                prevInput.focus();
+                                                prevInput.select();
+                                              }
+                                            }, 50);
+                                          }
+                                        } else if (e.key === "ArrowDown") {
+                                          e.preventDefault();
+                                          if (showSourceSidebar && filteredLocs.length > 0) {
+                                            setTransferSourceHighlightedIndex(
+                                              Math.min(
+                                                filteredLocs.length - 1,
+                                                transferSourceHighlightedIndex + 1,
+                                              ),
+                                            );
+                                          } else if (index < transferFields.length - 1) {
+                                            setTimeout(() => {
+                                              const nextInput = document.querySelector(
+                                                `[data-testid="input-source-${index + 1}"]`,
+                                              ) as HTMLInputElement;
+                                              if (nextInput) {
+                                                nextInput.focus();
+                                                nextInput.select();
+                                              }
+                                            }, 50);
+                                          }
+                                        } else if (
+                                          e.key === "ArrowRight" ||
+                                          (e.key === "Tab" && !e.shiftKey)
+                                        ) {
+                                          e.preventDefault();
+                                          setTimeout(() => {
+                                            const itemInput = document.querySelector(
+                                              `[data-testid="input-item-name-${index}"]`,
+                                            ) as HTMLInputElement;
+                                            if (itemInput) {
+                                              itemInput.focus();
+                                              itemInput.select();
+                                            }
+                                          }, 50);
+                                        }
+                                      }}
+                                      placeholder="Type location..."
+                                      className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20"
+                                      data-testid={`input-source-${index}`}
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-[120px] border-r h-9 sm:h-10">
+                                  <input
+                                    type="text"
+                                    value={
+                                      activeTransferRow === index && activeFieldType === "item"
+                                        ? transferSearchTerm
+                                        : transferEntries[index]?.stockItemName || ""
+                                    }
+                                    onChange={(e) => {
+                                      setTransferSearchTerm(e.target.value);
+                                      setTransferHighlightedIndex(0);
+                                      if (!e.target.value) {
+                                        stockTransferForm.setValue(
+                                          `entries.${index}.stockItemId`,
+                                          0,
+                                        );
+                                        stockTransferForm.setValue(
+                                          `entries.${index}.stockItemCode`,
+                                          "",
+                                        );
+                                        stockTransferForm.setValue(
+                                          `entries.${index}.stockItemName`,
+                                          "",
+                                        );
+                                      }
+                                    }}
+                                    onFocus={() => {
+                                      transferFocusIdRef.current += 1;
+                                      setActiveTransferRow(index);
+                                      setActiveFieldType("item");
+                                      setTransferHighlightedIndex(0);
+                                      setTransferSearchTerm(
+                                        transferEntries[index]?.stockItemName || "",
+                                      );
+                                      setShowItemSidebar(true);
+                                      setShowSourceSidebar(false);
+                                      if (transferEntries[index]?.sourceLocationId > 0) {
+                                        setTransferInventorySource(
+                                          transferEntries[index].sourceLocationId,
+                                        );
+                                      } else if (isPOS && posLocationId) {
+                                        setTransferInventorySource(posLocationId);
+                                      } else {
+                                        setTransferInventorySource(0);
+                                      }
+                                    }}
+                                    onBlur={() => {
+                                      const focusIdAtBlur = transferFocusIdRef.current;
+                                      setTimeout(() => {
+                                        if (transferFocusIdRef.current === focusIdAtBlur) {
+                                          setActiveTransferRow(null);
+                                          setActiveFieldType(null);
+                                          setTransferSearchTerm("");
+                                          setShowItemSidebar(false);
+                                        }
+                                      }, 200);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      const filteredInventory = transferInventory
+                                        .filter((item: any) => {
+                                          if (!transferSearchTerm.trim()) return true;
+                                          const term = transferSearchTerm.toLowerCase();
+                                          return (
+                                            item.stockItemName?.toLowerCase().includes(term) ||
+                                            item.stockItemCode?.toLowerCase().includes(term)
+                                          );
+                                        })
+                                        .sort((a: any, b: any) =>
+                                          (a.stockItemName || "").localeCompare(
+                                            b.stockItemName || "",
+                                          ),
+                                        );
+
+                                      if (e.key === "ArrowUp" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        if (showItemSidebar && filteredInventory.length > 0) {
+                                          setTransferHighlightedIndex(
+                                            Math.max(0, transferHighlightedIndex - 1),
+                                          );
+                                        } else if (index > 0) {
+                                          setTimeout(() => {
+                                            const prevInput = document.querySelector(
+                                              `[data-testid="input-item-name-${index - 1}"]`,
+                                            ) as HTMLInputElement;
+                                            if (prevInput) {
+                                              prevInput.focus();
+                                              prevInput.select();
+                                            }
+                                          }, 50);
+                                        }
+                                      } else if (e.key === "ArrowDown" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        if (showItemSidebar && filteredInventory.length > 0) {
+                                          setTransferHighlightedIndex(
+                                            Math.min(
+                                              filteredInventory.length - 1,
+                                              transferHighlightedIndex + 1,
+                                            ),
+                                          );
+                                        } else if (index < transferFields.length - 1) {
+                                          setTimeout(() => {
+                                            const nextInput = document.querySelector(
+                                              `[data-testid="input-item-name-${index + 1}"]`,
+                                            ) as HTMLInputElement;
+                                            if (nextInput) {
+                                              nextInput.focus();
+                                              nextInput.select();
+                                            }
+                                          }, 50);
+                                        }
+                                      } else if (e.key === "ArrowLeft" && !isPOS) {
+                                        e.preventDefault();
+                                        setShowItemSidebar(false);
+                                        setTransferSearchTerm("");
+                                        setTimeout(() => {
+                                          const sourceInput = document.querySelector(
+                                            `[data-testid="input-source-${index}"]`,
+                                          ) as HTMLInputElement;
+                                          if (sourceInput) {
+                                            sourceInput.focus();
+                                            sourceInput.select();
+                                          }
+                                        }, 50);
+                                      } else if (e.key === "ArrowRight") {
+                                        e.preventDefault();
+                                        setTimeout(() => {
+                                          const qtyInput = document.querySelector(
+                                            `[data-testid="input-transfer-quantity-${index}"]`,
+                                          ) as HTMLInputElement;
+                                          if (qtyInput) {
+                                            qtyInput.focus();
+                                            qtyInput.select();
+                                          }
+                                        }, 50);
+                                      } else if (e.key === "Tab" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        setTimeout(() => {
+                                          const qtyInput = document.querySelector(
+                                            `[data-testid="input-transfer-quantity-${index}"]`,
+                                          ) as HTMLInputElement;
+                                          if (qtyInput) {
+                                            qtyInput.focus();
+                                            qtyInput.select();
+                                          }
+                                        }, 50);
+                                      } else if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        const filteredInventory = transferInventory
+                                          .filter((item: any) => {
+                                            if (!transferSearchTerm.trim()) return true;
+                                            const term = transferSearchTerm.toLowerCase();
+                                            return (
+                                              item.stockItemName?.toLowerCase().includes(term) ||
+                                              item.stockItemCode?.toLowerCase().includes(term)
+                                            );
+                                          })
+                                          .sort((a: any, b: any) =>
+                                            (a.stockItemName || "").localeCompare(
+                                              b.stockItemName || "",
+                                            ),
+                                          );
+
+                                        if (filteredInventory.length > 0) {
+                                          const item =
+                                            filteredInventory[transferHighlightedIndex] ||
+                                            filteredInventory[0];
+                                          const stockItem = stockItems.find(
+                                            (s) => s.id === item.stockItemId,
+                                          );
+                                          if (stockItem) {
+                                            // Ensure we have a valid source location
+                                            const sourceId = Number(transferInventorySource);
+                                            if (!(sourceId > 0)) {
+                                              toast({
+                                                title: "Select a source location first",
+                                                description:
+                                                  "Please select a source location from the inventory sidebar before adding items.",
+                                                variant: "destructive",
+                                              });
+                                              return;
+                                            }
+
+                                            // Set source location - always set it from the current inventory source
+                                            const sourceLocation = locations.find(
+                                              (l) => l.id === sourceId,
+                                            );
+                                            stockTransferForm.setValue(
+                                              `entries.${index}.sourceLocationId`,
+                                              sourceId,
+                                              {
+                                                shouldValidate: true,
+                                                shouldDirty: true,
+                                                shouldTouch: true,
+                                              },
+                                            );
+                                            stockTransferForm.setValue(
+                                              `entries.${index}.sourceLocationName`,
+                                              sourceLocation?.name || "",
+                                            );
+
+                                            // Set item details
+                                            stockTransferForm.setValue(
+                                              `entries.${index}.stockItemId`,
+                                              item.stockItemId,
+                                              {
+                                                shouldValidate: true,
+                                                shouldDirty: true,
+                                                shouldTouch: true,
+                                              },
+                                            );
+                                            stockTransferForm.setValue(
+                                              `entries.${index}.stockItemCode`,
+                                              stockItem.code || "",
+                                            );
+                                            stockTransferForm.setValue(
+                                              `entries.${index}.stockItemName`,
+                                              stockItem.name,
+                                            );
+                                            stockTransferForm.setValue(
+                                              `entries.${index}.rate`,
+                                              item.averageRate || "0",
+                                            );
+                                            setTransferSearchTerm("");
+
+                                            setTimeout(() => {
+                                              const quantityInput = document.querySelector(
+                                                `[data-testid="input-transfer-quantity-${index}"]`,
+                                              ) as HTMLInputElement;
+                                              if (quantityInput) {
+                                                quantityInput.focus();
+                                                quantityInput.select();
+                                              }
+                                            }, 50);
+                                          }
+                                        }
+                                      }
+                                    }}
+                                    placeholder="Type to search..."
+                                    className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20"
+                                    data-testid={`input-item-name-${index}`}
+                                  />
+                                </div>
                                 <div className="w-16 sm:w-24 border-r h-9 sm:h-10">
                                   <input
                                     type="number"
-                                    step="0.01"
-                                    value={transferEntries[index]?.rate || ""}
+                                    step="0.001"
+                                    value={transferEntries[index]?.quantity || ""}
                                     onChange={(e) => {
-                                      stockTransferForm.setValue(`entries.${index}.rate`, e.target.value);
+                                      stockTransferForm.setValue(
+                                        `entries.${index}.quantity`,
+                                        e.target.value,
+                                      );
                                     }}
                                     onKeyDown={(e) => {
                                       if (e.key === "ArrowUp") {
                                         e.preventDefault();
                                         if (index > 0) {
                                           setTimeout(() => {
-                                            const prevInput = document.querySelector(`[data-testid="input-transfer-rate-${index - 1}"]`) as HTMLInputElement;
-                                            if (prevInput) { prevInput.focus(); prevInput.select(); }
+                                            const prevInput = document.querySelector(
+                                              `[data-testid="input-transfer-quantity-${index - 1}"]`,
+                                            ) as HTMLInputElement;
+                                            if (prevInput) {
+                                              prevInput.focus();
+                                              prevInput.select();
+                                            }
                                           }, 50);
                                         }
                                       } else if (e.key === "ArrowDown") {
                                         e.preventDefault();
                                         if (index < transferFields.length - 1) {
                                           setTimeout(() => {
-                                            const nextInput = document.querySelector(`[data-testid="input-transfer-rate-${index + 1}"]`) as HTMLInputElement;
-                                            if (nextInput) { nextInput.focus(); nextInput.select(); }
+                                            const nextInput = document.querySelector(
+                                              `[data-testid="input-transfer-quantity-${index + 1}"]`,
+                                            ) as HTMLInputElement;
+                                            if (nextInput) {
+                                              nextInput.focus();
+                                              nextInput.select();
+                                            }
                                           }, 50);
                                         }
                                       } else if (e.key === "ArrowLeft") {
                                         e.preventDefault();
                                         setTimeout(() => {
-                                          const qtyInput = document.querySelector(`[data-testid="input-transfer-quantity-${index}"]`) as HTMLInputElement;
-                                          if (qtyInput) { qtyInput.focus(); qtyInput.select(); }
+                                          const nameInput = document.querySelector(
+                                            `[data-testid="input-item-name-${index}"]`,
+                                          ) as HTMLInputElement;
+                                          if (nameInput) {
+                                            nameInput.focus();
+                                            nameInput.select();
+                                          }
+                                        }, 50);
+                                      } else if (e.key === "ArrowRight" && !isPOS) {
+                                        e.preventDefault();
+                                        setTimeout(() => {
+                                          const rateInput = document.querySelector(
+                                            `[data-testid="input-transfer-rate-${index}"]`,
+                                          ) as HTMLInputElement;
+                                          if (rateInput) {
+                                            rateInput.focus();
+                                            rateInput.select();
+                                          }
                                         }, 50);
                                       } else if (e.key === "Tab" && !e.shiftKey) {
                                         e.preventDefault();
-                                        if (index < transferFields.length - 1) {
+                                        if (!isPOS) {
                                           setTimeout(() => {
-                                            const nextNameInput = document.querySelector(`[data-testid="input-item-name-${index + 1}"]`) as HTMLInputElement;
-                                            if (nextNameInput) { nextNameInput.focus(); nextNameInput.select(); }
+                                            const rateInput = document.querySelector(
+                                              `[data-testid="input-transfer-rate-${index}"]`,
+                                            ) as HTMLInputElement;
+                                            if (rateInput) {
+                                              rateInput.focus();
+                                              rateInput.select();
+                                            }
+                                          }, 50);
+                                        } else if (index < transferFields.length - 1) {
+                                          setTimeout(() => {
+                                            const nextNameInput = document.querySelector(
+                                              `[data-testid="input-item-name-${index + 1}"]`,
+                                            ) as HTMLInputElement;
+                                            if (nextNameInput) {
+                                              nextNameInput.focus();
+                                              nextNameInput.select();
+                                            }
                                           }, 50);
                                         }
                                       } else if (e.key === "Enter") {
@@ -4942,7 +5729,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                                             rate: "",
                                           });
                                           setTimeout(() => {
-                                            const newInput = document.querySelector(`[data-testid="input-source-${index + 1}"]`) as HTMLInputElement;
+                                            const newInput = isPOS
+                                              ? (document.querySelector(
+                                                  `[data-testid="input-item-name-${index + 1}"]`,
+                                                ) as HTMLInputElement)
+                                              : (document.querySelector(
+                                                  `[data-testid="input-source-${index + 1}"]`,
+                                                ) as HTMLInputElement);
                                             if (newInput) newInput.focus();
                                           }, 100);
                                         }
@@ -4950,854 +5743,486 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                                     }}
                                     placeholder="0"
                                     className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20 font-mono text-right"
-                                    data-testid={`input-transfer-rate-${index}`}
+                                    data-testid={`input-transfer-quantity-${index}`}
                                   />
                                 </div>
-                                <div className="w-20 sm:w-28 border-r h-9 sm:h-10 bg-muted/30 flex items-center justify-end px-2 sm:px-3 font-mono text-xs sm:text-sm">
-                                  {formatAmount(parseFloat(transferEntries[index]?.quantity || "0") * parseFloat(transferEntries[index]?.rate || "0"))}
-                                </div>
-                              </>
-                            )}
-                            <div className="w-10 sm:w-12 flex items-center justify-center h-9 sm:h-10">
-                              {transferFields.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeTransfer(index)}
-                                  className="h-8 w-8"
-                                  data-testid={`button-remove-transfer-${index}`}
-                                >
-                                  <X className="h-4 w-4 text-destructive" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Total Section */}
-                  <div className="border-t bg-muted/20 p-4">
-                    <div className="flex flex-wrap justify-end items-center gap-2 sm:gap-8 max-w-lg ml-auto">
-                      <div className="text-xs text-muted-foreground">Total Items:</div>
-                      <div className="text-xs font-mono font-medium">
-                        {transferEntries.filter(e => e.stockItemId > 0).length}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Total Qty:</div>
-                      <div className="text-xs font-mono font-medium">
-                        {Math.floor(transferEntries.reduce((sum, e) => sum + parseFloat(e.quantity || "0"), 0))}
-                      </div>
-                      {!isPOS && (
-                        <>
-                          <div className="text-xs font-semibold">Grand Total:</div>
-                          <div className="text-sm font-bold font-mono" data-testid="text-transfer-total">
-                            {formatAmount(transferTotal)}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Right Panel - Item Search */}
-                {showItemSidebar && (
-                <Card className="w-full lg:w-80 flex flex-col lg:sticky lg:top-4 max-h-[60vh] lg:max-h-[calc(100vh-12rem)] self-start">
-                  <div className="p-4 border-b">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <h3 className="text-sm font-semibold">Search Items</h3>
-                      <button onClick={() => setShowItemSidebar(false)} className="text-xs text-muted-foreground hover:text-foreground" data-testid="button-close-item-sidebar">✕</button>
-                    </div>
-                    {transferInventorySource && (
-                      <p className="text-xs text-muted-foreground mb-3">
-                        {locations.find(l => l.id === transferInventorySource)?.name}
-                      </p>
-                    )}
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search by name or code..."
-                        value={transferSearchTerm}
-                        onChange={(e) => {
-                          setTransferSearchTerm(e.target.value);
-                          setTransferHighlightedIndex(0);
-                        }}
-                        className="pl-9"
-                        data-testid="input-transfer-sidebar-search"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-2" ref={transferSidebarRef}>
-                    <div className="space-y-1">
-                      {!transferInventorySource ? (
-                        <div className="text-center py-8 text-sm text-muted-foreground">
-                          Select a source location to see available items
-                        </div>
-                      ) : (() => {
-                        const filteredInventory = transferInventory
-                          .filter((item: any) => {
-                            if (!transferSearchTerm.trim()) return true;
-                            const term = transferSearchTerm.toLowerCase();
-                            return (
-                              item.stockItemName?.toLowerCase().includes(term) ||
-                              item.stockItemCode?.toLowerCase().includes(term)
-                            );
-                          })
-                          .sort((a: any, b: any) => (a.stockItemName || '').localeCompare(b.stockItemName || ''));
-                        
-                        if (filteredInventory.length === 0) {
-                          return (
-                            <div className="text-center py-8 text-sm text-muted-foreground">
-                              No items found
-                            </div>
-                          );
-                        }
-                        
-                        return filteredInventory.map((item: any, idx: number) => {
-                          const stock = parseFloat(item.quantity || "0");
-                          const isHighlighted = idx === transferHighlightedIndex && activeTransferRow !== null;
-                          
-                          return (
-                            <button
-                              key={item.stockItemId}
-                              type="button"
-                              className={`w-full text-left px-3 py-3 rounded-md hover-elevate active-elevate-2 ${
-                                stock === 0 ? "opacity-60" : ""
-                              } ${isHighlighted ? "bg-accent" : ""}`}
-                              data-testid={`button-suggest-item-${item.stockItemId}`}
-                              onClick={() => {
-                                if (activeTransferRow !== null) {
-                                  const stockItem = stockItems.find(s => s.id === item.stockItemId);
-                                  if (stockItem) {
-                                    // Ensure we have a valid source location
-                                    const sourceId = Number(transferInventorySource);
-                                    if (!(sourceId > 0)) {
-                                      toast({
-                                        title: "Select a source location first",
-                                        description: "Please select a source location from the inventory sidebar before adding items.",
-                                        variant: "destructive",
-                                      });
-                                      return;
-                                    }
-                                    
-                                    // Set source location - always set it from the current inventory source
-                                    const sourceLocation = locations.find(l => l.id === sourceId);
-                                    stockTransferForm.setValue(`entries.${activeTransferRow}.sourceLocationId`, sourceId, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-                                    stockTransferForm.setValue(`entries.${activeTransferRow}.sourceLocationName`, sourceLocation?.name || "");
-                                    
-                                    // Set item details
-                                    stockTransferForm.setValue(`entries.${activeTransferRow}.stockItemId`, item.stockItemId, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-                                    stockTransferForm.setValue(`entries.${activeTransferRow}.stockItemCode`, stockItem.code || "");
-                                    stockTransferForm.setValue(`entries.${activeTransferRow}.stockItemName`, stockItem.name);
-                                    stockTransferForm.setValue(`entries.${activeTransferRow}.rate`, item.averageRate || "0");
-                                    setTransferSearchTerm("");
-                                    
-                                    setTimeout(() => {
-                                      const quantityInput = document.querySelector(`[data-testid="input-transfer-quantity-${activeTransferRow}"]`) as HTMLInputElement;
-                                      if (quantityInput) {
-                                        quantityInput.focus();
-                                        quantityInput.select();
-                                      }
-                                    }, 50);
-                                  }
-                                }
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-medium mb-1 truncate">{item.stockItemName}</div>
-                                </div>
-                                <div className="flex items-center">
-                                  <div className={`text-xs font-medium px-2 py-0.5 rounded ${
-                                    stock === 0 
-                                      ? "bg-destructive/10 text-destructive" 
-                                      : stock < 10
-                                      ? "bg-chart-3/10 text-chart-3"
-                                      : "bg-chart-2/10 text-chart-2"
-                                  }`}>
-                                    {stock === 0 ? "Out" : `${stock.toFixed(0)}`}
-                                  </div>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        });
-                      })()}
-                    </div>
-                  </div>
-                </Card>
-                )}
-
-                {/* Right Panel - Source Location Search */}
-                {!isPOS && showSourceSidebar && (
-                  <Card className="w-full lg:w-80 flex flex-col lg:sticky lg:top-4 max-h-[60vh] lg:max-h-[calc(100vh-12rem)] self-start">
-                    <div className="p-4 border-b">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <h3 className="text-sm font-semibold">Select Source</h3>
-                        <button onClick={() => setShowSourceSidebar(false)} className="text-xs text-muted-foreground hover:text-foreground" data-testid="button-close-source-sidebar">✕</button>
-                      </div>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search locations..."
-                          value={transferSourceSearchTerm}
-                          onChange={(e) => {
-                            setTransferSourceSearchTerm(e.target.value);
-                            setTransferSourceHighlightedIndex(0);
-                          }}
-                          className="pl-9"
-                          data-testid="input-transfer-source-search"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-2">
-                      <div className="space-y-1">
-                        {(() => {
-                          const filteredLocations = locations
-                            .filter(loc => {
-                              if (!transferSourceSearchTerm.trim()) return true;
-                              const term = transferSourceSearchTerm.toLowerCase();
-                              return (loc.name || '').toLowerCase().includes(term) || (loc.code && loc.code.toLowerCase().includes(term));
-                            })
-                            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-                          
-                          if (filteredLocations.length === 0) {
-                            return (
-                              <div className="text-center py-8 text-sm text-muted-foreground">
-                                No locations found
-                              </div>
-                            );
-                          }
-                          
-                          return filteredLocations.map((loc, idx) => {
-                            const isHighlighted = idx === transferSourceHighlightedIndex && activeTransferRow !== null;
-                            
-                            return (
-                              <button
-                                key={loc.id}
-                                type="button"
-                                className={`w-full text-left px-3 py-3 rounded-md hover-elevate active-elevate-2 ${
-                                  isHighlighted ? "bg-accent" : ""
-                                }`}
-                                data-testid={`button-select-source-location-${loc.id}`}
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  transferFocusIdRef.current += 1;
-                                }}
-                                onClick={() => {
-                                  if (activeTransferRow !== null) {
-                                    const rowIndex = activeTransferRow;
-                                    stockTransferForm.setValue(`entries.${rowIndex}.sourceLocationId`, loc.id);
-                                    stockTransferForm.setValue(`entries.${rowIndex}.sourceLocationName`, loc.name);
-                                    setTransferInventorySource(loc.id);
-                                    setTransferSourceSearchTerm("");
-                                    setShowSourceSidebar(false);
-                                    setActiveTransferRow(null);
-                                    setActiveFieldType(null);
-                                    
-                                    setTimeout(() => {
-                                      const itemInput = document.querySelector(`[data-testid="input-item-name-${rowIndex}"]`) as HTMLInputElement;
-                                      if (itemInput) {
-                                        itemInput.focus();
-                                        itemInput.select();
-                                      }
-                                    }, 50);
-                                  }
-                                }}
-                              >
-                                <div className="text-sm font-medium">{loc.name}</div>
-                              </button>
-                            );
-                          });
-                        })()}
-                      </div>
-                    </div>
-                  </Card>
-                )}
-              </div>
-
-              {/* Notes and Options */}
-              <div className="mt-4 flex flex-wrap items-start gap-2 sm:gap-4">
-                <FormField
-                  control={stockTransferForm.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          placeholder="Notes (optional)"
-                          className="resize-none h-9"
-                          data-testid="input-transfer-notes"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={stockTransferForm.control}
-                  name="optional"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-transfer-optional"
-                        />
-                      </FormControl>
-                      <FormLabel className="text-sm">Optional</FormLabel>
-                    </FormItem>
-                  )}
-                />
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={transferEntries.filter(e => e.stockItemId > 0).length === 0}
-                      data-testid="button-export-stock-transfer"
-                    >
-                      <FileDown className="h-4 w-4 mr-2" />
-                      Export
-                      <ChevronDown className="h-4 w-4 ml-1" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleExportStockTransfer(false)} data-testid="export-transfer-summary">
-                      Summary Export
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExportStockTransfer(true)} data-testid="export-transfer-detailed">
-                      Detailed Export
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button
-                  type="submit"
-                  disabled={stockTransferMutation.isPending || transferEntries.filter(e => e.stockItemId > 0).length === 0}
-                  data-testid="button-save-transfer-voucher"
-                >
-                  {stockTransferMutation.isPending ? "Saving..." : "Save Transfer"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-          </div>
-        )}
-
-        {!isPOS && activeTab === "adjustment" && (
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Production / Consumption Voucher</CardTitle>
-              </CardHeader>
-              <CardContent>
-              <Form {...stockAdjustmentForm}>
-                <form onSubmit={stockAdjustmentForm.handleSubmit(onStockAdjustmentSubmit)} className="space-y-6">
-                  {/* Header section */}
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-                    <FormField
-                      control={stockAdjustmentForm.control}
-                      name="locationId"
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Location</FormLabel>
-                          <Select
-                            value={field.value > 0 ? field.value.toString() : ""}
-                            onValueChange={(value) => field.onChange(parseInt(value))}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-adjustment-location">
-                                <SelectValue placeholder="Select location..." />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {[...locations].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((location) => (
-                                <SelectItem key={location.id} value={location.id.toString()}>
-                                  {location.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={stockAdjustmentForm.control}
-                      name="voucherDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              value={field.value instanceof Date ? format(field.value, "yyyy-MM-dd") : (typeof field.value === "string" ? field.value : "")}
-                              onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value + "T00:00:00") : new Date())}
-                              className="w-full sm:w-[200px]"
-                              data-testid="input-adjustment-date"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* UNIFIED PRODUCTION/CONSUMPTION TABLE WITH SIDEBAR */}
-                  <div className="flex flex-col lg:flex-row gap-4">
-                    {/* Main Spreadsheet Area */}
-                    <Card className="flex-1 overflow-hidden min-w-0">
-                      <div className="overflow-x-auto">
-                        <div className="min-w-[400px]">
-                          {/* Header */}
-                          <div className="flex bg-muted/50 border-b sticky top-0 z-10">
-                            <div className="w-10 sm:w-12 flex items-center justify-center border-r h-9 sm:h-10 font-medium text-xs">
-                              #
-                            </div>
-                            <div className="w-16 sm:w-24 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
-                              Type
-                            </div>
-                            <div className="flex-1 min-w-[120px] flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
-                              Item
-                            </div>
-                            <div className="w-16 sm:w-20 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm text-muted-foreground">
-                              Avail
-                            </div>
-                            <div className="w-16 sm:w-24 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
-                              Qty
-                            </div>
-                            <div className="w-16 sm:w-24 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
-                              Rate
-                            </div>
-                            <div className="w-20 sm:w-28 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm bg-muted/30">
-                              Amt
-                            </div>
-                            <div className="w-10 sm:w-12 flex items-center justify-center h-9 sm:h-10" />
-                          </div>
-
-                          {/* Rows */}
-                          <div className="max-h-[calc(100vh-24rem)] overflow-y-auto">
-                            {adjustmentFields.map((field, index) => {
-                              const currentEntry = adjustmentEntries[index];
-                              const inventoryItem = adjustmentItemsWithInventory.find(
-                                item => item.stockItemId === currentEntry?.stockItemId
-                              );
-                              const availableQty = inventoryItem?.quantity || "0";
-                              
-                              return (
-                                <div key={field.id} className="flex border-b hover-elevate">
-                                  <div className="w-10 sm:w-12 flex items-center justify-center border-r h-9 sm:h-10 text-xs text-muted-foreground">
-                                    {index + 1}
-                                  </div>
-                                  {/* Type column - accepts p/c keyboard shortcuts */}
-                                  <div className="w-16 sm:w-24 border-r h-9 sm:h-10">
-                                    <input
-                                      type="text"
-                                      value={currentEntry?.type === "PRODUCE" ? "Produce" : currentEntry?.type === "CONSUME" ? "Consume" : ""}
-                                      onChange={(e) => {
-                                        const val = e.target.value.toLowerCase();
-                                        if (val.startsWith('p')) {
-                                          stockAdjustmentForm.setValue(`entries.${index}.type`, "PRODUCE");
-                                        } else if (val.startsWith('c')) {
-                                          stockAdjustmentForm.setValue(`entries.${index}.type`, "CONSUME");
-                                        }
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'p' || e.key === 'P') {
-                                          e.preventDefault();
-                                          stockAdjustmentForm.setValue(`entries.${index}.type`, "PRODUCE");
-                                        } else if (e.key === 'c' || e.key === 'C') {
-                                          e.preventDefault();
-                                          stockAdjustmentForm.setValue(`entries.${index}.type`, "CONSUME");
-                                        } else if (e.key === "Tab" && !e.shiftKey) {
-                                          e.preventDefault();
-                                          const itemInput = document.querySelector(`[data-testid="input-adjustment-item-${index}"]`) as HTMLInputElement;
-                                          if (itemInput) { itemInput.focus(); itemInput.select(); }
-                                        } else if (e.key === "ArrowDown") {
-                                          e.preventDefault();
-                                          const nextInput = document.querySelector(`[data-testid="input-adjustment-type-${index + 1}"]`) as HTMLInputElement;
-                                          if (nextInput) nextInput.focus();
-                                        } else if (e.key === "ArrowUp" && index > 0) {
-                                          e.preventDefault();
-                                          const prevInput = document.querySelector(`[data-testid="input-adjustment-type-${index - 1}"]`) as HTMLInputElement;
-                                          if (prevInput) prevInput.focus();
-                                        }
-                                      }}
-                                      placeholder="p/c"
-                                      className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20 text-sm"
-                                      data-testid={`input-adjustment-type-${index}`}
-                                    />
-                                  </div>
-                                  {/* Item Name column - triggers sidebar */}
-                                  <div className="flex-1 min-w-[120px] border-r h-9 sm:h-10">
-                                    <input
-                                      type="text"
-                                      value={activeAdjustmentRow === index ? adjustmentSearchTerm : (currentEntry?.stockItemName || "")}
-                                      onChange={(e) => {
-                                        setAdjustmentSearchTerm(e.target.value);
-                                        setAdjustmentHighlightedIndex(0);
-                                        if (!e.target.value) {
-                                          stockAdjustmentForm.setValue(`entries.${index}.stockItemId`, 0);
-                                          stockAdjustmentForm.setValue(`entries.${index}.stockItemCode`, "");
-                                          stockAdjustmentForm.setValue(`entries.${index}.stockItemName`, "");
-                                        }
-                                      }}
-                                      onFocus={() => {
-                                        adjustmentFocusIdRef.current += 1;
-                                        setActiveAdjustmentRow(index);
-                                        setAdjustmentSearchTerm(currentEntry?.stockItemName || "");
-                                        setAdjustmentHighlightedIndex(0);
-                                        setShowAdjustmentSidebar(true);
-                                      }}
-                                      onBlur={() => {
-                                        const focusIdAtBlur = adjustmentFocusIdRef.current;
-                                        setTimeout(() => {
-                                          if (adjustmentFocusIdRef.current === focusIdAtBlur) {
-                                            setActiveAdjustmentRow(null);
-                                            setAdjustmentSearchTerm("");
-                                            setShowAdjustmentSidebar(false);
-                                          }
-                                        }, 200);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "ArrowUp" && !e.shiftKey) {
-                                          e.preventDefault();
-                                          if (showAdjustmentSidebar && filteredAdjustmentItems.length > 0) {
-                                            setAdjustmentHighlightedIndex(Math.max(0, adjustmentHighlightedIndex - 1));
-                                          } else if (index > 0) {
-                                            const prevInput = document.querySelector(`[data-testid="input-adjustment-item-${index - 1}"]`) as HTMLInputElement;
-                                            if (prevInput) prevInput.focus();
-                                          }
-                                        } else if (e.key === "ArrowDown" && !e.shiftKey) {
-                                          e.preventDefault();
-                                          if (showAdjustmentSidebar && filteredAdjustmentItems.length > 0) {
-                                            setAdjustmentHighlightedIndex(Math.min(filteredAdjustmentItems.length - 1, adjustmentHighlightedIndex + 1));
-                                          } else if (index < adjustmentFields.length - 1) {
-                                            const nextInput = document.querySelector(`[data-testid="input-adjustment-item-${index + 1}"]`) as HTMLInputElement;
-                                            if (nextInput) nextInput.focus();
-                                          }
-                                        } else if (e.key === "Enter") {
-                                          e.preventDefault();
-                                          if (showAdjustmentSidebar && filteredAdjustmentItems.length > 0) {
-                                            const item = filteredAdjustmentItems[adjustmentHighlightedIndex];
-                                            if (item) {
-                                              stockAdjustmentForm.setValue(`entries.${index}.stockItemId`, item.stockItemId);
-                                              stockAdjustmentForm.setValue(`entries.${index}.stockItemCode`, item.stockItemCode || "");
-                                              stockAdjustmentForm.setValue(`entries.${index}.stockItemName`, item.stockItemName);
-                                              stockAdjustmentForm.setValue(`entries.${index}.rate`, item.averageRate || "0");
-                                              setAdjustmentSearchTerm("");
-                                              setShowAdjustmentSidebar(false);
+                                {!isPOS && (
+                                  <>
+                                    <div className="w-16 sm:w-24 border-r h-9 sm:h-10">
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={transferEntries[index]?.rate || ""}
+                                        onChange={(e) => {
+                                          stockTransferForm.setValue(
+                                            `entries.${index}.rate`,
+                                            e.target.value,
+                                          );
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "ArrowUp") {
+                                            e.preventDefault();
+                                            if (index > 0) {
                                               setTimeout(() => {
-                                                const qtyInput = document.querySelector(`[data-testid="input-adjustment-qty-${index}"]`) as HTMLInputElement;
-                                                if (qtyInput) { qtyInput.focus(); qtyInput.select(); }
+                                                const prevInput = document.querySelector(
+                                                  `[data-testid="input-transfer-rate-${index - 1}"]`,
+                                                ) as HTMLInputElement;
+                                                if (prevInput) {
+                                                  prevInput.focus();
+                                                  prevInput.select();
+                                                }
                                               }, 50);
                                             }
-                                          }
-                                        } else if (e.key === "Tab" && !e.shiftKey) {
-                                          e.preventDefault();
-                                          setShowAdjustmentSidebar(false);
-                                          const qtyInput = document.querySelector(`[data-testid="input-adjustment-qty-${index}"]`) as HTMLInputElement;
-                                          if (qtyInput) { qtyInput.focus(); qtyInput.select(); }
-                                        }
-                                      }}
-                                      placeholder="Type to search..."
-                                      className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20"
-                                      data-testid={`input-adjustment-item-${index}`}
-                                    />
-                                  </div>
-                                  {/* Available Qty column */}
-                                  <div className="w-16 sm:w-20 border-r h-9 sm:h-10 bg-muted/20 flex items-center justify-end px-2 sm:px-3 font-mono text-xs sm:text-sm text-muted-foreground">
-                                    {formatNumber(parseFloat(availableQty))}
-                                  </div>
-                                  {/* Quantity column - Enter goes to Rate */}
-                                  <div className="w-16 sm:w-24 border-r h-9 sm:h-10">
-                                    <input
-                                      type="number"
-                                      step="0.001"
-                                      value={currentEntry?.quantity || ""}
-                                      onChange={(e) => stockAdjustmentForm.setValue(`entries.${index}.quantity`, e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
-                                          e.preventDefault();
-                                          const rateInput = document.querySelector(`[data-testid="input-adjustment-rate-${index}"]`) as HTMLInputElement;
-                                          if (rateInput) { rateInput.focus(); rateInput.select(); }
-                                        } else if (e.key === "ArrowDown") {
-                                          e.preventDefault();
-                                          const nextInput = document.querySelector(`[data-testid="input-adjustment-qty-${index + 1}"]`) as HTMLInputElement;
-                                          if (nextInput) nextInput.focus();
-                                        } else if (e.key === "ArrowUp" && index > 0) {
-                                          e.preventDefault();
-                                          const prevInput = document.querySelector(`[data-testid="input-adjustment-qty-${index - 1}"]`) as HTMLInputElement;
-                                          if (prevInput) prevInput.focus();
-                                        }
-                                      }}
-                                      placeholder="0"
-                                      className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20 font-mono text-right"
-                                      data-testid={`input-adjustment-qty-${index}`}
-                                    />
-                                  </div>
-                                  {/* Rate column - Enter creates new row or goes to next row */}
-                                  <div className="w-16 sm:w-24 border-r h-9 sm:h-10">
-                                    <input
-                                      type="number"
-                                      step="0.01"
-                                      value={currentEntry?.rate || ""}
-                                      onChange={(e) => stockAdjustmentForm.setValue(`entries.${index}.rate`, e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault();
-                                          if (index === adjustmentFields.length - 1) {
-                                            appendAdjustment({
-                                              type: "CONSUME",
-                                              stockItemId: 0,
-                                              stockItemCode: "",
-                                              stockItemName: "",
-                                              quantity: "",
-                                              rate: "",
-                                            });
+                                          } else if (e.key === "ArrowDown") {
+                                            e.preventDefault();
+                                            if (index < transferFields.length - 1) {
+                                              setTimeout(() => {
+                                                const nextInput = document.querySelector(
+                                                  `[data-testid="input-transfer-rate-${index + 1}"]`,
+                                                ) as HTMLInputElement;
+                                                if (nextInput) {
+                                                  nextInput.focus();
+                                                  nextInput.select();
+                                                }
+                                              }, 50);
+                                            }
+                                          } else if (e.key === "ArrowLeft") {
+                                            e.preventDefault();
                                             setTimeout(() => {
-                                              const newInput = document.querySelector(`[data-testid="input-adjustment-type-${index + 1}"]`) as HTMLInputElement;
-                                              if (newInput) newInput.focus();
-                                            }, 100);
-                                          } else {
-                                            const nextTypeInput = document.querySelector(`[data-testid="input-adjustment-type-${index + 1}"]`) as HTMLInputElement;
-                                            if (nextTypeInput) nextTypeInput.focus();
+                                              const qtyInput = document.querySelector(
+                                                `[data-testid="input-transfer-quantity-${index}"]`,
+                                              ) as HTMLInputElement;
+                                              if (qtyInput) {
+                                                qtyInput.focus();
+                                                qtyInput.select();
+                                              }
+                                            }, 50);
+                                          } else if (e.key === "Tab" && !e.shiftKey) {
+                                            e.preventDefault();
+                                            if (index < transferFields.length - 1) {
+                                              setTimeout(() => {
+                                                const nextNameInput = document.querySelector(
+                                                  `[data-testid="input-item-name-${index + 1}"]`,
+                                                ) as HTMLInputElement;
+                                                if (nextNameInput) {
+                                                  nextNameInput.focus();
+                                                  nextNameInput.select();
+                                                }
+                                              }, 50);
+                                            }
+                                          } else if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            if (index === transferFields.length - 1) {
+                                              appendTransfer({
+                                                sourceLocationId: 0,
+                                                sourceLocationName: "",
+                                                stockItemId: 0,
+                                                stockItemCode: "",
+                                                stockItemName: "",
+                                                quantity: "",
+                                                rate: "",
+                                              });
+                                              setTimeout(() => {
+                                                const newInput = document.querySelector(
+                                                  `[data-testid="input-source-${index + 1}"]`,
+                                                ) as HTMLInputElement;
+                                                if (newInput) newInput.focus();
+                                              }, 100);
+                                            }
                                           }
-                                        } else if (e.key === "ArrowDown") {
-                                          e.preventDefault();
-                                          const nextInput = document.querySelector(`[data-testid="input-adjustment-rate-${index + 1}"]`) as HTMLInputElement;
-                                          if (nextInput) nextInput.focus();
-                                        } else if (e.key === "ArrowUp" && index > 0) {
-                                          e.preventDefault();
-                                          const prevInput = document.querySelector(`[data-testid="input-adjustment-rate-${index - 1}"]`) as HTMLInputElement;
-                                          if (prevInput) prevInput.focus();
-                                        }
-                                      }}
-                                      placeholder="0"
-                                      className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20 font-mono text-right"
-                                      data-testid={`input-adjustment-rate-${index}`}
-                                    />
-                                  </div>
-                                  {/* Amount column */}
-                                  <div className="w-20 sm:w-28 border-r h-9 sm:h-10 bg-muted/30 flex items-center justify-end px-2 sm:px-3 font-mono text-xs sm:text-sm">
-                                    {formatAmount(parseFloat(currentEntry?.quantity || "0") * parseFloat(currentEntry?.rate || "0"))}
-                                  </div>
-                                  {/* Delete button */}
-                                  <div className="w-10 sm:w-12 flex items-center justify-center h-9 sm:h-10">
-                                    {adjustmentFields.length > 1 && (
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => removeAdjustment(index)}
-                                        className="h-8 w-8"
-                                        data-testid={`button-remove-adjustment-${index}`}
-                                      >
-                                        <X className="h-4 w-4 text-destructive" />
-                                      </Button>
-                                    )}
-                                  </div>
+                                        }}
+                                        placeholder="0"
+                                        className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20 font-mono text-right"
+                                        data-testid={`input-transfer-rate-${index}`}
+                                      />
+                                    </div>
+                                    <div className="w-20 sm:w-28 border-r h-9 sm:h-10 bg-muted/30 flex items-center justify-end px-2 sm:px-3 font-mono text-xs sm:text-sm">
+                                      {formatAmount(
+                                        parseFloat(transferEntries[index]?.quantity || "0") *
+                                          parseFloat(transferEntries[index]?.rate || "0"),
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                                <div className="w-10 sm:w-12 flex items-center justify-center h-9 sm:h-10">
+                                  {transferFields.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeTransfer(index)}
+                                      className="h-8 w-8"
+                                      data-testid={`button-remove-transfer-${index}`}
+                                    >
+                                      <X className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  )}
                                 </div>
-                              );
-                            })}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>
 
                       {/* Total Section */}
                       <div className="border-t bg-muted/20 p-4">
-                        <div className="flex flex-wrap justify-between items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              appendAdjustment({
-                                type: "CONSUME",
-                                stockItemId: 0,
-                                stockItemCode: "",
-                                stockItemName: "",
-                                quantity: "",
-                                rate: "",
-                              })
-                            }
-                            data-testid="button-add-adjustment-row"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Row
-                          </Button>
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-6">
-                            <div className="text-xs text-muted-foreground">Total Qty:</div>
-                            <div className="text-xs font-mono font-medium">
-                              {formatNumber(adjustmentEntries.reduce((sum, e) => sum + parseFloat(e.quantity || "0"), 0))}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Consume:</div>
-                            <div className="text-xs font-mono font-medium text-destructive">
-                              {formatAmount(consumptionTotal)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Produce:</div>
-                            <div className="text-xs font-mono font-medium text-green-600">
-                              {formatAmount(productionTotal)}
-                            </div>
-                            <div className="text-sm font-semibold">Total:</div>
-                            <div className="text-sm font-bold font-mono" data-testid="text-adjustment-total">
-                              {formatAmount(consumptionTotal + productionTotal)}
-                            </div>
+                        <div className="flex flex-wrap justify-end items-center gap-2 sm:gap-8 max-w-lg ml-auto">
+                          <div className="text-xs text-muted-foreground">Total Items:</div>
+                          <div className="text-xs font-mono font-medium">
+                            {transferEntries.filter((e) => e.stockItemId > 0).length}
                           </div>
+                          <div className="text-xs text-muted-foreground">Total Qty:</div>
+                          <div className="text-xs font-mono font-medium">
+                            {Math.floor(
+                              transferEntries.reduce(
+                                (sum, e) => sum + parseFloat(e.quantity || "0"),
+                                0,
+                              ),
+                            )}
+                          </div>
+                          {!isPOS && (
+                            <>
+                              <div className="text-xs font-semibold">Grand Total:</div>
+                              <div
+                                className="text-sm font-bold font-mono"
+                                data-testid="text-transfer-total"
+                              >
+                                {formatAmount(transferTotal)}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     </Card>
 
-                    {/* Right Panel - Item Search Sidebar */}
-                    {showAdjustmentSidebar && (
+                    {/* Right Panel - Item Search */}
+                    {showItemSidebar && (
                       <Card className="w-full lg:w-80 flex flex-col lg:sticky lg:top-4 max-h-[60vh] lg:max-h-[calc(100vh-12rem)] self-start">
                         <div className="p-4 border-b">
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <h3 className="text-sm font-semibold">Search Items</h3>
-                            <button 
-                              onClick={() => setShowAdjustmentSidebar(false)} 
+                            <button
+                              onClick={() => setShowItemSidebar(false)}
                               className="text-xs text-muted-foreground hover:text-foreground"
-                              data-testid="button-close-adjustment-sidebar"
+                              data-testid="button-close-item-sidebar"
                             >
                               ✕
                             </button>
                           </div>
-                          {adjustmentLocationId > 0 && (
+                          {transferInventorySource && (
                             <p className="text-xs text-muted-foreground mb-3">
-                              {locations.find(l => l.id === adjustmentLocationId)?.name}
+                              {locations.find((l) => l.id === transferInventorySource)?.name}
                             </p>
                           )}
                           <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                               placeholder="Search by name or code..."
-                              value={adjustmentSearchTerm}
+                              value={transferSearchTerm}
                               onChange={(e) => {
-                                setAdjustmentSearchTerm(e.target.value);
-                                setAdjustmentHighlightedIndex(0);
+                                setTransferSearchTerm(e.target.value);
+                                setTransferHighlightedIndex(0);
                               }}
                               className="pl-9"
-                              data-testid="input-adjustment-sidebar-search"
+                              data-testid="input-transfer-sidebar-search"
                             />
                           </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-2" ref={adjustmentSidebarRef}>
+                        <div className="flex-1 overflow-y-auto p-2" ref={transferSidebarRef}>
                           <div className="space-y-1">
-                            {filteredAdjustmentItems.length === 0 ? (
+                            {!transferInventorySource ? (
                               <div className="text-center py-8 text-sm text-muted-foreground">
-                                {adjustmentLocationId > 0 ? "No items found" : "Select a location first"}
+                                Select a source location to see available items
                               </div>
                             ) : (
-                              filteredAdjustmentItems.map((item, idx) => {
-                                const stock = parseFloat(item.quantity || "0");
-                                const isHighlighted = idx === adjustmentHighlightedIndex && activeAdjustmentRow !== null;
-                                
+                              (() => {
+                                const filteredInventory = transferInventory
+                                  .filter((item: any) => {
+                                    if (!transferSearchTerm.trim()) return true;
+                                    const term = transferSearchTerm.toLowerCase();
+                                    return (
+                                      item.stockItemName?.toLowerCase().includes(term) ||
+                                      item.stockItemCode?.toLowerCase().includes(term)
+                                    );
+                                  })
+                                  .sort((a: any, b: any) =>
+                                    (a.stockItemName || "").localeCompare(b.stockItemName || ""),
+                                  );
+
+                                if (filteredInventory.length === 0) {
+                                  return (
+                                    <div className="text-center py-8 text-sm text-muted-foreground">
+                                      No items found
+                                    </div>
+                                  );
+                                }
+
+                                return filteredInventory.map((item: any, idx: number) => {
+                                  const stock = parseFloat(item.quantity || "0");
+                                  const isHighlighted =
+                                    idx === transferHighlightedIndex && activeTransferRow !== null;
+
+                                  return (
+                                    <button
+                                      key={item.stockItemId}
+                                      type="button"
+                                      className={`w-full text-left px-3 py-3 rounded-md hover-elevate active-elevate-2 ${
+                                        stock === 0 ? "opacity-60" : ""
+                                      } ${isHighlighted ? "bg-accent" : ""}`}
+                                      data-testid={`button-suggest-item-${item.stockItemId}`}
+                                      onClick={() => {
+                                        if (activeTransferRow !== null) {
+                                          const stockItem = stockItems.find(
+                                            (s) => s.id === item.stockItemId,
+                                          );
+                                          if (stockItem) {
+                                            // Ensure we have a valid source location
+                                            const sourceId = Number(transferInventorySource);
+                                            if (!(sourceId > 0)) {
+                                              toast({
+                                                title: "Select a source location first",
+                                                description:
+                                                  "Please select a source location from the inventory sidebar before adding items.",
+                                                variant: "destructive",
+                                              });
+                                              return;
+                                            }
+
+                                            // Set source location - always set it from the current inventory source
+                                            const sourceLocation = locations.find(
+                                              (l) => l.id === sourceId,
+                                            );
+                                            stockTransferForm.setValue(
+                                              `entries.${activeTransferRow}.sourceLocationId`,
+                                              sourceId,
+                                              {
+                                                shouldValidate: true,
+                                                shouldDirty: true,
+                                                shouldTouch: true,
+                                              },
+                                            );
+                                            stockTransferForm.setValue(
+                                              `entries.${activeTransferRow}.sourceLocationName`,
+                                              sourceLocation?.name || "",
+                                            );
+
+                                            // Set item details
+                                            stockTransferForm.setValue(
+                                              `entries.${activeTransferRow}.stockItemId`,
+                                              item.stockItemId,
+                                              {
+                                                shouldValidate: true,
+                                                shouldDirty: true,
+                                                shouldTouch: true,
+                                              },
+                                            );
+                                            stockTransferForm.setValue(
+                                              `entries.${activeTransferRow}.stockItemCode`,
+                                              stockItem.code || "",
+                                            );
+                                            stockTransferForm.setValue(
+                                              `entries.${activeTransferRow}.stockItemName`,
+                                              stockItem.name,
+                                            );
+                                            stockTransferForm.setValue(
+                                              `entries.${activeTransferRow}.rate`,
+                                              item.averageRate || "0",
+                                            );
+                                            setTransferSearchTerm("");
+
+                                            setTimeout(() => {
+                                              const quantityInput = document.querySelector(
+                                                `[data-testid="input-transfer-quantity-${activeTransferRow}"]`,
+                                              ) as HTMLInputElement;
+                                              if (quantityInput) {
+                                                quantityInput.focus();
+                                                quantityInput.select();
+                                              }
+                                            }, 50);
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-sm font-medium mb-1 truncate">
+                                            {item.stockItemName}
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`text-xs font-medium px-2 py-0.5 rounded ${
+                                              stock === 0
+                                                ? "bg-destructive/10 text-destructive"
+                                                : stock < 10
+                                                  ? "bg-chart-3/10 text-chart-3"
+                                                  : "bg-chart-2/10 text-chart-2"
+                                            }`}
+                                          >
+                                            {stock === 0 ? "Out" : `${stock.toFixed(0)}`}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </button>
+                                  );
+                                });
+                              })()
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+
+                    {/* Right Panel - Source Location Search */}
+                    {!isPOS && showSourceSidebar && (
+                      <Card className="w-full lg:w-80 flex flex-col lg:sticky lg:top-4 max-h-[60vh] lg:max-h-[calc(100vh-12rem)] self-start">
+                        <div className="p-4 border-b">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <h3 className="text-sm font-semibold">Select Source</h3>
+                            <button
+                              onClick={() => setShowSourceSidebar(false)}
+                              className="text-xs text-muted-foreground hover:text-foreground"
+                              data-testid="button-close-source-sidebar"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Search locations..."
+                              value={transferSourceSearchTerm}
+                              onChange={(e) => {
+                                setTransferSourceSearchTerm(e.target.value);
+                                setTransferSourceHighlightedIndex(0);
+                              }}
+                              className="pl-9"
+                              data-testid="input-transfer-source-search"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2">
+                          <div className="space-y-1">
+                            {(() => {
+                              const filteredLocations = locations
+                                .filter((loc) => {
+                                  if (!transferSourceSearchTerm.trim()) return true;
+                                  const term = transferSourceSearchTerm.toLowerCase();
+                                  return (
+                                    (loc.name || "").toLowerCase().includes(term) ||
+                                    (loc.code && loc.code.toLowerCase().includes(term))
+                                  );
+                                })
+                                .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+                              if (filteredLocations.length === 0) {
+                                return (
+                                  <div className="text-center py-8 text-sm text-muted-foreground">
+                                    No locations found
+                                  </div>
+                                );
+                              }
+
+                              return filteredLocations.map((loc, idx) => {
+                                const isHighlighted =
+                                  idx === transferSourceHighlightedIndex &&
+                                  activeTransferRow !== null;
+
                                 return (
                                   <button
-                                    key={item.stockItemId}
+                                    key={loc.id}
                                     type="button"
-                                    data-adjustment-idx={idx}
                                     className={`w-full text-left px-3 py-3 rounded-md hover-elevate active-elevate-2 ${
-                                      stock === 0 ? "opacity-60" : ""
-                                    } ${isHighlighted ? "bg-accent" : ""}`}
-                                    data-testid={`button-adjustment-suggest-item-${item.stockItemId}`}
+                                      isHighlighted ? "bg-accent" : ""
+                                    }`}
+                                    data-testid={`button-select-source-location-${loc.id}`}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      transferFocusIdRef.current += 1;
+                                    }}
                                     onClick={() => {
-                                      if (activeAdjustmentRow !== null) {
-                                        stockAdjustmentForm.setValue(`entries.${activeAdjustmentRow}.stockItemId`, item.stockItemId);
-                                        stockAdjustmentForm.setValue(`entries.${activeAdjustmentRow}.stockItemCode`, item.stockItemCode || "");
-                                        stockAdjustmentForm.setValue(`entries.${activeAdjustmentRow}.stockItemName`, item.stockItemName);
-                                        stockAdjustmentForm.setValue(`entries.${activeAdjustmentRow}.rate`, item.averageRate || "0");
-                                        setAdjustmentSearchTerm("");
-                                        setShowAdjustmentSidebar(false);
-                                        
+                                      if (activeTransferRow !== null) {
+                                        const rowIndex = activeTransferRow;
+                                        stockTransferForm.setValue(
+                                          `entries.${rowIndex}.sourceLocationId`,
+                                          loc.id,
+                                        );
+                                        stockTransferForm.setValue(
+                                          `entries.${rowIndex}.sourceLocationName`,
+                                          loc.name,
+                                        );
+                                        setTransferInventorySource(loc.id);
+                                        setTransferSourceSearchTerm("");
+                                        setShowSourceSidebar(false);
+                                        setActiveTransferRow(null);
+                                        setActiveFieldType(null);
+
                                         setTimeout(() => {
-                                          const qtyInput = document.querySelector(`[data-testid="input-adjustment-qty-${activeAdjustmentRow}"]`) as HTMLInputElement;
-                                          if (qtyInput) { qtyInput.focus(); qtyInput.select(); }
+                                          const itemInput = document.querySelector(
+                                            `[data-testid="input-item-name-${rowIndex}"]`,
+                                          ) as HTMLInputElement;
+                                          if (itemInput) {
+                                            itemInput.focus();
+                                            itemInput.select();
+                                          }
                                         }, 50);
                                       }
                                     }}
                                   >
-                                    <div className="flex items-center justify-between gap-2">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="font-medium text-sm truncate">{item.stockItemName}</div>
-                                        <div className="text-xs text-muted-foreground">{item.stockItemCode}</div>
-                                      </div>
-                                      <div className="text-right">
-                                        <div className={`text-sm font-mono ${stock > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                                          {formatNumber(stock)}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          @{formatAmount(item.averageRate || "0")}
-                                        </div>
-                                      </div>
-                                    </div>
+                                    <div className="text-sm font-medium">{loc.name}</div>
                                   </button>
                                 );
-                              })
-                            )}
+                              });
+                            })()}
                           </div>
                         </div>
                       </Card>
                     )}
                   </div>
 
-                  {/* Notes field */}
-                  <FormField
-                    control={stockAdjustmentForm.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Notes</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Additional notes..."
-                            rows={3}
-                            data-testid="input-adjustment-notes"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Notes and Options */}
+                  <div className="mt-4 flex flex-wrap items-start gap-2 sm:gap-4">
+                    <FormField
+                      control={stockTransferForm.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Notes (optional)"
+                              className="resize-none h-9"
+                              data-testid="input-transfer-notes"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* Optional checkbox */}
-                  <FormField
-                    control={stockAdjustmentForm.control}
-                    name="optional"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="checkbox-adjustment-optional"
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Mark as Optional
-                          </FormLabel>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={stockTransferForm.control}
+                      name="optional"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-transfer-optional"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm">Optional</FormLabel>
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* Submit button */}
-                  <div className="flex flex-wrap justify-end gap-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           type="button"
                           variant="outline"
-                          disabled={adjustmentEntries.filter((e: any) => e.stockItemId > 0 && parseFloat(e.quantity) > 0).length === 0}
-                          data-testid="button-export-production-consumption"
+                          disabled={transferEntries.filter((e) => e.stockItemId > 0).length === 0}
+                          data-testid="button-export-stock-transfer"
                         >
                           <FileDown className="h-4 w-4 mr-2" />
                           Export
@@ -5805,39 +6230,770 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleExportProductionConsumptionVoucher(false)} data-testid="export-prod-cons-summary">
+                        <DropdownMenuItem
+                          onClick={() => handleExportStockTransfer(false)}
+                          data-testid="export-transfer-summary"
+                        >
                           Summary Export
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExportProductionConsumptionVoucher(true)} data-testid="export-prod-cons-detailed">
+                        <DropdownMenuItem
+                          onClick={() => handleExportStockTransfer(true)}
+                          data-testid="export-transfer-detailed"
+                        >
                           Detailed Export
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+
                     <Button
                       type="submit"
-                      disabled={stockAdjustmentMutation.isPending || adjustmentEntries.length === 0}
-                      data-testid="button-save-adjustment-voucher"
+                      disabled={
+                        stockTransferMutation.isPending ||
+                        transferEntries.filter((e) => e.stockItemId > 0).length === 0
+                      }
+                      data-testid="button-save-transfer-voucher"
                     >
-                      {stockAdjustmentMutation.isPending ? "Saving..." : "Save Production/Consumption Voucher"}
+                      {stockTransferMutation.isPending ? "Saving..." : "Save Transfer"}
                     </Button>
                   </div>
                 </form>
               </Form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+            </div>
+          )}
 
-        {!isPOS && activeTab === "creditnote" && (
-          <div className="space-y-4">
-            <CreditNoteTab allAccounts={allAccounts} editVoucherId={activeTab === "creditnote" ? editVoucherId : null} />
-          </div>
-        )}
+          {!isPOS && activeTab === "adjustment" && (
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Production / Consumption Voucher</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Form {...stockAdjustmentForm}>
+                    <form
+                      onSubmit={stockAdjustmentForm.handleSubmit(onStockAdjustmentSubmit)}
+                      className="space-y-6"
+                    >
+                      {/* Header section */}
+                      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                        <FormField
+                          control={stockAdjustmentForm.control}
+                          name="locationId"
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormLabel>Location</FormLabel>
+                              <Select
+                                value={field.value > 0 ? field.value.toString() : ""}
+                                onValueChange={(value) => field.onChange(parseInt(value))}
+                              >
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-adjustment-location">
+                                    <SelectValue placeholder="Select location..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {[...locations]
+                                    .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                                    .map((location) => (
+                                      <SelectItem key={location.id} value={location.id.toString()}>
+                                        {location.name}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-        {!isPOS && activeTab === "transferorder" && (
-          <StockTransferOrder />
-        )}
+                        <FormField
+                          control={stockAdjustmentForm.control}
+                          name="voucherDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Date</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="date"
+                                  value={
+                                    field.value instanceof Date
+                                      ? format(field.value, "yyyy-MM-dd")
+                                      : typeof field.value === "string"
+                                        ? field.value
+                                        : ""
+                                  }
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      e.target.value
+                                        ? new Date(e.target.value + "T00:00:00")
+                                        : new Date(),
+                                    )
+                                  }
+                                  className="w-full sm:w-[200px]"
+                                  data-testid="input-adjustment-date"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
+                      {/* UNIFIED PRODUCTION/CONSUMPTION TABLE WITH SIDEBAR */}
+                      <div className="flex flex-col lg:flex-row gap-4">
+                        {/* Main Spreadsheet Area */}
+                        <Card className="flex-1 overflow-hidden min-w-0">
+                          <div className="overflow-x-auto">
+                            <div className="min-w-[400px]">
+                              {/* Header */}
+                              <div className="flex bg-muted/50 border-b sticky top-0 z-10">
+                                <div className="w-10 sm:w-12 flex items-center justify-center border-r h-9 sm:h-10 font-medium text-xs">
+                                  #
+                                </div>
+                                <div className="w-16 sm:w-24 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
+                                  Type
+                                </div>
+                                <div className="flex-1 min-w-[120px] flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
+                                  Item
+                                </div>
+                                <div className="w-16 sm:w-20 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm text-muted-foreground">
+                                  Avail
+                                </div>
+                                <div className="w-16 sm:w-24 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
+                                  Qty
+                                </div>
+                                <div className="w-16 sm:w-24 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm">
+                                  Rate
+                                </div>
+                                <div className="w-20 sm:w-28 flex items-center px-2 sm:px-3 border-r h-9 sm:h-10 font-medium text-xs sm:text-sm bg-muted/30">
+                                  Amt
+                                </div>
+                                <div className="w-10 sm:w-12 flex items-center justify-center h-9 sm:h-10" />
+                              </div>
+
+                              {/* Rows */}
+                              <div className="max-h-[calc(100vh-24rem)] overflow-y-auto">
+                                {adjustmentFields.map((field, index) => {
+                                  const currentEntry = adjustmentEntries[index];
+                                  const inventoryItem = adjustmentItemsWithInventory.find(
+                                    (item) => item.stockItemId === currentEntry?.stockItemId,
+                                  );
+                                  const availableQty = inventoryItem?.quantity || "0";
+
+                                  return (
+                                    <div key={field.id} className="flex border-b hover-elevate">
+                                      <div className="w-10 sm:w-12 flex items-center justify-center border-r h-9 sm:h-10 text-xs text-muted-foreground">
+                                        {index + 1}
+                                      </div>
+                                      {/* Type column - accepts p/c keyboard shortcuts */}
+                                      <div className="w-16 sm:w-24 border-r h-9 sm:h-10">
+                                        <input
+                                          type="text"
+                                          value={
+                                            currentEntry?.type === "PRODUCE"
+                                              ? "Produce"
+                                              : currentEntry?.type === "CONSUME"
+                                                ? "Consume"
+                                                : ""
+                                          }
+                                          onChange={(e) => {
+                                            const val = e.target.value.toLowerCase();
+                                            if (val.startsWith("p")) {
+                                              stockAdjustmentForm.setValue(
+                                                `entries.${index}.type`,
+                                                "PRODUCE",
+                                              );
+                                            } else if (val.startsWith("c")) {
+                                              stockAdjustmentForm.setValue(
+                                                `entries.${index}.type`,
+                                                "CONSUME",
+                                              );
+                                            }
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "p" || e.key === "P") {
+                                              e.preventDefault();
+                                              stockAdjustmentForm.setValue(
+                                                `entries.${index}.type`,
+                                                "PRODUCE",
+                                              );
+                                            } else if (e.key === "c" || e.key === "C") {
+                                              e.preventDefault();
+                                              stockAdjustmentForm.setValue(
+                                                `entries.${index}.type`,
+                                                "CONSUME",
+                                              );
+                                            } else if (e.key === "Tab" && !e.shiftKey) {
+                                              e.preventDefault();
+                                              const itemInput = document.querySelector(
+                                                `[data-testid="input-adjustment-item-${index}"]`,
+                                              ) as HTMLInputElement;
+                                              if (itemInput) {
+                                                itemInput.focus();
+                                                itemInput.select();
+                                              }
+                                            } else if (e.key === "ArrowDown") {
+                                              e.preventDefault();
+                                              const nextInput = document.querySelector(
+                                                `[data-testid="input-adjustment-type-${index + 1}"]`,
+                                              ) as HTMLInputElement;
+                                              if (nextInput) nextInput.focus();
+                                            } else if (e.key === "ArrowUp" && index > 0) {
+                                              e.preventDefault();
+                                              const prevInput = document.querySelector(
+                                                `[data-testid="input-adjustment-type-${index - 1}"]`,
+                                              ) as HTMLInputElement;
+                                              if (prevInput) prevInput.focus();
+                                            }
+                                          }}
+                                          placeholder="p/c"
+                                          className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20 text-sm"
+                                          data-testid={`input-adjustment-type-${index}`}
+                                        />
+                                      </div>
+                                      {/* Item Name column - triggers sidebar */}
+                                      <div className="flex-1 min-w-[120px] border-r h-9 sm:h-10">
+                                        <input
+                                          type="text"
+                                          value={
+                                            activeAdjustmentRow === index
+                                              ? adjustmentSearchTerm
+                                              : currentEntry?.stockItemName || ""
+                                          }
+                                          onChange={(e) => {
+                                            setAdjustmentSearchTerm(e.target.value);
+                                            setAdjustmentHighlightedIndex(0);
+                                            if (!e.target.value) {
+                                              stockAdjustmentForm.setValue(
+                                                `entries.${index}.stockItemId`,
+                                                0,
+                                              );
+                                              stockAdjustmentForm.setValue(
+                                                `entries.${index}.stockItemCode`,
+                                                "",
+                                              );
+                                              stockAdjustmentForm.setValue(
+                                                `entries.${index}.stockItemName`,
+                                                "",
+                                              );
+                                            }
+                                          }}
+                                          onFocus={() => {
+                                            adjustmentFocusIdRef.current += 1;
+                                            setActiveAdjustmentRow(index);
+                                            setAdjustmentSearchTerm(
+                                              currentEntry?.stockItemName || "",
+                                            );
+                                            setAdjustmentHighlightedIndex(0);
+                                            setShowAdjustmentSidebar(true);
+                                          }}
+                                          onBlur={() => {
+                                            const focusIdAtBlur = adjustmentFocusIdRef.current;
+                                            setTimeout(() => {
+                                              if (adjustmentFocusIdRef.current === focusIdAtBlur) {
+                                                setActiveAdjustmentRow(null);
+                                                setAdjustmentSearchTerm("");
+                                                setShowAdjustmentSidebar(false);
+                                              }
+                                            }, 200);
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "ArrowUp" && !e.shiftKey) {
+                                              e.preventDefault();
+                                              if (
+                                                showAdjustmentSidebar &&
+                                                filteredAdjustmentItems.length > 0
+                                              ) {
+                                                setAdjustmentHighlightedIndex(
+                                                  Math.max(0, adjustmentHighlightedIndex - 1),
+                                                );
+                                              } else if (index > 0) {
+                                                const prevInput = document.querySelector(
+                                                  `[data-testid="input-adjustment-item-${index - 1}"]`,
+                                                ) as HTMLInputElement;
+                                                if (prevInput) prevInput.focus();
+                                              }
+                                            } else if (e.key === "ArrowDown" && !e.shiftKey) {
+                                              e.preventDefault();
+                                              if (
+                                                showAdjustmentSidebar &&
+                                                filteredAdjustmentItems.length > 0
+                                              ) {
+                                                setAdjustmentHighlightedIndex(
+                                                  Math.min(
+                                                    filteredAdjustmentItems.length - 1,
+                                                    adjustmentHighlightedIndex + 1,
+                                                  ),
+                                                );
+                                              } else if (index < adjustmentFields.length - 1) {
+                                                const nextInput = document.querySelector(
+                                                  `[data-testid="input-adjustment-item-${index + 1}"]`,
+                                                ) as HTMLInputElement;
+                                                if (nextInput) nextInput.focus();
+                                              }
+                                            } else if (e.key === "Enter") {
+                                              e.preventDefault();
+                                              if (
+                                                showAdjustmentSidebar &&
+                                                filteredAdjustmentItems.length > 0
+                                              ) {
+                                                const item =
+                                                  filteredAdjustmentItems[
+                                                    adjustmentHighlightedIndex
+                                                  ];
+                                                if (item) {
+                                                  stockAdjustmentForm.setValue(
+                                                    `entries.${index}.stockItemId`,
+                                                    item.stockItemId,
+                                                  );
+                                                  stockAdjustmentForm.setValue(
+                                                    `entries.${index}.stockItemCode`,
+                                                    item.stockItemCode || "",
+                                                  );
+                                                  stockAdjustmentForm.setValue(
+                                                    `entries.${index}.stockItemName`,
+                                                    item.stockItemName,
+                                                  );
+                                                  stockAdjustmentForm.setValue(
+                                                    `entries.${index}.rate`,
+                                                    item.averageRate || "0",
+                                                  );
+                                                  setAdjustmentSearchTerm("");
+                                                  setShowAdjustmentSidebar(false);
+                                                  setTimeout(() => {
+                                                    const qtyInput = document.querySelector(
+                                                      `[data-testid="input-adjustment-qty-${index}"]`,
+                                                    ) as HTMLInputElement;
+                                                    if (qtyInput) {
+                                                      qtyInput.focus();
+                                                      qtyInput.select();
+                                                    }
+                                                  }, 50);
+                                                }
+                                              }
+                                            } else if (e.key === "Tab" && !e.shiftKey) {
+                                              e.preventDefault();
+                                              setShowAdjustmentSidebar(false);
+                                              const qtyInput = document.querySelector(
+                                                `[data-testid="input-adjustment-qty-${index}"]`,
+                                              ) as HTMLInputElement;
+                                              if (qtyInput) {
+                                                qtyInput.focus();
+                                                qtyInput.select();
+                                              }
+                                            }
+                                          }}
+                                          placeholder="Type to search..."
+                                          className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20"
+                                          data-testid={`input-adjustment-item-${index}`}
+                                        />
+                                      </div>
+                                      {/* Available Qty column */}
+                                      <div className="w-16 sm:w-20 border-r h-9 sm:h-10 bg-muted/20 flex items-center justify-end px-2 sm:px-3 font-mono text-xs sm:text-sm text-muted-foreground">
+                                        {formatNumber(parseFloat(availableQty))}
+                                      </div>
+                                      {/* Quantity column - Enter goes to Rate */}
+                                      <div className="w-16 sm:w-24 border-r h-9 sm:h-10">
+                                        <input
+                                          type="number"
+                                          step="0.001"
+                                          value={currentEntry?.quantity || ""}
+                                          onChange={(e) =>
+                                            stockAdjustmentForm.setValue(
+                                              `entries.${index}.quantity`,
+                                              e.target.value,
+                                            )
+                                          }
+                                          onKeyDown={(e) => {
+                                            if (
+                                              e.key === "Enter" ||
+                                              (e.key === "Tab" && !e.shiftKey)
+                                            ) {
+                                              e.preventDefault();
+                                              const rateInput = document.querySelector(
+                                                `[data-testid="input-adjustment-rate-${index}"]`,
+                                              ) as HTMLInputElement;
+                                              if (rateInput) {
+                                                rateInput.focus();
+                                                rateInput.select();
+                                              }
+                                            } else if (e.key === "ArrowDown") {
+                                              e.preventDefault();
+                                              const nextInput = document.querySelector(
+                                                `[data-testid="input-adjustment-qty-${index + 1}"]`,
+                                              ) as HTMLInputElement;
+                                              if (nextInput) nextInput.focus();
+                                            } else if (e.key === "ArrowUp" && index > 0) {
+                                              e.preventDefault();
+                                              const prevInput = document.querySelector(
+                                                `[data-testid="input-adjustment-qty-${index - 1}"]`,
+                                              ) as HTMLInputElement;
+                                              if (prevInput) prevInput.focus();
+                                            }
+                                          }}
+                                          placeholder="0"
+                                          className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20 font-mono text-right"
+                                          data-testid={`input-adjustment-qty-${index}`}
+                                        />
+                                      </div>
+                                      {/* Rate column - Enter creates new row or goes to next row */}
+                                      <div className="w-16 sm:w-24 border-r h-9 sm:h-10">
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          value={currentEntry?.rate || ""}
+                                          onChange={(e) =>
+                                            stockAdjustmentForm.setValue(
+                                              `entries.${index}.rate`,
+                                              e.target.value,
+                                            )
+                                          }
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                              e.preventDefault();
+                                              if (index === adjustmentFields.length - 1) {
+                                                appendAdjustment({
+                                                  type: "CONSUME",
+                                                  stockItemId: 0,
+                                                  stockItemCode: "",
+                                                  stockItemName: "",
+                                                  quantity: "",
+                                                  rate: "",
+                                                });
+                                                setTimeout(() => {
+                                                  const newInput = document.querySelector(
+                                                    `[data-testid="input-adjustment-type-${index + 1}"]`,
+                                                  ) as HTMLInputElement;
+                                                  if (newInput) newInput.focus();
+                                                }, 100);
+                                              } else {
+                                                const nextTypeInput = document.querySelector(
+                                                  `[data-testid="input-adjustment-type-${index + 1}"]`,
+                                                ) as HTMLInputElement;
+                                                if (nextTypeInput) nextTypeInput.focus();
+                                              }
+                                            } else if (e.key === "ArrowDown") {
+                                              e.preventDefault();
+                                              const nextInput = document.querySelector(
+                                                `[data-testid="input-adjustment-rate-${index + 1}"]`,
+                                              ) as HTMLInputElement;
+                                              if (nextInput) nextInput.focus();
+                                            } else if (e.key === "ArrowUp" && index > 0) {
+                                              e.preventDefault();
+                                              const prevInput = document.querySelector(
+                                                `[data-testid="input-adjustment-rate-${index - 1}"]`,
+                                              ) as HTMLInputElement;
+                                              if (prevInput) prevInput.focus();
+                                            }
+                                          }}
+                                          placeholder="0"
+                                          className="w-full h-full px-3 bg-transparent outline-none focus:bg-accent/20 font-mono text-right"
+                                          data-testid={`input-adjustment-rate-${index}`}
+                                        />
+                                      </div>
+                                      {/* Amount column */}
+                                      <div className="w-20 sm:w-28 border-r h-9 sm:h-10 bg-muted/30 flex items-center justify-end px-2 sm:px-3 font-mono text-xs sm:text-sm">
+                                        {formatAmount(
+                                          parseFloat(currentEntry?.quantity || "0") *
+                                            parseFloat(currentEntry?.rate || "0"),
+                                        )}
+                                      </div>
+                                      {/* Delete button */}
+                                      <div className="w-10 sm:w-12 flex items-center justify-center h-9 sm:h-10">
+                                        {adjustmentFields.length > 1 && (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => removeAdjustment(index)}
+                                            className="h-8 w-8"
+                                            data-testid={`button-remove-adjustment-${index}`}
+                                          >
+                                            <X className="h-4 w-4 text-destructive" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Total Section */}
+                          <div className="border-t bg-muted/20 p-4">
+                            <div className="flex flex-wrap justify-between items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  appendAdjustment({
+                                    type: "CONSUME",
+                                    stockItemId: 0,
+                                    stockItemCode: "",
+                                    stockItemName: "",
+                                    quantity: "",
+                                    rate: "",
+                                  })
+                                }
+                                data-testid="button-add-adjustment-row"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Row
+                              </Button>
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-6">
+                                <div className="text-xs text-muted-foreground">Total Qty:</div>
+                                <div className="text-xs font-mono font-medium">
+                                  {formatNumber(
+                                    adjustmentEntries.reduce(
+                                      (sum, e) => sum + parseFloat(e.quantity || "0"),
+                                      0,
+                                    ),
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted-foreground">Consume:</div>
+                                <div className="text-xs font-mono font-medium text-destructive">
+                                  {formatAmount(consumptionTotal)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">Produce:</div>
+                                <div className="text-xs font-mono font-medium text-green-600">
+                                  {formatAmount(productionTotal)}
+                                </div>
+                                <div className="text-sm font-semibold">Total:</div>
+                                <div
+                                  className="text-sm font-bold font-mono"
+                                  data-testid="text-adjustment-total"
+                                >
+                                  {formatAmount(consumptionTotal + productionTotal)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+
+                        {/* Right Panel - Item Search Sidebar */}
+                        {showAdjustmentSidebar && (
+                          <Card className="w-full lg:w-80 flex flex-col lg:sticky lg:top-4 max-h-[60vh] lg:max-h-[calc(100vh-12rem)] self-start">
+                            <div className="p-4 border-b">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <h3 className="text-sm font-semibold">Search Items</h3>
+                                <button
+                                  onClick={() => setShowAdjustmentSidebar(false)}
+                                  className="text-xs text-muted-foreground hover:text-foreground"
+                                  data-testid="button-close-adjustment-sidebar"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                              {adjustmentLocationId > 0 && (
+                                <p className="text-xs text-muted-foreground mb-3">
+                                  {locations.find((l) => l.id === adjustmentLocationId)?.name}
+                                </p>
+                              )}
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="Search by name or code..."
+                                  value={adjustmentSearchTerm}
+                                  onChange={(e) => {
+                                    setAdjustmentSearchTerm(e.target.value);
+                                    setAdjustmentHighlightedIndex(0);
+                                  }}
+                                  className="pl-9"
+                                  data-testid="input-adjustment-sidebar-search"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-2" ref={adjustmentSidebarRef}>
+                              <div className="space-y-1">
+                                {filteredAdjustmentItems.length === 0 ? (
+                                  <div className="text-center py-8 text-sm text-muted-foreground">
+                                    {adjustmentLocationId > 0
+                                      ? "No items found"
+                                      : "Select a location first"}
+                                  </div>
+                                ) : (
+                                  filteredAdjustmentItems.map((item, idx) => {
+                                    const stock = parseFloat(item.quantity || "0");
+                                    const isHighlighted =
+                                      idx === adjustmentHighlightedIndex &&
+                                      activeAdjustmentRow !== null;
+
+                                    return (
+                                      <button
+                                        key={item.stockItemId}
+                                        type="button"
+                                        data-adjustment-idx={idx}
+                                        className={`w-full text-left px-3 py-3 rounded-md hover-elevate active-elevate-2 ${
+                                          stock === 0 ? "opacity-60" : ""
+                                        } ${isHighlighted ? "bg-accent" : ""}`}
+                                        data-testid={`button-adjustment-suggest-item-${item.stockItemId}`}
+                                        onClick={() => {
+                                          if (activeAdjustmentRow !== null) {
+                                            stockAdjustmentForm.setValue(
+                                              `entries.${activeAdjustmentRow}.stockItemId`,
+                                              item.stockItemId,
+                                            );
+                                            stockAdjustmentForm.setValue(
+                                              `entries.${activeAdjustmentRow}.stockItemCode`,
+                                              item.stockItemCode || "",
+                                            );
+                                            stockAdjustmentForm.setValue(
+                                              `entries.${activeAdjustmentRow}.stockItemName`,
+                                              item.stockItemName,
+                                            );
+                                            stockAdjustmentForm.setValue(
+                                              `entries.${activeAdjustmentRow}.rate`,
+                                              item.averageRate || "0",
+                                            );
+                                            setAdjustmentSearchTerm("");
+                                            setShowAdjustmentSidebar(false);
+
+                                            setTimeout(() => {
+                                              const qtyInput = document.querySelector(
+                                                `[data-testid="input-adjustment-qty-${activeAdjustmentRow}"]`,
+                                              ) as HTMLInputElement;
+                                              if (qtyInput) {
+                                                qtyInput.focus();
+                                                qtyInput.select();
+                                              }
+                                            }, 50);
+                                          }
+                                        }}
+                                      >
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="font-medium text-sm truncate">
+                                              {item.stockItemName}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              {item.stockItemCode}
+                                            </div>
+                                          </div>
+                                          <div className="text-right">
+                                            <div
+                                              className={`text-sm font-mono ${stock > 0 ? "text-green-600" : "text-muted-foreground"}`}
+                                            >
+                                              {formatNumber(stock)}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              @{formatAmount(item.averageRate || "0")}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </div>
+                          </Card>
+                        )}
+                      </div>
+
+                      {/* Notes field */}
+                      <FormField
+                        control={stockAdjustmentForm.control}
+                        name="notes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Notes</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                {...field}
+                                placeholder="Additional notes..."
+                                rows={3}
+                                data-testid="input-adjustment-notes"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Optional checkbox */}
+                      <FormField
+                        control={stockAdjustmentForm.control}
+                        name="optional"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="checkbox-adjustment-optional"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Mark as Optional</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Submit button */}
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={
+                                adjustmentEntries.filter(
+                                  (e: any) => e.stockItemId > 0 && parseFloat(e.quantity) > 0,
+                                ).length === 0
+                              }
+                              data-testid="button-export-production-consumption"
+                            >
+                              <FileDown className="h-4 w-4 mr-2" />
+                              Export
+                              <ChevronDown className="h-4 w-4 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleExportProductionConsumptionVoucher(false)}
+                              data-testid="export-prod-cons-summary"
+                            >
+                              Summary Export
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleExportProductionConsumptionVoucher(true)}
+                              data-testid="export-prod-cons-detailed"
+                            >
+                              Detailed Export
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button
+                          type="submit"
+                          disabled={
+                            stockAdjustmentMutation.isPending || adjustmentEntries.length === 0
+                          }
+                          data-testid="button-save-adjustment-voucher"
+                        >
+                          {stockAdjustmentMutation.isPending
+                            ? "Saving..."
+                            : "Save Production/Consumption Voucher"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {!isPOS && activeTab === "creditnote" && (
+            <div className="space-y-4">
+              <CreditNoteTab
+                allAccounts={allAccounts}
+                editVoucherId={activeTab === "creditnote" ? editVoucherId : null}
+              />
+            </div>
+          )}
+
+          {!isPOS && activeTab === "transferorder" && <StockTransferOrder />}
         </div>
       </div>
 
@@ -5862,7 +7018,8 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
               Import Stock Transfer from Excel
             </DialogTitle>
             <DialogDescription>
-              Upload an Excel file with columns: Source Location, Barcode, Quantity. Each row can have a different source location.
+              Upload an Excel file with columns: Source Location, Barcode, Quantity. Each row can
+              have a different source location.
             </DialogDescription>
           </DialogHeader>
 
@@ -5879,9 +7036,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                   data-testid="input-import-file"
                 />
                 {importFile && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Selected: {importFile.name}
-                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">Selected: {importFile.name}</p>
                 )}
               </div>
               <Button
@@ -5900,15 +7055,21 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
               <div>
                 <Label htmlFor="import-dest-location">Destination Location</Label>
                 <Select value={importDestLocation} onValueChange={setImportDestLocation}>
-                  <SelectTrigger id="import-dest-location" className="mt-1" data-testid="select-import-dest-location">
+                  <SelectTrigger
+                    id="import-dest-location"
+                    className="mt-1"
+                    data-testid="select-import-dest-location"
+                  >
                     <SelectValue placeholder="Select destination..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {[...locations].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((location) => (
-                      <SelectItem key={location.id} value={location.id.toString()}>
-                        {location.name}
-                      </SelectItem>
-                    ))}
+                    {[...locations]
+                      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                      .map((location) => (
+                        <SelectItem key={location.id} value={location.id.toString()}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -5971,7 +7132,11 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                 data-testid="button-import-submit"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                {importMutation.isPending ? "Importing..." : importHasErrors ? `Import Transfer (${importValidItemsCount} valid)` : "Import Transfer"}
+                {importMutation.isPending
+                  ? "Importing..."
+                  : importHasErrors
+                    ? `Import Transfer (${importValidItemsCount} valid)`
+                    : "Import Transfer"}
               </Button>
             </div>
 
@@ -5998,7 +7163,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                   <Table>
                     <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow>
-                        <TableHead className="sticky left-0 bg-muted z-10">Source Location</TableHead>
+                        <TableHead className="sticky left-0 bg-muted z-10">
+                          Source Location
+                        </TableHead>
                         <TableHead>Barcode</TableHead>
                         <TableHead>Item Name</TableHead>
                         <TableHead className="text-right">Quantity</TableHead>
@@ -6012,8 +7179,14 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                         const hasError = validation?.error;
 
                         return (
-                          <TableRow key={index} className={hasError ? "bg-destructive/10" : ""} data-testid={`import-preview-row-${index}`}>
-                            <TableCell className="sticky left-0 bg-background z-10">{item.sourceLocation || "-"}</TableCell>
+                          <TableRow
+                            key={index}
+                            className={hasError ? "bg-destructive/10" : ""}
+                            data-testid={`import-preview-row-${index}`}
+                          >
+                            <TableCell className="sticky left-0 bg-background z-10">
+                              {item.sourceLocation || "-"}
+                            </TableCell>
                             <TableCell className="font-mono">{item.barcode}</TableCell>
                             <TableCell>
                               {validation?.stockItemName || (
@@ -6022,7 +7195,9 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                             </TableCell>
                             <TableCell className="text-right">{item.quantity}</TableCell>
                             <TableCell className="text-right">
-                              {validation?.currentStock !== undefined ? formatNumber(validation.currentStock) : "-"}
+                              {validation?.currentStock !== undefined
+                                ? formatNumber(validation.currentStock)
+                                : "-"}
                             </TableCell>
                             <TableCell>
                               {validation ? (
@@ -6058,7 +7233,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                         key={index}
                         className={cn(
                           "p-3 rounded-md border text-sm space-y-1",
-                          hasError ? "bg-destructive/10 border-destructive/30" : "bg-background"
+                          hasError ? "bg-destructive/10 border-destructive/30" : "bg-background",
                         )}
                         data-testid={`import-preview-card-${index}`}
                       >
@@ -6081,8 +7256,17 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
                           <span className="font-mono">Code: {item.barcode}</span>
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                          <span>Qty: <span className="font-mono">{item.quantity}</span></span>
-                          <span>Avail: <span className="font-mono">{validation?.currentStock !== undefined ? formatNumber(validation.currentStock) : "-"}</span></span>
+                          <span>
+                            Qty: <span className="font-mono">{item.quantity}</span>
+                          </span>
+                          <span>
+                            Avail:{" "}
+                            <span className="font-mono">
+                              {validation?.currentStock !== undefined
+                                ? formatNumber(validation.currentStock)
+                                : "-"}
+                            </span>
+                          </span>
                         </div>
                         {hasError && (
                           <div className="text-xs text-destructive">{validation.error}</div>
@@ -6104,11 +7288,16 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
             <AlertDialogTitle>Import with Validation Errors?</AlertDialogTitle>
             <AlertDialogDescription>
               {importValidItemsCount === 0 ? (
-                <>All {importTotalItemsCount} items have validation errors. Nothing will be imported.</>
+                <>
+                  All {importTotalItemsCount} items have validation errors. Nothing will be
+                  imported.
+                </>
               ) : (
                 <>
-                  {importTotalItemsCount - importValidItemsCount} of {importTotalItemsCount} items have validation errors and will be skipped.
-                  <br /><br />
+                  {importTotalItemsCount - importValidItemsCount} of {importTotalItemsCount} items
+                  have validation errors and will be skipped.
+                  <br />
+                  <br />
                   <strong>{importValidItemsCount} valid item(s)</strong> will be transferred.
                 </>
               )}
@@ -6116,10 +7305,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-import-cancel">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmedImport}
-              data-testid="button-import-confirm"
-            >
+            <AlertDialogAction onClick={handleConfirmedImport} data-testid="button-import-confirm">
               {importValidItemsCount === 0 ? "OK" : `Import ${importValidItemsCount} Item(s)`}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -13,7 +13,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Printer, FileDown, ChevronDown } from "lucide-react";
@@ -63,6 +62,11 @@ interface PaymentVoucherTabProps {
   isAutoCreating?: boolean;
   isEditMode?: boolean;
   originalTotal?: number;
+  sidebarIsLoading?: boolean;
+  sidebarIsError?: boolean;
+  sidebarErrorMessage?: string;
+  sidebarOnRetry?: () => void;
+  sidebarUsingFallback?: boolean;
 }
 
 export function PaymentVoucherTab({
@@ -97,6 +101,11 @@ export function PaymentVoucherTab({
   isAutoCreating = false,
   isEditMode = false,
   originalTotal = 0,
+  sidebarIsLoading = false,
+  sidebarIsError = false,
+  sidebarErrorMessage,
+  sidebarOnRetry,
+  sidebarUsingFallback = false,
 }: PaymentVoucherTabProps) {
   const { formatAmount } = useCurrencyContext();
   const { formatDisplayDate } = useDateFormat();
@@ -112,16 +121,11 @@ export function PaymentVoucherTab({
       <div className="flex-1 min-w-0">
         <Card>
           <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-base sm:text-lg">
-              Payment Voucher
-            </CardTitle>
+            <CardTitle className="text-base sm:text-lg">Payment</CardTitle>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-6"
-              >
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 {/* Header section */}
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_180px_auto] lg:items-start">
                   {/* Payment account selector */}
@@ -130,9 +134,7 @@ export function PaymentVoucherTab({
                     name="paymentAccountId"
                     render={() => (
                       <FormItem className="min-w-0">
-                        <FormLabel>
-                          {activeTab === "payment" ? "Pay From" : "Receive In"}
-                        </FormLabel>
+                        <FormLabel>{activeTab === "payment" ? "Pay From" : "Receive In"}</FormLabel>
                         <FormControl>
                           <div className="w-full min-w-0">
                             <AccountAutocomplete
@@ -153,33 +155,41 @@ export function PaymentVoucherTab({
                               allAccounts={allAccounts}
                               rowIndex={-1}
                               placeholder={
-                                activeTab === "payment"
-                                  ? "Pay from..."
-                                  : "Receive in..."
+                                activeTab === "payment" ? "Pay from..." : "Receive in..."
                               }
                               testId="input-pay-from"
                             />
                           </div>
                         </FormControl>
-                        {paymentAccountId > 0 && (() => {
-                          const projected = isEditMode
-                            ? accountBalance + originalTotal - total
-                            : accountBalance - total;
-                          const balColor = (v: number) => v < 0 ? "text-red-600 dark:text-red-400" : v > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground";
-                          return (
-                            <div className="flex items-center gap-1.5 flex-wrap text-sm mt-1.5 font-mono">
-                              <span className="text-muted-foreground text-xs">Bal:</span>
-                              <span className={cn(balColor(accountBalance))}>{formatAmount(accountBalance)}</span>
-                              {total > 0 && (
-                                <>
-                                  <span className="text-muted-foreground">→</span>
-                                  <span className={cn("font-semibold", balColor(projected))}>{formatAmount(projected)}</span>
-                                  <span className="text-muted-foreground text-xs">after</span>
-                                </>
-                              )}
-                            </div>
-                          );
-                        })()}
+                        {paymentAccountId > 0 &&
+                          (() => {
+                            const projected = isEditMode
+                              ? accountBalance + originalTotal - total
+                              : accountBalance - total;
+                            const balColor = (v: number) =>
+                              v < 0
+                                ? "text-red-600 dark:text-red-400"
+                                : v > 0
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-muted-foreground";
+                            return (
+                              <div className="flex items-center gap-1.5 flex-wrap text-sm mt-1.5 font-mono">
+                                <span className="text-muted-foreground text-xs">Bal:</span>
+                                <span className={cn(balColor(accountBalance))}>
+                                  {formatAmount(accountBalance)}
+                                </span>
+                                {total > 0 && (
+                                  <>
+                                    <span className="text-muted-foreground">→</span>
+                                    <span className={cn("font-semibold", balColor(projected))}>
+                                      {formatAmount(projected)}
+                                    </span>
+                                    <span className="text-muted-foreground text-xs">after</span>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -195,8 +205,20 @@ export function PaymentVoucherTab({
                         <FormControl>
                           <Input
                             type="date"
-                            value={field.value instanceof Date ? format(field.value, "yyyy-MM-dd") : (typeof field.value === "string" ? field.value : "")}
-                            onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value + "T00:00:00") : new Date())}
+                            value={
+                              field.value instanceof Date
+                                ? format(field.value, "yyyy-MM-dd")
+                                : typeof field.value === "string"
+                                  ? field.value
+                                  : ""
+                            }
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value
+                                  ? new Date(e.target.value + "T00:00:00")
+                                  : new Date(),
+                              )
+                            }
                             data-testid="input-date-picker"
                           />
                         </FormControl>
@@ -208,9 +230,7 @@ export function PaymentVoucherTab({
                   {/* Single Actions dropdown (Print + Export) */}
                   <div className="flex flex-col gap-1 lg:items-end">
                     {/* spacer to align with other labeled controls */}
-                    <div className="text-sm font-medium text-transparent select-none">
-                      Actions
-                    </div>
+                    <div className="text-sm font-medium text-transparent select-none">Actions</div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -280,8 +300,7 @@ export function PaymentVoucherTab({
                   onRowFocus={(rowIndex, fieldName) => {
                     if (fieldName === "account") {
                       setActiveRowIndex(rowIndex);
-                      const currentAccountName =
-                        entries[rowIndex]?.accountName || "";
+                      const currentAccountName = entries[rowIndex]?.accountName || "";
                       setSidebarSearchValue(currentAccountName);
                       // Don't set highlightedIndex here - let the useEffect in Vouchers.tsx handle it
                     }
@@ -342,7 +361,7 @@ export function PaymentVoucherTab({
                     disabled={paymentAccountId === 0 || total === 0}
                     data-testid="button-save-voucher"
                   >
-                    Save Voucher
+                    Record Payment
                   </Button>
                 </div>
               </form>
@@ -375,6 +394,11 @@ export function PaymentVoucherTab({
           isFactoryCompany={isFactoryCompany}
           onAutoCreateAccount={onAutoCreateAccount}
           isAutoCreating={isAutoCreating}
+          isLoading={sidebarIsLoading}
+          isError={sidebarIsError}
+          errorMessage={sidebarErrorMessage}
+          onRetry={sidebarOnRetry}
+          usingFallback={sidebarUsingFallback}
         />
       </div>
     </div>

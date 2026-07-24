@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Search, Plus, Loader2 } from "lucide-react";
 import { useCurrencyContext } from "@/contexts/CurrencyContext";
 
+function getAccountIdentityId(account: any): number {
+  return Number(account.accountId ?? account.id);
+}
+
 export interface Account {
   id: number;
   type: "bank" | "ledger" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier";
@@ -39,6 +43,11 @@ interface AccountSidebarProps {
   isFactoryCompany?: boolean;
   onAutoCreateAccount?: (name: string) => Promise<Account | null>;
   isAutoCreating?: boolean;
+  isLoading?: boolean;
+  isError?: boolean;
+  errorMessage?: string;
+  onRetry?: () => void;
+  usingFallback?: boolean;
 }
 
 export default function AccountSidebar({
@@ -60,6 +69,11 @@ export default function AccountSidebar({
   isFactoryCompany = false,
   onAutoCreateAccount,
   isAutoCreating = false,
+  isLoading = false,
+  isError = false,
+  errorMessage,
+  onRetry,
+  usingFallback = false,
 }: AccountSidebarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -73,7 +87,7 @@ export default function AccountSidebar({
 
       // Check for EXACT match (case-insensitive) - only select if name matches exactly
       const exactMatch = filteredAccounts.find(
-        (acc) => acc.name.toLowerCase() === trimmedName.toLowerCase()
+        (acc) => acc.name.toLowerCase() === trimmedName.toLowerCase(),
       );
 
       if (exactMatch) {
@@ -98,7 +112,11 @@ export default function AccountSidebar({
       }
     } else if (e.key === "Enter" && !isFactoryCompany) {
       // For non-factory: select highlighted account on Enter
-      if (filteredAccounts.length > 0 && highlightedIndex >= 0 && highlightedIndex < filteredAccounts.length) {
+      if (
+        filteredAccounts.length > 0 &&
+        highlightedIndex >= 0 &&
+        highlightedIndex < filteredAccounts.length
+      ) {
         e.preventDefault();
         onSelectAccount(filteredAccounts[highlightedIndex]);
       }
@@ -111,7 +129,7 @@ export default function AccountSidebar({
     let adjustment = 0;
 
     const isPaymentAccount =
-      account.id === paymentAccountId && account.type === paymentAccountType;
+      getAccountIdentityId(account) === paymentAccountId && account.type === paymentAccountType;
 
     // Check if this is the payment/receipt account
     if (isPaymentAccount && voucherTotal > 0) {
@@ -125,7 +143,7 @@ export default function AccountSidebar({
       const entryAmount = entries
         .filter(
           (entry) =>
-            entry.accountId === account.id &&
+            entry.accountId === getAccountIdentityId(account) &&
             entry.accountType === account.type &&
             entry.amount &&
             !isNaN(Number(entry.amount)),
@@ -145,9 +163,7 @@ export default function AccountSidebar({
 
   // Scroll highlighted item into view
   useEffect(() => {
-    const highlightedElement = listRef.current?.querySelector(
-      `[data-index="${highlightedIndex}"]`,
-    );
+    const highlightedElement = listRef.current?.querySelector(`[data-index="${highlightedIndex}"]`);
     if (highlightedElement) {
       highlightedElement.scrollIntoView({
         block: "nearest",
@@ -163,10 +179,7 @@ export default function AccountSidebar({
     return balance < 0 ? `(${formatted})` : formatted;
   };
 
-  const getBalanceColorClass = (
-    balance: number | undefined,
-    _accountType?: string,
-  ) => {
+  const getBalanceColorClass = (balance: number | undefined, _accountType?: string) => {
     if (balance === undefined) return "text-muted-foreground";
     // All account types use the same sign convention in the sidebar:
     // negative = credit balance (red), positive = debit balance (green).
@@ -214,20 +227,45 @@ export default function AccountSidebar({
         </div>
       </div>
 
+      {usingFallback && (
+        <div className="px-3 py-1.5 bg-amber-50 dark:bg-amber-950/30 border-b text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+          <span>⚠</span>
+          <span>Balances unavailable</span>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto p-3" ref={listRef}>
         <div className="space-y-1">
-          {filteredAccounts.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Loading accounts...</span>
+            </div>
+          ) : isError && filteredAccounts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-3 text-sm text-muted-foreground">
+              <p>Could not load accounts</p>
+              {errorMessage && <p className="text-xs text-destructive">{errorMessage}</p>}
+              {onRetry && (
+                <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                  Try again
+                </Button>
+              )}
+            </div>
+          ) : filteredAccounts.length === 0 ? (
             <div className="text-center py-8 text-sm text-muted-foreground">
               {isFactoryCompany && searchValue.trim() ? (
-                <span>Press <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Enter</kbd> to create "{searchValue.trim()}"</span>
+                <span>
+                  Press <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Enter</kbd> to
+                  create "{searchValue.trim()}"
+                </span>
               ) : (
-                "No accounts found"
+                "No accounts are available for this company."
               )}
             </div>
           ) : (
             filteredAccounts.map((account, idx) => {
               const isSelected =
-                account.id === selectedAccountId &&
+                getAccountIdentityId(account) === selectedAccountId &&
                 account.type === selectedAccountType;
               const isHighlighted = idx === highlightedIndex;
               const projectedBalance = getProjectedBalance(account);
@@ -235,7 +273,7 @@ export default function AccountSidebar({
 
               return (
                 <button
-                  key={`${account.type}-${account.id}`}
+                  key={`${account.type}-${getAccountIdentityId(account)}`}
                   data-index={idx}
                   onClick={() => onSelectAccount(account)}
                   className={`w-full text-left px-3 py-2.5 rounded-md hover-elevate active-elevate-2 transition-colors ${
@@ -246,9 +284,7 @@ export default function AccountSidebar({
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">
-                        {account.name ||
-                          account.code ||
-                          `${account.type}-${account.id}`}
+                        {account.name || account.code || `${account.type}-${account.id}`}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-0.5">

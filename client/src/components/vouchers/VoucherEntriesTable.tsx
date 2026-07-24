@@ -6,8 +6,13 @@ import { Plus } from "lucide-react";
 import type { Account } from "@/components/AccountSidebar";
 import { useCurrencyContext } from "@/contexts/CurrencyContext";
 
+function getAccountIdentityId(account: any): number {
+  return Number(account.accountId ?? account.id);
+}
+
 export interface VoucherEntry {
-  accountType: "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "factorySupplier";
+  accountType:
+    "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier";
   accountId: number;
   accountName: string;
   amount: string;
@@ -62,10 +67,7 @@ export function VoucherEntriesTable({
     if (!entry || !entry.accountId || !sidebarAccounts.length) return null;
     const found = sidebarAccounts.find((a) => {
       if (a.type !== (entry.accountType as any)) return false;
-      if (entry.accountType === "employee") {
-        return (a as any).accountId === entry.accountId;
-      }
-      return a.id === entry.accountId;
+      return getAccountIdentityId(a) === entry.accountId;
     });
     if (!found || found.balance == null) return null;
     return typeof found.balance === "string" ? parseFloat(found.balance) : found.balance;
@@ -86,7 +88,7 @@ export function VoucherEntriesTable({
       if (filteredSidebarAccounts.length === 0) return;
       const newIndex = Math.min(
         sidebarHighlightedIndex < 0 ? 0 : sidebarHighlightedIndex + 1,
-        filteredSidebarAccounts.length - 1
+        filteredSidebarAccounts.length - 1,
       );
       setSidebarHighlightedIndex(newIndex);
     } else if (e.key === "ArrowUp") {
@@ -103,7 +105,7 @@ export function VoucherEntriesTable({
       if (isFactoryCompany && onAutoCreateAccount && currentName) {
         // Check for EXACT match (case-insensitive)
         const exactMatch = filteredSidebarAccounts.find(
-          (acc) => acc.name.toLowerCase() === currentName.toLowerCase()
+          (acc) => acc.name.toLowerCase() === currentName.toLowerCase(),
         );
 
         if (exactMatch) {
@@ -142,7 +144,9 @@ export function VoucherEntriesTable({
         // Focus the new row's account input
         requestAnimationFrame(() => {
           const newRowIndex = entries.length;
-          const newInput = document.querySelector(`[data-testid="input-account-${newRowIndex}"]`) as HTMLInputElement;
+          const newInput = document.querySelector(
+            `[data-testid="input-account-${newRowIndex}"]`,
+          ) as HTMLInputElement;
           if (newInput) {
             newInput.focus();
             newInput.select();
@@ -151,14 +155,18 @@ export function VoucherEntriesTable({
       }
     } else if (e.key === "ArrowUp" && index > 0) {
       e.preventDefault();
-      const prevInput = document.querySelector(`[data-testid="input-amount-${index - 1}"]`) as HTMLInputElement;
+      const prevInput = document.querySelector(
+        `[data-testid="input-amount-${index - 1}"]`,
+      ) as HTMLInputElement;
       if (prevInput) {
         prevInput.focus();
         prevInput.select();
       }
     } else if (e.key === "ArrowDown" && index < entries.length - 1) {
       e.preventDefault();
-      const nextInput = document.querySelector(`[data-testid="input-amount-${index + 1}"]`) as HTMLInputElement;
+      const nextInput = document.querySelector(
+        `[data-testid="input-amount-${index + 1}"]`,
+      ) as HTMLInputElement;
       if (nextInput) {
         nextInput.focus();
         nextInput.select();
@@ -209,7 +217,9 @@ export function VoucherEntriesTable({
                         const bal = getEntryBalance(index);
                         if (bal == null) return null;
                         return (
-                          <p className={`text-xs font-mono mt-0.5 ${bal < 0 ? "text-red-500 dark:text-red-400" : bal > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                          <p
+                            className={`text-xs font-mono mt-0.5 ${bal < 0 ? "text-red-500 dark:text-red-400" : bal > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}
+                          >
                             Balance: {formatAmount(bal)}
                           </p>
                         );
@@ -286,9 +296,7 @@ export function VoucherEntriesTable({
               </Button>
             </td>
             <td className="p-3">
-              <div className="text-right font-bold font-mono">
-                {formatAmount(total)}
-              </div>
+              <div className="text-right font-bold font-mono">{formatAmount(total)}</div>
             </td>
             <td colSpan={1}></td>
           </tr>
