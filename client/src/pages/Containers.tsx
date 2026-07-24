@@ -342,12 +342,6 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
             <Plus className="h-4 w-4" />
             Add Shipment
           </Button>
-          <Link href="/po-import">
-            <Button className="gap-2" data-testid="button-import-po">
-              <Plus className="h-4 w-4" />
-              Import Purchase Order
-            </Button>
-          </Link>
         </div>
       </div>
 
