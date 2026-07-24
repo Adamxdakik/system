@@ -42,7 +42,6 @@ import {
   Eye,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StockItemDetailsDialog } from "@/components/StockItemDetailsDialog";
 import { StockItemEditDialog } from "@/components/StockItemEditDialog";
 import { StockItemCreateDialog } from "@/components/StockItemCreateDialog";
@@ -125,29 +124,12 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
   const [, navigate] = useLocation();
   const today = new Date().toISOString().split("T")[0];
 
-  // ── Internal sub-tab state ──────────────────────────────────────────────
-  const [stockSubTab, setStockSubTab] = useState<"overview" | "manage">("overview");
-  const [overviewVisited, setOverviewVisited] = useState(true);
-  const [manageVisited, setManageVisited] = useState(false);
-
-  const handleSubTabChange = (val: string) => {
-    const t = val as "overview" | "manage";
-    setStockSubTab(t);
-    if (t === "overview") setOverviewVisited(true);
-    if (t === "manage") setManageVisited(true);
-  };
-
-  // ── Overview filter state ───────────────────────────────────────────────
+  // ── Filter state ────────────────────────────────────────────────────────
   const [overviewSearch, setOverviewSearch] = useState("");
   const [overviewGroup, setOverviewGroup] = useState("all");
   const [overviewStatus, setOverviewStatus] = useState("all");
   const [hideZeroStock, setHideZeroStock] = useState(true);
 
-  // ── Manage state (all existing, preserved) ──────────────────────────────
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedGroupFilter, setSelectedGroupFilter] = useState<number | null | "uncategorized">(
-    null,
-  );
   const [selectedStockItemId, setSelectedStockItemId] = useState<number | null>(null);
   const [selectedStockItemName, setSelectedStockItemName] = useState<string>("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -264,7 +246,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
   // ── Handlers ────────────────────────────────────────────────────────────
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(filteredManageItems.map((item) => item.id));
+      setSelectedIds(filteredOverviewItems.map((item) => item.id));
     } else {
       setSelectedIds([]);
     }
@@ -336,26 +318,9 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
     });
   }, [stockItems, overviewSearch, overviewGroup, overviewStatus, hideZeroStock, productTotals]);
 
-  // Manage filtered (existing logic)
-  const filteredManageItems = stockItems
-    .filter((item) => {
-      const matchesSearch =
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.barcode && item.barcode.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      if (selectedGroupFilter === "uncategorized") {
-        return matchesSearch && !item.stockGroupId;
-      } else if (selectedGroupFilter !== null) {
-        return matchesSearch && item.stockGroupId === selectedGroupFilter;
-      }
-      return matchesSearch;
-    })
-    .sort((a, b) => a.id - b.id);
-
   const allFilteredSelected =
-    filteredManageItems.length > 0 &&
-    filteredManageItems.every((item) => selectedIds.includes(item.id));
+    filteredOverviewItems.length > 0 &&
+    filteredOverviewItems.every((item) => selectedIds.includes(item.id));
 
   // ── Summary card values ──────────────────────────────────────────────────
   const overviewStats = useMemo(
@@ -416,484 +381,268 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
         </div>
       )}
 
-      {/* ── Internal sub-tabs ─────────────────────────────────────────── */}
-      <Tabs value={stockSubTab} onValueChange={handleSubTabChange}>
-        <TabsList className="h-9">
-          <TabsTrigger value="overview" className="gap-2 text-sm" data-testid="tab-stock-overview">
-            <Package className="h-3.5 w-3.5" />
-            Stock Overview
-          </TabsTrigger>
-          <TabsTrigger value="manage" className="gap-2 text-sm" data-testid="tab-manage-products">
-            <Edit className="h-3.5 w-3.5" />
-            Manage Products
-          </TabsTrigger>
-        </TabsList>
+      {/* ── Summary cards ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+              Total Products
+            </p>
+            <p className="text-2xl font-bold">{overviewStats.totalProducts}</p>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+              Active Products
+            </p>
+            <p className="text-2xl font-bold">{overviewStats.activeProducts}</p>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+              In Stock
+            </p>
+            <p className="text-2xl font-bold text-emerald-600">{overviewStats.inStock}</p>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+              Out of Stock
+            </p>
+            <p className="text-2xl font-bold text-amber-600">{overviewStats.outOfStock}</p>
+          </CardHeader>
+        </Card>
+      </div>
 
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/*  A. STOCK OVERVIEW                                             */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        <TabsContent value="overview" className="space-y-4 mt-4">
-          {overviewVisited && (
-            <>
-              {/* Summary cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-                      Total Products
-                    </p>
-                    <p className="text-2xl font-bold">{overviewStats.totalProducts}</p>
-                  </CardHeader>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-                      Active Products
-                    </p>
-                    <p className="text-2xl font-bold">{overviewStats.activeProducts}</p>
-                  </CardHeader>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-                      In Stock
-                    </p>
-                    <p className="text-2xl font-bold text-emerald-600">{overviewStats.inStock}</p>
-                  </CardHeader>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-                      Out of Stock
-                    </p>
-                    <p className="text-2xl font-bold text-amber-600">{overviewStats.outOfStock}</p>
-                  </CardHeader>
-                </Card>
-              </div>
-
-              {/* Filters + actions */}
-              <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
-                <div className="flex flex-col sm:flex-row gap-2 flex-1">
-                  <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search motorcycle, part, code or barcode..."
-                      value={overviewSearch}
-                      onChange={(e) => setOverviewSearch(e.target.value)}
-                      className="pl-9 text-sm"
-                      data-testid="input-search"
-                    />
-                  </div>
-                  <Select value={overviewGroup} onValueChange={setOverviewGroup}>
-                    <SelectTrigger className="w-44 text-sm" data-testid="select-stock-group">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="uncategorized">Uncategorized</SelectItem>
-                      {stockGroups.map((g) => (
-                        <SelectItem key={g.id} value={String(g.id)}>
-                          {g.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={overviewStatus} onValueChange={setOverviewStatus}>
-                    <SelectTrigger className="w-44 text-sm" data-testid="select-stock-status">
-                      <SelectValue placeholder="Stock Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="in-stock">In Stock</SelectItem>
-                      <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => setHideZeroStock((prev) => !prev)}
-                    data-testid="button-toggle-zero-stock"
-                  >
-                    {hideZeroStock ? (
-                      <>
-                        <Eye className="h-4 w-4" />
-                        Show 0 Stock
-                      </>
-                    ) : (
-                      <>
-                        <EyeOff className="h-4 w-4" />
-                        Hide 0 Stock
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    className="gap-2"
-                    onClick={() => {
-                      setStockSubTab("manage");
-                      setManageVisited(true);
-                      setCreateDialogOpen(true);
-                    }}
-                    data-testid="button-add-item"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Product
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => {
-                      setStockSubTab("manage");
-                      setManageVisited(true);
-                      setImportDialogOpen(true);
-                    }}
-                    data-testid="button-import-data"
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    Import
-                  </Button>
-                </div>
-              </div>
-
-              {/* Stock table */}
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  {isLoading ? (
-                    <div className="space-y-2 p-4">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Product</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead className="text-right">Total Qty</TableHead>
-                            <TableHead className="text-right">Avg Cost</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredOverviewItems.length === 0 ? (
-                            <TableRow>
-                              <TableCell
-                                colSpan={6}
-                                className="text-center py-10 text-muted-foreground"
-                              >
-                                {overviewSearch
-                                  ? "No products match your search"
-                                  : "No products found"}
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            filteredOverviewItems.map((item) => {
-                              const totals = productTotals.get(item.id) || {
-                                totalQuantity: 0,
-                                totalValue: 0,
-                                averageCost: 0,
-                                locationCount: 0,
-                              };
-                              return (
-                                <TableRow
-                                  key={item.id}
-                                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                                  onClick={() => navigate(`/stock-query/${item.id}`)}
-                                  data-testid={`row-product-overview-${item.id}`}
-                                >
-                                  <TableCell className="font-medium">
-                                    <div className="flex items-center gap-2">
-                                      <Package className="h-4 w-4 text-muted-foreground shrink-0" />
-                                      {item.name}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-sm">
-                                    {getStockGroupName(item.stockGroupId)}
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono text-sm">
-                                    {totals.totalQuantity !== 0
-                                      ? totals.totalQuantity % 1 === 0
-                                        ? totals.totalQuantity.toLocaleString()
-                                        : totals.totalQuantity.toFixed(2)
-                                      : "0"}
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono text-sm">
-                                    {totals.averageCost > 0
-                                      ? `$${totals.averageCost.toFixed(2)}`
-                                      : "—"}
-                                  </TableCell>
-                                  <TableCell>{statusBadge(item)}</TableCell>
-                                  <TableCell>
-                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {!isLoading && filteredOverviewItems.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Showing {filteredOverviewItems.length} of {stockItems.length} products
-                </p>
-              )}
-            </>
+      {/* ── Toolbar ───────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {/* Search */}
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search motorcycle, part, code or barcode..."
+            value={overviewSearch}
+            onChange={(e) => setOverviewSearch(e.target.value)}
+            className="pl-9 text-sm"
+            data-testid="input-search"
+          />
+        </div>
+        {/* Category filter */}
+        <Select value={overviewGroup} onValueChange={setOverviewGroup}>
+          <SelectTrigger className="w-44 text-sm" data-testid="select-stock-group">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="uncategorized">Uncategorized</SelectItem>
+            {stockGroups.map((g) => (
+              <SelectItem key={g.id} value={String(g.id)}>
+                {g.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {/* Status filter */}
+        <Select value={overviewStatus} onValueChange={setOverviewStatus}>
+          <SelectTrigger className="w-40 text-sm" data-testid="select-stock-status">
+            <SelectValue placeholder="Stock Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="in-stock">In Stock</SelectItem>
+            <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+        {/* Right-side actions */}
+        <div className="flex gap-2 ml-auto flex-wrap">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setHideZeroStock((prev) => !prev)}
+            data-testid="button-toggle-zero-stock"
+          >
+            {hideZeroStock ? (
+              <>
+                <Eye className="h-4 w-4" />
+                Show 0 Stock
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-4 w-4" />
+                Hide 0 Stock
+              </>
+            )}
+          </Button>
+          {selectedIds.length > 0 && (
+            <Button
+              variant="destructive"
+              className="gap-2"
+              onClick={handleDeleteClick}
+              data-testid="button-delete-selected"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete {selectedIds.length} {selectedIds.length === 1 ? "Product" : "Products"}
+            </Button>
           )}
-        </TabsContent>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                Admin Tools
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportToExcel} data-testid="button-export-items">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => updateUOMMutation.mutate()}
+                disabled={updateUOMMutation.isPending}
+                data-testid="button-update-uom"
+              >
+                {updateUOMMutation.isPending ? "Converting..." : "Convert to Unit"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setImportDialogOpen(true)}
+            data-testid="button-import-data"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Import
+          </Button>
+          <Button
+            className="gap-2"
+            onClick={() => setCreateDialogOpen(true)}
+            data-testid="button-add-item"
+          >
+            <Plus className="h-4 w-4" />
+            Add Product
+          </Button>
+        </div>
+      </div>
 
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/*  B. MANAGE PRODUCTS                                            */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        <TabsContent value="manage" className="space-y-4 mt-4">
-          {manageVisited && (
-            <>
-              {/* Header */}
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <h2 className="text-lg font-semibold">Manage Products</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Create, edit, import and organise motorcycle products.
-                  </p>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {selectedIds.length > 0 && (
-                    <Button
-                      variant="destructive"
-                      className="gap-2"
-                      onClick={handleDeleteClick}
-                      data-testid="button-delete-selected"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete {selectedIds.length}{" "}
-                      {selectedIds.length === 1 ? "Product" : "Products"}
-                    </Button>
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="gap-2">
-                        Admin Tools
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={exportToExcel} data-testid="button-export-items">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => updateUOMMutation.mutate()}
-                        disabled={updateUOMMutation.isPending}
-                        data-testid="button-update-uom"
-                      >
-                        {updateUOMMutation.isPending ? "Converting..." : "Convert to Unit"}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => setImportDialogOpen(true)}
-                    data-testid="button-import-data"
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    Import
-                  </Button>
-                  <Button
-                    className="gap-2"
-                    onClick={() => setCreateDialogOpen(true)}
-                    data-testid="button-add-item"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Product
-                  </Button>
-                </div>
-              </div>
-
-              {/* Filters */}
-              <Card className="p-4">
-                <div className="flex gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name, code, or barcode..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                      data-testid="input-search"
-                    />
-                  </div>
-                  <Select
-                    value={selectedGroupFilter === null ? "all" : String(selectedGroupFilter)}
-                    onValueChange={(val) => {
-                      setSelectedGroupFilter(
-                        val === "all"
-                          ? null
-                          : val === "uncategorized"
-                            ? "uncategorized"
-                            : parseInt(val),
+      {/* ── Merged table ──────────────────────────────────────────────── */}
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="space-y-2 p-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr className="h-11">
+                    <th className="w-12 px-3">
+                      <Checkbox
+                        checked={allFilteredSelected}
+                        onCheckedChange={handleSelectAll}
+                        data-testid="checkbox-select-all"
+                      />
+                    </th>
+                    <th className="text-left px-3 font-medium">Product</th>
+                    <th className="text-left px-3 font-medium">Category</th>
+                    <th className="text-right px-3 font-medium">Total Qty</th>
+                    <th className="text-right px-3 font-medium">Avg Cost</th>
+                    <th className="text-left px-3 font-medium">Stock</th>
+                    <th className="text-center px-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOverviewItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-10 text-muted-foreground">
+                        {overviewSearch ? "No products match your search" : "No products found"}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredOverviewItems.map((item) => {
+                      const totals = productTotals.get(item.id) || {
+                        totalQuantity: 0,
+                        totalValue: 0,
+                        averageCost: 0,
+                        locationCount: 0,
+                      };
+                      const isSelected = selectedIds.includes(item.id);
+                      return (
+                        <tr
+                          key={item.id}
+                          className="border-t hover-elevate h-12 cursor-pointer"
+                          onClick={() => navigate(`/stock-query/${item.id}`)}
+                          data-testid={`row-stock-item-${item.id}`}
+                        >
+                          <td className="px-3" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) =>
+                                handleSelectItem(item.id, checked as boolean)
+                              }
+                              data-testid={`checkbox-${item.id}`}
+                            />
+                          </td>
+                          <td className="px-3 font-medium" data-testid={`name-${item.id}`}>
+                            <div className="flex items-center gap-2">
+                              <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+                              {item.name}
+                            </div>
+                          </td>
+                          <td
+                            className="px-3 text-sm text-muted-foreground"
+                            data-testid={`group-${item.id}`}
+                          >
+                            {getStockGroupName(item.stockGroupId)}
+                          </td>
+                          <td className="px-3 text-right font-mono text-sm">
+                            {totals.totalQuantity !== 0
+                              ? totals.totalQuantity % 1 === 0
+                                ? totals.totalQuantity.toLocaleString()
+                                : totals.totalQuantity.toFixed(2)
+                              : "0"}
+                          </td>
+                          <td className="px-3 text-right font-mono text-sm">
+                            {totals.averageCost > 0
+                              ? `$${totals.averageCost.toFixed(2)}`
+                              : "—"}
+                          </td>
+                          <td className="px-3">{statusBadge(item)}</td>
+                          <td className="px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => handleEditClick(item.id, e)}
+                              data-testid={`button-edit-${item.id}`}
+                              className="gap-2"
+                            >
+                              <Edit className="h-4 w-4" />
+                              Edit
+                            </Button>
+                          </td>
+                        </tr>
                       );
-                    }}
-                  >
-                    <SelectTrigger className="w-48" data-testid="select-stock-group">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="uncategorized">Uncategorized</SelectItem>
-                      {stockGroups.map((group) => (
-                        <SelectItem key={group.id} value={String(group.id)}>
-                          {group.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </Card>
-
-              {/* Table */}
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  {isLoading ? (
-                    <div className="space-y-2 p-4">
-                      <Skeleton className="h-12 w-full" />
-                      <Skeleton className="h-12 w-full" />
-                      <Skeleton className="h-12 w-full" />
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50">
-                          <tr className="h-11">
-                            <th className="w-12 px-3">
-                              <Checkbox
-                                checked={allFilteredSelected}
-                                onCheckedChange={handleSelectAll}
-                                data-testid="checkbox-select-all"
-                              />
-                            </th>
-                            <th className="text-left px-3 font-medium">Product</th>
-                            <th className="text-left px-3 font-medium">Code</th>
-                            <th className="text-left px-3 font-medium">Category</th>
-                            <th className="text-left px-3 font-medium">Barcode</th>
-                            <th className="text-right px-3 font-medium">Selling Price</th>
-                            <th className="text-left px-3 font-medium">Status</th>
-                            <th className="text-center px-3 font-medium">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredManageItems.length === 0 ? (
-                            <tr>
-                              <td colSpan={8} className="text-center py-8 text-muted-foreground">
-                                {searchTerm
-                                  ? "No products found matching your search"
-                                  : "No products found"}
-                              </td>
-                            </tr>
-                          ) : (
-                            filteredManageItems.map((item) => {
-                              const sellingPrice = parseFloat(item.sellingPrice || "0");
-                              const isSelected = selectedIds.includes(item.id);
-                              return (
-                                <tr
-                                  key={item.id}
-                                  className="border-t hover-elevate h-12"
-                                  data-testid={`row-stock-item-${item.id}`}
-                                >
-                                  <td className="px-3" onClick={(e) => e.stopPropagation()}>
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={(checked) =>
-                                        handleSelectItem(item.id, checked as boolean)
-                                      }
-                                      data-testid={`checkbox-${item.id}`}
-                                    />
-                                  </td>
-                                  <td
-                                    className="px-3 font-medium cursor-pointer"
-                                    onClick={() => handleStockItemClick(item.id, item.name)}
-                                    data-testid={`name-${item.id}`}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <Package className="h-4 w-4 text-muted-foreground" />
-                                      {item.name}
-                                    </div>
-                                  </td>
-                                  <td
-                                    className="px-3 font-mono text-sm text-muted-foreground cursor-pointer"
-                                    onClick={() => handleStockItemClick(item.id, item.name)}
-                                  >
-                                    {item.code}
-                                  </td>
-                                  <td
-                                    className="px-3 text-sm cursor-pointer"
-                                    onClick={() => handleStockItemClick(item.id, item.name)}
-                                    data-testid={`group-${item.id}`}
-                                  >
-                                    {getStockGroupName(item.stockGroupId)}
-                                  </td>
-                                  <td
-                                    className="px-3 font-mono text-xs text-muted-foreground cursor-pointer"
-                                    onClick={() => handleStockItemClick(item.id, item.name)}
-                                  >
-                                    {item.barcode || "—"}
-                                  </td>
-                                  <td
-                                    className="px-3 text-right font-mono cursor-pointer"
-                                    onClick={() => handleStockItemClick(item.id, item.name)}
-                                  >
-                                    ${sellingPrice.toFixed(2)}
-                                  </td>
-                                  <td
-                                    className="px-3 cursor-pointer"
-                                    onClick={() => handleStockItemClick(item.id, item.name)}
-                                    data-testid={`status-${item.id}`}
-                                  >
-                                    <Badge variant={item.active ? "default" : "secondary"}>
-                                      {item.active ? "Active" : "Inactive"}
-                                    </Badge>
-                                  </td>
-                                  <td className="px-3 text-center">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={(e) => handleEditClick(item.id, e)}
-                                      data-testid={`button-edit-${item.id}`}
-                                      className="gap-2"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                      Edit
-                                    </Button>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                    })
                   )}
-                </CardContent>
-              </Card>
-
-              {!isLoading && filteredManageItems.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Showing {filteredManageItems.length} of {stockItems.length} products
-                </p>
-              )}
-            </>
+                </tbody>
+              </table>
+            </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
+
+      {!isLoading && filteredOverviewItems.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Showing {filteredOverviewItems.length} of {stockItems.length} products
+        </p>
+      )}
 
       {/* ── Shared dialogs (all preserved) ──────────────────────────────── */}
       {selectedStockItemId && (
