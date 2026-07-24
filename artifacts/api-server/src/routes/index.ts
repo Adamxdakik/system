@@ -12,6 +12,7 @@ import accountsRouter from "./accounts";
 import vouchersRouter from "./vouchers";
 import employeesRouter from "./employees";
 import dashboardRouter from "./dashboard";
+import offloadsRouter from "./offloads";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(accountsRouter);
 router.use(vouchersRouter);
 router.use(employeesRouter);
 router.use(dashboardRouter);
+router.use(offloadsRouter);
 
 export default router;
