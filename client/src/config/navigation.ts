@@ -9,7 +9,6 @@ import {
   MapPin,
   Landmark,
   ArrowRightLeft,
-  ClipboardList,
   CreditCard,
   BarChart3,
   HeartHandshake,
@@ -17,6 +16,7 @@ import {
   Cog,
   BadgeCheck,
   Settings,
+  BookOpen,
 } from "lucide-react";
 
 export interface NavigationItem {
@@ -40,6 +40,12 @@ export const primaryItems: NavigationItem[] = [
     url: "/",
     icon: LayoutDashboard,
     activePrefixes: ["/"],
+  },
+  {
+    title: "Transaction History",
+    url: "/daybook",
+    icon: BookOpen,
+    activePrefixes: ["/daybook"],
   },
 ];
 
@@ -96,12 +102,6 @@ export const financeItems: NavigationItem[] = [
     url: "/vouchers",
     icon: ArrowRightLeft,
     activePrefixes: ["/vouchers"],
-  },
-  {
-    title: "Transaction History",
-    url: "/daybook",
-    icon: ClipboardList,
-    activePrefixes: ["/daybook"],
   },
   {
     title: "Payroll",
