@@ -56,6 +56,21 @@ export default defineConfig({
         '..',
         'attached_assets',
       ),
+      // tailwindcss-animate and @tailwindcss/typography are v3 plugins used by the
+      // workspace-root tailwind.config.ts (for the Huanghe Motors client). When
+      // @tailwindcss/vite adds that file to Vite's module graph for HMR watching,
+      // Vite's import-analysis tries to resolve those requires from the workspace root
+      // where they are NOT hoisted by pnpm. These aliases redirect them so the
+      // import resolves without crashing. MotoTrack itself uses tw-animate-css (CSS
+      // @import) and @tailwindcss/typography via CSS @plugin — both already work.
+      'tailwindcss-animate': path.resolve(
+        import.meta.dirname,
+        'tailwindcss-animate-stub.js',
+      ),
+      '@tailwindcss/typography': path.resolve(
+        import.meta.dirname,
+        'node_modules/@tailwindcss/typography',
+      ),
     },
     dedupe: ['react', 'react-dom'],
   },
