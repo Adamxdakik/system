@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +40,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   defaultFromKey?: string;
   defaultToKey?: string;
+  mode?: "transfer" | "receive" | "pay";
 }
 
 const TYPE_TO_KIND: Record<string, string> = {
@@ -69,6 +70,7 @@ export function QuickTransferDialog({
   onOpenChange,
   defaultFromKey,
   defaultToKey,
+  mode = "transfer",
 }: Props) {
   const { toast } = useToast();
   const [fromKey, setFromKey] = useState<string>(defaultFromKey ?? "");
@@ -76,6 +78,16 @@ export function QuickTransferDialog({
   const [amount, setAmount] = useState<string>("");
   const [date, setDate] = useState<string>(todayISO());
   const [notes, setNotes] = useState<string>("");
+
+  // Reset fields every time the dialog opens (or defaults/mode change)
+  useEffect(() => {
+    if (!open) return;
+    setFromKey(defaultFromKey ?? "");
+    setToKey(defaultToKey ?? "");
+    setAmount("");
+    setNotes("");
+    setDate(todayISO());
+  }, [open, defaultFromKey, defaultToKey, mode]);
 
   const { data: accounts = [] } = useQuery<AccountOption[]>({
     queryKey: ["/api/accounts/all"],
@@ -92,9 +104,7 @@ export function QuickTransferDialog({
     for (const a of supportedAccounts) {
       (out[a.type] ||= []).push(a);
     }
-    Object.values(out).forEach((list) =>
-      list.sort((a, b) => a.name.localeCompare(b.name)),
-    );
+    Object.values(out).forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name)));
     return out;
   }, [supportedAccounts]);
 
@@ -113,8 +123,7 @@ export function QuickTransferDialog({
       const to = parseKey(toKey);
       if (!from || !to) throw new Error("Pick both From and To accounts");
       const amt = parseFloat(amount);
-      if (!Number.isFinite(amt) || amt <= 0)
-        throw new Error("Enter a positive amount");
+      if (!Number.isFinite(amt) || amt <= 0) throw new Error("Enter a positive amount");
       const res = await apiRequest("POST", "/api/accounts/transfer", {
         fromKind: from.kind,
         fromId: from.id,
@@ -169,8 +178,7 @@ export function QuickTransferDialog({
                   <SelectItem key={key} value={key}>
                     {a.name}
                     <span className="ml-2 text-xs text-muted-foreground">
-                      ({a.balanceSide === "Cr" ? "owe" : "have"}{" "}
-                      {sign}
+                      ({a.balanceSide === "Cr" ? "owe" : "have"} {sign}
                       {a.balance.toLocaleString("en-US", {
                         maximumFractionDigits: 2,
                       })}
@@ -185,20 +193,41 @@ export function QuickTransferDialog({
     </Select>
   );
 
+  const wording = {
+    transfer: {
+      title: "Pay or Receive",
+      description: "Move money from one account to another.",
+      fromLabel: "From",
+      toLabel: "To",
+      button: "Record",
+    },
+    receive: {
+      title: "Receive Money",
+      description: "Record money received from one account into another.",
+      fromLabel: "From",
+      toLabel: "Receive Into",
+      button: "Record Receipt",
+    },
+    pay: {
+      title: "Pay Money",
+      description: "Record money paid from one account to another.",
+      fromLabel: "Pay From",
+      toLabel: "To",
+      button: "Record Payment",
+    },
+  }[mode];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Pay or Receive</DialogTitle>
-          <DialogDescription>
-            Move money from one account to another. The system records both
-            sides automatically.
-          </DialogDescription>
+          <DialogTitle>{wording.title}</DialogTitle>
+          <DialogDescription>{wording.description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>From (where the money leaves)</Label>
+            <Label>{wording.fromLabel}</Label>
             {renderSelect(fromKey, setFromKey, toKey)}
           </div>
 
@@ -207,7 +236,7 @@ export function QuickTransferDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>To (where the money goes)</Label>
+            <Label>{wording.toLabel}</Label>
             {renderSelect(toKey, setToKey, fromKey)}
           </div>
 
@@ -250,11 +279,8 @@ export function QuickTransferDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            onClick={() => transferMutation.mutate()}
-            disabled={transferMutation.isPending}
-          >
-            {transferMutation.isPending ? "Saving..." : "Record"}
+          <Button onClick={() => transferMutation.mutate()} disabled={transferMutation.isPending}>
+            {transferMutation.isPending ? "Saving..." : wording.button}
           </Button>
         </DialogFooter>
       </DialogContent>

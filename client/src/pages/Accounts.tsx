@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { DeleteConfirmDialog } from "@/components/ConfirmationDialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -45,7 +45,9 @@ import {
   ExternalLink,
   FileDown,
   ArrowLeft,
-  Wallet,
+  ArrowDownLeft,
+  ArrowUpRight,
+  MoreHorizontal,
   BookOpen,
 } from "lucide-react";
 import {
@@ -94,7 +96,6 @@ import {
 } from "@/components/ui/period-filter";
 import { useEscapeBack } from "@/hooks/use-escape-back";
 import { QuickTransferDialog } from "@/components/QuickTransferDialog";
-import { ArrowLeftRight } from "lucide-react";
 
 interface Account {
   id: string;
@@ -173,7 +174,9 @@ export default function Accounts() {
 
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const [showManageAccounts, setShowManageAccounts] = useState(false);
+  const [manageAccountsOpen, setManageAccountsOpen] = useState(false);
+  type MoneyAction = "receive" | "pay";
+  const [moneyAction, setMoneyAction] = useState<MoneyAction>("receive");
   const [accountTypeFilter, setAccountTypeFilter] = useState("all");
 
   useEscapeBack(selectedAccount ? () => setSelectedAccount(null) : null);
@@ -665,6 +668,13 @@ export default function Accounts() {
     }
     return { groups, getCategory };
   }, [filteredAccounts, accountTypeFilter, ledgerMetaMap]);
+
+  const selectedTransferKey = useMemo(() => {
+    if (!selectedAccount) return undefined;
+    const supportedTypes = new Set(["ledger", "bank", "fixedAsset", "supplier", "employee"]);
+    if (!supportedTypes.has(selectedAccount.type)) return undefined;
+    return `${selectedAccount.type}:${selectedAccount.accountId}`;
+  }, [selectedAccount]);
 
   const toggleParent = (accountId: string) => {
     const newExpanded = new Set(expandedParents);
@@ -1402,38 +1412,57 @@ export default function Accounts() {
             View balances, payments and account activity.
           </p>
         </div>
-        {!showManageAccounts && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              data-testid="button-quick-transfer"
-              disabled={!selectedCompany}
-              onClick={() => setTransferDialogOpen(true)}
-            >
-              <ArrowLeftRight className="w-4 h-4 mr-2" />
-              Pay / Receive
-            </Button>
-            <Button
-              variant="outline"
-              data-testid="button-manage-accounts"
-              disabled={!selectedCompany}
-              onClick={() => setShowManageAccounts(true)}
-            >
-              Manage Accounts
-            </Button>
-            <Button
-              data-testid="button-create-account"
-              disabled={!selectedCompany}
-              onClick={() => navigate(appMode === "factory" ? "/factory/create" : "/create")}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Account
-            </Button>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            data-testid="button-receive-money"
+            disabled={!selectedCompany}
+            onClick={() => {
+              setMoneyAction("receive");
+              setTransferDialogOpen(true);
+            }}
+          >
+            <ArrowDownLeft className="w-4 h-4 mr-2" />
+            Receive Money
+          </Button>
+          <Button
+            variant="outline"
+            data-testid="button-pay-money"
+            disabled={!selectedCompany}
+            onClick={() => {
+              setMoneyAction("pay");
+              setTransferDialogOpen(true);
+            }}
+          >
+            <ArrowUpRight className="w-4 h-4 mr-2" />
+            Pay Money
+          </Button>
+          <Button
+            variant="outline"
+            data-testid="button-manage-accounts"
+            disabled={!selectedCompany}
+            onClick={() => setManageAccountsOpen(true)}
+          >
+            Manage Accounts
+          </Button>
+          <Button
+            data-testid="button-create-account"
+            disabled={!selectedCompany}
+            onClick={() => navigate(appMode === "factory" ? "/factory/create" : "/create")}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Account
+          </Button>
+        </div>
       </div>
 
-      <QuickTransferDialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen} />
+      <QuickTransferDialog
+        open={transferDialogOpen}
+        onOpenChange={setTransferDialogOpen}
+        mode={moneyAction}
+        defaultFromKey={moneyAction === "pay" ? selectedTransferKey : undefined}
+        defaultToKey={moneyAction === "receive" ? selectedTransferKey : undefined}
+      />
 
       {/* Bank Account Edit Dialog */}
       <Dialog
@@ -1648,26 +1677,13 @@ export default function Accounts() {
         </DialogContent>
       </Dialog>
 
-      {/* ─────────────────────────────────────────────────────────── */}
-      {showManageAccounts ? (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowManageAccounts(false)}
-              data-testid="button-back-to-accounts"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Accounts
-            </Button>
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold">Manage Accounts</h2>
-            <p className="text-sm text-muted-foreground">
-              Create, edit and organise financial accounts.
-            </p>
-          </div>
+      {/* ── Manage Accounts Dialog ─────────────────────────────────────── */}
+      <Dialog open={manageAccountsOpen} onOpenChange={setManageAccountsOpen}>
+        <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Accounts</DialogTitle>
+            <DialogDescription>Create, edit and organise financial accounts.</DialogDescription>
+          </DialogHeader>
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Alter Account</CardTitle>
@@ -2213,277 +2229,802 @@ export default function Accounts() {
               )}
             </CardContent>
           </Card>
-        </div>
-      ) : (
-        /* ── Accounts workspace ─────────────────────────────────────────── */
-        <div className="grid min-h-0 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)] lg:h-[calc(100vh-12rem)] overflow-hidden">
-          {/* ── Left: Account browser ──────────────────────────────────── */}
-          <Card className={`flex flex-col min-h-0 ${selectedAccount ? "hidden lg:flex" : "flex"}`}>
-            <CardHeader className="pb-3 flex-shrink-0">
-              <CardTitle className="text-base">Accounts</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Select an account to view its activity.
-              </p>
-            </CardHeader>
-            <CardContent className="flex-1 min-h-0 flex flex-col gap-3 pb-4 overflow-hidden">
-              {/* Search */}
-              <div className="relative flex-shrink-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search account name or code..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                  disabled={accountsLoading || !selectedCompany}
-                  data-testid="input-account-search"
-                />
-              </div>
-              {/* Type filter */}
-              <Select value={accountTypeFilter} onValueChange={setAccountTypeFilter}>
-                <SelectTrigger className="flex-shrink-0" data-testid="select-account-type-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Account Type: All</SelectItem>
-                  {BROWSER_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {/* Account list */}
-              {accountsLoading || !selectedCompany ? (
-                <div className="space-y-2 flex-shrink-0">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-2 px-2">
-                  {BROWSER_CATEGORIES.map((cat) => {
-                    const catAccounts = groupedBrowserAccounts.groups[cat];
-                    if (!catAccounts || catAccounts.length === 0) return null;
-                    return (
-                      <div key={cat} className="mb-3">
-                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 pb-1.5 sticky top-0 bg-card">
-                          {cat}
-                        </p>
-                        {catAccounts.map((account) => {
-                          const isSelected = selectedAccount?.id === account.id;
-                          const hasChildren = account.children.length > 0;
-                          const isExpanded = expandedParents.has(account.id);
-                          const la = ledgerMetaMap.get(account.accountId);
-                          const subLabel = (() => {
-                            if (account.type === "bank") return null;
-                            if (account.type === "customer") return null;
-                            if (account.type === "supplier" || account.type === "factorySupplier")
-                              return null;
-                            if (account.type === "employee" || account.type === "factoryWorker")
-                              return null;
-                            const parts = [account.code, la?.accountType].filter(Boolean);
-                            return parts.join(" · ") || null;
-                          })();
-                          const typeBadgeEl = (() => {
-                            if (account.type === "bank")
-                              return (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                                  Bank
-                                </Badge>
-                              );
-                            if (account.type === "customer")
-                              return (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                                  Customer
-                                </Badge>
-                              );
-                            if (account.type === "supplier" || account.type === "factorySupplier")
-                              return (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                                  Supplier
-                                </Badge>
-                              );
-                            if (account.type === "employee" || account.type === "factoryWorker")
-                              return (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                                  Employee
-                                </Badge>
-                              );
-                            return subLabel ? (
-                              <span className="text-[10px] text-muted-foreground truncate max-w-[14rem]">
-                                {subLabel}
-                              </span>
-                            ) : null;
-                          })();
+        </DialogContent>
+      </Dialog>
 
-                          return (
-                            <div key={account.id}>
-                              <div
-                                className={`flex items-center rounded-md mb-0.5 cursor-pointer ${
-                                  isSelected
-                                    ? "bg-primary/10 border border-primary/30"
-                                    : "hover:bg-accent/50"
-                                }`}
-                              >
-                                {hasChildren && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleParent(account.id);
-                                    }}
-                                    className="p-2 shrink-0 text-muted-foreground hover:text-foreground"
-                                    data-testid={`button-toggle-${account.id}`}
-                                  >
-                                    {isExpanded ? (
-                                      <ChevronDown className="h-3.5 w-3.5" />
-                                    ) : (
-                                      <ChevronRight className="h-3.5 w-3.5" />
-                                    )}
-                                  </button>
-                                )}
+      {/* ── Accounts workspace ─────────────────────────────────────────── */}
+      <div className="grid min-h-0 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)] lg:h-[calc(100vh-12rem)] overflow-hidden">
+        {/* ── Left: Account browser ──────────────────────────────────── */}
+        <Card className={`flex flex-col min-h-0 ${selectedAccount ? "hidden lg:flex" : "flex"}`}>
+          <CardHeader className="pb-3 flex-shrink-0">
+            <CardTitle className="text-base">Accounts</CardTitle>
+            <p className="text-sm text-muted-foreground">Select an account to view its activity.</p>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0 flex flex-col gap-3 pb-4 overflow-hidden">
+            {/* Search */}
+            <div className="relative flex-shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search account name or code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+                disabled={accountsLoading || !selectedCompany}
+                data-testid="input-account-search"
+              />
+            </div>
+            {/* Type filter */}
+            <Select value={accountTypeFilter} onValueChange={setAccountTypeFilter}>
+              <SelectTrigger className="flex-shrink-0" data-testid="select-account-type-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Account Type: All</SelectItem>
+                {BROWSER_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {/* Account list */}
+            {accountsLoading || !selectedCompany ? (
+              <div className="space-y-2 flex-shrink-0">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-2 px-2">
+                {BROWSER_CATEGORIES.map((cat) => {
+                  const catAccounts = groupedBrowserAccounts.groups[cat];
+                  if (!catAccounts || catAccounts.length === 0) return null;
+                  return (
+                    <div key={cat} className="mb-3">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 pb-1.5 sticky top-0 bg-card">
+                        {cat}
+                      </p>
+                      {catAccounts.map((account) => {
+                        const isSelected = selectedAccount?.id === account.id;
+                        const hasChildren = account.children.length > 0;
+                        const isExpanded = expandedParents.has(account.id);
+                        const la = ledgerMetaMap.get(account.accountId);
+                        const subLabel = (() => {
+                          if (account.type === "bank") return null;
+                          if (account.type === "customer") return null;
+                          if (account.type === "supplier" || account.type === "factorySupplier")
+                            return null;
+                          if (account.type === "employee" || account.type === "factoryWorker")
+                            return null;
+                          const parts = [account.code, la?.accountType].filter(Boolean);
+                          return parts.join(" · ") || null;
+                        })();
+                        const typeBadgeEl = (() => {
+                          if (account.type === "bank")
+                            return (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                                Bank
+                              </Badge>
+                            );
+                          if (account.type === "customer")
+                            return (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                                Customer
+                              </Badge>
+                            );
+                          if (account.type === "supplier" || account.type === "factorySupplier")
+                            return (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                                Supplier
+                              </Badge>
+                            );
+                          if (account.type === "employee" || account.type === "factoryWorker")
+                            return (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                                Employee
+                              </Badge>
+                            );
+                          return subLabel ? (
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[14rem]">
+                              {subLabel}
+                            </span>
+                          ) : null;
+                        })();
+
+                        return (
+                          <div key={account.id}>
+                            <div
+                              className={`flex items-center rounded-md mb-0.5 cursor-pointer ${
+                                isSelected
+                                  ? "bg-primary/10 border border-primary/30"
+                                  : "hover:bg-accent/50"
+                              }`}
+                            >
+                              {hasChildren && (
                                 <button
-                                  onClick={() => handleAccountChange(account.id)}
-                                  disabled={accountsLoading || !selectedCompany}
-                                  className={`flex-1 flex items-center justify-between gap-2 py-2 text-left ${hasChildren ? "pr-2" : "px-2"}`}
-                                  data-testid={`button-select-account-${account.id}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleParent(account.id);
+                                  }}
+                                  className="p-2 shrink-0 text-muted-foreground hover:text-foreground"
+                                  data-testid={`button-toggle-${account.id}`}
                                 >
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium leading-tight truncate">
-                                      {account.name}
-                                    </p>
-                                    {typeBadgeEl && <div className="mt-0.5">{typeBadgeEl}</div>}
-                                  </div>
-                                  {!hideBalances && account.balance !== 0 && (
-                                    <span className="text-xs tabular-nums shrink-0 font-mono text-right">
-                                      {formatAmount(Math.abs(account.balance))}{" "}
-                                      <span
-                                        className={
-                                          account.balanceSide?.toLowerCase() === "dr"
-                                            ? "text-red-500 dark:text-red-400"
-                                            : "text-green-600 dark:text-green-400"
-                                        }
-                                      >
-                                        {account.balanceSide ?? ""}
-                                      </span>
-                                    </span>
+                                  {isExpanded ? (
+                                    <ChevronDown className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <ChevronRight className="h-3.5 w-3.5" />
                                   )}
                                 </button>
-                              </div>
-                              {isExpanded &&
-                                account.children.map((child: any) => {
-                                  const childSelected = selectedAccount?.id === child.id;
-                                  return (
-                                    <div
-                                      key={child.id}
-                                      className={`flex items-center rounded-md mb-0.5 ml-6 cursor-pointer ${
-                                        childSelected
-                                          ? "bg-primary/10 border border-primary/30"
-                                          : "hover:bg-accent/50"
-                                      }`}
+                              )}
+                              <button
+                                onClick={() => handleAccountChange(account.id)}
+                                disabled={accountsLoading || !selectedCompany}
+                                className={`flex-1 flex items-center justify-between gap-2 py-2 text-left ${hasChildren ? "pr-2" : "px-2"}`}
+                                data-testid={`button-select-account-${account.id}`}
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium leading-tight truncate">
+                                    {account.name}
+                                  </p>
+                                  {typeBadgeEl && <div className="mt-0.5">{typeBadgeEl}</div>}
+                                </div>
+                                {!hideBalances && account.balance !== 0 && (
+                                  <span className="text-xs tabular-nums shrink-0 font-mono text-right">
+                                    {formatAmount(Math.abs(account.balance))}{" "}
+                                    <span
+                                      className={
+                                        account.balanceSide?.toLowerCase() === "dr"
+                                          ? "text-red-500 dark:text-red-400"
+                                          : "text-green-600 dark:text-green-400"
+                                      }
                                     >
-                                      <button
-                                        onClick={() => handleAccountChange(child.id)}
-                                        disabled={accountsLoading || !selectedCompany}
-                                        className="flex-1 flex items-center justify-between gap-2 px-2 py-2 text-left"
-                                        data-testid={`button-select-account-${child.id}`}
-                                      >
-                                        <div className="min-w-0">
-                                          <p className="text-sm font-medium leading-tight truncate">
-                                            {child.name}
-                                          </p>
-                                        </div>
-                                        {!hideBalances && child.balance !== 0 && (
-                                          <span className="text-xs tabular-nums shrink-0 font-mono">
-                                            {formatAmount(Math.abs(child.balance))}{" "}
-                                            <span
-                                              className={
-                                                child.balanceSide?.toLowerCase() === "dr"
-                                                  ? "text-red-500 dark:text-red-400"
-                                                  : "text-green-600 dark:text-green-400"
-                                              }
-                                            >
-                                              {child.balanceSide ?? ""}
-                                            </span>
+                                      {account.balanceSide ?? ""}
+                                    </span>
+                                  </span>
+                                )}
+                              </button>
+                            </div>
+                            {isExpanded &&
+                              account.children.map((child: any) => {
+                                const childSelected = selectedAccount?.id === child.id;
+                                return (
+                                  <div
+                                    key={child.id}
+                                    className={`flex items-center rounded-md mb-0.5 ml-6 cursor-pointer ${
+                                      childSelected
+                                        ? "bg-primary/10 border border-primary/30"
+                                        : "hover:bg-accent/50"
+                                    }`}
+                                  >
+                                    <button
+                                      onClick={() => handleAccountChange(child.id)}
+                                      disabled={accountsLoading || !selectedCompany}
+                                      className="flex-1 flex items-center justify-between gap-2 px-2 py-2 text-left"
+                                      data-testid={`button-select-account-${child.id}`}
+                                    >
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-medium leading-tight truncate">
+                                          {child.name}
+                                        </p>
+                                      </div>
+                                      {!hideBalances && child.balance !== 0 && (
+                                        <span className="text-xs tabular-nums shrink-0 font-mono">
+                                          {formatAmount(Math.abs(child.balance))}{" "}
+                                          <span
+                                            className={
+                                              child.balanceSide?.toLowerCase() === "dr"
+                                                ? "text-red-500 dark:text-red-400"
+                                                : "text-green-600 dark:text-green-400"
+                                            }
+                                          >
+                                            {child.balanceSide ?? ""}
                                           </span>
-                                        )}
-                                      </button>
+                                        </span>
+                                      )}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+                {BROWSER_CATEGORIES.every(
+                  (cat) => (groupedBrowserAccounts.groups[cat] || []).length === 0,
+                ) && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No accounts found
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Right: Statement panel ──────────────────────────────────── */}
+        <div className={`flex flex-col min-h-0 ${selectedAccount ? "flex" : "hidden lg:flex"}`}>
+          {selectedAccount ? (
+            <div className="flex flex-col gap-4 min-h-0 overflow-y-auto overscroll-contain">
+              {/* Mobile back button */}
+              <div className="lg:hidden">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedAccount(null);
+                    updateUrlParams({ accountId: null, accountType: null });
+                  }}
+                  data-testid="button-back-to-accounts-mobile"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Accounts
+                </Button>
+              </div>
+              {/* Account summary */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <CardTitle
+                        className="text-xl leading-tight truncate"
+                        data-testid="text-account-name"
+                      >
+                        {selectedAccount.name}
+                      </CardTitle>
+                      <CardDescription className="mt-0.5">
+                        {[
+                          selectedAccount.code,
+                          (() => {
+                            const t = selectedAccount.type;
+                            if (t === "bank") return "Bank Account";
+                            if (t === "ledger") return "Ledger Account";
+                            if (t === "supplier") return "Supplier";
+                            if (t === "factorySupplier") return "Factory Supplier";
+                            if (t === "customer") return "Customer";
+                            if (t === "employee") return "Employee";
+                            if (t === "factoryWorker") return "Factory Worker";
+                            if (t === "fixedAsset") return "Fixed Asset";
+                            return t;
+                          })(),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        data-testid="button-edit-account"
+                        disabled={
+                          ![
+                            "ledger",
+                            "bank",
+                            "supplier",
+                            "factorySupplier",
+                            "customer",
+                            "employee",
+                            "factoryWorker",
+                          ].includes(selectedAccount.type)
+                        }
+                        title={
+                          ![
+                            "ledger",
+                            "bank",
+                            "supplier",
+                            "factorySupplier",
+                            "customer",
+                            "employee",
+                            "factoryWorker",
+                          ].includes(selectedAccount.type)
+                            ? "This account type cannot be edited here"
+                            : undefined
+                        }
+                        onClick={() => {
+                          const type = selectedAccount.type;
+                          if (type === "ledger") {
+                            const la = ledgerAccounts.find(
+                              (x) => x.id === selectedAccount.accountId,
+                            );
+                            if (la) {
+                              setAccountToEdit(null);
+                              setBankToEdit(null);
+                              setSupplierToEdit(null);
+                              setCustomerToEdit(null);
+                              handleSelectAccountForEdit(la);
+                              setManageAccountsOpen(true);
+                            }
+                          } else if (type === "bank") {
+                            const ba = bankAccounts.find((x) => x.id === selectedAccount.accountId);
+                            if (ba) {
+                              setAccountToEdit(null);
+                              setBankToEdit(null);
+                              setSupplierToEdit(null);
+                              setCustomerToEdit(null);
+                              handleSelectBankForEdit(ba);
+                              setManageAccountsOpen(true);
+                            }
+                          } else if (type === "supplier" || type === "factorySupplier") {
+                            setAccountToEdit(null);
+                            setBankToEdit(null);
+                            setCustomerToEdit(null);
+                            setSupplierToEdit(selectedAccount);
+                            editForm.reset({
+                              code: selectedAccount.code,
+                              name: selectedAccount.name,
+                              openingBalance: String(selectedAccount.openingBalance ?? 0),
+                              openingBalanceSide: "Cr",
+                              active: selectedAccount.active,
+                            });
+                            setManageAccountsOpen(true);
+                          } else if (type === "customer") {
+                            setAccountToEdit(null);
+                            setBankToEdit(null);
+                            setSupplierToEdit(null);
+                            setEmployeeToEdit(null);
+                            setCustomerToEdit(selectedAccount);
+                            editForm.reset({
+                              code: selectedAccount.code,
+                              name: selectedAccount.name,
+                              openingBalance: String(selectedAccount.openingBalance ?? 0),
+                              openingBalanceSide: (selectedAccount.openingBalanceSide ?? "Dr") as
+                                "Dr" | "Cr",
+                              active: selectedAccount.active,
+                            });
+                            setManageAccountsOpen(true);
+                          } else if (type === "employee" || type === "factoryWorker") {
+                            setAccountToEdit(null);
+                            setBankToEdit(null);
+                            setSupplierToEdit(null);
+                            setCustomerToEdit(null);
+                            setEmployeeToEdit(selectedAccount);
+                            editForm.reset({
+                              code: selectedAccount.code,
+                              name: selectedAccount.name,
+                              active: selectedAccount.active,
+                            });
+                            setManageAccountsOpen(true);
+                          }
+                        }}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Account
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" data-testid="button-account-more">
+                            <MoreHorizontal className="w-4 h-4 mr-1" />
+                            More
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => setManageAccountsOpen(true)}
+                            data-testid="button-more-manage-accounts"
+                          >
+                            Manage Accounts
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              navigate(appMode === "factory" ? "/factory/create" : "/create")
+                            }
+                            data-testid="button-more-new-account"
+                          >
+                            New Account
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </CardHeader>
+                {!hideBalances && (
+                  <CardContent className="pt-0 pb-4">
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const bal = selectedAccount.balance ?? 0;
+                        const side = selectedAccount.balanceSide ?? "Dr";
+                        const isCredit = side === "Cr";
+                        return (
+                          <>
+                            {isCredit ? (
+                              <TrendingDown className="w-5 h-5 text-red-500 shrink-0" />
+                            ) : (
+                              <TrendingUp className="w-5 h-5 text-green-600 shrink-0" />
+                            )}
+                            <div>
+                              <p className="text-xs text-muted-foreground">Current Balance</p>
+                              <p
+                                className="text-lg font-mono font-semibold"
+                                data-testid="text-account-balance"
+                              >
+                                {formatAmount(Math.abs(bal))}{" "}
+                                <span
+                                  className={
+                                    isCredit
+                                      ? "text-red-500 dark:text-red-400"
+                                      : "text-green-600 dark:text-green-500"
+                                  }
+                                >
+                                  {side}
+                                </span>
+                              </p>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
+              {isFactorySupplierAccount ? (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">
+                      {isBrokerSupplier ? "Broker Consolidated Statement" : "Factory Supplier"}:{" "}
+                      {selectedAccount?.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {factoryStatementLoading || (isBrokerSupplier && brokerStatementLoading) ? (
+                      <div className="space-y-2">
+                        {[1, 2, 3].map((i) => (
+                          <Skeleton key={i} className="h-10 w-full" />
+                        ))}
+                      </div>
+                    ) : isBrokerSupplier && brokerStatementData ? (
+                      /* ── BROKER: show consolidated currency ledgers (same as Suppliers page) ── */
+                      <div className="space-y-6">
+                        {brokerStatementData.currencyLedgers?.length > 0 ? (
+                          brokerStatementData.currencyLedgers.map((section: any) => {
+                            const typeLabel: Record<string, string> = {
+                              container: "Container",
+                              payment: "Payment",
+                              fx_out: "FX Out",
+                              fx_in: "FX In",
+                              commission: "Commission",
+                            };
+                            const typeColor = (t: string) => {
+                              if (t === "payment") return "text-green-600 dark:text-green-400";
+                              if (t === "fx_out") return "text-amber-600 dark:text-amber-400";
+                              if (t === "fx_in") return "text-blue-600 dark:text-blue-400";
+                              if (t === "commission") return "text-destructive";
+                              return "";
+                            };
+                            const fmt = (v: string | number) =>
+                              parseFloat(String(v)).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              });
+                            const ccPfx = (cc: string) => (cc !== "USD" ? `${cc} ` : "$");
+                            return (
+                              <div key={section.currencyCode} className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-sm px-3 py-1 font-bold"
+                                  >
+                                    {section.currencyCode}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {section.totalContainers} container
+                                    {section.totalContainers !== 1 ? "s" : ""}
+                                  </span>
+                                </div>
+                                <div className="overflow-x-auto rounded-md border">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className="bg-muted/50">
+                                        <TableHead className="text-xs h-8">Date</TableHead>
+                                        <TableHead className="text-xs h-8">Type</TableHead>
+                                        <TableHead className="text-xs h-8">Description</TableHead>
+                                        <TableHead className="text-xs h-8 text-right">
+                                          Amount ({section.currencyCode})
+                                        </TableHead>
+                                        <TableHead className="text-xs h-8 text-right">
+                                          Commission
+                                        </TableHead>
+                                        <TableHead className="text-xs h-8 text-right">
+                                          Balance
+                                        </TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {section.rows.map((row: any, idx: number) => (
+                                        <TableRow key={`${row.ref}-${idx}`} className="text-xs">
+                                          <TableCell className="py-1.5 whitespace-nowrap text-muted-foreground">
+                                            {row.date
+                                              ? new Date(row.date).toLocaleDateString()
+                                              : "—"}
+                                          </TableCell>
+                                          <TableCell className="py-1.5">
+                                            <Badge
+                                              variant={
+                                                row.type === "payment"
+                                                  ? "secondary"
+                                                  : row.type === "commission"
+                                                    ? "destructive"
+                                                    : "outline"
+                                              }
+                                              className="text-xs py-0 font-normal"
+                                            >
+                                              {typeLabel[row.type] || row.type}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell className="py-1.5 max-w-[220px] truncate font-medium">
+                                            {row.description}
+                                          </TableCell>
+                                          <TableCell
+                                            className={`py-1.5 text-right tabular-nums font-medium ${typeColor(row.type)}`}
+                                          >
+                                            {row.amount < 0 ? "−" : ""}
+                                            {ccPfx(section.currencyCode)}
+                                            {fmt(Math.abs(row.amount))}
+                                          </TableCell>
+                                          <TableCell className="py-1.5 text-right tabular-nums text-xs text-muted-foreground">
+                                            {row.commissionAmount != null &&
+                                            row.commissionAmount > 0
+                                              ? `${row.commissionCurrency || section.currencyCode} ${fmt(row.commissionAmount)}`
+                                              : "—"}
+                                          </TableCell>
+                                          <TableCell
+                                            className={`py-1.5 text-right tabular-nums font-medium text-xs ${row.runningBalance > 0 ? "text-red-600 dark:text-red-400" : row.runningBalance < 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}
+                                          >
+                                            {ccPfx(section.currencyCode)}
+                                            {fmt(Math.abs(row.runningBalance))}
+                                            <span className="ml-1 opacity-70">
+                                              {row.runningBalance > 0
+                                                ? "CR"
+                                                : row.runningBalance < 0
+                                                  ? "DR"
+                                                  : ""}
+                                            </span>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                                <div className="flex justify-end">
+                                  <div className="text-xs space-y-0.5 text-right min-w-56 pr-1">
+                                    <div className="flex justify-between gap-6 text-muted-foreground">
+                                      <span>Gross Value</span>
+                                      <span className="tabular-nums font-medium text-foreground">
+                                        {ccPfx(section.currencyCode)}
+                                        {fmt(section.totalValue)}
+                                      </span>
                                     </div>
-                                  );
-                                })}
+                                    {parseFloat(section.totalCommission) > 0 && (
+                                      <div className="flex justify-between gap-6 text-muted-foreground">
+                                        <span>Commission</span>
+                                        <span className="tabular-nums text-destructive">
+                                          {ccPfx(section.currencyCode)}
+                                          {fmt(section.totalCommission)}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {parseFloat(section.totalPaid) > 0 && (
+                                      <div className="flex justify-between gap-6 text-muted-foreground">
+                                        <span>Paid</span>
+                                        <span className="tabular-nums text-green-600 dark:text-green-400">
+                                          − {ccPfx(section.currencyCode)}
+                                          {fmt(section.totalPaid)}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {parseFloat(section.totalFxOut) > 0 && (
+                                      <div className="flex justify-between gap-6 text-muted-foreground">
+                                        <span>FX Out</span>
+                                        <span className="tabular-nums text-amber-600 dark:text-amber-400">
+                                          − {ccPfx(section.currencyCode)}
+                                          {fmt(section.totalFxOut)}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {parseFloat(section.totalFxIn) > 0 && (
+                                      <div className="flex justify-between gap-6 text-muted-foreground">
+                                        <span>FX In</span>
+                                        <span className="tabular-nums text-blue-600 dark:text-blue-400">
+                                          + {ccPfx(section.currencyCode)}
+                                          {fmt(section.totalFxIn)}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between gap-6 border-t pt-1">
+                                      <span className="font-semibold">Net Balance</span>
+                                      <span
+                                        className={`tabular-nums font-bold ${parseFloat(section.netBalance) > 0 ? "text-red-600 dark:text-red-400" : parseFloat(section.netBalance) < 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}
+                                      >
+                                        {ccPfx(section.currencyCode)}
+                                        {fmt(Math.abs(parseFloat(section.netBalance)))}
+                                        <span className="ml-1 font-normal opacity-80">
+                                          {parseFloat(section.netBalance) > 0
+                                            ? "CR"
+                                            : parseFloat(section.netBalance) < 0
+                                              ? "DR"
+                                              : ""}
+                                        </span>
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            No broker activity found.
+                          </p>
+                        )}
+                      </div>
+                    ) : factorySupplierStatement ? (
+                      /* ── REGULAR SUPPLIER: show summary + transaction ledger ── */
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="p-3 rounded-md bg-muted/50">
+                            <div className="text-xs text-muted-foreground">Containers</div>
+                            <div className="text-lg font-bold">
+                              {factorySupplierStatement.summary?.totalContainers || 0}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-md bg-muted/50">
+                            <div className="text-xs text-muted-foreground">Total Value</div>
+                            <div className="text-lg font-bold tabular-nums">
+                              $
+                              {parseFloat(
+                                factorySupplierStatement.summary?.totalValue || "0",
+                              ).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-md bg-muted/50">
+                            <div className="text-xs text-muted-foreground">Total Paid</div>
+                            <div className="text-lg font-bold tabular-nums">
+                              $
+                              {parseFloat(
+                                factorySupplierStatement.summary?.totalPayments || "0",
+                              ).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-md bg-muted/50">
+                            <div className="text-xs text-muted-foreground">Net Payable</div>
+                            <div className="text-lg font-bold tabular-nums text-primary">
+                              $
+                              {parseFloat(
+                                factorySupplierStatement.summary?.netPayable || "0",
+                              ).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                        {(() => {
+                          const allLedgerEntries = factorySupplierStatement.ledger || [];
+                          const paymentEntries = allLedgerEntries.filter(
+                            (e: any) => e.type === "payment",
+                          );
+                          const purchaseEntries = allLedgerEntries.filter(
+                            (e: any) => e.type === "purchase",
+                          );
+                          const allEntries = [...purchaseEntries, ...paymentEntries].sort(
+                            (a: any, b: any) => {
+                              const da = a.date ? new Date(a.date).getTime() : 0;
+                              const db2 = b.date ? new Date(b.date).getTime() : 0;
+                              return da - db2;
+                            },
+                          );
+                          if (allEntries.length === 0) {
+                            return (
+                              <p className="text-sm text-muted-foreground text-center py-4">
+                                No activity recorded yet
+                              </p>
+                            );
+                          }
+                          let runBal = 0;
+                          const rowsWithBal = allEntries.map((e: any) => {
+                            const rawNum =
+                              parseFloat(String(e.amount || "0").replace(/[^0-9.]/g, "")) || 0;
+                            if (e.type === "purchase") runBal += rawNum;
+                            else if (e.type === "payment") runBal -= rawNum;
+                            return { ...e, runBal };
+                          });
+                          return (
+                            <div>
+                              <div className="text-sm font-medium mb-2">Transaction Ledger</div>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Reference</TableHead>
+                                    <TableHead className="text-right">Debit</TableHead>
+                                    <TableHead className="text-right">Credit</TableHead>
+                                    <TableHead className="text-right">Balance</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {rowsWithBal.slice(0, 50).map((e: any) => {
+                                    const cleanAmt = String(e.amount || "0").replace(/^[-−+]/, "");
+                                    return (
+                                      <TableRow key={e.key}>
+                                        <TableCell className="text-sm whitespace-nowrap">
+                                          {e.date ? new Date(e.date).toLocaleDateString() : "-"}
+                                        </TableCell>
+                                        <TableCell className="text-sm">
+                                          <span
+                                            className={`text-xs font-medium ${e.type === "payment" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                                          >
+                                            {e.type === "payment" ? "Payment" : "Purchase"}
+                                          </span>
+                                        </TableCell>
+                                        <TableCell className="text-sm text-muted-foreground max-w-[120px] truncate">
+                                          {e.ref ||
+                                            (e.type === "payment" ? "Payment" : e.detail) ||
+                                            "-"}
+                                        </TableCell>
+                                        <TableCell className="text-right text-sm tabular-nums text-green-600 dark:text-green-400">
+                                          {e.type === "payment" ? cleanAmt : ""}
+                                        </TableCell>
+                                        <TableCell className="text-right text-sm tabular-nums text-red-600 dark:text-red-400">
+                                          {e.type === "purchase" ? cleanAmt : ""}
+                                        </TableCell>
+                                        <TableCell
+                                          className={`text-right text-sm tabular-nums font-medium ${e.runBal > 0 ? "text-red-600 dark:text-red-400" : e.runBal < 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}
+                                        >
+                                          $
+                                          {Math.abs(e.runBal).toLocaleString(undefined, {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                          })}
+                                          {e.runBal > 0 ? " Cr" : e.runBal < 0 ? " Dr" : ""}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
                             </div>
                           );
-                        })}
+                        })()}
                       </div>
-                    );
-                  })}
-                  {BROWSER_CATEGORIES.every(
-                    (cat) => (groupedBrowserAccounts.groups[cat] || []).length === 0,
-                  ) && (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      No accounts found
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ── Right: Statement panel ──────────────────────────────────── */}
-          <div className={`flex flex-col min-h-0 ${selectedAccount ? "flex" : "hidden lg:flex"}`}>
-            {selectedAccount ? (
-              <div className="flex flex-col gap-4 min-h-0 overflow-y-auto overscroll-contain">
-                {/* Mobile back button */}
-                <div className="lg:hidden">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedAccount(null);
-                      updateUrlParams({ accountId: null, accountType: null });
-                    }}
-                    data-testid="button-back-to-accounts-mobile"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Accounts
-                  </Button>
-                </div>
-                {/* Account summary */}
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Could not load statement</p>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">Account Name</p>
-                        <span className="font-medium" data-testid="text-account-name">
-                          {selectedAccount.name}
-                        </span>
+                        <CardTitle className="text-base">Account Activity</CardTitle>
+                        <CardDescription className="text-xs mt-0.5">
+                          Transactions for the selected period.
+                        </CardDescription>
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Current Balance</p>
-                        <div className="flex items-center gap-2">
-                          {(() => {
-                            const bal = selectedAccount?.balance ?? 0;
-                            const side = selectedAccount?.balanceSide ?? "Dr";
-                            const isSupplier = selectedAccount?.type === "supplier";
-                            const isNegative = isSupplier ? side === "Cr" : side === "Cr";
-                            return (
-                              <>
-                                {isNegative ? (
-                                  <TrendingDown className="w-4 h-4 text-red-600" />
-                                ) : (
-                                  <TrendingUp className="w-4 h-4 text-green-600" />
-                                )}
-                                <span
-                                  className="font-mono font-semibold"
-                                  data-testid="text-account-balance"
-                                >
-                                  {formatAmount(Math.abs(bal))} {side}
-                                </span>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                      <div className="md:col-span-2 flex justify-end gap-2 flex-wrap">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <PeriodFilter
+                          value={periodFilter}
+                          onChange={handlePeriodFilterChange}
+                          data-testid="period-filter"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePrint}
+                          disabled={transactionsLoading}
+                          data-testid="button-print"
+                        >
+                          Print
+                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -2532,858 +3073,269 @@ export default function Accounts() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        {selectedVoucherIds.size > 0 && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setShowBulkDeleteConfirm(true)}
+                            data-testid="button-delete-selected"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete Selected ({selectedVoucherIds.size})
+                          </Button>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-                {/* Statement */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Statement Period
-                      </CardTitle>
-                      <PeriodFilter
-                        value={periodFilter}
-                        onChange={handlePeriodFilterChange}
-                        data-testid="period-filter"
-                      />
-                    </div>
                   </CardHeader>
-                </Card>
-
-                {isFactorySupplierAccount ? (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">
-                        {isBrokerSupplier ? "Broker Consolidated Statement" : "Factory Supplier"}:{" "}
-                        {selectedAccount?.name}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {factoryStatementLoading || (isBrokerSupplier && brokerStatementLoading) ? (
-                        <div className="space-y-2">
-                          {[1, 2, 3].map((i) => (
-                            <Skeleton key={i} className="h-10 w-full" />
-                          ))}
-                        </div>
-                      ) : isBrokerSupplier && brokerStatementData ? (
-                        /* ── BROKER: show consolidated currency ledgers (same as Suppliers page) ── */
-                        <div className="space-y-6">
-                          {brokerStatementData.currencyLedgers?.length > 0 ? (
-                            brokerStatementData.currencyLedgers.map((section: any) => {
-                              const typeLabel: Record<string, string> = {
-                                container: "Container",
-                                payment: "Payment",
-                                fx_out: "FX Out",
-                                fx_in: "FX In",
-                                commission: "Commission",
-                              };
-                              const typeColor = (t: string) => {
-                                if (t === "payment") return "text-green-600 dark:text-green-400";
-                                if (t === "fx_out") return "text-amber-600 dark:text-amber-400";
-                                if (t === "fx_in") return "text-blue-600 dark:text-blue-400";
-                                if (t === "commission") return "text-destructive";
-                                return "";
-                              };
-                              const fmt = (v: string | number) =>
-                                parseFloat(String(v)).toLocaleString(undefined, {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                });
-                              const ccPfx = (cc: string) => (cc !== "USD" ? `${cc} ` : "$");
-                              return (
-                                <div key={section.currencyCode} className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-sm px-3 py-1 font-bold"
-                                    >
-                                      {section.currencyCode}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {section.totalContainers} container
-                                      {section.totalContainers !== 1 ? "s" : ""}
-                                    </span>
-                                  </div>
-                                  <div className="overflow-x-auto rounded-md border">
-                                    <Table>
-                                      <TableHeader>
-                                        <TableRow className="bg-muted/50">
-                                          <TableHead className="text-xs h-8">Date</TableHead>
-                                          <TableHead className="text-xs h-8">Type</TableHead>
-                                          <TableHead className="text-xs h-8">Description</TableHead>
-                                          <TableHead className="text-xs h-8 text-right">
-                                            Amount ({section.currencyCode})
-                                          </TableHead>
-                                          <TableHead className="text-xs h-8 text-right">
-                                            Commission
-                                          </TableHead>
-                                          <TableHead className="text-xs h-8 text-right">
-                                            Balance
-                                          </TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {section.rows.map((row: any, idx: number) => (
-                                          <TableRow key={`${row.ref}-${idx}`} className="text-xs">
-                                            <TableCell className="py-1.5 whitespace-nowrap text-muted-foreground">
-                                              {row.date
-                                                ? new Date(row.date).toLocaleDateString()
-                                                : "—"}
-                                            </TableCell>
-                                            <TableCell className="py-1.5">
-                                              <Badge
-                                                variant={
-                                                  row.type === "payment"
-                                                    ? "secondary"
-                                                    : row.type === "commission"
-                                                      ? "destructive"
-                                                      : "outline"
-                                                }
-                                                className="text-xs py-0 font-normal"
-                                              >
-                                                {typeLabel[row.type] || row.type}
-                                              </Badge>
-                                            </TableCell>
-                                            <TableCell className="py-1.5 max-w-[220px] truncate font-medium">
-                                              {row.description}
-                                            </TableCell>
-                                            <TableCell
-                                              className={`py-1.5 text-right tabular-nums font-medium ${typeColor(row.type)}`}
-                                            >
-                                              {row.amount < 0 ? "−" : ""}
-                                              {ccPfx(section.currencyCode)}
-                                              {fmt(Math.abs(row.amount))}
-                                            </TableCell>
-                                            <TableCell className="py-1.5 text-right tabular-nums text-xs text-muted-foreground">
-                                              {row.commissionAmount != null &&
-                                              row.commissionAmount > 0
-                                                ? `${row.commissionCurrency || section.currencyCode} ${fmt(row.commissionAmount)}`
-                                                : "—"}
-                                            </TableCell>
-                                            <TableCell
-                                              className={`py-1.5 text-right tabular-nums font-medium text-xs ${row.runningBalance > 0 ? "text-red-600 dark:text-red-400" : row.runningBalance < 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}
-                                            >
-                                              {ccPfx(section.currencyCode)}
-                                              {fmt(Math.abs(row.runningBalance))}
-                                              <span className="ml-1 opacity-70">
-                                                {row.runningBalance > 0
-                                                  ? "CR"
-                                                  : row.runningBalance < 0
-                                                    ? "DR"
-                                                    : ""}
-                                              </span>
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
-                                  </div>
-                                  <div className="flex justify-end">
-                                    <div className="text-xs space-y-0.5 text-right min-w-56 pr-1">
-                                      <div className="flex justify-between gap-6 text-muted-foreground">
-                                        <span>Gross Value</span>
-                                        <span className="tabular-nums font-medium text-foreground">
-                                          {ccPfx(section.currencyCode)}
-                                          {fmt(section.totalValue)}
-                                        </span>
-                                      </div>
-                                      {parseFloat(section.totalCommission) > 0 && (
-                                        <div className="flex justify-between gap-6 text-muted-foreground">
-                                          <span>Commission</span>
-                                          <span className="tabular-nums text-destructive">
-                                            {ccPfx(section.currencyCode)}
-                                            {fmt(section.totalCommission)}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {parseFloat(section.totalPaid) > 0 && (
-                                        <div className="flex justify-between gap-6 text-muted-foreground">
-                                          <span>Paid</span>
-                                          <span className="tabular-nums text-green-600 dark:text-green-400">
-                                            − {ccPfx(section.currencyCode)}
-                                            {fmt(section.totalPaid)}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {parseFloat(section.totalFxOut) > 0 && (
-                                        <div className="flex justify-between gap-6 text-muted-foreground">
-                                          <span>FX Out</span>
-                                          <span className="tabular-nums text-amber-600 dark:text-amber-400">
-                                            − {ccPfx(section.currencyCode)}
-                                            {fmt(section.totalFxOut)}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {parseFloat(section.totalFxIn) > 0 && (
-                                        <div className="flex justify-between gap-6 text-muted-foreground">
-                                          <span>FX In</span>
-                                          <span className="tabular-nums text-blue-600 dark:text-blue-400">
-                                            + {ccPfx(section.currencyCode)}
-                                            {fmt(section.totalFxIn)}
-                                          </span>
-                                        </div>
-                                      )}
-                                      <div className="flex justify-between gap-6 border-t pt-1">
-                                        <span className="font-semibold">Net Balance</span>
-                                        <span
-                                          className={`tabular-nums font-bold ${parseFloat(section.netBalance) > 0 ? "text-red-600 dark:text-red-400" : parseFloat(section.netBalance) < 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}
-                                        >
-                                          {ccPfx(section.currencyCode)}
-                                          {fmt(Math.abs(parseFloat(section.netBalance)))}
-                                          <span className="ml-1 font-normal opacity-80">
-                                            {parseFloat(section.netBalance) > 0
-                                              ? "CR"
-                                              : parseFloat(section.netBalance) < 0
-                                                ? "DR"
-                                                : ""}
-                                          </span>
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <p className="text-sm text-muted-foreground text-center py-4">
-                              No broker activity found.
-                            </p>
-                          )}
-                        </div>
-                      ) : factorySupplierStatement ? (
-                        /* ── REGULAR SUPPLIER: show summary + transaction ledger ── */
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div className="p-3 rounded-md bg-muted/50">
-                              <div className="text-xs text-muted-foreground">Containers</div>
-                              <div className="text-lg font-bold">
-                                {factorySupplierStatement.summary?.totalContainers || 0}
-                              </div>
-                            </div>
-                            <div className="p-3 rounded-md bg-muted/50">
-                              <div className="text-xs text-muted-foreground">Total Value</div>
-                              <div className="text-lg font-bold tabular-nums">
-                                $
-                                {parseFloat(
-                                  factorySupplierStatement.summary?.totalValue || "0",
-                                ).toLocaleString(undefined, {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </div>
-                            </div>
-                            <div className="p-3 rounded-md bg-muted/50">
-                              <div className="text-xs text-muted-foreground">Total Paid</div>
-                              <div className="text-lg font-bold tabular-nums">
-                                $
-                                {parseFloat(
-                                  factorySupplierStatement.summary?.totalPayments || "0",
-                                ).toLocaleString(undefined, {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </div>
-                            </div>
-                            <div className="p-3 rounded-md bg-muted/50">
-                              <div className="text-xs text-muted-foreground">Net Payable</div>
-                              <div className="text-lg font-bold tabular-nums text-primary">
-                                $
-                                {parseFloat(
-                                  factorySupplierStatement.summary?.netPayable || "0",
-                                ).toLocaleString(undefined, {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                          {(() => {
-                            const allLedgerEntries = factorySupplierStatement.ledger || [];
-                            const paymentEntries = allLedgerEntries.filter(
-                              (e: any) => e.type === "payment",
-                            );
-                            const purchaseEntries = allLedgerEntries.filter(
-                              (e: any) => e.type === "purchase",
-                            );
-                            const allEntries = [...purchaseEntries, ...paymentEntries].sort(
-                              (a: any, b: any) => {
-                                const da = a.date ? new Date(a.date).getTime() : 0;
-                                const db2 = b.date ? new Date(b.date).getTime() : 0;
-                                return da - db2;
-                              },
-                            );
-                            if (allEntries.length === 0) {
-                              return (
-                                <p className="text-sm text-muted-foreground text-center py-4">
-                                  No activity recorded yet
-                                </p>
-                              );
-                            }
-                            let runBal = 0;
-                            const rowsWithBal = allEntries.map((e: any) => {
-                              const rawNum =
-                                parseFloat(String(e.amount || "0").replace(/[^0-9.]/g, "")) || 0;
-                              if (e.type === "purchase") runBal += rawNum;
-                              else if (e.type === "payment") runBal -= rawNum;
-                              return { ...e, runBal };
-                            });
-                            return (
-                              <div>
-                                <div className="text-sm font-medium mb-2">Transaction Ledger</div>
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Date</TableHead>
-                                      <TableHead>Type</TableHead>
-                                      <TableHead>Reference</TableHead>
-                                      <TableHead className="text-right">Debit</TableHead>
-                                      <TableHead className="text-right">Credit</TableHead>
-                                      <TableHead className="text-right">Balance</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {rowsWithBal.slice(0, 50).map((e: any) => {
-                                      const cleanAmt = String(e.amount || "0").replace(
-                                        /^[-−+]/,
-                                        "",
-                                      );
-                                      return (
-                                        <TableRow key={e.key}>
-                                          <TableCell className="text-sm whitespace-nowrap">
-                                            {e.date ? new Date(e.date).toLocaleDateString() : "-"}
-                                          </TableCell>
-                                          <TableCell className="text-sm">
-                                            <span
-                                              className={`text-xs font-medium ${e.type === "payment" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-                                            >
-                                              {e.type === "payment" ? "Payment" : "Purchase"}
-                                            </span>
-                                          </TableCell>
-                                          <TableCell className="text-sm text-muted-foreground max-w-[120px] truncate">
-                                            {e.ref ||
-                                              (e.type === "payment" ? "Payment" : e.detail) ||
-                                              "-"}
-                                          </TableCell>
-                                          <TableCell className="text-right text-sm tabular-nums text-green-600 dark:text-green-400">
-                                            {e.type === "payment" ? cleanAmt : ""}
-                                          </TableCell>
-                                          <TableCell className="text-right text-sm tabular-nums text-red-600 dark:text-red-400">
-                                            {e.type === "purchase" ? cleanAmt : ""}
-                                          </TableCell>
-                                          <TableCell
-                                            className={`text-right text-sm tabular-nums font-medium ${e.runBal > 0 ? "text-red-600 dark:text-red-400" : e.runBal < 0 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}
-                                          >
-                                            $
-                                            {Math.abs(e.runBal).toLocaleString(undefined, {
-                                              minimumFractionDigits: 2,
-                                              maximumFractionDigits: 2,
-                                            })}
-                                            {e.runBal > 0 ? " Cr" : e.runBal < 0 ? " Dr" : ""}
-                                          </TableCell>
-                                        </TableRow>
-                                      );
-                                    })}
-                                  </TableBody>
-                                </Table>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Could not load statement</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card>
-                    <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
-                      <CardTitle className="text-base">Ledger: {selectedAccount?.name}</CardTitle>
-                      {selectedVoucherIds.size > 0 && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setShowBulkDeleteConfirm(true)}
-                          data-testid="button-delete-selected"
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete Selected ({selectedVoucherIds.size})
-                        </Button>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      {transactionsLoading ? (
-                        <div className="space-y-2">
-                          {[1, 2, 3].map((i) => (
-                            <Skeleton key={i} className="h-10 w-full" />
-                          ))}
-                        </div>
-                      ) : (
-                        <div ref={printRef} className="print-container">
-                          <div className="hidden print:block print-header">
-                            <div style={{ textAlign: "center", marginBottom: "16px" }}>
-                              <h1
-                                style={{
-                                  fontSize: "18px",
-                                  fontWeight: 700,
-                                  margin: 0,
-                                  color: "#111",
-                                }}
-                              >
-                                {selectedCompany?.name}
-                              </h1>
-                              <h2
-                                style={{
-                                  fontSize: "14px",
-                                  fontWeight: 600,
-                                  margin: "4px 0 0",
-                                  color: "#333",
-                                }}
-                              >
-                                Account Statement: {selectedAccount?.name}
-                              </h2>
-                            </div>
-                            <div
+                  <CardContent>
+                    {transactionsLoading ? (
+                      <div className="space-y-2">
+                        {[1, 2, 3].map((i) => (
+                          <Skeleton key={i} className="h-10 w-full" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div ref={printRef} className="print-container">
+                        <div className="hidden print:block print-header">
+                          <div style={{ textAlign: "center", marginBottom: "16px" }}>
+                            <h1
                               style={{
-                                borderTop: "1px solid #ccc",
-                                borderBottom: "1px solid #ccc",
-                                padding: "6px 0",
-                                fontSize: "11px",
-                                color: "#555",
+                                fontSize: "18px",
+                                fontWeight: 700,
+                                margin: 0,
+                                color: "#111",
                               }}
                             >
-                              <div>
-                                {periodFilter.fromDate || periodFilter.toDate
-                                  ? `Period: ${periodLabel}`
-                                  : "Period: All Transactions"}
-                              </div>
-                              <div>Generated: {formatDisplayDate(new Date())}</div>
+                              {selectedCompany?.name}
+                            </h1>
+                            <h2
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: 600,
+                                margin: "4px 0 0",
+                                color: "#333",
+                              }}
+                            >
+                              Account Statement: {selectedAccount?.name}
+                            </h2>
+                          </div>
+                          <div
+                            style={{
+                              borderTop: "1px solid #ccc",
+                              borderBottom: "1px solid #ccc",
+                              padding: "6px 0",
+                              fontSize: "11px",
+                              color: "#555",
+                            }}
+                          >
+                            <div>
+                              {periodFilter.fromDate || periodFilter.toDate
+                                ? `Period: ${periodLabel}`
+                                : "Period: All Transactions"}
                             </div>
+                            <div>Generated: {formatDisplayDate(new Date())}</div>
                           </div>
-                          <div className="rounded-md border overflow-x-auto print:border-0 hidden md:block print:!block">
-                            <Table>
-                              <TableHeader className="sticky top-0 z-10 bg-background">
-                                <TableRow className="bg-muted/30">
-                                  <TableHead className="w-[40px] py-2 print:hidden">
-                                    <Checkbox
-                                      checked={
-                                        vouchersWithBalance.length > 0 &&
-                                        selectedVoucherIds.size === vouchersWithBalance.length
-                                      }
-                                      onCheckedChange={toggleSelectAll}
-                                      data-testid="checkbox-select-all"
-                                    />
-                                  </TableHead>
-                                  <TableHead className="col-date w-[100px] py-2 sticky left-0 bg-muted z-10">
-                                    Date
-                                  </TableHead>
-                                  <TableHead className="col-type w-[100px] py-2">Type</TableHead>
-                                  <TableHead className="col-particulars py-2">
-                                    Particulars
-                                  </TableHead>
-                                  {appMode === "factory" && (
-                                    <TableHead className="py-2">Notes</TableHead>
-                                  )}
-                                  {!hideBalances && (
-                                    <TableHead className="col-amount text-right w-[120px] py-2">
-                                      Debit
-                                    </TableHead>
-                                  )}
-                                  {!hideBalances && (
-                                    <TableHead className="col-amount text-right w-[120px] py-2">
-                                      Credit
-                                    </TableHead>
-                                  )}
-                                  {!hideBalances && (
-                                    <TableHead className="col-balance text-right w-[130px] py-2">
-                                      Balance
-                                    </TableHead>
-                                  )}
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {/* Opening Balance Row */}
-                                <TableRow
-                                  className="bg-accent/30 border-b-2"
-                                  data-testid="row-opening-balance"
-                                >
-                                  <TableCell className="py-2 print:hidden"></TableCell>
-                                  <TableCell
-                                    className="font-mono text-sm py-2"
-                                    colSpan={appMode === "factory" ? 4 : 3}
-                                  >
-                                    <span className="font-semibold">Opening Balance</span>
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono py-2">
-                                    {selectedAccount?.type === "supplier"
-                                      ? openingBalance < 0
-                                        ? formatAmount(Math.abs(openingBalance))
-                                        : "-"
-                                      : openingBalance > 0
-                                        ? formatAmount(openingBalance)
-                                        : "-"}
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono py-2">
-                                    {selectedAccount?.type === "supplier"
-                                      ? openingBalance > 0
-                                        ? formatAmount(openingBalance)
-                                        : "-"
-                                      : openingBalance < 0
-                                        ? formatAmount(Math.abs(openingBalance))
-                                        : "-"}
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono font-semibold py-2">
-                                    {formatAmount(Math.abs(openingBalance))}{" "}
-                                    {selectedAccount?.type === "supplier"
-                                      ? openingBalance > 0
-                                        ? "Cr"
-                                        : "Dr"
-                                      : openingBalance >= 0
-                                        ? "Dr"
-                                        : "Cr"}
-                                  </TableCell>
-                                </TableRow>
-
-                                {/* Voucher Rows */}
-                                {vouchersWithBalance.length === 0 ? (
-                                  <TableRow>
-                                    <TableCell
-                                      colSpan={appMode === "factory" ? 8 : 7}
-                                      className="text-center py-8 text-muted-foreground"
-                                    >
-                                      <Search className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                                      <p>No transactions found for this account</p>
-                                      {(periodFilter.fromDate || periodFilter.toDate) && (
-                                        <p className="text-sm mt-1">Try adjusting the date range</p>
-                                      )}
-                                    </TableCell>
-                                  </TableRow>
-                                ) : (
-                                  vouchersWithBalance.map((voucher) => (
-                                    <TableRow
-                                      key={voucher.voucherId}
-                                      className="hover-elevate"
-                                      data-testid={`row-voucher-${voucher.voucherId}`}
-                                    >
-                                      <TableCell className="py-2 print:hidden">
-                                        <Checkbox
-                                          checked={selectedVoucherIds.has(voucher.voucherId)}
-                                          onCheckedChange={() =>
-                                            toggleVoucherSelection(voucher.voucherId)
-                                          }
-                                          data-testid={`checkbox-voucher-${voucher.voucherId}`}
-                                        />
-                                      </TableCell>
-                                      <TableCell className="font-mono text-sm py-2 sticky left-0 bg-background z-10">
-                                        {voucher.voucherDate
-                                          ? formatDisplayDate(new Date(voucher.voucherDate))
-                                          : "-"}
-                                      </TableCell>
-                                      <TableCell className="py-2">
-                                        <Badge variant="outline" className="text-xs">
-                                          {voucher.voucherType}
-                                        </Badge>
-                                      </TableCell>
-                                      <TableCell className="py-2">
-                                        {appMode === "factory" ? (
-                                          <span className="text-sm">
-                                            {selectedAccount?.name ?? "-"}
-                                          </span>
-                                        ) : (
-                                          <button
-                                            onClick={() => handleVoucherClick(voucher)}
-                                            className="flex items-center gap-1 text-primary hover:underline cursor-pointer text-sm text-left"
-                                            data-testid={`link-voucher-${voucher.voucherId}`}
-                                          >
-                                            <span className="truncate max-w-[280px]">
-                                              {voucher.narration ||
-                                                voucher.voucherDescription ||
-                                                voucher.voucherNumber}
-                                            </span>
-                                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                                          </button>
-                                        )}
-                                      </TableCell>
-                                      {appMode === "factory" && (
-                                        <TableCell className="py-2">
-                                          <button
-                                            onClick={() => handleVoucherClick(voucher)}
-                                            className="flex items-center gap-1 text-primary hover:underline cursor-pointer text-sm text-left"
-                                            data-testid={`link-voucher-${voucher.voucherId}`}
-                                          >
-                                            <span className="truncate max-w-[280px]">
-                                              {voucher.narration ||
-                                                voucher.voucherDescription ||
-                                                "-"}
-                                            </span>
-                                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                                          </button>
-                                        </TableCell>
-                                      )}
-                                      {!hideBalances && (
-                                        <TableCell className="text-right font-mono py-2">
-                                          {voucher.totalDebit > 0
-                                            ? voucher.currency && voucher.currency !== "USD"
-                                              ? `${voucher.currency} ${voucher.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                              : formatAmount(voucher.totalDebit)
-                                            : "-"}
-                                        </TableCell>
-                                      )}
-                                      {!hideBalances && (
-                                        <TableCell className="text-right font-mono py-2">
-                                          {voucher.totalCredit > 0
-                                            ? voucher.currency && voucher.currency !== "USD"
-                                              ? `${voucher.currency} ${voucher.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                              : formatAmount(voucher.totalCredit)
-                                            : "-"}
-                                        </TableCell>
-                                      )}
-                                      {!hideBalances && (
-                                        <TableCell className="text-right font-mono font-medium py-2">
-                                          {formatAmount(Math.abs(voucher.runningBalance ?? 0))}{" "}
-                                          {selectedAccount?.type === "supplier"
-                                            ? (voucher.runningBalance ?? 0) > 0
-                                              ? "Cr"
-                                              : "Dr"
-                                            : (voucher.runningBalance ?? 0) >= 0
-                                              ? "Dr"
-                                              : "Cr"}
-                                        </TableCell>
-                                      )}
-                                    </TableRow>
-                                  ))
+                        </div>
+                        <div className="rounded-md border overflow-x-auto print:border-0 hidden md:block print:!block">
+                          <Table>
+                            <TableHeader className="sticky top-0 z-10 bg-background">
+                              <TableRow className="bg-muted/30">
+                                <TableHead className="w-[40px] py-2 print:hidden">
+                                  <Checkbox
+                                    checked={
+                                      vouchersWithBalance.length > 0 &&
+                                      selectedVoucherIds.size === vouchersWithBalance.length
+                                    }
+                                    onCheckedChange={toggleSelectAll}
+                                    data-testid="checkbox-select-all"
+                                  />
+                                </TableHead>
+                                <TableHead className="col-date w-[100px] py-2 sticky left-0 bg-muted z-10">
+                                  Date
+                                </TableHead>
+                                <TableHead className="col-type w-[100px] py-2">Type</TableHead>
+                                <TableHead className="col-particulars py-2">Particulars</TableHead>
+                                {appMode === "factory" && (
+                                  <TableHead className="py-2">Notes</TableHead>
                                 )}
-                              </TableBody>
-                            </Table>
-                          </div>
-
-                          {/* Mobile Card View for Ledger */}
-                          <div className="md:hidden print:!hidden space-y-2">
-                            <Card className="bg-accent/30">
-                              <CardContent className="p-3">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-semibold text-sm">Opening Balance</span>
-                                  <span className="font-mono text-sm font-semibold">
-                                    {formatAmount(Math.abs(openingBalance))}{" "}
-                                    {selectedAccount?.type === "supplier"
-                                      ? openingBalance > 0
-                                        ? "Cr"
-                                        : "Dr"
-                                      : openingBalance >= 0
-                                        ? "Dr"
-                                        : "Cr"}
-                                  </span>
-                                </div>
-                              </CardContent>
-                            </Card>
-                            {vouchersWithBalance.length === 0 ? (
-                              <div className="text-center py-8 text-muted-foreground">
-                                <Search className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                                <p>No transactions found for this account</p>
-                              </div>
-                            ) : (
-                              vouchersWithBalance.map((voucher) => (
-                                <Card
-                                  key={voucher.voucherId}
-                                  className="hover-elevate"
-                                  data-testid={`row-voucher-${voucher.voucherId}`}
+                                {!hideBalances && (
+                                  <TableHead className="col-amount text-right w-[120px] py-2">
+                                    Debit
+                                  </TableHead>
+                                )}
+                                {!hideBalances && (
+                                  <TableHead className="col-amount text-right w-[120px] py-2">
+                                    Credit
+                                  </TableHead>
+                                )}
+                                {!hideBalances && (
+                                  <TableHead className="col-balance text-right w-[130px] py-2">
+                                    Balance
+                                  </TableHead>
+                                )}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {/* Opening Balance Row */}
+                              <TableRow
+                                className="bg-accent/30 border-b-2"
+                                data-testid="row-opening-balance"
+                              >
+                                <TableCell className="py-2 print:hidden"></TableCell>
+                                <TableCell
+                                  className="font-mono text-sm py-2"
+                                  colSpan={appMode === "factory" ? 4 : 3}
                                 >
-                                  <CardContent className="p-3 space-y-2">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        <Checkbox
-                                          checked={selectedVoucherIds.has(voucher.voucherId)}
-                                          onCheckedChange={() =>
-                                            toggleVoucherSelection(voucher.voucherId)
-                                          }
-                                          data-testid={`checkbox-voucher-${voucher.voucherId}`}
-                                        />
-                                        <div className="min-w-0">
-                                          {appMode === "factory" ? (
-                                            <div className="space-y-0.5">
-                                              <span className="text-sm font-medium block truncate">
-                                                {selectedAccount?.name ?? "-"}
-                                              </span>
-                                              <button
-                                                onClick={() => handleVoucherClick(voucher)}
-                                                className="flex items-center gap-1 text-primary hover:underline cursor-pointer text-xs text-left"
-                                                data-testid={`link-voucher-${voucher.voucherId}`}
-                                              >
-                                                <span className="truncate text-muted-foreground">
-                                                  {voucher.narration ||
-                                                    voucher.voucherDescription ||
-                                                    "-"}
-                                                </span>
-                                                <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                                              </button>
-                                            </div>
-                                          ) : (
-                                            <button
-                                              onClick={() => handleVoucherClick(voucher)}
-                                              className="flex items-center gap-1 text-primary hover:underline cursor-pointer text-sm text-left"
-                                              data-testid={`link-voucher-${voucher.voucherId}`}
-                                            >
-                                              <span className="truncate">
-                                                {voucher.narration ||
-                                                  voucher.voucherDescription ||
-                                                  voucher.voucherNumber}
-                                              </span>
-                                              <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <Badge variant="outline" className="text-xs flex-shrink-0">
+                                  <span className="font-semibold">Opening Balance</span>
+                                </TableCell>
+                                <TableCell className="text-right font-mono py-2">
+                                  {selectedAccount?.type === "supplier"
+                                    ? openingBalance < 0
+                                      ? formatAmount(Math.abs(openingBalance))
+                                      : "-"
+                                    : openingBalance > 0
+                                      ? formatAmount(openingBalance)
+                                      : "-"}
+                                </TableCell>
+                                <TableCell className="text-right font-mono py-2">
+                                  {selectedAccount?.type === "supplier"
+                                    ? openingBalance > 0
+                                      ? formatAmount(openingBalance)
+                                      : "-"
+                                    : openingBalance < 0
+                                      ? formatAmount(Math.abs(openingBalance))
+                                      : "-"}
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-semibold py-2">
+                                  {formatAmount(Math.abs(openingBalance))}{" "}
+                                  {selectedAccount?.type === "supplier"
+                                    ? openingBalance > 0
+                                      ? "Cr"
+                                      : "Dr"
+                                    : openingBalance >= 0
+                                      ? "Dr"
+                                      : "Cr"}
+                                </TableCell>
+                              </TableRow>
+
+                              {/* Voucher Rows */}
+                              {vouchersWithBalance.length === 0 ? (
+                                <TableRow>
+                                  <TableCell
+                                    colSpan={appMode === "factory" ? 8 : 7}
+                                    className="text-center py-8 text-muted-foreground"
+                                  >
+                                    <Search className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                                    <p>No transactions found for this account</p>
+                                    {(periodFilter.fromDate || periodFilter.toDate) && (
+                                      <p className="text-sm mt-1">Try adjusting the date range</p>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                vouchersWithBalance.map((voucher) => (
+                                  <TableRow
+                                    key={voucher.voucherId}
+                                    className="hover-elevate"
+                                    data-testid={`row-voucher-${voucher.voucherId}`}
+                                  >
+                                    <TableCell className="py-2 print:hidden">
+                                      <Checkbox
+                                        checked={selectedVoucherIds.has(voucher.voucherId)}
+                                        onCheckedChange={() =>
+                                          toggleVoucherSelection(voucher.voucherId)
+                                        }
+                                        data-testid={`checkbox-voucher-${voucher.voucherId}`}
+                                      />
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm py-2 sticky left-0 bg-background z-10">
+                                      {voucher.voucherDate
+                                        ? formatDisplayDate(new Date(voucher.voucherDate))
+                                        : "-"}
+                                    </TableCell>
+                                    <TableCell className="py-2">
+                                      <Badge variant="outline" className="text-xs">
                                         {voucher.voucherType}
                                       </Badge>
-                                    </div>
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                      <span className="font-mono">
-                                        {voucher.voucherDate
-                                          ? formatDisplayDate(new Date(voucher.voucherDate))
-                                          : "-"}
-                                      </span>
-                                    </div>
-                                    {!hideBalances && (
-                                      <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t">
-                                        <div>
-                                          <span className="text-muted-foreground block">Debit</span>
-                                          <span className="font-mono">
-                                            {voucher.totalDebit > 0
-                                              ? voucher.currency && voucher.currency !== "USD"
-                                                ? `${voucher.currency} ${voucher.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                                : formatAmount(voucher.totalDebit)
-                                              : "-"}
+                                    </TableCell>
+                                    <TableCell className="py-2">
+                                      {appMode === "factory" ? (
+                                        <span className="text-sm">
+                                          {selectedAccount?.name ?? "-"}
+                                        </span>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleVoucherClick(voucher)}
+                                          className="flex items-center gap-1 text-primary hover:underline cursor-pointer text-sm text-left"
+                                          data-testid={`link-voucher-${voucher.voucherId}`}
+                                        >
+                                          <span className="truncate max-w-[280px]">
+                                            {voucher.narration ||
+                                              voucher.voucherDescription ||
+                                              voucher.voucherNumber}
                                           </span>
-                                        </div>
-                                        <div>
-                                          <span className="text-muted-foreground block">
-                                            Credit
+                                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                        </button>
+                                      )}
+                                    </TableCell>
+                                    {appMode === "factory" && (
+                                      <TableCell className="py-2">
+                                        <button
+                                          onClick={() => handleVoucherClick(voucher)}
+                                          className="flex items-center gap-1 text-primary hover:underline cursor-pointer text-sm text-left"
+                                          data-testid={`link-voucher-${voucher.voucherId}`}
+                                        >
+                                          <span className="truncate max-w-[280px]">
+                                            {voucher.narration || voucher.voucherDescription || "-"}
                                           </span>
-                                          <span className="font-mono">
-                                            {voucher.totalCredit > 0
-                                              ? voucher.currency && voucher.currency !== "USD"
-                                                ? `${voucher.currency} ${voucher.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                                : formatAmount(voucher.totalCredit)
-                                              : "-"}
-                                          </span>
-                                        </div>
-                                        <div className="text-right">
-                                          <span className="text-muted-foreground block">
-                                            Balance
-                                          </span>
-                                          <span className="font-mono font-medium">
-                                            {formatAmount(Math.abs(voucher.runningBalance ?? 0))}{" "}
-                                            {selectedAccount?.type === "supplier"
-                                              ? (voucher.runningBalance ?? 0) > 0
-                                                ? "Cr"
-                                                : "Dr"
-                                              : (voucher.runningBalance ?? 0) >= 0
-                                                ? "Dr"
-                                                : "Cr"}
-                                          </span>
-                                        </div>
-                                      </div>
+                                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                        </button>
+                                      </TableCell>
                                     )}
-                                  </CardContent>
-                                </Card>
-                              ))
-                            )}
-                          </div>
+                                    {!hideBalances && (
+                                      <TableCell className="text-right font-mono py-2">
+                                        {voucher.totalDebit > 0
+                                          ? voucher.currency && voucher.currency !== "USD"
+                                            ? `${voucher.currency} ${voucher.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                            : formatAmount(voucher.totalDebit)
+                                          : "-"}
+                                      </TableCell>
+                                    )}
+                                    {!hideBalances && (
+                                      <TableCell className="text-right font-mono py-2">
+                                        {voucher.totalCredit > 0
+                                          ? voucher.currency && voucher.currency !== "USD"
+                                            ? `${voucher.currency} ${voucher.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                            : formatAmount(voucher.totalCredit)
+                                          : "-"}
+                                      </TableCell>
+                                    )}
+                                    {!hideBalances && (
+                                      <TableCell className="text-right font-mono font-medium py-2">
+                                        {formatAmount(Math.abs(voucher.runningBalance ?? 0))}{" "}
+                                        {selectedAccount?.type === "supplier"
+                                          ? (voucher.runningBalance ?? 0) > 0
+                                            ? "Cr"
+                                            : "Dr"
+                                          : (voucher.runningBalance ?? 0) >= 0
+                                            ? "Dr"
+                                            : "Cr"}
+                                      </TableCell>
+                                    )}
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
 
-                          {/* Tally-style Footer Summary */}
-                          <div className="mt-4 border rounded-md overflow-hidden hidden md:block print:!block">
-                            <Table>
-                              <TableBody>
-                                <TableRow className="bg-muted/30">
-                                  <TableCell
-                                    colSpan={appMode === "factory" ? 4 : 3}
-                                    className="text-right font-medium py-2"
-                                  >
-                                    Opening Balance:
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono w-[120px] py-2">
-                                    {selectedAccount?.type === "supplier"
-                                      ? openingBalance < 0
-                                        ? formatAmount(Math.abs(openingBalance))
-                                        : "-"
-                                      : openingBalance > 0
-                                        ? formatAmount(openingBalance)
-                                        : "-"}
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono w-[120px] py-2">
-                                    {selectedAccount?.type === "supplier"
-                                      ? openingBalance > 0
-                                        ? formatAmount(openingBalance)
-                                        : "-"
-                                      : openingBalance < 0
-                                        ? formatAmount(Math.abs(openingBalance))
-                                        : "-"}
-                                  </TableCell>
-                                  <TableCell className="w-[130px] py-2"></TableCell>
-                                </TableRow>
-                                <TableRow className="row-totals">
-                                  <TableCell
-                                    colSpan={appMode === "factory" ? 4 : 3}
-                                    className="text-right font-medium py-2"
-                                  >
-                                    Current Total:
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono font-semibold w-[120px] py-2">
-                                    {formatAmount(transactionTotals.totalDebit)}
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono font-semibold w-[120px] py-2">
-                                    {formatAmount(transactionTotals.totalCredit)}
-                                  </TableCell>
-                                  <TableCell className="w-[130px] py-2"></TableCell>
-                                </TableRow>
-                                <TableRow className="bg-accent/50 border-t-2">
-                                  <TableCell
-                                    colSpan={appMode === "factory" ? 4 : 3}
-                                    className="text-right font-bold py-2"
-                                  >
-                                    Current Balance:
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono font-bold w-[120px] py-2">
-                                    {selectedAccount?.type === "supplier"
-                                      ? closingBalance < 0
-                                        ? formatAmount(Math.abs(closingBalance))
-                                        : "-"
-                                      : closingBalance > 0
-                                        ? formatAmount(closingBalance)
-                                        : "-"}
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono font-bold w-[120px] py-2">
-                                    {selectedAccount?.type === "supplier"
-                                      ? closingBalance > 0
-                                        ? formatAmount(closingBalance)
-                                        : "-"
-                                      : closingBalance < 0
-                                        ? formatAmount(Math.abs(closingBalance))
-                                        : "-"}
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono font-bold w-[130px] py-2">
-                                    {formatAmount(Math.abs(closingBalance))}{" "}
-                                    {selectedAccount?.type === "supplier"
-                                      ? closingBalance > 0
-                                        ? "Cr"
-                                        : "Dr"
-                                      : closingBalance >= 0
-                                        ? "Dr"
-                                        : "Cr"}
-                                  </TableCell>
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </div>
-                          {/* Mobile Footer Summary */}
-                          <div className="mt-4 border rounded-md md:hidden print:!hidden">
-                            <div className="p-3 space-y-2 text-sm">
-                              <div className="flex justify-between bg-muted/30 p-2 rounded">
-                                <span className="font-medium">Opening Balance:</span>
-                                <span className="font-mono">
+                        {/* Mobile Card View for Ledger */}
+                        <div className="md:hidden print:!hidden space-y-2">
+                          <Card className="bg-accent/30">
+                            <CardContent className="p-3">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-sm">Opening Balance</span>
+                                <span className="font-mono text-sm font-semibold">
                                   {formatAmount(Math.abs(openingBalance))}{" "}
                                   {selectedAccount?.type === "supplier"
                                     ? openingBalance > 0
@@ -3394,21 +3346,191 @@ export default function Accounts() {
                                       : "Cr"}
                                 </span>
                               </div>
-                              <div className="flex justify-between p-2">
-                                <span className="font-medium">Total Debit:</span>
-                                <span className="font-mono font-semibold">
+                            </CardContent>
+                          </Card>
+                          {vouchersWithBalance.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <Search className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                              <p>No transactions found for this account</p>
+                            </div>
+                          ) : (
+                            vouchersWithBalance.map((voucher) => (
+                              <Card
+                                key={voucher.voucherId}
+                                className="hover-elevate"
+                                data-testid={`row-voucher-${voucher.voucherId}`}
+                              >
+                                <CardContent className="p-3 space-y-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <Checkbox
+                                        checked={selectedVoucherIds.has(voucher.voucherId)}
+                                        onCheckedChange={() =>
+                                          toggleVoucherSelection(voucher.voucherId)
+                                        }
+                                        data-testid={`checkbox-voucher-${voucher.voucherId}`}
+                                      />
+                                      <div className="min-w-0">
+                                        {appMode === "factory" ? (
+                                          <div className="space-y-0.5">
+                                            <span className="text-sm font-medium block truncate">
+                                              {selectedAccount?.name ?? "-"}
+                                            </span>
+                                            <button
+                                              onClick={() => handleVoucherClick(voucher)}
+                                              className="flex items-center gap-1 text-primary hover:underline cursor-pointer text-xs text-left"
+                                              data-testid={`link-voucher-${voucher.voucherId}`}
+                                            >
+                                              <span className="truncate text-muted-foreground">
+                                                {voucher.narration ||
+                                                  voucher.voucherDescription ||
+                                                  "-"}
+                                              </span>
+                                              <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            onClick={() => handleVoucherClick(voucher)}
+                                            className="flex items-center gap-1 text-primary hover:underline cursor-pointer text-sm text-left"
+                                            data-testid={`link-voucher-${voucher.voucherId}`}
+                                          >
+                                            <span className="truncate">
+                                              {voucher.narration ||
+                                                voucher.voucherDescription ||
+                                                voucher.voucherNumber}
+                                            </span>
+                                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Badge variant="outline" className="text-xs flex-shrink-0">
+                                      {voucher.voucherType}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span className="font-mono">
+                                      {voucher.voucherDate
+                                        ? formatDisplayDate(new Date(voucher.voucherDate))
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                  {!hideBalances && (
+                                    <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t">
+                                      <div>
+                                        <span className="text-muted-foreground block">Debit</span>
+                                        <span className="font-mono">
+                                          {voucher.totalDebit > 0
+                                            ? voucher.currency && voucher.currency !== "USD"
+                                              ? `${voucher.currency} ${voucher.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                              : formatAmount(voucher.totalDebit)
+                                            : "-"}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground block">Credit</span>
+                                        <span className="font-mono">
+                                          {voucher.totalCredit > 0
+                                            ? voucher.currency && voucher.currency !== "USD"
+                                              ? `${voucher.currency} ${voucher.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                              : formatAmount(voucher.totalCredit)
+                                            : "-"}
+                                        </span>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="text-muted-foreground block">Balance</span>
+                                        <span className="font-mono font-medium">
+                                          {formatAmount(Math.abs(voucher.runningBalance ?? 0))}{" "}
+                                          {selectedAccount?.type === "supplier"
+                                            ? (voucher.runningBalance ?? 0) > 0
+                                              ? "Cr"
+                                              : "Dr"
+                                            : (voucher.runningBalance ?? 0) >= 0
+                                              ? "Dr"
+                                              : "Cr"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Tally-style Footer Summary */}
+                        <div className="mt-4 border rounded-md overflow-hidden hidden md:block print:!block">
+                          <Table>
+                            <TableBody>
+                              <TableRow className="bg-muted/30">
+                                <TableCell
+                                  colSpan={appMode === "factory" ? 4 : 3}
+                                  className="text-right font-medium py-2"
+                                >
+                                  Opening Balance:
+                                </TableCell>
+                                <TableCell className="text-right font-mono w-[120px] py-2">
+                                  {selectedAccount?.type === "supplier"
+                                    ? openingBalance < 0
+                                      ? formatAmount(Math.abs(openingBalance))
+                                      : "-"
+                                    : openingBalance > 0
+                                      ? formatAmount(openingBalance)
+                                      : "-"}
+                                </TableCell>
+                                <TableCell className="text-right font-mono w-[120px] py-2">
+                                  {selectedAccount?.type === "supplier"
+                                    ? openingBalance > 0
+                                      ? formatAmount(openingBalance)
+                                      : "-"
+                                    : openingBalance < 0
+                                      ? formatAmount(Math.abs(openingBalance))
+                                      : "-"}
+                                </TableCell>
+                                <TableCell className="w-[130px] py-2"></TableCell>
+                              </TableRow>
+                              <TableRow className="row-totals">
+                                <TableCell
+                                  colSpan={appMode === "factory" ? 4 : 3}
+                                  className="text-right font-medium py-2"
+                                >
+                                  Current Total:
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-semibold w-[120px] py-2">
                                   {formatAmount(transactionTotals.totalDebit)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between p-2">
-                                <span className="font-medium">Total Credit:</span>
-                                <span className="font-mono font-semibold">
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-semibold w-[120px] py-2">
                                   {formatAmount(transactionTotals.totalCredit)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between bg-accent/50 p-2 rounded border-t-2">
-                                <span className="font-bold">Current Balance:</span>
-                                <span className="font-mono font-bold">
+                                </TableCell>
+                                <TableCell className="w-[130px] py-2"></TableCell>
+                              </TableRow>
+                              <TableRow className="bg-accent/50 border-t-2">
+                                <TableCell
+                                  colSpan={appMode === "factory" ? 4 : 3}
+                                  className="text-right font-bold py-2"
+                                >
+                                  Current Balance:
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-bold w-[120px] py-2">
+                                  {selectedAccount?.type === "supplier"
+                                    ? closingBalance < 0
+                                      ? formatAmount(Math.abs(closingBalance))
+                                      : "-"
+                                    : closingBalance > 0
+                                      ? formatAmount(closingBalance)
+                                      : "-"}
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-bold w-[120px] py-2">
+                                  {selectedAccount?.type === "supplier"
+                                    ? closingBalance > 0
+                                      ? formatAmount(closingBalance)
+                                      : "-"
+                                    : closingBalance < 0
+                                      ? formatAmount(Math.abs(closingBalance))
+                                      : "-"}
+                                </TableCell>
+                                <TableCell className="text-right font-mono font-bold w-[130px] py-2">
                                   {formatAmount(Math.abs(closingBalance))}{" "}
                                   {selectedAccount?.type === "supplier"
                                     ? closingBalance > 0
@@ -3417,32 +3539,74 @@ export default function Accounts() {
                                     : closingBalance >= 0
                                       ? "Dr"
                                       : "Cr"}
-                                </span>
-                              </div>
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
+                        {/* Mobile Footer Summary */}
+                        <div className="mt-4 border rounded-md md:hidden print:!hidden">
+                          <div className="p-3 space-y-2 text-sm">
+                            <div className="flex justify-between bg-muted/30 p-2 rounded">
+                              <span className="font-medium">Opening Balance:</span>
+                              <span className="font-mono">
+                                {formatAmount(Math.abs(openingBalance))}{" "}
+                                {selectedAccount?.type === "supplier"
+                                  ? openingBalance > 0
+                                    ? "Cr"
+                                    : "Dr"
+                                  : openingBalance >= 0
+                                    ? "Dr"
+                                    : "Cr"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2">
+                              <span className="font-medium">Total Debit:</span>
+                              <span className="font-mono font-semibold">
+                                {formatAmount(transactionTotals.totalDebit)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between p-2">
+                              <span className="font-medium">Total Credit:</span>
+                              <span className="font-mono font-semibold">
+                                {formatAmount(transactionTotals.totalCredit)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between bg-accent/50 p-2 rounded border-t-2">
+                              <span className="font-bold">Current Balance:</span>
+                              <span className="font-mono font-bold">
+                                {formatAmount(Math.abs(closingBalance))}{" "}
+                                {selectedAccount?.type === "supplier"
+                                  ? closingBalance > 0
+                                    ? "Cr"
+                                    : "Dr"
+                                  : closingBalance >= 0
+                                    ? "Dr"
+                                    : "Cr"}
+                              </span>
                             </div>
                           </div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            ) : (
-              /* Empty state */
-              <Card className="flex-1 flex items-center justify-center min-h-[320px]">
-                <CardContent className="text-center py-12">
-                  <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
-                  <h3 className="text-base font-medium mb-1">Select an account</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Choose an account to view its balance and transaction history.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            /* Empty state */
+            <Card className="flex-1 flex items-center justify-center min-h-[320px]">
+              <CardContent className="text-center py-12">
+                <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                <h3 className="text-base font-medium mb-1">Select an account</h3>
+                <p className="text-sm text-muted-foreground">
+                  Choose an account to view its balance and transaction history.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
-      )}
-
+      </div>
       {/* Bulk Delete Confirmation Dialog */}
       <Dialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
         <DialogContent>
