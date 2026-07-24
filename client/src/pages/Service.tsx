@@ -15,10 +15,14 @@ import {
   Trash2,
   Bike,
   Wrench,
+  Shield,
+  MessageSquare,
+  Clock,
   ChevronDown,
   ChevronRight,
   ArrowLeft,
   AlertCircle,
+  Filter,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import {
@@ -47,12 +51,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   insertCustomerSchema,
   insertBikePurchaseSchema,
   insertPartPurchaseSchema,
   type Customer,
   type BikePurchase,
   type PartPurchase,
+  type ServiceHistory,
+  type Warranty,
+  type CommunicationLog,
 } from "@shared/schema";
 import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,14 +78,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { z } from "zod";
+import ServiceHistoryPage from "@/pages/ServiceHistory";
+import WarrantyPage from "@/pages/Warranty";
+import CommunicationLogPage from "@/pages/CommunicationLog";
 
 interface Location {
   id: number;
@@ -79,7 +89,7 @@ interface Location {
   code: string;
 }
 
-// ── Schemas ──────────────────────────────────────────────────────────────────
+// ── Schemas ───────────────────────────────────────────────────────────────────
 
 const customerFormSchema = insertCustomerSchema.extend({
   legalName: z.string().min(1, "Full name is required"),
@@ -111,6 +121,20 @@ const partPurchaseFormSchema = insertPartPurchaseSchema.extend({
 });
 
 type PartPurchaseFormValues = z.infer<typeof partPurchaseFormSchema>;
+
+// ── Activity timeline types ───────────────────────────────────────────────────
+
+type CustomerActivityType = "motorcycle" | "part" | "service" | "warranty" | "communication";
+
+interface CustomerActivity {
+  id: string;
+  type: CustomerActivityType;
+  date: string;
+  title: string;
+  description: string;
+  bikeModel?: string;
+  sourceId: number;
+}
 
 // ── Sub-forms ─────────────────────────────────────────────────────────────────
 
@@ -520,6 +544,68 @@ interface ServiceProps {
   initialSection?: CustomerCenterSection;
 }
 
+type SectionKey = "activity" | "motorcycles" | "parts" | "services" | "warranty" | "communications";
+
+// ── Section open/visited helpers ──────────────────────────────────────────────
+
+function getInitialOpenSections(section: CustomerCenterSection): Record<SectionKey, boolean> {
+  return {
+    activity: section === "overview",
+    motorcycles: section === "overview" || section === "purchases",
+    parts: section === "purchases",
+    services: section === "services",
+    warranty: section === "warranty",
+    communications: section === "communications",
+  };
+}
+
+function getInitialVisitedKeys(section: CustomerCenterSection): SectionKey[] {
+  switch (section) {
+    case "overview":
+      return ["activity", "motorcycles"];
+    case "purchases":
+      return ["motorcycles", "parts"];
+    case "services":
+      return ["services"];
+    case "warranty":
+      return ["warranty"];
+    case "communications":
+      return ["communications"];
+  }
+}
+
+// ── Activity icon/label helpers ───────────────────────────────────────────────
+
+function activityIcon(type: CustomerActivityType) {
+  switch (type) {
+    case "motorcycle":
+      return <Bike className="h-3.5 w-3.5" />;
+    case "part":
+      return <Wrench className="h-3.5 w-3.5" />;
+    case "service":
+      return <Wrench className="h-3.5 w-3.5" />;
+    case "warranty":
+      return <Shield className="h-3.5 w-3.5" />;
+    case "communication":
+      return <MessageSquare className="h-3.5 w-3.5" />;
+  }
+}
+
+function activitySectionKey(type: CustomerActivityType): SectionKey {
+  switch (type) {
+    case "motorcycle":
+      return "motorcycles";
+    case "part":
+      return "parts";
+    case "service":
+      return "services";
+    case "warranty":
+      return "warranty";
+    case "communication":
+      return "communications";
+  }
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function Service({ initialSection = "overview" }: ServiceProps = {}) {
@@ -540,14 +626,48 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
   const [deleteBikePurchaseId, setDeleteBikePurchaseId] = useState<number | null>(null);
   const [deletePartPurchaseId, setDeletePartPurchaseId] = useState<number | null>(null);
 
-  // Expandable sections — motorcycles open by default; both open for "purchases"
-  const [openSections, setOpenSections] = useState({
-    motorcycles: true,
-    parts: initialSection === "purchases",
-  });
+  // Expandable sections with visited-state lazy mounting
+  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>(() =>
+    getInitialOpenSections(initialSection),
+  );
+  const [visitedSections, setVisitedSections] = useState<Set<SectionKey>>(
+    () => new Set(getInitialVisitedKeys(initialSection)),
+  );
 
-  const toggleSection = (key: "motorcycles" | "parts") =>
+  // Activity filters
+  const [activityTypeFilter, setActivityTypeFilter] = useState<"all" | CustomerActivityType>("all");
+  const [activitySearch, setActivitySearch] = useState("");
+  const [activityStartDate, setActivityStartDate] = useState("");
+  const [activityEndDate, setActivityEndDate] = useState("");
+
+  // Open a section and mark it visited (for timeline click-through)
+  const openSection = (key: SectionKey) => {
+    setOpenSections((prev) => ({ ...prev, [key]: true }));
+    setVisitedSections((prev) => new Set([...prev, key]));
+  };
+
+  const toggleSection = (key: SectionKey) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+    // Mark as visited when first opened
+    if (!visitedSections.has(key)) {
+      setVisitedSections((prev) => new Set([...prev, key]));
+    }
+  };
+
+  // Update open sections when initialSection prop changes (route change)
+  useEffect(() => {
+    const newOpen = getInitialOpenSections(initialSection);
+    setOpenSections((prev) => ({
+      activity: newOpen.activity || prev.activity,
+      motorcycles: newOpen.motorcycles || prev.motorcycles,
+      parts: newOpen.parts || prev.parts,
+      services: newOpen.services || prev.services,
+      warranty: newOpen.warranty || prev.warranty,
+      communications: newOpen.communications || prev.communications,
+    }));
+    const newVisited = getInitialVisitedKeys(initialSection);
+    setVisitedSections((prev) => new Set([...prev, ...newVisited]));
+  }, [initialSection]);
 
   // ── Company switch: clear everything ──────────────────────────────────────
   useEffect(() => {
@@ -563,6 +683,10 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
     setDeleteCustomerId(null);
     setDeleteBikePurchaseId(null);
     setDeletePartPurchaseId(null);
+    setActivitySearch("");
+    setActivityTypeFilter("all");
+    setActivityStartDate("");
+    setActivityEndDate("");
   }, [selectedCompany?.id]);
 
   // ── Queries ───────────────────────────────────────────────────────────────
@@ -599,6 +723,34 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
     enabled: !!selectedCustomerId && !!selectedCompany?.id,
   });
 
+  // Activity queries — same keys as embedded child components so React Query shares cache
+  const { data: serviceRecords = [] } = useQuery<ServiceHistory[]>({
+    queryKey: [
+      `/api/service-history/customer/${selectedCustomerId}`,
+      selectedCompany?.id,
+      selectedCustomerId,
+    ],
+    enabled: !!selectedCustomerId && !!selectedCompany?.id,
+  });
+
+  const { data: warranties = [] } = useQuery<Warranty[]>({
+    queryKey: [
+      `/api/warranties/customer/${selectedCustomerId}`,
+      selectedCompany?.id,
+      selectedCustomerId,
+    ],
+    enabled: !!selectedCustomerId && !!selectedCompany?.id,
+  });
+
+  const { data: communicationLogs = [] } = useQuery<CommunicationLog[]>({
+    queryKey: [
+      `/api/communication-logs/customer/${selectedCustomerId}`,
+      selectedCompany?.id,
+      selectedCustomerId,
+    ],
+    enabled: !!selectedCustomerId && !!selectedCompany?.id,
+  });
+
   // ── Derived ───────────────────────────────────────────────────────────────
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === selectedCustomerId) ?? null,
@@ -621,6 +773,101 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
     if (!locationId) return null;
     return locations.find((l) => l.id === locationId)?.name ?? null;
   };
+
+  // ── Activity timeline ─────────────────────────────────────────────────────
+  const allActivities = useMemo<CustomerActivity[]>(() => {
+    const items: CustomerActivity[] = [];
+
+    bikePurchases.forEach((b) => {
+      items.push({
+        id: `motorcycle-${b.id}`,
+        type: "motorcycle",
+        date: b.saleDate,
+        title: "Motorcycle Purchase",
+        description: [b.bikeModel, b.invoiceNumber].filter(Boolean).join(" · "),
+        bikeModel: b.bikeModel,
+        sourceId: b.id,
+      });
+    });
+
+    partPurchases.forEach((p) => {
+      items.push({
+        id: `part-${p.id}`,
+        type: "part",
+        date: p.purchaseDate,
+        title: "Part Purchase",
+        description: [p.partName, `qty ${p.quantity}`].filter(Boolean).join(" · "),
+        sourceId: p.id,
+      });
+    });
+
+    serviceRecords.forEach((s) => {
+      items.push({
+        id: `service-${s.id}`,
+        type: "service",
+        date: s.serviceDate,
+        title: "Service",
+        description: [s.serviceType, s.bikeModel].filter(Boolean).join(" · "),
+        bikeModel: s.bikeModel,
+        sourceId: s.id,
+      });
+    });
+
+    warranties.forEach((w) => {
+      items.push({
+        id: `warranty-${w.id}`,
+        type: "warranty",
+        date: w.warrantyStartDate,
+        title: "Warranty",
+        description: [w.bikeModel, w.warrantyStatus].filter(Boolean).join(" · "),
+        bikeModel: w.bikeModel,
+        sourceId: w.id,
+      });
+    });
+
+    communicationLogs.forEach((c) => {
+      items.push({
+        id: `communication-${c.id}`,
+        type: "communication",
+        date: c.contactDate,
+        title: "Communication",
+        description: [c.contactType, c.notes].filter(Boolean).join(" · "),
+        sourceId: c.id,
+      });
+    });
+
+    // Sort newest first
+    return items.sort((a, b) => b.date.localeCompare(a.date));
+  }, [bikePurchases, partPurchases, serviceRecords, warranties, communicationLogs]);
+
+  const filteredActivities = useMemo(() => {
+    let list = allActivities;
+    if (activityTypeFilter !== "all") {
+      list = list.filter((a) => a.type === activityTypeFilter);
+    }
+    if (activityStartDate) {
+      list = list.filter((a) => a.date >= activityStartDate);
+    }
+    if (activityEndDate) {
+      list = list.filter((a) => a.date <= activityEndDate);
+    }
+    if (activitySearch) {
+      const q = activitySearch.toLowerCase();
+      list = list.filter(
+        (a) =>
+          a.title.toLowerCase().includes(q) ||
+          a.description.toLowerCase().includes(q) ||
+          (a.bikeModel?.toLowerCase().includes(q) ?? false),
+      );
+    }
+    return list;
+  }, [allActivities, activityTypeFilter, activityStartDate, activityEndDate, activitySearch]);
+
+  // ── Summary counts ────────────────────────────────────────────────────────
+  const activeWarranties = useMemo(
+    () => warranties.filter((w) => w.warrantyStatus === "Active").length,
+    [warranties],
+  );
 
   // ── Forms ─────────────────────────────────────────────────────────────────
   const blankCustomer = () => ({
@@ -919,6 +1166,69 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
     setIsPartDialogOpen(true);
   };
 
+  // ── Section header helper ─────────────────────────────────────────────────
+  function SectionHeader({
+    sectionKey,
+    icon: Icon,
+    title,
+    count,
+    actionLabel,
+    onAction,
+    actionTestId,
+  }: {
+    sectionKey: SectionKey;
+    icon: React.ComponentType<{ className?: string }>;
+    title: string;
+    count?: number;
+    actionLabel?: string;
+    onAction?: () => void;
+    actionTestId?: string;
+  }) {
+    return (
+      <button
+        type="button"
+        className="w-full text-left"
+        onClick={() => toggleSection(sectionKey)}
+        data-testid={`section-${sectionKey}-toggle`}
+      >
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 py-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="font-semibold text-sm truncate">
+              {title}
+              {count !== undefined && (
+                <span className="text-muted-foreground font-normal ml-1">({count})</span>
+              )}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {actionLabel && onAction && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAction();
+                }}
+                data-testid={actionTestId}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                {actionLabel}
+              </Button>
+            )}
+            {openSections[sectionKey] ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
+        </CardHeader>
+      </button>
+    );
+  }
+
   // ── No company ────────────────────────────────────────────────────────────
   if (!selectedCompany) {
     return (
@@ -1068,13 +1378,13 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
     </Card>
   );
 
-  // ── Right-side: empty state ────────────────────────────────────────────────
+  // ── Right-side: empty state ───────────────────────────────────────────────
   const emptyDetail = (
     <div className="flex flex-col items-center justify-center h-full min-h-[20rem] text-center gap-3">
       <UserRound className="h-12 w-12 text-muted-foreground/30" />
       <p className="text-base font-medium text-muted-foreground">Select a customer</p>
       <p className="text-sm text-muted-foreground max-w-xs">
-        Choose a customer to view their motorcycles, purchases and activity.
+        Choose a customer to view their motorcycles, purchases, service history and activity.
       </p>
     </div>
   );
@@ -1102,7 +1412,7 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
               variant="outline"
               size="sm"
               onClick={() => handleEdit(selectedCustomer)}
-              data-testid={`button-edit-customer-detail`}
+              data-testid="button-edit-customer-detail"
             >
               <Pencil className="h-3.5 w-3.5 mr-1" />
               Edit Customer
@@ -1110,15 +1420,21 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
           </div>
         </CardHeader>
         <CardContent className="pt-0">
-          {/* Summary counts */}
-          <div className="grid grid-cols-3 gap-3 mt-2">
+          {/* Summary counts — 5 tiles */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-2">
             {[
               { label: "Motorcycles", value: bikePurchases.length, icon: Bike },
-              { label: "Parts Purchases", value: partPurchases.length, icon: Wrench },
               {
-                label: "Total Purchases",
+                label: "Purchases",
                 value: bikePurchases.length + partPurchases.length,
-                icon: Users,
+                icon: Wrench,
+              },
+              { label: "Services", value: serviceRecords.length, icon: Wrench },
+              { label: "Active Warranties", value: activeWarranties, icon: Shield },
+              {
+                label: "Communications",
+                value: communicationLogs.length,
+                icon: MessageSquare,
               },
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className="rounded-md border p-3 text-center">
@@ -1131,47 +1447,117 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
         </CardContent>
       </Card>
 
-      {/* Motorcycles section */}
+      {/* ── Activity section ─────────────────────────────────────────────── */}
       <Card>
-        <button
-          type="button"
-          className="w-full text-left"
-          onClick={() => toggleSection("motorcycles")}
-          data-testid="section-motorcycles-toggle"
-        >
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 py-3">
-            <div className="flex items-center gap-2">
-              <Bike className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold text-sm">
-                Motorcycles{" "}
-                <span className="text-muted-foreground font-normal">({bikePurchases.length})</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openBikeDialog();
-                }}
-                data-testid="button-add-bike-purchase"
+        <SectionHeader
+          sectionKey="activity"
+          icon={Clock}
+          title="Activity"
+          count={allActivities.length}
+        />
+        {openSections.activity && (
+          <CardContent className="pt-0">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Filter className="h-3.5 w-3.5" />
+              </div>
+              <Select
+                value={activityTypeFilter}
+                onValueChange={(v) => setActivityTypeFilter(v as "all" | CustomerActivityType)}
               >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Add Motorcycle Purchase
-              </Button>
-              {openSections.motorcycles ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              )}
+                <SelectTrigger className="h-7 text-xs w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Activities</SelectItem>
+                  <SelectItem value="motorcycle">Motorcycle Purchases</SelectItem>
+                  <SelectItem value="part">Part Purchases</SelectItem>
+                  <SelectItem value="service">Services</SelectItem>
+                  <SelectItem value="warranty">Warranties</SelectItem>
+                  <SelectItem value="communication">Communications</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Search activity..."
+                value={activitySearch}
+                onChange={(e) => setActivitySearch(e.target.value)}
+                className="h-7 text-xs w-36"
+                data-testid="input-activity-search"
+              />
+              <Input
+                type="date"
+                value={activityStartDate}
+                onChange={(e) => setActivityStartDate(e.target.value)}
+                className="h-7 text-xs w-32"
+                aria-label="Start date filter"
+                data-testid="input-activity-start-date"
+              />
+              <Input
+                type="date"
+                value={activityEndDate}
+                onChange={(e) => setActivityEndDate(e.target.value)}
+                className="h-7 text-xs w-32"
+                aria-label="End date filter"
+                data-testid="input-activity-end-date"
+              />
             </div>
-          </CardHeader>
-        </button>
 
-        {openSections.motorcycles && (
+            {filteredActivities.length === 0 ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                {allActivities.length === 0
+                  ? "No activity recorded for this customer."
+                  : "No activities match the current filters."}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {filteredActivities.map((activity) => (
+                  <button
+                    key={activity.id}
+                    type="button"
+                    className="w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-accent/60 transition-colors group"
+                    onClick={() => openSection(activitySectionKey(activity.type))}
+                    data-testid={`activity-item-${activity.id}`}
+                  >
+                    <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      {activityIcon(activity.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold">{activity.title}</span>
+                        {activity.bikeModel && (
+                          <span className="text-xs text-muted-foreground">
+                            {activity.bikeModel}
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {activity.date}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {activity.description}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* ── Motorcycles section ──────────────────────────────────────────── */}
+      <Card>
+        <SectionHeader
+          sectionKey="motorcycles"
+          icon={Bike}
+          title="Motorcycles"
+          count={bikePurchases.length}
+          actionLabel="Add Motorcycle Purchase"
+          onAction={openBikeDialog}
+          actionTestId="button-add-bike-purchase"
+        />
+        {openSections.motorcycles && visitedSections.has("motorcycles") && (
           <CardContent className="pt-0">
             {bikePurchases.length === 0 ? (
               <div className="text-center py-6 text-sm text-muted-foreground">
@@ -1232,47 +1618,18 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
         )}
       </Card>
 
-      {/* Parts Purchases section */}
+      {/* ── Parts Purchases section ──────────────────────────────────────── */}
       <Card>
-        <button
-          type="button"
-          className="w-full text-left"
-          onClick={() => toggleSection("parts")}
-          data-testid="section-parts-toggle"
-        >
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 py-3">
-            <div className="flex items-center gap-2">
-              <Wrench className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold text-sm">
-                Parts Purchases{" "}
-                <span className="text-muted-foreground font-normal">({partPurchases.length})</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openPartDialog();
-                }}
-                data-testid="button-add-part-purchase"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Add Part Purchase
-              </Button>
-              {openSections.parts ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              )}
-            </div>
-          </CardHeader>
-        </button>
-
-        {openSections.parts && (
+        <SectionHeader
+          sectionKey="parts"
+          icon={Wrench}
+          title="Parts Purchases"
+          count={partPurchases.length}
+          actionLabel="Add Part Purchase"
+          onAction={openPartDialog}
+          actionTestId="button-add-part-purchase"
+        />
+        {openSections.parts && visitedSections.has("parts") && (
           <CardContent className="pt-0">
             {partPurchases.length === 0 ? (
               <div className="text-center py-6 text-sm text-muted-foreground">
@@ -1332,6 +1689,51 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
           </CardContent>
         )}
       </Card>
+
+      {/* ── Service History section ──────────────────────────────────────── */}
+      <Card>
+        <SectionHeader
+          sectionKey="services"
+          icon={Wrench}
+          title="Service History"
+          count={serviceRecords.length}
+        />
+        {openSections.services && visitedSections.has("services") && (
+          <CardContent className="pt-0">
+            <ServiceHistoryPage embedded customerId={selectedCustomerId} />
+          </CardContent>
+        )}
+      </Card>
+
+      {/* ── Warranty section ─────────────────────────────────────────────── */}
+      <Card>
+        <SectionHeader
+          sectionKey="warranty"
+          icon={Shield}
+          title="Warranty"
+          count={warranties.length}
+        />
+        {openSections.warranty && visitedSections.has("warranty") && (
+          <CardContent className="pt-0">
+            <WarrantyPage embedded customerId={selectedCustomerId} />
+          </CardContent>
+        )}
+      </Card>
+
+      {/* ── Communication Log section ────────────────────────────────────── */}
+      <Card>
+        <SectionHeader
+          sectionKey="communications"
+          icon={MessageSquare}
+          title="Communication Log"
+          count={communicationLogs.length}
+        />
+        {openSections.communications && visitedSections.has("communications") && (
+          <CardContent className="pt-0">
+            <CommunicationLogPage embedded customerId={selectedCustomerId} />
+          </CardContent>
+        )}
+      </Card>
     </div>
   ) : null;
 
@@ -1360,7 +1762,9 @@ export default function Service({ initialSection = "overview" }: ServiceProps = 
 
         {/* Right: detail — hidden on mobile when no customer selected */}
         <div
-          className={`${selectedCustomerId !== null ? "block" : "hidden lg:block"} lg:h-[calc(100vh-12rem)] lg:overflow-y-auto lg:overscroll-contain`}
+          className={`${
+            selectedCustomerId !== null ? "block" : "hidden lg:block"
+          } lg:h-[calc(100vh-12rem)] lg:overflow-y-auto lg:overscroll-contain`}
         >
           {/* Mobile back button */}
           {selectedCustomerId !== null && (
