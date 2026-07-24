@@ -1627,7 +1627,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
         const row = visibleRows.find((r) => rowId(r) === selectedRowId);
         if (!row) return;
         if (row._type === "offload") {
-          navigate(`/offloads/${(row.data as OffloadListItem).id}`);
+          openOffloadDetails(row.data as OffloadListItem);
         } else {
           openVoucherDetails(row.data as Voucher);
         }
@@ -1881,7 +1881,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                         )}
                         onClick={() => {
                           setSelectedRowId(rid);
-                          navigate(`/offloads/${o.id}`);
+                          openOffloadDetails(o);
                         }}
                         data-testid={`card-offload-${o.id}`}
                       >
@@ -1912,7 +1912,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/offloads/${o.id}`)}
+                            onClick={() => openOffloadDetails(o)}
                             data-testid={`button-view-offload-${o.id}`}
                             className="gap-1 text-xs"
                           >
@@ -2121,7 +2121,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                 )}
                                 onClick={() => {
                                   setSelectedRowId(rid);
-                                  navigate(`/offloads/${o.id}`);
+                                  openOffloadDetails(o);
                                 }}
                               >
                                 <TableCell className="text-sm">
@@ -2154,7 +2154,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      onClick={() => navigate(`/offloads/${o.id}`)}
+                                      onClick={() => openOffloadDetails(o)}
                                       data-testid={`button-view-offload-${o.id}`}
                                       title="View"
                                     >
@@ -2348,783 +2348,319 @@ export default function Daybook({ user }: { user?: any } = {}) {
         </CardContent>
       </Card>
 
-      {/* View Voucher Dialog */}
-      <Dialog open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
-        <DialogContent className="w-full max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Voucher Details</DialogTitle>
-            <DialogDescription>View voucher information</DialogDescription>
-          </DialogHeader>
+      {/* View Transaction Sheet */}
+      <Sheet
+        open={detailSheetOpen}
+        onOpenChange={(open) => {
+          setDetailSheetOpen(open);
+          if (!open) {
+            setSelectedVoucher(null);
+            setSelectedOffload(null);
+            setSelectedDialogRow(null);
+            setPurchaseOrderData(null);
+          }
+        }}
+      >
+        <SheetContent className="w-full sm:max-w-xl lg:max-w-2xl overflow-y-auto">
+          {/* Voucher details */}
           {selectedVoucher && (
-            <div className="space-y-4 md:space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Date</p>
-                  <p className="font-medium">
-                    {formatDisplayDate(parseISO(selectedVoucher.voucherDate))}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
-                  <div className="flex gap-2 items-center">
-                    <Badge {...getVoucherTypeBadge(selectedVoucher.voucherType)}>
-                      {selectedVoucher.voucherType}
-                    </Badge>
-                    {selectedVoucher.optional && (
-                      <Badge variant="outline" className="text-xs">
-                        Optional
-                      </Badge>
+            <div className="flex flex-col">
+              <SheetHeader className="pb-4 border-b">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <Badge
+                    {...getVoucherTypeBadge(selectedVoucher.voucherType)}
+                    className={cn(
+                      "",
+                      (getVoucherTypeBadge(selectedVoucher.voucherType) as any).className,
                     )}
+                  >
+                    {getTransactionDisplayType(selectedVoucher.voucherType)}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Posted
+                  </Badge>
+                  {selectedVoucher.optional && (
+                    <Badge variant="outline" className="text-xs">
+                      Optional
+                    </Badge>
+                  )}
+                </div>
+                <SheetTitle className="font-mono text-base">
+                  {selectedVoucher.voucherNumber}
+                </SheetTitle>
+                <SheetDescription>
+                  Transaction recorded on {formatDisplayDate(parseISO(selectedVoucher.voucherDate))}
+                  .
+                </SheetDescription>
+              </SheetHeader>
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-2 py-4 border-b">
+                {canEdit(selectedVoucher) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => {
+                      setDetailSheetOpen(false);
+                      handleEdit(selectedVoucher);
+                    }}
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit Transaction
+                  </Button>
+                )}
+                {canDelete() && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 text-destructive hover:text-destructive"
+                    onClick={() => {
+                      setDetailSheetOpen(false);
+                      handleDelete(selectedVoucher);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Transaction
+                  </Button>
+                )}
+                {(selectedVoucher.voucherType === "Sales" ||
+                  selectedVoucher.voucherType === "POS") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => {
+                      setDetailSheetOpen(false);
+                      navigate(`/vouchers/${selectedVoucher.id}/edit?from=daybook`);
+                    }}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Open Sale
+                  </Button>
+                )}
+                {selectedVoucher.voucherType === "Purchase" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => {
+                      setDetailSheetOpen(false);
+                      fetch(`/api/vouchers/${selectedVoucher.id}/linked-container`, {
+                        credentials: "include",
+                      })
+                        .then((r) => r.json())
+                        .then((data) => {
+                          if (data.containerId) navigate(`/containers/${data.containerId}`);
+                          else navigate(`/containers`);
+                        })
+                        .catch(() => navigate(`/containers`));
+                    }}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Open Shipment
+                  </Button>
+                )}
+              </div>
+
+              {/* Overview */}
+              <div className="py-4 border-b">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  Overview
+                </h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="font-medium">
+                      {formatDisplayDate(parseISO(selectedVoucher.voucherDate))}
+                    </p>
                   </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Created Time</p>
+                    <p className="font-medium">
+                      {format(new Date(selectedVoucher.createdAt), "hh:mm a")}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Transaction Type</p>
+                    <p className="font-medium">
+                      {getTransactionDisplayType(selectedVoucher.voucherType)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Voucher Number</p>
+                    <p className="font-mono">{selectedVoucher.voucherNumber}</p>
+                  </div>
+                  {selectedVoucher.description && (
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">Description</p>
+                      <p>{selectedVoucher.description}</p>
+                    </div>
+                  )}
+                  {selectedVoucher.locationName && (
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">Location</p>
+                      <p>{selectedVoucher.locationName}</p>
+                    </div>
+                  )}
+                  {!hideAmounts && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Amount</p>
+                      <p className="font-mono font-semibold">
+                        {formatAmount(selectedVoucher.totalAmount)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
-              {selectedVoucher.description && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Description</p>
-                  <p className="text-sm">{selectedVoucher.description}</p>
-                </div>
-              )}
-              {selectedVoucher.locationName && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Location</p>
-                  <p className="text-sm">{selectedVoucher.locationName}</p>
-                </div>
-              )}
 
-              {/* Payment/Receipt Source Account Summary */}
-              {(selectedVoucher.voucherType === "Payment" ||
-                selectedVoucher.voucherType === "Receipt") &&
-                !viewEntriesLoading &&
-                viewVoucherEntries.length > 0 &&
-                (() => {
-                  // For Payment: credit entry is the source (cash/bank account where money comes FROM)
-                  // For Receipt: debit entry is the source (cash/bank account where money goes INTO)
-                  const sourceEntry =
-                    selectedVoucher.voucherType === "Payment"
-                      ? viewVoucherEntries.find((e: any) => parseFloat(e.creditAmount || "0") > 0)
-                      : viewVoucherEntries.find((e: any) => parseFloat(e.debitAmount || "0") > 0);
-
-                  // Total = sum of the opposite side entries
-                  const totalAmount =
-                    selectedVoucher.voucherType === "Payment"
-                      ? viewVoucherEntries.reduce(
-                          (sum: number, e: any) => sum + parseFloat(e.debitAmount || "0"),
-                          0,
-                        )
-                      : viewVoucherEntries.reduce(
-                          (sum: number, e: any) => sum + parseFloat(e.creditAmount || "0"),
-                          0,
+              {/* Entry-based sections */}
+              {viewEntriesLoading ? (
+                <div className="py-4 space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : viewEntriesError ? (
+                <div className="py-6 text-center space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Could not load transaction details.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => viewEntriesRefetch()}>
+                    Retry
+                  </Button>
+                </div>
+              ) : viewVoucherEntries.length === 0 ? (
+                <div className="py-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No accounting entries were returned for this transaction.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  {/* Payment details */}
+                  {selectedVoucher.voucherType === "Payment" && (
+                    <div className="py-4 border-b">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        Payment Details
+                      </h3>
+                      {(() => {
+                        const paidFrom = viewVoucherEntries.find(
+                          (e: ViewVoucherEntry) => parseFloat(e.creditAmount || "0") > 0,
                         );
-
-                  if (!sourceEntry) return null;
-
-                  return (
-                    <div className="p-3 md:p-4 bg-muted/50 rounded-md mb-4">
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-1">
-                            {selectedVoucher.voucherType === "Payment"
-                              ? "Paid From"
-                              : "Received In"}
-                          </p>
-                          <div className="font-medium text-base md:text-lg">
-                            {sourceEntry.accountName}
-                          </div>
-                          <div className="text-sm font-mono mt-2">
-                            Balance: {formatAmount(cashAccountBalance)}
-                          </div>
-                        </div>
-                        <div className="sm:text-right">
-                          <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
-                          <div className="text-xl md:text-2xl font-bold font-mono">
-                            {formatAmount(totalAmount)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-              {/* Voucher Entries Table */}
-              <div>
-                <h3 className="font-semibold mb-3">Entries</h3>
-                {viewEntriesLoading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                  </div>
-                ) : viewVoucherEntries.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No entries found</p>
-                ) : selectedVoucher.voucherType === "Sales" ? (
-                  // Special rendering for Sales vouchers
-                  (() => {
-                    // Separate ledger entries (cash/revenue) from sales items
-                    const canSeeProfitCost = !(!user || user?.role?.startsWith("POS"));
-
-                    const ledgerEntries = viewVoucherEntries.filter(
-                      (e: ViewVoucherEntry) => !e.isStockItem && !e.stockItemId,
-                    );
-                    const salesItems = viewVoucherEntries.filter(
-                      (e: ViewVoucherEntry) => e.isStockItem || e.stockItemId,
-                    );
-
-                    // Find cash entry (debit) and revenue entry (credit)
-                    const cashEntry = ledgerEntries.find(
-                      (e: ViewVoucherEntry) => parseFloat(e.debitAmount || "0") > 0,
-                    );
-                    const revenueEntry = ledgerEntries.find(
-                      (e: ViewVoucherEntry) => parseFloat(e.creditAmount || "0") > 0,
-                    );
-
-                    return (
-                      <div className="space-y-4">
-                        {/* Cash Account Summary */}
-                        {cashEntry && (
-                          <div className="p-3 bg-muted/50 rounded-md mb-4">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                              <div>
-                                <div className="font-medium">{cashEntry.accountName}</div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-sm text-muted-foreground mb-1">Balance</div>
-                                <div className="font-mono font-bold">
-                                  {formatAmount(cashAccountBalance)}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Sales Items Table */}
-                        {salesItems.length > 0 && (
-                          <div>
-                            <p className="text-xs text-muted-foreground text-right mb-1">
-                              Hover or use ↑↓ to select · Alt+S to view item
-                            </p>
-                            <div className="border rounded-md">
-                              <Table>
-                                <TableHeader className="sticky top-0 z-10 bg-background">
-                                  <TableRow>
-                                    <TableHead>Item Name</TableHead>
-                                    <TableHead className="text-right">Qty</TableHead>
-                                    <TableHead className="text-right">Price</TableHead>
-                                    {canSeeProfitCost && (
-                                      <TableHead className="text-right">Cost</TableHead>
-                                    )}
-                                    <TableHead className="text-right">Total</TableHead>
-                                    {canSeeProfitCost && (
-                                      <TableHead className="text-right">Profit</TableHead>
-                                    )}
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {salesItems.map((item: ViewVoucherEntry, idx: number) => {
-                                    const qty = parseFloat(item.quantity || "0");
-                                    const rate = parseFloat(item.rate || item.sellingPrice || "0");
-                                    const totalAmount = parseFloat(
-                                      item.totalSales || item.creditAmount || "0",
-                                    );
-                                    const profit = parseFloat(item.profit || "0");
-                                    const isPositiveProfit = profit >= 0;
-                                    return (
-                                      <TableRow
-                                        key={item.id}
-                                        data-dialog-row={idx}
-                                        className={`cursor-pointer ${selectedDialogRow === idx ? "bg-accent" : ""}`}
-                                        onMouseEnter={() => setSelectedDialogRow(idx)}
-                                      >
-                                        <TableCell>
-                                          <div className="font-medium">
-                                            {item.stockItemName || item.accountName}
-                                          </div>
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono">
-                                          {formatNumber(qty)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono">
-                                          {formatAmount(rate)}
-                                        </TableCell>
-                                        {canSeeProfitCost && (
-                                          <TableCell className="text-right font-mono text-muted-foreground">
-                                            {item.costPrice
-                                              ? formatAmount(parseFloat(item.costPrice))
-                                              : "-"}
-                                          </TableCell>
-                                        )}
-                                        <TableCell className="text-right font-mono font-semibold">
-                                          {formatAmount(totalAmount)}
-                                        </TableCell>
-                                        {canSeeProfitCost && (
-                                          <TableCell
-                                            className={`text-right font-mono font-semibold ${item.profit ? (isPositiveProfit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400") : ""}`}
-                                          >
-                                            {item.profit ? formatAmount(profit) : "-"}
-                                          </TableCell>
-                                        )}
-                                      </TableRow>
-                                    );
-                                  })}
-                                  {/* Totals Row */}
-                                  <TableRow className="font-bold bg-muted/50">
-                                    <TableCell>Total</TableCell>
-                                    <TableCell className="text-right font-mono">
-                                      {formatNumber(
-                                        salesItems.reduce(
-                                          (sum: number, item: ViewVoucherEntry) =>
-                                            sum + parseFloat(item.quantity || "0"),
-                                          0,
-                                        ),
-                                      )}
-                                    </TableCell>
-                                    <TableCell></TableCell>
-                                    {canSeeProfitCost && <TableCell></TableCell>}
-                                    <TableCell className="text-right font-mono">
-                                      {formatAmount(
-                                        salesItems.reduce(
-                                          (sum: number, item: ViewVoucherEntry) =>
-                                            sum +
-                                            parseFloat(item.totalSales || item.creditAmount || "0"),
-                                          0,
-                                        ),
-                                      )}
-                                    </TableCell>
-                                    {canSeeProfitCost && (
-                                      <TableCell className="text-right font-mono">
-                                        {formatAmount(
-                                          salesItems.reduce(
-                                            (sum: number, item: ViewVoucherEntry) =>
-                                              sum + parseFloat(item.profit || "0"),
-                                            0,
-                                          ),
-                                        )}
-                                      </TableCell>
-                                    )}
-                                  </TableRow>
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()
-                ) : selectedVoucher.voucherType === "Purchase" ? (
-                  // Special rendering for Purchase vouchers - show items with supplier info
-                  (() => {
-                    // SECURITY: Hide cost prices for POS users (default to hiding if user is undefined during load)
-                    const isPOSUser = !user || user?.role?.startsWith("POS");
-
-                    // Separate ledger entries from purchase items
-                    // Purchase items are stock items linked to a PO
-                    const purchaseItems = viewVoucherEntries.filter(
-                      (e: ViewVoucherEntry) => e.isPurchaseItem || e.isStockItem,
-                    );
-
-                    // When purchase items exist, only show charge-type ledger accounts (Freight, Fumigation, etc.)
-                    // When no purchase items found (PO not linked), show ALL ledger entries so the dialog isn't empty
-                    const chargeKeywords = [
-                      "freight",
-                      "fumigation",
-                      "surcharge",
-                      "discount",
-                      "other charges",
-                      "handling",
-                      "insurance",
-                      "customs",
-                      "duty",
-                    ];
-                    const ledgerEntries = viewVoucherEntries.filter((e: ViewVoucherEntry) => {
-                      if (e.isPurchaseItem || e.isStockItem) return false;
-                      if (purchaseItems.length === 0) return true;
-                      const name = (e.accountName || "").toLowerCase();
-                      return chargeKeywords.some((keyword) => name.startsWith(keyword));
-                    });
-
-                    return (
-                      <div className="space-y-4">
-                        {/* Purchase Order Info - Show supplier name and container tracking number */}
-                        {purchaseOrderData && (
-                          <div className="p-3 bg-muted/50 rounded-md space-y-2">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                              <div>
-                                <div className="font-medium">{purchaseOrderData.supplierName}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  Container: {purchaseOrderData.containerNumber}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {!isPOSUser && purchaseOrderData.itemsTotal && (
-                                  <div className="font-mono font-bold">
-                                    {formatAmount(parseFloat(purchaseOrderData.itemsTotal || "0"))}
-                                  </div>
+                        const paidTo = viewVoucherEntries.filter(
+                          (e: ViewVoucherEntry) => parseFloat(e.debitAmount || "0") > 0,
+                        );
+                        return (
+                          <div className="space-y-3">
+                            {paidFrom && (
+                              <div className="rounded-md bg-muted/50 p-3">
+                                <p className="text-xs text-muted-foreground mb-1">Paid From</p>
+                                <p className="font-medium">{paidFrom.accountName}</p>
+                                {!hideAmounts && (
+                                  <p className="text-xs text-muted-foreground font-mono mt-1">
+                                    Balance: {formatAmount(cashAccountBalance)}
+                                  </p>
                                 )}
-                                <Badge
-                                  variant={
-                                    purchaseOrderData.status === "Closed" ? "secondary" : "default"
-                                  }
-                                >
-                                  {purchaseOrderData.status}
-                                </Badge>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setDetailSheetOpen(false);
-                                    navigate(`/purchase-orders/${purchaseOrderData.id}/edit`);
-                                  }}
-                                  data-testid="button-edit-po"
-                                >
-                                  Edit PO
-                                </Button>
                               </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Purchase Items + Charges Table */}
-                        {purchaseItems.length > 0 ? (
-                          <div className="border rounded-md">
-                            <Table>
-                              <TableHeader className="sticky top-0 z-10 bg-background">
-                                <TableRow>
-                                  <TableHead>Item Name</TableHead>
-                                  <TableHead className="text-right">Qty</TableHead>
-                                  {!isPOSUser && (
-                                    <>
-                                      <TableHead className="text-right">Rate</TableHead>
-                                      <TableHead className="text-right">Total</TableHead>
-                                    </>
-                                  )}
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {/* Purchase Items */}
-                                {purchaseItems.map((item: ViewVoucherEntry) => {
-                                  const qty = parseFloat(item.quantity || "0");
-                                  const rate = item.rate != null ? parseFloat(item.rate) : 0;
-                                  const totalAmount =
-                                    item.totalAmount != null ? parseFloat(item.totalAmount) : 0;
-                                  return (
-                                    <TableRow key={item.id}>
-                                      <TableCell>
-                                        <div className="font-medium">
-                                          {item.stockItemName || item.accountName}
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="text-right font-mono">
-                                        {Math.round(qty).toLocaleString()}
-                                      </TableCell>
-                                      {!isPOSUser && (
-                                        <>
-                                          <TableCell className="text-right font-mono">
-                                            {formatAmount(rate)}
-                                          </TableCell>
-                                          <TableCell className="text-right font-mono">
-                                            {formatAmount(totalAmount)}
-                                          </TableCell>
-                                        </>
+                            )}
+                            {paidTo.length > 0 && (
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-2">Paid To</p>
+                                <div className="space-y-1.5">
+                                  {paidTo.map((e: ViewVoucherEntry) => (
+                                    <div
+                                      key={e.id}
+                                      className="flex justify-between items-center text-sm rounded-md px-3 py-2 bg-muted/30"
+                                    >
+                                      <span>{e.accountName}</span>
+                                      {!hideAmounts && (
+                                        <span className="font-mono">
+                                          {formatAmount(e.debitAmount)}
+                                        </span>
                                       )}
-                                    </TableRow>
-                                  );
-                                })}
-
-                                {/* Items Subtotal */}
-                                {purchaseItems.length > 0 && (
-                                  <TableRow className="bg-muted/30">
-                                    <TableCell className="font-semibold">Items Subtotal</TableCell>
-                                    <TableCell className="text-right font-mono">
-                                      {Math.round(
-                                        purchaseItems.reduce(
-                                          (sum: number, item: ViewVoucherEntry) =>
-                                            sum + parseFloat(item.quantity || "0"),
-                                          0,
-                                        ),
-                                      ).toLocaleString()}
-                                    </TableCell>
-                                    {!isPOSUser && (
-                                      <>
-                                        <TableCell></TableCell>
-                                        <TableCell className="text-right font-mono font-semibold">
-                                          {formatAmount(
-                                            purchaseItems.reduce(
-                                              (sum: number, item: ViewVoucherEntry) =>
-                                                sum +
-                                                (item.totalAmount != null
-                                                  ? parseFloat(item.totalAmount)
-                                                  : 0),
-                                              0,
-                                            ),
-                                          )}
-                                        </TableCell>
-                                      </>
-                                    )}
-                                  </TableRow>
-                                )}
-
-                                {/* Individual Charges from Purchase Order */}
-                                {purchaseOrderData &&
-                                  (() => {
-                                    const charges = [
-                                      {
-                                        label: "Freight",
-                                        amount: parseFloat(purchaseOrderData.freight || "0"),
-                                      },
-                                      {
-                                        label: "Fumigation",
-                                        amount: parseFloat(purchaseOrderData.fumigation || "0"),
-                                      },
-                                      {
-                                        label: "Surcharge",
-                                        amount: parseFloat(purchaseOrderData.surcharge || "0"),
-                                      },
-                                      {
-                                        label: "Document Charges",
-                                        amount: parseFloat(
-                                          purchaseOrderData.documentCharges || "0",
-                                        ),
-                                      },
-                                      {
-                                        label: "Other Charges",
-                                        amount: parseFloat(purchaseOrderData.otherCharges || "0"),
-                                      },
-                                      {
-                                        label: "Discount",
-                                        amount: -parseFloat(purchaseOrderData.discount || "0"),
-                                      },
-                                    ].filter((c) => c.amount !== 0);
-
-                                    return charges.map((charge, idx) => (
-                                      <TableRow key={`charge-${idx}`} className="bg-muted/20">
-                                        <TableCell>
-                                          <div className="font-medium text-sm">{charge.label}</div>
-                                        </TableCell>
-                                        <TableCell></TableCell>
-                                        {!isPOSUser && (
-                                          <>
-                                            <TableCell></TableCell>
-                                            <TableCell className="text-right font-mono">
-                                              {charge.amount < 0
-                                                ? `-${formatAmount(Math.abs(charge.amount))}`
-                                                : formatAmount(charge.amount)}
-                                            </TableCell>
-                                          </>
-                                        )}
-                                      </TableRow>
-                                    ));
-                                  })()}
-
-                                {/* Grand Total Row */}
-                                <TableRow className="font-bold bg-muted/50">
-                                  <TableCell>GRAND TOTAL</TableCell>
-                                  <TableCell className="text-right font-mono">
-                                    {Math.round(
-                                      purchaseItems.reduce(
-                                        (sum: number, item: ViewVoucherEntry) =>
-                                          sum + parseFloat(item.quantity || "0"),
-                                        0,
-                                      ),
-                                    ).toLocaleString()}
-                                  </TableCell>
-                                  {!isPOSUser && (
-                                    <>
-                                      <TableCell></TableCell>
-                                      <TableCell className="text-right font-mono">
-                                        {formatAmount(
-                                          purchaseItems.reduce(
-                                            (sum: number, item: ViewVoucherEntry) =>
-                                              sum +
-                                              (item.totalAmount != null
-                                                ? parseFloat(item.totalAmount)
-                                                : 0),
-                                            0,
-                                          ) +
-                                            (purchaseOrderData
-                                              ? parseFloat(purchaseOrderData.freight || "0") +
-                                                parseFloat(purchaseOrderData.fumigation || "0") +
-                                                parseFloat(purchaseOrderData.surcharge || "0") +
-                                                parseFloat(
-                                                  purchaseOrderData.documentCharges || "0",
-                                                ) +
-                                                parseFloat(purchaseOrderData.otherCharges || "0") -
-                                                parseFloat(purchaseOrderData.discount || "0")
-                                              : 0),
-                                        )}
-                                      </TableCell>
-                                    </>
-                                  )}
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </div>
-                        ) : (
-                          // Fallback to ledger entries if no purchase items found
-                          <div className="border rounded-md">
-                            <Table>
-                              <TableHeader className="sticky top-0 z-10 bg-background">
-                                <TableRow>
-                                  <TableHead>Account</TableHead>
-                                  {!isPOSUser && (
-                                    <>
-                                      <TableHead className="text-right">Debit</TableHead>
-                                      <TableHead className="text-right">Credit</TableHead>
-                                    </>
-                                  )}
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {ledgerEntries.map((entry: ViewVoucherEntry) => (
-                                  <TableRow key={entry.id}>
-                                    <TableCell>
-                                      <div className="font-medium">{entry.accountName}</div>
-                                    </TableCell>
-                                    {!isPOSUser && (
-                                      <>
-                                        <TableCell className="text-right font-mono">
-                                          {parseFloat(entry.debitAmount) > 0
-                                            ? formatAmount(entry.debitAmount)
-                                            : "-"}
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono">
-                                          {parseFloat(entry.creditAmount) > 0
-                                            ? formatAmount(entry.creditAmount)
-                                            : "-"}
-                                        </TableCell>
-                                      </>
-                                    )}
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()
-                ) : (
-                  <div className="border rounded-md">
-                    <Table>
-                      <TableHeader className="sticky top-0 z-10 bg-background">
-                        <TableRow>
-                          {selectedVoucher.voucherType === "Consumption" ||
-                          selectedVoucher.voucherType === "Production" ||
-                          selectedVoucher.voucherType === "Mixed" ||
-                          selectedVoucher.voucherType === "Stock Transfer" ||
-                          selectedVoucher.voucherType === "StockTransfer" ? (
-                            <>
-                              <TableHead>Item Name</TableHead>
-                              {selectedVoucher.voucherType === "Mixed" && (
-                                <TableHead>Type</TableHead>
-                              )}
-                              <TableHead className="text-right">Qty</TableHead>
-                              {user && !user?.role?.startsWith("POS") && (
-                                <>
-                                  <TableHead className="text-right">Amount</TableHead>
-                                  <TableHead className="text-right">Total Amount</TableHead>
-                                </>
-                              )}
-                            </>
-                          ) : selectedVoucher.voucherType === "Payment" ||
-                            selectedVoucher.voucherType === "Receipt" ||
-                            selectedVoucher.voucherType === "Journal" ? (
-                            <>
-                              <TableHead>Account</TableHead>
-                              <TableHead className="text-right">Amount</TableHead>
-                            </>
-                          ) : (
-                            <>
-                              <TableHead>Account</TableHead>
-                              <TableHead className="text-right">Debit</TableHead>
-                              <TableHead className="text-right">Credit</TableHead>
-                              <TableHead>Narration</TableHead>
-                            </>
-                          )}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(() => {
-                          const isPOSUser = !user || user?.role?.startsWith("POS");
-
-                          // For Consumption/Production/Mixed/Stock Transfer, show stock items
-                          if (
-                            selectedVoucher.voucherType === "Consumption" ||
-                            selectedVoucher.voucherType === "Production" ||
-                            selectedVoucher.voucherType === "Mixed" ||
-                            selectedVoucher.voucherType === "Stock Transfer" ||
-                            selectedVoucher.voucherType === "StockTransfer"
-                          ) {
-                            return viewVoucherEntries.map((entry: ViewVoucherEntry) => {
-                              const qty = parseFloat(entry.quantity || "0");
-                              const rate = entry.rate != null ? parseFloat(entry.rate) : 0;
-                              const totalAmount =
-                                entry.totalAmount != null
-                                  ? parseFloat(entry.totalAmount)
-                                  : qty * rate;
-                              return (
-                                <TableRow key={entry.id}>
-                                  <TableCell>
-                                    <div className="font-medium">
-                                      {entry.stockItemName || entry.accountName}
                                     </div>
-                                  </TableCell>
-                                  {selectedVoucher.voucherType === "Mixed" && (
-                                    <TableCell>
-                                      <Badge
-                                        variant={
-                                          entry.adjustmentType === "Production"
-                                            ? "default"
-                                            : "secondary"
-                                        }
-                                      >
-                                        {entry.adjustmentType ||
-                                          (qty > 0 ? "Production" : "Consumption")}
-                                      </Badge>
-                                    </TableCell>
-                                  )}
-                                  <TableCell className="text-right font-mono">
-                                    {Math.round(Math.abs(qty)).toLocaleString()}
-                                  </TableCell>
-                                  {!isPOSUser && (
-                                    <>
-                                      <TableCell className="text-right font-mono">
-                                        {formatAmount(rate)}
-                                      </TableCell>
-                                      <TableCell className="text-right font-mono">
-                                        {formatAmount(totalAmount)}
-                                      </TableCell>
-                                    </>
-                                  )}
-                                </TableRow>
-                              );
-                            });
-                          }
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
 
-                          // For Payment/Receipt/Journal, filter out the cash source entries
-                          const displayEntries =
-                            selectedVoucher.voucherType === "Payment" ||
-                            selectedVoucher.voucherType === "Receipt" ||
-                            selectedVoucher.voucherType === "Journal"
-                              ? viewVoucherEntries.filter((entry: ViewVoucherEntry) => {
-                                  // Payment: show only debit entries (accounts being paid)
-                                  // Receipt: show only credit entries (accounts receiving)
-                                  // Journal: show all entries (no filtering)
-                                  if (selectedVoucher.voucherType === "Payment") {
-                                    return parseFloat(entry.debitAmount || "0") > 0;
-                                  } else if (selectedVoucher.voucherType === "Receipt") {
-                                    return parseFloat(entry.creditAmount || "0") > 0;
-                                  } else {
-                                    // Journal: show all entries
-                                    return true;
-                                  }
-                                })
-                              : viewVoucherEntries;
+                  {/* Money Received details */}
+                  {selectedVoucher.voucherType === "Receipt" && (
+                    <div className="py-4 border-b">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        Money Received Details
+                      </h3>
+                      {(() => {
+                        const receivedInto = viewVoucherEntries.find(
+                          (e: ViewVoucherEntry) => parseFloat(e.debitAmount || "0") > 0,
+                        );
+                        const receivedFrom = viewVoucherEntries.filter(
+                          (e: ViewVoucherEntry) => parseFloat(e.creditAmount || "0") > 0,
+                        );
+                        return (
+                          <div className="space-y-3">
+                            {receivedInto && (
+                              <div className="rounded-md bg-muted/50 p-3">
+                                <p className="text-xs text-muted-foreground mb-1">Received Into</p>
+                                <p className="font-medium">{receivedInto.accountName}</p>
+                                {!hideAmounts && (
+                                  <p className="text-xs text-muted-foreground font-mono mt-1">
+                                    Balance: {formatAmount(cashAccountBalance)}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            {receivedFrom.length > 0 && (
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-2">Received From</p>
+                                <div className="space-y-1.5">
+                                  {receivedFrom.map((e: ViewVoucherEntry) => (
+                                    <div
+                                      key={e.id}
+                                      className="flex justify-between items-center text-sm rounded-md px-3 py-2 bg-muted/30"
+                                    >
+                                      <span>{e.accountName}</span>
+                                      {!hideAmounts && (
+                                        <span className="font-mono">
+                                          {formatAmount(e.creditAmount)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
 
-                          return displayEntries.map((entry: ViewVoucherEntry) => (
-                            <TableRow key={entry.id}>
-                              <TableCell>
-                                <div className="font-medium">{entry.accountName}</div>
-                                {(selectedVoucher.voucherType === "Payment" ||
-                                  selectedVoucher.voucherType === "Receipt" ||
-                                  selectedVoucher.voucherType === "Journal") && (
-                                  <div className="text-xs text-muted-foreground mt-0.5">
-                                    Balance: {formatAmount(entryBalances[entry.id] ?? "0")}
-                                  </div>
-                                )}
-                              </TableCell>
-                              {selectedVoucher.voucherType === "Payment" ||
-                              selectedVoucher.voucherType === "Receipt" ||
-                              selectedVoucher.voucherType === "Journal" ? (
-                                <TableCell className="text-right font-mono">
-                                  {formatAmount(
-                                    Math.max(
-                                      parseFloat(entry.debitAmount || "0"),
-                                      parseFloat(entry.creditAmount || "0"),
-                                    ),
-                                  )}
-                                </TableCell>
-                              ) : (
-                                <>
-                                  <TableCell className="text-right font-mono">
-                                    {parseFloat(entry.debitAmount) > 0
-                                      ? formatAmount(entry.debitAmount)
-                                      : "-"}
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono">
-                                    {parseFloat(entry.creditAmount) > 0
-                                      ? formatAmount(entry.creditAmount)
-                                      : "-"}
-                                  </TableCell>
-                                  <TableCell className="text-sm text-muted-foreground">
-                                    {entry.narration || "-"}
-                                  </TableCell>
-                                </>
-                              )}
-                            </TableRow>
-                          ));
-                        })()}
-                        {/* Totals Row */}
-                        <TableRow className="font-bold bg-muted/50">
-                          {selectedVoucher.voucherType === "Consumption" ||
-                          selectedVoucher.voucherType === "Production" ||
-                          selectedVoucher.voucherType === "Stock Transfer" ||
-                          selectedVoucher.voucherType === "StockTransfer" ? (
-                            <>
-                              <TableCell>Total</TableCell>
-                              <TableCell className="text-right font-mono">
-                                {viewVoucherEntries
-                                  .reduce(
-                                    (sum: number, e: ViewVoucherEntry) =>
-                                      sum + Math.abs(parseFloat(e.quantity || "0")),
-                                    0,
-                                  )
-                                  .toFixed(3)}
-                              </TableCell>
-                              {user && !user?.role?.startsWith("POS") && (
-                                <>
-                                  <TableCell></TableCell>
-                                  <TableCell className="text-right font-mono">
-                                    {formatAmount(
-                                      viewVoucherEntries.reduce(
-                                        (sum: number, e: ViewVoucherEntry) => {
-                                          if (e.totalAmount != null) {
-                                            return sum + Math.abs(parseFloat(e.totalAmount));
-                                          }
-                                          const qty = Math.abs(parseFloat(e.quantity || "0"));
-                                          const rate = e.rate != null ? parseFloat(e.rate) : 0;
-                                          return sum + qty * rate;
-                                        },
-                                        0,
-                                      ),
-                                    )}
-                                  </TableCell>
-                                </>
-                              )}
-                            </>
-                          ) : selectedVoucher.voucherType === "Payment" ||
-                            selectedVoucher.voucherType === "Receipt" ||
-                            selectedVoucher.voucherType === "Journal" ? (
-                            <>
-                              <TableCell>Total</TableCell>
-                              <TableCell className="text-right font-mono">
-                                {formatAmount(
-                                  Math.max(
-                                    viewVoucherEntries.reduce(
-                                      (sum: number, e: ViewVoucherEntry) =>
-                                        sum + parseFloat(e.debitAmount || "0"),
-                                      0,
-                                    ),
-                                    viewVoucherEntries.reduce(
-                                      (sum: number, e: ViewVoucherEntry) =>
-                                        sum + parseFloat(e.creditAmount || "0"),
-                                      0,
-                                    ),
-                                  ),
-                                )}
-                              </TableCell>
-                            </>
-                          ) : (
-                            <>
-                              <TableCell>Total</TableCell>
-                              <TableCell className="text-right font-mono">
+                  {/* Journal / Contra details */}
+                  {(selectedVoucher.voucherType === "Journal" ||
+                    selectedVoucher.voucherType === "Contra") && (
+                    <div className="py-4 border-b">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                        {selectedVoucher.voucherType === "Journal"
+                          ? "Journal Details"
+                          : "Account Transfer Details"}
+                      </h3>
+                      <div className="grid grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Accounts</p>
+                          <p className="font-medium">{viewVoucherEntries.length}</p>
+                        </div>
+                        {!hideAmounts && (
+                          <>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Total Debit</p>
+                              <p className="font-mono font-medium">
                                 {formatAmount(
                                   viewVoucherEntries.reduce(
                                     (sum: number, e: ViewVoucherEntry) =>
@@ -3132,8 +2668,11 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                     0,
                                   ),
                                 )}
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Total Credit</p>
+                              <p className="font-mono font-medium">
                                 {formatAmount(
                                   viewVoucherEntries.reduce(
                                     (sum: number, e: ViewVoucherEntry) =>
@@ -3141,20 +2680,620 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                     0,
                                   ),
                                 )}
-                              </TableCell>
-                              <TableCell></TableCell>
-                            </>
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sale details + products */}
+                  {(selectedVoucher.voucherType === "Sales" ||
+                    selectedVoucher.voucherType === "POS") &&
+                    (() => {
+                      const canSeeProfitCost = !(!user || user?.role?.startsWith("POS"));
+                      const isPOSUser = !user || user?.role?.startsWith("POS");
+                      const salesItems = viewVoucherEntries.filter(
+                        (e: ViewVoucherEntry) => e.isStockItem || e.stockItemId,
+                      );
+                      const cashEntry = viewVoucherEntries.find(
+                        (e: ViewVoucherEntry) =>
+                          !e.isStockItem && !e.stockItemId && parseFloat(e.debitAmount || "0") > 0,
+                      );
+                      const totalQty = salesItems.reduce(
+                        (sum: number, e: ViewVoucherEntry) => sum + parseFloat(e.quantity || "0"),
+                        0,
+                      );
+                      return (
+                        <>
+                          <div className="py-4 border-b">
+                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                              Sale Details
+                            </h3>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Products</p>
+                                <p className="font-medium">{salesItems.length}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Total Quantity</p>
+                                <p className="font-medium font-mono">{formatNumber(totalQty)}</p>
+                              </div>
+                              {selectedVoucher.locationName && (
+                                <div className="col-span-2">
+                                  <p className="text-xs text-muted-foreground">Location</p>
+                                  <p>{selectedVoucher.locationName}</p>
+                                </div>
+                              )}
+                              {cashEntry && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Received In</p>
+                                  <p>{cashEntry.accountName}</p>
+                                </div>
+                              )}
+                              {!hideAmounts && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Total Sale</p>
+                                  <p className="font-mono font-semibold">
+                                    {formatAmount(selectedVoucher.totalAmount)}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {salesItems.length > 0 && (
+                            <div className="py-4 border-b">
+                              <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                  Product Details
+                                </h3>
+                                <p className="text-xs text-muted-foreground">
+                                  ↑↓ to select · Alt+S to open
+                                </p>
+                              </div>
+                              <div className="border rounded-md overflow-x-auto">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Product</TableHead>
+                                      <TableHead className="text-right">Qty</TableHead>
+                                      {!isPOSUser && (
+                                        <TableHead className="text-right">Price</TableHead>
+                                      )}
+                                      {canSeeProfitCost && (
+                                        <TableHead className="text-right">Cost</TableHead>
+                                      )}
+                                      {!hideAmounts && (
+                                        <TableHead className="text-right">Amount</TableHead>
+                                      )}
+                                      {canSeeProfitCost && (
+                                        <TableHead className="text-right">Profit</TableHead>
+                                      )}
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {salesItems.map((item: ViewVoucherEntry, idx: number) => {
+                                      const qty = parseFloat(item.quantity || "0");
+                                      const rate = parseFloat(
+                                        item.rate || item.sellingPrice || "0",
+                                      );
+                                      const totalSales = parseFloat(
+                                        item.totalSales || item.creditAmount || "0",
+                                      );
+                                      const profit = parseFloat(item.profit || "0");
+                                      return (
+                                        <TableRow
+                                          key={item.id}
+                                          data-dialog-row={idx}
+                                          className={cn(
+                                            "cursor-pointer",
+                                            selectedDialogRow === idx && "bg-accent",
+                                          )}
+                                          onMouseEnter={() => setSelectedDialogRow(idx)}
+                                        >
+                                          <TableCell>
+                                            <div className="font-medium text-sm">
+                                              {item.stockItemName || item.accountName}
+                                            </div>
+                                            {item.stockItemCode && (
+                                              <div className="text-xs text-muted-foreground font-mono">
+                                                {item.stockItemCode}
+                                              </div>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-right font-mono text-sm">
+                                            {formatNumber(qty)}
+                                          </TableCell>
+                                          {!isPOSUser && (
+                                            <TableCell className="text-right font-mono text-sm">
+                                              {formatAmount(rate)}
+                                            </TableCell>
+                                          )}
+                                          {canSeeProfitCost && (
+                                            <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                                              {item.costPrice
+                                                ? formatAmount(parseFloat(item.costPrice))
+                                                : "—"}
+                                            </TableCell>
+                                          )}
+                                          {!hideAmounts && (
+                                            <TableCell className="text-right font-mono font-semibold text-sm">
+                                              {formatAmount(totalSales)}
+                                            </TableCell>
+                                          )}
+                                          {canSeeProfitCost && (
+                                            <TableCell
+                                              className={cn(
+                                                "text-right font-mono font-semibold text-sm",
+                                                item.profit
+                                                  ? profit >= 0
+                                                    ? "text-green-600 dark:text-green-400"
+                                                    : "text-red-600 dark:text-red-400"
+                                                  : "",
+                                              )}
+                                            >
+                                              {item.profit ? formatAmount(profit) : "—"}
+                                            </TableCell>
+                                          )}
+                                        </TableRow>
+                                      );
+                                    })}
+                                    <TableRow className="font-bold bg-muted/50">
+                                      <TableCell>Total</TableCell>
+                                      <TableCell className="text-right font-mono">
+                                        {formatNumber(
+                                          salesItems.reduce(
+                                            (s: number, e: ViewVoucherEntry) =>
+                                              s + parseFloat(e.quantity || "0"),
+                                            0,
+                                          ),
+                                        )}
+                                      </TableCell>
+                                      {!isPOSUser && <TableCell />}
+                                      {canSeeProfitCost && <TableCell />}
+                                      {!hideAmounts && (
+                                        <TableCell className="text-right font-mono">
+                                          {formatAmount(
+                                            salesItems.reduce(
+                                              (s: number, e: ViewVoucherEntry) =>
+                                                s +
+                                                parseFloat(e.totalSales || e.creditAmount || "0"),
+                                              0,
+                                            ),
+                                          )}
+                                        </TableCell>
+                                      )}
+                                      {canSeeProfitCost && (
+                                        <TableCell className="text-right font-mono">
+                                          {formatAmount(
+                                            salesItems.reduce(
+                                              (s: number, e: ViewVoucherEntry) =>
+                                                s + parseFloat(e.profit || "0"),
+                                              0,
+                                            ),
+                                          )}
+                                        </TableCell>
+                                      )}
+                                    </TableRow>
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
                           )}
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                        </>
+                      );
+                    })()}
+
+                  {/* Purchase details + products */}
+                  {selectedVoucher.voucherType === "Purchase" &&
+                    (() => {
+                      const isPOSUser = !user || user?.role?.startsWith("POS");
+                      const purchaseItems = viewVoucherEntries.filter(
+                        (e: ViewVoucherEntry) => e.isPurchaseItem || e.isStockItem,
+                      );
+                      const totalQty = purchaseItems.reduce(
+                        (sum: number, e: ViewVoucherEntry) => sum + parseFloat(e.quantity || "0"),
+                        0,
+                      );
+                      return (
+                        <>
+                          <div className="py-4 border-b">
+                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                              Purchase Details
+                            </h3>
+                            {purchaseOrderData && (
+                              <div className="rounded-md bg-muted/50 p-3 mb-3 space-y-1">
+                                <p className="font-medium">{purchaseOrderData.supplierName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Container: {purchaseOrderData.containerNumber}
+                                </p>
+                                <div className="mt-1">
+                                  <Badge
+                                    variant={
+                                      purchaseOrderData.status === "Closed"
+                                        ? "secondary"
+                                        : "default"
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {purchaseOrderData.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Products</p>
+                                <p className="font-medium">{purchaseItems.length}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Total Quantity</p>
+                                <p className="font-medium font-mono">
+                                  {Math.round(totalQty).toLocaleString()}
+                                </p>
+                              </div>
+                              {!hideAmounts && purchaseOrderData?.itemsTotal && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Total Amount</p>
+                                  <p className="font-mono font-semibold">
+                                    {formatAmount(parseFloat(purchaseOrderData.itemsTotal || "0"))}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {purchaseItems.length > 0 && (
+                            <div className="py-4 border-b">
+                              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                                Product Details
+                              </h3>
+                              <div className="border rounded-md overflow-x-auto">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Product</TableHead>
+                                      <TableHead className="text-right">Qty</TableHead>
+                                      {!isPOSUser && (
+                                        <>
+                                          <TableHead className="text-right">Rate</TableHead>
+                                          <TableHead className="text-right">Amount</TableHead>
+                                        </>
+                                      )}
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {purchaseItems.map((item: ViewVoucherEntry) => {
+                                      const qty = parseFloat(item.quantity || "0");
+                                      const rate = item.rate != null ? parseFloat(item.rate) : 0;
+                                      const totalAmt =
+                                        item.totalAmount != null ? parseFloat(item.totalAmount) : 0;
+                                      return (
+                                        <TableRow key={item.id}>
+                                          <TableCell>
+                                            <div className="font-medium text-sm">
+                                              {item.stockItemName || item.accountName}
+                                            </div>
+                                            {item.stockItemCode && (
+                                              <div className="text-xs text-muted-foreground font-mono">
+                                                {item.stockItemCode}
+                                              </div>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-right font-mono text-sm">
+                                            {Math.round(qty).toLocaleString()}
+                                          </TableCell>
+                                          {!isPOSUser && (
+                                            <>
+                                              <TableCell className="text-right font-mono text-sm">
+                                                {formatAmount(rate)}
+                                              </TableCell>
+                                              <TableCell className="text-right font-mono text-sm">
+                                                {formatAmount(totalAmt)}
+                                              </TableCell>
+                                            </>
+                                          )}
+                                        </TableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+
+                  {/* Stock Transfer / Production / Consumption / Mixed */}
+                  {[
+                    "Stock Transfer",
+                    "StockTransfer",
+                    "Production",
+                    "Consumption",
+                    "Mixed",
+                  ].includes(selectedVoucher.voucherType) &&
+                    (() => {
+                      const isPOSUser = !user || user?.role?.startsWith("POS");
+                      const totalQty = viewVoucherEntries.reduce(
+                        (sum: number, e: ViewVoucherEntry) =>
+                          sum + Math.abs(parseFloat(e.quantity || "0")),
+                        0,
+                      );
+                      return (
+                        <>
+                          <div className="py-4 border-b">
+                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                              {getTransactionDisplayType(selectedVoucher.voucherType)} Details
+                            </h3>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Products</p>
+                                <p className="font-medium">{viewVoucherEntries.length}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Total Quantity</p>
+                                <p className="font-medium font-mono">{totalQty.toFixed(3)}</p>
+                              </div>
+                              {selectedVoucher.description && (
+                                <div className="col-span-2">
+                                  <p className="text-xs text-muted-foreground">Description</p>
+                                  <p>{selectedVoucher.description}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="py-4 border-b">
+                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                              Product Details
+                            </h3>
+                            <div className="border rounded-md overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Product</TableHead>
+                                    {selectedVoucher.voucherType === "Mixed" && (
+                                      <TableHead>Type</TableHead>
+                                    )}
+                                    <TableHead className="text-right">Qty</TableHead>
+                                    {!isPOSUser && !hideAmounts && (
+                                      <>
+                                        <TableHead className="text-right">Rate</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                      </>
+                                    )}
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {viewVoucherEntries.map((entry: ViewVoucherEntry) => {
+                                    const qty = parseFloat(entry.quantity || "0");
+                                    const rate = entry.rate != null ? parseFloat(entry.rate) : 0;
+                                    const totalAmt =
+                                      entry.totalAmount != null
+                                        ? parseFloat(entry.totalAmount)
+                                        : qty * rate;
+                                    return (
+                                      <TableRow key={entry.id}>
+                                        <TableCell>
+                                          <div className="font-medium text-sm">
+                                            {entry.stockItemName || entry.accountName}
+                                          </div>
+                                        </TableCell>
+                                        {selectedVoucher.voucherType === "Mixed" && (
+                                          <TableCell>
+                                            <Badge
+                                              variant={
+                                                entry.adjustmentType === "Production"
+                                                  ? "default"
+                                                  : "secondary"
+                                              }
+                                              className="text-xs"
+                                            >
+                                              {entry.adjustmentType ||
+                                                (qty > 0 ? "Production" : "Consumption")}
+                                            </Badge>
+                                          </TableCell>
+                                        )}
+                                        <TableCell className="text-right font-mono text-sm">
+                                          {Math.round(Math.abs(qty)).toLocaleString()}
+                                        </TableCell>
+                                        {!isPOSUser && !hideAmounts && (
+                                          <>
+                                            <TableCell className="text-right font-mono text-sm">
+                                              {formatAmount(rate)}
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono text-sm">
+                                              {formatAmount(totalAmt)}
+                                            </TableCell>
+                                          </>
+                                        )}
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
+
+                  {/* Accounting Details — collapsible */}
+                  <div className="py-4">
+                    <details>
+                      <summary className="text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors">
+                        Accounting Details
+                      </summary>
+                      <div className="mt-3 border rounded-md overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Account</TableHead>
+                              <TableHead className="text-xs">Narration</TableHead>
+                              {!hideAmounts && (
+                                <>
+                                  <TableHead className="text-right">Debit</TableHead>
+                                  <TableHead className="text-right">Credit</TableHead>
+                                </>
+                              )}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {viewVoucherEntries.map((entry: ViewVoucherEntry) => (
+                              <TableRow key={entry.id}>
+                                <TableCell>
+                                  <div className="text-sm font-medium">{entry.accountName}</div>
+                                  {(selectedVoucher.voucherType === "Payment" ||
+                                    selectedVoucher.voucherType === "Receipt" ||
+                                    selectedVoucher.voucherType === "Journal") &&
+                                    entryBalances[entry.id] !== undefined && (
+                                      <div className="text-xs text-muted-foreground">
+                                        Balance: {formatAmount(entryBalances[entry.id])}
+                                      </div>
+                                    )}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {entry.narration || "—"}
+                                </TableCell>
+                                {!hideAmounts && (
+                                  <>
+                                    <TableCell className="text-right font-mono text-sm">
+                                      {parseFloat(entry.debitAmount || "0") > 0
+                                        ? formatAmount(entry.debitAmount)
+                                        : "—"}
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-sm">
+                                      {parseFloat(entry.creditAmount || "0") > 0
+                                        ? formatAmount(entry.creditAmount)
+                                        : "—"}
+                                    </TableCell>
+                                  </>
+                                )}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </details>
                   </div>
-                )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Offload details */}
+          {selectedOffload && !selectedVoucher && (
+            <div className="flex flex-col">
+              <SheetHeader className="pb-4 border-b">
+                <div>
+                  <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30 mb-2 flex items-center gap-1 w-fit">
+                    <Package className="w-3 h-3" />
+                    Shipment Received
+                  </Badge>
+                  <SheetTitle className="font-mono">{selectedOffload.containerNumber}</SheetTitle>
+                  <SheetDescription>
+                    Received on{" "}
+                    {formatDisplayDate(parseISO(selectedOffload.offloadedAt.slice(0, 10)))}.
+                  </SheetDescription>
+                </div>
+              </SheetHeader>
+
+              {/* Offload actions */}
+              <div className="flex flex-wrap gap-2 py-4 border-b">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => {
+                    setDetailSheetOpen(false);
+                    navigate(`/offloads/${selectedOffload.id}`);
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open Receiving Details
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => {
+                    setDetailSheetOpen(false);
+                    navigate(`/containers/${selectedOffload.containerId}`);
+                  }}
+                >
+                  <Package className="w-4 h-4" />
+                  Open Shipment
+                </Button>
+              </div>
+
+              {/* Offload overview */}
+              <div className="py-4">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  Overview
+                </h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Received Date</p>
+                    <p className="font-medium">
+                      {formatDisplayDate(parseISO(selectedOffload.offloadedAt.slice(0, 10)))}
+                    </p>
+                  </div>
+                  {selectedOffload.locationName && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Location</p>
+                      <p className="font-medium">{selectedOffload.locationName}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Motorcycles</p>
+                    <p className="font-medium font-mono">
+                      {parseFloat(selectedOffload.totalMotos || "0").toLocaleString()}
+                    </p>
+                  </div>
+                  {!hideAmounts && (
+                    <>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Products Value</p>
+                        <p className="font-mono">{formatAmount(selectedOffload.itemsTotal)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Duties</p>
+                        <p className="font-mono">{formatAmount(selectedOffload.duties)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Office Charges</p>
+                        <p className="font-mono">{formatAmount(selectedOffload.officeCharges)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Transfer Charges</p>
+                        <p className="font-mono">{formatAmount(selectedOffload.transferCharges)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Transport Fees</p>
+                        <p className="font-mono">{formatAmount(selectedOffload.transportFees)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total Charges</p>
+                        <p className="font-mono font-semibold">
+                          {formatAmount(selectedOffload.totalCharges)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Additional Cost / Motorcycle
+                        </p>
+                        <p className="font-mono">
+                          {formatAmount(selectedOffload.additionalCostPerMoto)}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Edit Voucher Dialog */}
       <Dialog
