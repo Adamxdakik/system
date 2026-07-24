@@ -906,9 +906,7 @@ export default function Service() {
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Full Name</TableHead>
-                    <TableHead>Phone Number</TableHead>
                     <TableHead>WhatsApp</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Branch</TableHead>
                     <TableHead>Customer Type</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
@@ -923,9 +921,7 @@ export default function Service() {
                         className={expandedCustomerId === customer.id ? "border-b-0" : ""}
                       >
                         <TableCell className="font-medium">{customer.legalName}</TableCell>
-                        <TableCell>{customer.phone || "-"}</TableCell>
                         <TableCell>{customer.whatsapp || "-"}</TableCell>
-                        <TableCell>{customer.email || "-"}</TableCell>
                         <TableCell>{getLocationName(customer.locationId)}</TableCell>
                         <TableCell>{customer.customerType || "-"}</TableCell>
                         <TableCell>
