@@ -171,7 +171,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
       if (!res.ok) throw new Error("Failed to fetch inventory summary");
       return res.json();
     },
-    enabled: allLocationIds.length > 0 && overviewVisited,
+    enabled: allLocationIds.length > 0,
   });
 
   // ── Per-product totals (memoised) ───────────────────────────────────────
