@@ -2,9 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import * as XLSX from "./lib/excel";
-import bcrypt from "bcryptjs";
 import { createHash } from "crypto";
-import CryptoJS from "crypto-js";
 import { z } from "zod";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -94,6 +92,13 @@ import {
 } from "@shared/schema";
 import { eq, and, inArray, sql, like, ne, desc, asc, or, isNotNull, lt, gte, lte, isNull } from "drizzle-orm";
 import { format } from "date-fns";
+import {
+  createLoginHandler,
+  hashPassword,
+  loginRateLimiter,
+  loginSchema,
+  resetLoginRateLimit,
+} from "./authSecurity";
 
 // Configure multer with file size limit (10MB) to prevent memory exhaustion
 const upload = multer({ 
@@ -102,9 +107,6 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   }
 });
-
-// Bcrypt configuration
-const BCRYPT_SALT_ROUNDS = 12;
 
 // ─── Active-user tracking (in-memory) ────────────────────────────────────────
 interface ActiveUserEntry {
@@ -116,42 +118,6 @@ interface ActiveUserEntry {
 }
 const activeUsers = new Map<string, ActiveUserEntry>();
 const ACTIVE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-
-// Auth request schemas (validated via the validate() middleware)
-const loginSchema = z.object({
-  username: z.string().min(1, "Username is required").max(255),
-  password: z.string().min(1, "Password is required").max(1024),
-});
-
-// Helper function to hash passwords with bcrypt (async)
-async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
-}
-
-// Check if a hash is a legacy SHA256 hash
-function isLegacySHA256Hash(hash: string): boolean {
-  return hash.length === 64 && /^[a-f0-9]+$/i.test(hash);
-}
-
-// Verify password using legacy SHA256 (for migration)
-// Normalize case since some hashes may be stored uppercase
-function verifyLegacyPassword(password: string, hash: string): boolean {
-  const sha256Hash = CryptoJS.SHA256(password).toString().toLowerCase();
-  return sha256Hash === hash.toLowerCase();
-}
-
-// Helper function to verify password against hash
-async function verifyPassword(password: string, hash: string): Promise<{ valid: boolean; needsMigration: boolean }> {
-  // Handle legacy SHA256 hashes (for backward compatibility during migration)
-  if (isLegacySHA256Hash(hash)) {
-    // Verify using legacy SHA256
-    const isValid = verifyLegacyPassword(password, hash);
-    return { valid: isValid, needsMigration: isValid }; // Flag for migration if valid
-  }
-  // Use bcrypt for new hashes
-  const isValid = await bcrypt.compare(password, hash);
-  return { valid: isValid, needsMigration: false };
-}
 
 // Helper function to sync employee payroll balances from voucher entries
 // Handles both:
@@ -286,82 +252,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Authentication routes
   // Validates body with Zod, races the DB lookup against a timeout, and
-  // explicitly persists the session before responding so the Set-Cookie
-  // header is guaranteed to be present on the response.
+  // regenerates and explicitly persists the authenticated session.
+  const loginHandler = createLoginHandler({
+    getUserByUsername: (username) => storage.getUserByUsername(username),
+    updateUserPassword: async (userId, password) => {
+      await storage.updateUser(userId, { password });
+    },
+    getUserCompaniesWithRoles: (userId) =>
+      storage.getUserCompaniesWithRoles(userId),
+    recordLogin: async (input) => {
+      await db.insert(loginHistory).values(input);
+    },
+    resetRateLimit: resetLoginRateLimit,
+  });
+
   app.post(
     "/api/auth/login",
+    loginRateLimiter,
     validate(loginSchema),
-    asyncHandler(async (req, res) => {
-      const { username, password } = req.body as { username: string; password: string };
-
-      const user = (await Promise.race([
-        storage.getUserByUsername(username),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Database query timeout")), 5000),
-        ),
-      ])) as Awaited<ReturnType<typeof storage.getUserByUsername>>;
-
-      if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const { valid: passwordValid, needsMigration } = await verifyPassword(
-        password,
-        user.password,
-      );
-      if (!passwordValid) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      // Migrate legacy SHA256 password to bcrypt on successful login
-      if (needsMigration) {
-        const newHash = await hashPassword(password);
-        await storage.updateUser(user.id, { password: newHash });
-      }
-
-      if (!user.active) {
-        return res.status(403).json({ message: "Account is inactive" });
-      }
-
-      req.session.userId = user.id;
-
-      // Auto-select first company
-      const userCompanies = await storage.getUserCompaniesWithRoles(user.id);
-      if (userCompanies.length > 0) {
-        const firstCompany = userCompanies[0];
-        req.session.currentCompanyId = firstCompany.companyId;
-        req.session.currentRole = firstCompany.role;
-        req.session.currentLocationId = firstCompany.assignedLocationId;
-        req.session.currentPOSStation = firstCompany.posStation;
-        req.session.cashAccountId = firstCompany.cashAccountId;
-      }
-
-      // Record login history (non-blocking — failures here must not fail login)
-      try {
-        await db.insert(loginHistory).values({
-          userId: user.id,
-          username: user.username,
-          ipAddress:
-            (req.headers["x-forwarded-for"] as string) ||
-            req.socket?.remoteAddress ||
-            null,
-          userAgent: req.headers["user-agent"] || null,
-        });
-      } catch {
-        /* non-blocking */
-      }
-
-      // Explicitly persist the session before responding so the Set-Cookie
-      // header is guaranteed to land on the response. With async work
-      // happening between mutating req.session and res.json(), the implicit
-      // save can race the response and leave the client unauthenticated.
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => (err ? reject(err) : resolve()));
-      });
-
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    }),
+    asyncHandler(loginHandler),
   );
 
   app.post("/api/auth/logout", (req, res) => {
