@@ -99,9 +99,10 @@ export const financeItems: NavigationItem[] = [
     activePrefixes: ["/vouchers"],
   },
   {
-    title: "Daybook",
+    title: "Transaction History",
     url: "/daybook",
     icon: ClipboardList,
+    activePrefixes: ["/daybook"],
   },
   {
     title: "Payroll",

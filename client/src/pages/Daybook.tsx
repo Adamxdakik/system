@@ -7,13 +7,7 @@ import { z } from "zod";
 import { useLocation } from "wouter";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useCurrencyContext } from "@/contexts/CurrencyContext";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,11 +36,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -83,7 +73,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Book,
+  History,
   Filter,
   X,
   Eye,
@@ -97,13 +87,18 @@ import {
   FileDown,
   Package,
   ExternalLink,
+  MoreHorizontal,
 } from "lucide-react";
-import { format, parseISO, isToday, addDays } from "date-fns";
+import { format, parseISO, isToday, isYesterday, addDays } from "date-fns";
 import { useDateFormat } from "@/contexts/DateFormatContext";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/formatNumber";
 import { utils, writeFile } from "@/lib/excelHelper";
-import { PeriodFilter, PeriodFilterValue, getDefaultPeriodValue } from "@/components/ui/period-filter";
+import {
+  PeriodFilter,
+  PeriodFilterValue,
+  getDefaultPeriodValue,
+} from "@/components/ui/period-filter";
 
 // Account types
 interface LedgerAccount {
@@ -145,16 +140,12 @@ const newEntryRowSchema = z.object({
   accountType: z.enum(["ledger", "bank", "supplier", "employee", "fixedAsset"]),
   accountId: z.number().min(1, "Please select an account"),
   accountName: z.string(),
-  debitAmount: z
-    .string()
-    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
-      message: "Must be a valid number",
-    }),
-  creditAmount: z
-    .string()
-    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
-      message: "Must be a valid number",
-    }),
+  debitAmount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+    message: "Must be a valid number",
+  }),
+  creditAmount: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+    message: "Must be a valid number",
+  }),
   narration: z.string().optional(),
 });
 
@@ -162,15 +153,7 @@ const newEntryRowSchema = z.object({
 const createVoucherSchema = z
   .object({
     voucherType: z.enum(
-      [
-        "Journal",
-        "Payment",
-        "Receipt",
-        "Stock Transfer",
-        "Sales",
-        "Purchase",
-        "Contra",
-      ],
+      ["Journal", "Payment", "Receipt", "Stock Transfer", "Sales", "Purchase", "Contra"],
       {
         required_error: "Voucher type is required",
       },
@@ -243,9 +226,56 @@ interface OffloadDetail extends OffloadListItem {
   }>;
 }
 
-type DaybookRow =
-  | { _type: "voucher"; data: Voucher }
-  | { _type: "offload"; data: OffloadListItem };
+type DaybookRow = { _type: "voucher"; data: Voucher } | { _type: "offload"; data: OffloadListItem };
+
+interface TransactionDateGroup {
+  date: string;
+  rows: DaybookRow[];
+}
+
+function getTransactionDisplayType(type: string): string {
+  switch (type) {
+    case "Sales":
+      return "Sale";
+    case "POS":
+      return "Sale";
+    case "Payment":
+      return "Payment";
+    case "Receipt":
+      return "Money Received";
+    case "Purchase":
+      return "Purchase";
+    case "Stock Transfer":
+      return "Stock Transfer";
+    case "StockTransfer":
+      return "Stock Transfer";
+    case "Offload":
+      return "Shipment Received";
+    case "Production":
+      return "Production";
+    case "Consumption":
+      return "Consumption";
+    case "Mixed":
+      return "Stock Adjustment";
+    case "Journal":
+      return "Journal Entry";
+    case "Contra":
+      return "Account Transfer";
+    case "Credit Note":
+      return "Credit Note";
+    case "Debit Note":
+      return "Debit Note";
+    default:
+      return type;
+  }
+}
+
+function getDateGroupLabel(dateStr: string): string {
+  const date = parseISO(dateStr);
+  if (isToday(date)) return `TODAY — ${format(date, "d MMMM yyyy").toUpperCase()}`;
+  if (isYesterday(date)) return `YESTERDAY — ${format(date, "d MMMM yyyy").toUpperCase()}`;
+  return `${format(date, "EEEE").toUpperCase()} — ${format(date, "d MMMM yyyy").toUpperCase()}`;
+}
 
 interface VoucherEntry {
   id: number;
@@ -290,7 +320,10 @@ interface ViewVoucherEntry {
 // Account Combobox Component
 function focusDaybookEditById(id: string) {
   const el = document.querySelector<HTMLElement>(`[data-testid="${id}"]`);
-  if (el) { el.focus(); el.scrollIntoView({ block: "nearest" }); }
+  if (el) {
+    el.focus();
+    el.scrollIntoView({ block: "nearest" });
+  }
 }
 
 function AccountCombobox({
@@ -444,10 +477,14 @@ export default function Daybook({ user }: { user?: any } = {}) {
   const { formatDisplayDate } = useDateFormat();
   const { formatAmount } = useCurrencyContext();
   const [, navigate] = useLocation();
-  const { data: myErpPages } = useQuery<{ hiddenErpCostFields?: string[] }>({ queryKey: ["/api/my-erp-pages"] });
+  const { data: myErpPages } = useQuery<{ hiddenErpCostFields?: string[] }>({
+    queryKey: ["/api/my-erp-pages"],
+  });
   const hiddenErpCosts = myErpPages?.hiddenErpCostFields ?? [];
   const hideAmounts = hiddenErpCosts.includes("daybook_amounts");
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilterValue>(getDefaultPeriodValue("today"));
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilterValue>(
+    getDefaultPeriodValue("today"),
+  );
   const [filters, setFilters] = useState({
     voucherType: "all",
     searchQuery: "",
@@ -498,13 +535,10 @@ export default function Daybook({ user }: { user?: any } = {}) {
   const [purchaseOrderData, setPurchaseOrderData] = useState<any>(null);
 
   // Fetch voucher entries when viewing (includes account names and stock items)
-  const { data: viewVoucherEntriesRaw, isLoading: viewEntriesLoading } =
-    useQuery<any>({
-      queryKey: selectedVoucher
-        ? [`/api/vouchers/${selectedVoucher.id}/view-entries`]
-        : [],
-      enabled: !!selectedVoucher && viewDialogOpen,
-    });
+  const { data: viewVoucherEntriesRaw, isLoading: viewEntriesLoading } = useQuery<any>({
+    queryKey: selectedVoucher ? [`/api/vouchers/${selectedVoucher.id}/view-entries`] : [],
+    enabled: !!selectedVoucher && viewDialogOpen,
+  });
 
   // Handle the response which can be either array (most types) or object with entries/purchaseOrder (Purchase type)
   const viewVoucherEntries: ViewVoucherEntry[] = useMemo(() => {
@@ -522,10 +556,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
   useEffect(() => {
     if (!viewVoucherEntriesRaw) {
       setPurchaseOrderData(null);
-    } else if (
-      !Array.isArray(viewVoucherEntriesRaw) &&
-      viewVoucherEntriesRaw.purchaseOrder
-    ) {
+    } else if (!Array.isArray(viewVoucherEntriesRaw) && viewVoucherEntriesRaw.purchaseOrder) {
       setPurchaseOrderData(viewVoucherEntriesRaw.purchaseOrder);
     } else {
       setPurchaseOrderData(null);
@@ -538,10 +569,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
     if (!selectedVoucher) return null;
 
     // For Sales and POS vouchers, find the cash entry (debit > 0)
-    if (
-      selectedVoucher.voucherType === "Sales" ||
-      selectedVoucher.voucherType === "POS"
-    ) {
+    if (selectedVoucher.voucherType === "Sales" || selectedVoucher.voucherType === "POS") {
       const ledgerEntries = viewVoucherEntries.filter(
         (e: ViewVoucherEntry) => !e.isStockItem && !e.stockItemId,
       );
@@ -592,10 +620,9 @@ export default function Daybook({ user }: { user?: any } = {}) {
         return;
       }
       try {
-        const res = await fetch(
-          `/api/accounts/ledger/${cashAccountId}/balance`,
-          { credentials: "include" },
-        );
+        const res = await fetch(`/api/accounts/ledger/${cashAccountId}/balance`, {
+          credentials: "include",
+        });
         if (res.ok) {
           const data = await res.json();
           setCashAccountBalance(data.balance?.toString() || "0");
@@ -650,7 +677,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
           } catch {
             // ignore individual failures
           }
-        })
+        }),
       );
       setEntryBalances(results);
     };
@@ -679,16 +706,21 @@ export default function Daybook({ user }: { user?: any } = {}) {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      const isTyping = tag === "input" || tag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
+      const isTyping =
+        tag === "input" || tag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
 
       if (e.key === "ArrowDown" && !isTyping) {
         e.preventDefault();
-        setSelectedDialogRow(prev => (prev === null ? 0 : Math.min(prev + 1, salesItems.length - 1)));
+        setSelectedDialogRow((prev) =>
+          prev === null ? 0 : Math.min(prev + 1, salesItems.length - 1),
+        );
         return;
       }
       if (e.key === "ArrowUp" && !isTyping) {
         e.preventDefault();
-        setSelectedDialogRow(prev => (prev === null ? salesItems.length - 1 : Math.max(prev - 1, 0)));
+        setSelectedDialogRow((prev) =>
+          prev === null ? salesItems.length - 1 : Math.max(prev - 1, 0),
+        );
         return;
       }
       if (e.altKey && (e.key === "s" || e.key === "S" || e.key === "ß")) {
@@ -708,12 +740,8 @@ export default function Daybook({ user }: { user?: any } = {}) {
   }, [viewDialogOpen, selectedVoucher, viewVoucherEntries, navigate, selectedDialogRow]);
 
   // Fetch voucher entries when editing
-  const { data: voucherEntries = [], isLoading: entriesLoading } = useQuery<
-    VoucherEntry[]
-  >({
-    queryKey: voucherToEdit
-      ? [`/api/vouchers/${voucherToEdit.id}/entries`]
-      : [],
+  const { data: voucherEntries = [], isLoading: entriesLoading } = useQuery<VoucherEntry[]>({
+    queryKey: voucherToEdit ? [`/api/vouchers/${voucherToEdit.id}/entries`] : [],
     enabled: !!voucherToEdit && editDialogOpen,
   });
 
@@ -740,12 +768,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
 
   // Populate form with entries when they're loaded (only once per voucher)
   useEffect(() => {
-    if (
-      voucherToEdit &&
-      voucherEntries.length > 0 &&
-      !entriesLoading &&
-      !editFormInitialized
-    ) {
+    if (voucherToEdit && voucherEntries.length > 0 && !entriesLoading && !editFormInitialized) {
       editForm.reset({
         voucherType: voucherToEdit.voucherType as any,
         voucherDate: voucherToEdit.voucherDate,
@@ -753,11 +776,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
         optional: voucherToEdit.optional,
         entries: voucherEntries.map((entry) => ({
           accountType: entry.accountType as
-            | "ledger"
-            | "bank"
-            | "supplier"
-            | "employee"
-            | "fixedAsset",
+            "ledger" | "bank" | "supplier" | "employee" | "fixedAsset",
           accountId: entry.accountId,
           accountName: entry.accountName,
           debitAmount: entry.debitAmount || "0",
@@ -767,27 +786,14 @@ export default function Daybook({ user }: { user?: any } = {}) {
       });
       setEditFormInitialized(true);
     }
-  }, [
-    voucherToEdit,
-    voucherEntries,
-    entriesLoading,
-    editFormInitialized,
-    editForm,
-  ]);
+  }, [voucherToEdit, voucherEntries, entriesLoading, editFormInitialized, editForm]);
 
   // State to cache first account names for Payment/Receipt/Journal vouchers
-  const [accountNameCache, setAccountNameCache] = useState<
-    Record<number, string>
-  >({});
+  const [accountNameCache, setAccountNameCache] = useState<Record<number, string>>({});
 
   // Fetch all vouchers with date filtering
   const { data: vouchers = [], isLoading } = useQuery<Voucher[]>({
-    queryKey: [
-      "/api/vouchers",
-      selectedCompany?.id,
-      periodFilter.fromDate,
-      periodFilter.toDate,
-    ],
+    queryKey: ["/api/vouchers", selectedCompany?.id, periodFilter.fromDate, periodFilter.toDate],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (periodFilter.fromDate) params.append("startDate", periodFilter.fromDate);
@@ -816,14 +822,11 @@ export default function Daybook({ user }: { user?: any } = {}) {
     enabled: !!selectedCompany,
   });
 
-
   // Fetch account names for Payment/Receipt/Journal vouchers
   useEffect(() => {
     const paymentVouchers = vouchers.filter(
       (v) =>
-        v.voucherType === "Payment" ||
-        v.voucherType === "Receipt" ||
-        v.voucherType === "Journal",
+        v.voucherType === "Payment" || v.voucherType === "Receipt" || v.voucherType === "Journal",
     );
 
     const fetchAccountNames = async () => {
@@ -831,12 +834,9 @@ export default function Daybook({ user }: { user?: any } = {}) {
       for (const voucher of paymentVouchers) {
         if (!(voucher.id in newCache)) {
           try {
-            const res = await fetch(
-              `/api/vouchers/${voucher.id}/view-entries`,
-              {
-                credentials: "include",
-              },
-            );
+            const res = await fetch(`/api/vouchers/${voucher.id}/view-entries`, {
+              credentials: "include",
+            });
             if (res.ok) {
               const entries = await res.json();
               if (entries.length > 0) {
@@ -888,10 +888,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
     return vouchers
       .filter((voucher) => {
         // Voucher type filter
-        if (
-          filters.voucherType !== "all" &&
-          voucher.voucherType !== filters.voucherType
-        ) {
+        if (filters.voucherType !== "all" && voucher.voucherType !== filters.voucherType) {
           return false;
         }
 
@@ -915,9 +912,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
         ];
         if (
           voucher.description &&
-          chargePatterns.some((pattern) =>
-            voucher.description!.startsWith(pattern),
-          )
+          chargePatterns.some((pattern) => voucher.description!.startsWith(pattern))
         ) {
           return false;
         }
@@ -927,8 +922,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
       .sort((a, b) => {
         // Sort by date, then by voucher type, then by voucher number
         const dateCompare = a.voucherDate.localeCompare(b.voucherDate);
-        if (dateCompare !== 0)
-          return filters.sortOrder === "desc" ? -dateCompare : dateCompare;
+        if (dateCompare !== 0) return filters.sortOrder === "desc" ? -dateCompare : dateCompare;
         const typeCompare = a.voucherType.localeCompare(b.voucherType);
         if (typeCompare !== 0) return typeCompare;
         return a.voucherNumber.localeCompare(b.voucherNumber);
@@ -970,6 +964,37 @@ export default function Daybook({ user }: { user?: any } = {}) {
     return allRows.filter((row) => !hiddenRowIds.has(rowId(row)));
   }, [allRows, hiddenRowIds, showHidden, rowId]);
 
+  // Summary counts — calculated from allRows (before hidden filtering)
+  const summaryCounts = useMemo(() => {
+    const total = allRows.length;
+    const sales = allRows.filter(
+      (r) => r._type === "voucher" && ["Sales", "POS"].includes((r.data as Voucher).voucherType),
+    ).length;
+    const payments = allRows.filter(
+      (r) =>
+        r._type === "voucher" && ["Payment", "Receipt"].includes((r.data as Voucher).voucherType),
+    ).length;
+    const stock = allRows.filter((r) => {
+      if (r._type === "offload") return true;
+      return ["Stock Transfer", "StockTransfer", "Production", "Consumption", "Mixed"].includes(
+        (r.data as Voucher).voucherType,
+      );
+    }).length;
+    return { total, sales, payments, stock };
+  }, [allRows]);
+
+  // Group visibleRows by date (preserves existing sort order)
+  const groupedRows = useMemo((): TransactionDateGroup[] => {
+    const groups = new Map<string, DaybookRow[]>();
+    for (const row of visibleRows) {
+      const date =
+        row._type === "voucher" ? row.data.voucherDate : row.data.offloadedAt.slice(0, 10);
+      if (!groups.has(date)) groups.set(date, []);
+      groups.get(date)!.push(row);
+    }
+    return Array.from(groups.entries()).map(([date, rows]) => ({ date, rows }));
+  }, [visibleRows]);
+
   // Check if user can edit a voucher based on role and date
   const canEdit = (voucher: Voucher): boolean => {
     if (!user) return false;
@@ -994,22 +1019,14 @@ export default function Daybook({ user }: { user?: any } = {}) {
 
   // Edit voucher mutation
   const editMutation = useMutation({
-    mutationFn: async ({
-      id,
-      updates,
-    }: {
-      id: number;
-      updates: EditVoucherForm;
-    }) => {
+    mutationFn: async ({ id, updates }: { id: number; updates: EditVoucherForm }) => {
       // Transform entries to match API format
       const transformedEntries = updates.entries.map((entry) => ({
-        ledgerAccountId:
-          entry.accountType === "ledger" ? entry.accountId : null,
+        ledgerAccountId: entry.accountType === "ledger" ? entry.accountId : null,
         bankAccountId: entry.accountType === "bank" ? entry.accountId : null,
         supplierId: entry.accountType === "supplier" ? entry.accountId : null,
         employeeId: entry.accountType === "employee" ? entry.accountId : null,
-        fixedAssetId:
-          entry.accountType === "fixedAsset" ? entry.accountId : null,
+        fixedAssetId: entry.accountType === "fixedAsset" ? entry.accountId : null,
         debitAmount: entry.debitAmount,
         creditAmount: entry.creditAmount,
         narration: entry.narration || null,
@@ -1207,8 +1224,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
     if (filteredVouchers.length === 0) {
       toast({
         title: "No data to export",
-        description:
-          "There are no vouchers to export based on current filters.",
+        description: "There are no vouchers to export based on current filters.",
         variant: "destructive",
       });
       return;
@@ -1242,8 +1258,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
     if (filteredVouchers.length === 0) {
       toast({
         title: "No data to export",
-        description:
-          "There are no vouchers to export based on current filters.",
+        description: "There are no vouchers to export based on current filters.",
         variant: "destructive",
       });
       return;
@@ -1277,9 +1292,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
 
           if (res.ok) {
             const response = await res.json();
-            const entries = Array.isArray(response)
-              ? response
-              : response.entries || [];
+            const entries = Array.isArray(response) ? response : response.entries || [];
 
             if (entries.length === 0) {
               // Voucher with no entries - still add a row
@@ -1331,8 +1344,10 @@ export default function Daybook({ user }: { user?: any } = {}) {
                   Optional: voucher.optional ? "Yes" : "No",
                   "Account Name": accountName,
                   "Account Type": accountType,
-                  "Item Code": (entry.isStockItem || entry.stockItemId) ? (entry.stockItemCode || "") : "",
-                  "Item Name": (entry.isStockItem || entry.stockItemId) ? (entry.stockItemName || "") : "",
+                  "Item Code":
+                    entry.isStockItem || entry.stockItemId ? entry.stockItemCode || "" : "",
+                  "Item Name":
+                    entry.isStockItem || entry.stockItemId ? entry.stockItemName || "" : "",
                   Debit:
                     entry.debitAmount && parseFloat(entry.debitAmount) > 0
                       ? formatAmount(entry.debitAmount)
@@ -1347,10 +1362,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
             }
           }
         } catch (error) {
-          console.error(
-            `Error fetching entries for voucher ${voucher.id}:`,
-            error,
-          );
+          console.error(`Error fetching entries for voucher ${voucher.id}:`, error);
         }
       }
 
@@ -1456,7 +1468,6 @@ export default function Daybook({ user }: { user?: any } = {}) {
     requestAnimationFrame(() => {
       window.scrollTo({ top: scrollY, behavior: "instant" as ScrollBehavior });
     });
-   
   }, []);
 
   // ── ERP Daybook persistence: save to sessionStorage on every state change ────
@@ -1485,7 +1496,6 @@ export default function Daybook({ user }: { user?: any } = {}) {
       // When staying in the voucher flow, state is already up-to-date in
       // sessionStorage via the save-on-change effect and the scroll handler.
     };
-   
   }, []);
 
   // ── Track window scroll into ref + patch sessionStorage directly ─────────────
@@ -1532,12 +1542,10 @@ export default function Daybook({ user }: { user?: any } = {}) {
           ? visibleRows.findIndex((r) => rowId(r) === selectedRowId)
           : -1;
         if (e.key === "ArrowDown") {
-          const nextIndex =
-            currentIndex < visibleRows.length - 1 ? currentIndex + 1 : 0;
+          const nextIndex = currentIndex < visibleRows.length - 1 ? currentIndex + 1 : 0;
           setSelectedRowId(rowId(visibleRows[nextIndex]));
         } else {
-          const prevIndex =
-            currentIndex > 0 ? currentIndex - 1 : visibleRows.length - 1;
+          const prevIndex = currentIndex > 0 ? currentIndex - 1 : visibleRows.length - 1;
           setSelectedRowId(rowId(visibleRows[prevIndex]));
         }
         return;
@@ -1551,12 +1559,9 @@ export default function Daybook({ user }: { user?: any } = {}) {
           !hiddenRowIds.has(selectedRowId)
         ) {
           const ridToHide = selectedRowId;
-          const nextVisible = visibleRows.filter(
-            (r) => rowId(r) !== ridToHide,
-          );
+          const nextVisible = visibleRows.filter((r) => rowId(r) !== ridToHide);
           const idx = visibleRows.findIndex((r) => rowId(r) === ridToHide);
-          const nextSel =
-            nextVisible[idx] ?? nextVisible[idx - 1] ?? null;
+          const nextSel = nextVisible[idx] ?? nextVisible[idx - 1] ?? null;
           setHiddenRowIds((prev) => {
             const next = new Set(prev);
             next.add(ridToHide);
@@ -1590,6 +1595,18 @@ export default function Daybook({ user }: { user?: any } = {}) {
         }
         return;
       }
+
+      if (e.key === "Enter") {
+        if (!selectedRowId) return;
+        const row = visibleRows.find((r) => rowId(r) === selectedRowId);
+        if (!row) return;
+        if (row._type === "offload") {
+          navigate(`/offloads/${row.data.id}`);
+        } else {
+          handleView(row.data as Voucher);
+        }
+        return;
+      }
     };
 
     window.addEventListener("keydown", handler);
@@ -1606,20 +1623,32 @@ export default function Daybook({ user }: { user?: any } = {}) {
   };
 
   const hasActiveFilters =
-    periodFilter.preset !== "today" ||
-    filters.voucherType !== "all" ||
-    filters.searchQuery;
+    periodFilter.preset !== "today" || filters.voucherType !== "all" || filters.searchQuery;
 
-  const getVoucherTypeBadge = (type: string): { variant: "default" | "secondary" | "destructive" | "outline"; className?: string } => {
+  const getVoucherTypeBadge = (
+    type: string,
+  ): { variant: "default" | "secondary" | "destructive" | "outline"; className?: string } => {
     switch (type) {
-      case "Sales":    return { variant: "default" };
-      case "Purchase": return { variant: "secondary" };
-      case "Payment":  return { variant: "destructive" };
-      case "Receipt":  return { variant: "default" };
-      case "Journal":  return { variant: "outline" };
-      case "Contra":   return { variant: "secondary" };
-      case "Stock Transfer": return { variant: "outline", className: "bg-green-500 text-white border-green-500 dark:bg-green-600 dark:border-green-600" };
-      default:         return { variant: "outline" };
+      case "Sales":
+        return { variant: "default" };
+      case "Purchase":
+        return { variant: "secondary" };
+      case "Payment":
+        return { variant: "destructive" };
+      case "Receipt":
+        return { variant: "default" };
+      case "Journal":
+        return { variant: "outline" };
+      case "Contra":
+        return { variant: "secondary" };
+      case "Stock Transfer":
+        return {
+          variant: "outline",
+          className:
+            "bg-green-500 text-white border-green-500 dark:bg-green-600 dark:border-green-600",
+        };
+      default:
+        return { variant: "outline" };
     }
   };
 
@@ -1628,14 +1657,14 @@ export default function Daybook({ user }: { user?: any } = {}) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <Book className="w-6 h-6 md:w-8 md:h-8" />
-            Daybook
+            <History className="w-6 h-6 md:w-8 md:h-8" />
+            Transaction History
           </h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            View all accounting transactions chronologically
+            Review every sale, payment, purchase and stock movement.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -1650,16 +1679,10 @@ export default function Daybook({ user }: { user?: any } = {}) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={handleExportToExcel}
-                data-testid="export-simple"
-              >
+              <DropdownMenuItem onClick={handleExportToExcel} data-testid="export-simple">
                 Summary Export
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={handleExportDetailedToExcel}
-                data-testid="export-detailed"
-              >
+              <DropdownMenuItem onClick={handleExportDetailedToExcel} data-testid="export-detailed">
                 Detailed Export (with entries)
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -1670,36 +1693,16 @@ export default function Daybook({ user }: { user?: any } = {}) {
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
-            New Voucher
+            New Transaction
           </Button>
         </div>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              <CardTitle>Filters</CardTitle>
-            </div>
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                data-testid="button-clear-filters"
-                className="gap-1"
-              >
-                <X className="w-4 h-4" />
-                Clear Filters
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="space-y-2">
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1.5">
               <Label>Period</Label>
               <PeriodFilter
                 value={periodFilter}
@@ -1707,81 +1710,109 @@ export default function Daybook({ user }: { user?: any } = {}) {
                 data-testid="period-filter"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="voucher-type">Voucher Type</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="voucher-type">Transaction Type</Label>
               <Select
                 value={filters.voucherType}
-                onValueChange={(value) =>
-                  setFilters({ ...filters, voucherType: value })
-                }
+                onValueChange={(value) => setFilters({ ...filters, voucherType: value })}
               >
                 <SelectTrigger
                   id="voucher-type"
                   data-testid="select-voucher-type"
+                  className="w-[180px]"
                 >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="all">All Transactions</SelectItem>
                   <SelectItem value="Sales">Sales</SelectItem>
-                  <SelectItem value="Purchase">Purchase</SelectItem>
-                  <SelectItem value="Payment">Payment</SelectItem>
-                  <SelectItem value="Receipt">Receipt</SelectItem>
-                  <SelectItem value="Journal">Journal</SelectItem>
-                  <SelectItem value="Contra">Contra</SelectItem>
-                  <SelectItem value="Offload">Offload</SelectItem>
+                  <SelectItem value="Payment">Payments</SelectItem>
+                  <SelectItem value="Receipt">Money Received</SelectItem>
+                  <SelectItem value="Purchase">Purchases</SelectItem>
+                  <SelectItem value="Stock Transfer">Stock Transfers</SelectItem>
+                  <SelectItem value="Offload">Shipment Receiving</SelectItem>
+                  <SelectItem value="Production">Production</SelectItem>
+                  <SelectItem value="Consumption">Consumption</SelectItem>
+                  <SelectItem value="Journal">Journal Entries</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2 flex-1 min-w-0 w-full md:min-w-[200px] md:w-auto">
+            <div className="space-y-1.5 flex-1 min-w-0 w-full md:min-w-[220px] md:w-auto">
               <Label htmlFor="search">Search</Label>
               <Input
                 id="search"
-                placeholder="Voucher # or description..."
+                placeholder="Search transaction number, description or container..."
                 value={filters.searchQuery}
-                onChange={(e) =>
-                  setFilters({ ...filters, searchQuery: e.target.value })
-                }
+                onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
                 data-testid="input-search"
               />
             </div>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                data-testid="button-clear-filters"
+                className="gap-1 self-end"
+              >
+                <X className="w-4 h-4" />
+                Clear Filters
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Vouchers Table */}
+      {/* Summary Counts */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Transactions", value: summaryCounts.total },
+          { label: "Sales", value: summaryCounts.sales },
+          { label: "Payments", value: summaryCounts.payments },
+          { label: "Stock & Operations", value: summaryCounts.stock },
+        ].map(({ label, value }) => (
+          <Card key={label} className="py-3">
+            <CardContent className="px-4 py-0">
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="text-2xl font-bold">{value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Transaction List */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <CardTitle>
-              Transactions
-              {allRows.length > 0 && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({visibleRows.length}
-                  {hiddenRowIds.size > 0 && !showHidden ? ` of ${allRows.length}` : ""}{" "}
-                  {visibleRows.length === 1 ? "entry" : "entries"})
-                </span>
-              )}
-            </CardTitle>
-            {hiddenRowIds.size > 0 && (
-              <Button
-                variant={showHidden ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => setShowHidden((v) => !v)}
-                className="gap-1"
-                data-testid="button-toggle-show-hidden"
-              >
-                <EyeOff className="w-4 h-4" />
-                {showHidden ? "Hide hidden rows" : "Show hidden"}
-                <Badge className="ml-1">{hiddenRowIds.size}</Badge>
-              </Button>
-            )}
-          </div>
-          <CardDescription>
-            All accounting vouchers and transactions
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
+          {/* Hidden-row banner */}
+          {hiddenRowIds.size > 0 && !showHidden && (
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-2 rounded-md border border-muted bg-muted/40 px-4 py-3 text-sm">
+              <span className="flex-1 text-muted-foreground">
+                {hiddenRowIds.size}{" "}
+                {hiddenRowIds.size === 1 ? "transaction is" : "transactions are"} hidden from your
+                view.{" "}
+                <span className="text-xs">Hidden transactions are not deleted or cancelled.</span>
+              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowHidden(true)}
+                  data-testid="button-show-hidden"
+                >
+                  Show Hidden
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setHiddenRowIds(new Set())}
+                  data-testid="button-restore-all"
+                >
+                  Restore All
+                </Button>
+              </div>
+            </div>
+          )}
+
           {isLoading || offloadsLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
@@ -1792,9 +1823,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
             <div className="text-center py-12 text-muted-foreground">
               {hasActiveFilters ? (
                 <div>
-                  <p className="mb-2">
-                    No transactions found matching your filters.
-                  </p>
+                  <p className="mb-2">No transactions match your filters.</p>
                   <Button
                     variant="outline"
                     onClick={clearFilters}
@@ -1804,355 +1833,490 @@ export default function Daybook({ user }: { user?: any } = {}) {
                   </Button>
                 </div>
               ) : (
-                <p>
-                  No transactions found. Create your first voucher to get
-                  started.
-                </p>
+                <p>No transactions found for this period.</p>
               )}
             </div>
           ) : (
             <>
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-3">
-              {visibleRows.map((row) => {
-                if (row._type === "offload") {
-                  const o = row.data;
-                  const rid = `offload-${o.id}`;
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
+                {visibleRows.map((row) => {
+                  if (row._type === "offload") {
+                    const o = row.data;
+                    const rid = `offload-${o.id}`;
+                    return (
+                      <div
+                        key={rid}
+                        data-row-id={rid}
+                        className={cn(
+                          "border rounded-md p-3 space-y-2 cursor-pointer transition-colors",
+                          selectedRowId === rid && "bg-accent/30 border-accent",
+                          hiddenRowIds.has(rid) && showHidden && "opacity-50",
+                        )}
+                        onClick={() => {
+                          setSelectedRowId(rid);
+                          navigate(`/offloads/${o.id}`);
+                        }}
+                        data-testid={`card-offload-${o.id}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30 mb-1">
+                              <Package className="w-3 h-3 mr-1" />
+                              Shipment Received
+                            </Badge>
+                            <p className="text-xs text-muted-foreground font-mono">
+                              {o.containerNumber}
+                            </p>
+                          </div>
+                          {!hideAmounts && (
+                            <span className="font-mono font-medium text-sm whitespace-nowrap">
+                              {formatAmount(Number(o.itemsTotal))}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatDisplayDate(parseISO(o.offloadedAt.slice(0, 10)))}
+                          {o.locationName && <span className="ml-2">· {o.locationName}</span>}
+                        </div>
+                        <div
+                          className="flex items-center gap-1 pt-1 border-t"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/offloads/${o.id}`)}
+                            data-testid={`button-view-offload-${o.id}`}
+                            className="gap-1 text-xs"
+                          >
+                            <Eye className="w-3 h-3" />
+                            View
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => navigate(`/containers/${o.containerId}`)}
+                              >
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                View Container
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    );
+                  }
+                  const voucher = row.data as Voucher;
+                  const vid = `voucher-${voucher.id}`;
+                  const isVoucherHidden = hiddenRowIds.has(vid);
+                  const displayDesc =
+                    voucher.description ||
+                    (voucher.voucherType === "Payment" ||
+                    voucher.voucherType === "Receipt" ||
+                    voucher.voucherType === "Journal"
+                      ? `${getTransactionDisplayType(voucher.voucherType)}${accountNameCache[voucher.id] ? ` — ${accountNameCache[voucher.id]}` : ""}`
+                      : getTransactionDisplayType(voucher.voucherType));
                   return (
                     <div
-                      key={rid}
-                      data-row-id={rid}
+                      key={vid}
+                      data-row-id={vid}
                       className={cn(
                         "border rounded-md p-3 space-y-2 cursor-pointer transition-colors",
-                        selectedRowId === rid && "bg-accent/30 border-accent",
-                        hiddenRowIds.has(rid) && showHidden && "opacity-50",
+                        selectedRowId === vid && "bg-accent/30 border-accent",
+                        isVoucherHidden && showHidden && "opacity-50",
                       )}
-                      onClick={() => setSelectedRowId(rid)}
-                      data-testid={`card-offload-${o.id}`}
+                      onClick={() => {
+                        setSelectedRowId(vid);
+                        handleView(voucher);
+                      }}
+                      data-testid={`card-voucher-${voucher.id}`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30">
-                          <Package className="w-3 h-3 mr-1" />
-                          Offload
-                        </Badge>
-                        <span className="font-mono font-medium text-sm whitespace-nowrap">
-                          {formatAmount(Number(o.itemsTotal))}
-                        </span>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {formatDisplayDate(parseISO(o.offloadedAt.slice(0, 10)))}
-                      </div>
-                      <p className="text-sm font-medium">{o.containerNumber}</p>
-                      {o.locationName && <p className="text-xs text-muted-foreground">{o.locationName}</p>}
-                      <div className="flex items-center gap-1 pt-1 border-t">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/offloads/${o.id}`)}
-                          data-testid={`button-view-offload-${o.id}`}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/containers/${o.containerId}`)}
-                          data-testid={`button-edit-offload-${o.id}`}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                }
-                const voucher = row.data as Voucher;
-                const vid = `voucher-${voucher.id}`;
-                const isVoucherHidden = hiddenRowIds.has(vid);
-                return (
-                  <div
-                    key={vid}
-                    data-row-id={vid}
-                    className={cn(
-                      "border rounded-md p-3 space-y-2 cursor-pointer transition-colors",
-                      selectedRowId === vid && "bg-accent/30 border-accent",
-                      isVoucherHidden && showHidden && "opacity-50",
-                    )}
-                    onClick={() => setSelectedRowId(vid)}
-                    data-testid={`card-voucher-${voucher.id}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge
-                          {...getVoucherTypeBadge(voucher.voucherType)}
-                          data-testid={`badge-type-${voucher.id}`}
-                        >
-                          {voucher.voucherType}
-                        </Badge>
-                        {voucher.optional && (
+                        <div>
                           <Badge
-                            variant="outline"
-                            data-testid={`badge-optional-${voucher.id}`}
-                            className="text-xs"
+                            {...getVoucherTypeBadge(voucher.voucherType)}
+                            data-testid={`badge-type-${voucher.id}`}
+                            className="mb-1"
                           >
-                            Optional
+                            {getTransactionDisplayType(voucher.voucherType)}
                           </Badge>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {voucher.voucherNumber}
+                          </p>
+                        </div>
+                        {!hideAmounts && (
+                          <span className="font-mono font-medium text-sm whitespace-nowrap">
+                            {formatAmount(voucher.totalAmount)}
+                          </span>
                         )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatDisplayDate(parseISO(voucher.voucherDate))}
+                        <span className="ml-2">
+                          {format(new Date(voucher.createdAt), "hh:mm a")}
+                        </span>
                         {isVoucherHidden && (
-                          <Badge variant="outline" className="text-xs text-muted-foreground">
+                          <Badge variant="outline" className="ml-2 text-xs">
                             Hidden
                           </Badge>
                         )}
+                        {voucher.optional && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Optional
+                          </Badge>
+                        )}
                       </div>
-                      <span className="font-mono font-medium text-sm whitespace-nowrap">
-                        {formatAmount(voucher.totalAmount)}
-                      </span>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {formatDisplayDate(parseISO(voucher.voucherDate))}
-                      <span className="ml-2 text-xs">{format(new Date(voucher.createdAt), "hh:mm a")}</span>
-                    </div>
-                    <p className="text-sm truncate">
-                      {voucher.description ||
-                        (voucher.voucherType === "Payment" ||
-                        voucher.voucherType === "Receipt" ||
-                        voucher.voucherType === "Journal"
-                          ? `${voucher.voucherType}${accountNameCache[voucher.id] ? ` (${accountNameCache[voucher.id]})` : ""}`
-                          : "-")}
-                    </p>
-                    <div className="flex items-center gap-1 pt-1 border-t">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => { e.stopPropagation(); handleView(voucher); }}
-                        data-testid={`button-view-${voucher.id}`}
+                      <p className="text-sm truncate text-muted-foreground">{displayDesc}</p>
+                      <div
+                        className="flex items-center gap-1 pt-1 border-t"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {canEdit(voucher) && (
                         <Button
                           variant="ghost"
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); handleEdit(voucher); }}
-                          data-testid={`button-edit-${voucher.id}`}
+                          size="sm"
+                          onClick={() => handleView(voucher)}
+                          data-testid={`button-view-${voucher.id}`}
+                          className="gap-1 text-xs"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Eye className="w-3 h-3" />
+                          View
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isVoucherHidden) {
-                            setHiddenRowIds((prev) => { const next = new Set(prev); next.delete(vid); return next; });
-                          } else {
-                            setHiddenRowIds((prev) => { const next = new Set(prev); next.add(vid); return next; });
-                            if (selectedRowId === vid) setSelectedRowId(null);
-                          }
-                        }}
-                        data-testid={isVoucherHidden ? `button-unhide-${voucher.id}` : `button-hide-${voucher.id}`}
-                        title={isVoucherHidden ? "Unhide row" : "Hide row"}
-                      >
-                        {isVoucherHidden ? <Eye className="w-4 h-4 text-muted-foreground" /> : <EyeOff className="w-4 h-4 text-muted-foreground" />}
-                      </Button>
-                      {canDelete() && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(voucher); }}
-                          data-testid={`button-delete-${voucher.id}`}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canEdit(voucher) && (
+                              <DropdownMenuItem
+                                onClick={() => handleEdit(voucher)}
+                                data-testid={`button-edit-${voucher.id}`}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
+                            {isVoucherHidden ? (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setHiddenRowIds((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(vid);
+                                    return next;
+                                  })
+                                }
+                                data-testid={`button-unhide-${voucher.id}`}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Show in my view
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setHiddenRowIds((prev) => {
+                                    const next = new Set(prev);
+                                    next.add(vid);
+                                    return next;
+                                  });
+                                  if (selectedRowId === vid) setSelectedRowId(null);
+                                }}
+                                data-testid={`button-hide-${voucher.id}`}
+                              >
+                                <EyeOff className="w-4 h-4 mr-2" />
+                                Hide from my view
+                              </DropdownMenuItem>
+                            )}
+                            {canDelete() && (
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(voucher)}
+                                data-testid={`button-delete-${voucher.id}`}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
 
-            {/* Desktop Table View */}
-            <div className="hidden md:block border rounded-md overflow-x-auto">
-              <Table>
-                <TableHeader className="sticky top-0 z-20 bg-background">
-                  <TableRow>
-                    <TableHead className="sticky left-0 bg-muted z-10">
-                      Date
-                    </TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Description</TableHead>
-                    {!hideAmounts && <TableHead className="text-right">Amount</TableHead>}
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visibleRows.map((row) => {
-                    if (row._type === "offload") {
-                      const o = row.data;
-                      const rid = `offload-${o.id}`;
-                      return (
+              {/* Desktop Table View */}
+              <div className="hidden md:block border rounded-md overflow-x-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 z-20 bg-background">
+                    <TableRow>
+                      <TableHead className="w-[130px]">Date &amp; Time</TableHead>
+                      <TableHead className="w-[180px]">Transaction</TableHead>
+                      <TableHead>Details</TableHead>
+                      {!hideAmounts && (
+                        <TableHead className="text-right w-[120px]">Amount</TableHead>
+                      )}
+                      <TableHead className="text-right w-[80px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {groupedRows.map((group) => (
+                      <>
+                        {/* Date group header */}
                         <TableRow
-                          key={rid}
-                          data-row-id={rid}
-                          data-testid={`row-offload-${o.id}`}
-                          className={cn(
-                            "cursor-pointer",
-                            selectedRowId === rid && "bg-accent/30",
-                          )}
-                          onClick={() => setSelectedRowId(rid)}
+                          key={`group-${group.date}`}
+                          className="bg-muted/50 hover:bg-muted/50 pointer-events-none"
                         >
-                          <TableCell className="font-medium sticky left-0 bg-background z-10">
-                            {formatDisplayDate(parseISO(o.offloadedAt.slice(0, 10)))}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30">
-                              <Package className="w-3 h-3 mr-1" />
-                              Offload
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="max-w-md truncate">
-                            {o.containerNumber}{o.locationName ? ` — ${o.locationName}` : ""}
-                          </TableCell>
-                          {!hideAmounts && <TableCell className="text-right font-mono font-medium">
-                            {formatAmount(Number(o.itemsTotal))}
-                          </TableCell>}
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => navigate(`/offloads/${o.id}`)}
-                                data-testid={`button-view-offload-${o.id}`}
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => navigate(`/containers/${o.containerId}`)}
-                                data-testid={`button-goto-container-${o.id}`}
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </Button>
-                            </div>
+                          <TableCell colSpan={hideAmounts ? 4 : 5} className="py-1.5 px-4">
+                            <span className="text-xs font-semibold tracking-wider text-muted-foreground">
+                              {getDateGroupLabel(group.date)}
+                            </span>
                           </TableCell>
                         </TableRow>
-                      );
-                    }
-                    const voucher = row.data as Voucher;
-                    const dvid = `voucher-${voucher.id}`;
-                    const isDvHidden = hiddenRowIds.has(dvid);
-                    return (
-                      <TableRow
-                        key={dvid}
-                        data-row-id={dvid}
-                        data-testid={`row-voucher-${voucher.id}`}
-                        className={cn(
-                          "cursor-pointer",
-                          selectedRowId === dvid && "bg-accent/30",
-                          isDvHidden && showHidden && "opacity-50",
-                        )}
-                        onClick={() => setSelectedRowId(dvid)}
-                      >
-                        <TableCell className="font-medium sticky left-0 bg-background z-10">
-                          <div className="flex flex-col">
-                            <span>{formatDisplayDate(parseISO(voucher.voucherDate))}</span>
-                            <span className="text-xs text-muted-foreground">{format(new Date(voucher.createdAt), "hh:mm a")}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              {...getVoucherTypeBadge(voucher.voucherType)}
-                              data-testid={`badge-type-${voucher.id}`}
-                            >
-                              {voucher.voucherType}
-                            </Badge>
-                            {voucher.optional && (
-                              <Badge
-                                variant="outline"
-                                data-testid={`badge-optional-${voucher.id}`}
-                                className="text-xs"
+
+                        {group.rows.map((row) => {
+                          if (row._type === "offload") {
+                            const o = row.data;
+                            const rid = `offload-${o.id}`;
+                            return (
+                              <TableRow
+                                key={rid}
+                                data-row-id={rid}
+                                data-testid={`row-offload-${o.id}`}
+                                className={cn(
+                                  "cursor-pointer",
+                                  selectedRowId === rid && "bg-accent/30",
+                                )}
+                                onClick={() => {
+                                  setSelectedRowId(rid);
+                                  navigate(`/offloads/${o.id}`);
+                                }}
                               >
-                                Optional
-                              </Badge>
-                            )}
-                            {isDvHidden && (
-                              <Badge variant="outline" className="text-xs text-muted-foreground">
-                                Hidden
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="max-w-md truncate">
-                          {voucher.description ||
+                                <TableCell className="text-sm">
+                                  <div className="text-xs text-muted-foreground">
+                                    {format(parseISO(o.offloadedAt.slice(0, 10)), "d MMM")}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30 block w-fit mb-1">
+                                    <Package className="w-3 h-3 mr-1 inline" />
+                                    Shipment Received
+                                  </Badge>
+                                  <p className="text-xs text-muted-foreground font-mono">
+                                    {o.containerNumber}
+                                  </p>
+                                </TableCell>
+                                <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                                  {o.locationName || o.containerNumber}
+                                </TableCell>
+                                {!hideAmounts && (
+                                  <TableCell className="text-right font-mono font-medium text-sm">
+                                    {formatAmount(Number(o.itemsTotal))}
+                                  </TableCell>
+                                )}
+                                <TableCell className="text-right">
+                                  <div
+                                    className="flex items-center justify-end gap-1"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => navigate(`/offloads/${o.id}`)}
+                                      data-testid={`button-view-offload-${o.id}`}
+                                      title="View"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                          <MoreHorizontal className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={() => navigate(`/containers/${o.containerId}`)}
+                                        >
+                                          <ExternalLink className="w-4 h-4 mr-2" />
+                                          View Container
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+
+                          const voucher = row.data as Voucher;
+                          const dvid = `voucher-${voucher.id}`;
+                          const isDvHidden = hiddenRowIds.has(dvid);
+                          const isStockType = [
+                            "Stock Transfer",
+                            "StockTransfer",
+                            "Production",
+                            "Consumption",
+                            "Mixed",
+                          ].includes(voucher.voucherType);
+                          const amountDisplay = !hideAmounts
+                            ? isStockType &&
+                              (!voucher.totalAmount ||
+                                parseFloat(String(voucher.totalAmount)) === 0)
+                              ? "—"
+                              : formatAmount(voucher.totalAmount)
+                            : null;
+                          const detailsText =
+                            voucher.description ||
                             (voucher.voucherType === "Payment" ||
                             voucher.voucherType === "Receipt" ||
                             voucher.voucherType === "Journal"
-                              ? `${voucher.voucherType}${accountNameCache[voucher.id] ? ` (${accountNameCache[voucher.id]})` : ""}`
-                              : "-")}
-                        </TableCell>
-                        {!hideAmounts && <TableCell className="text-right font-mono font-medium">
-                          {formatAmount(voucher.totalAmount)}
-                        </TableCell>}
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => { e.stopPropagation(); handleView(voucher); }}
-                              data-testid={`button-view-${voucher.id}`}
-                              title="View detail"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            {canEdit(voucher) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => { e.stopPropagation(); handleEdit(voucher); }}
-                                data-testid={`button-edit-${voucher.id}`}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (isDvHidden) {
-                                  setHiddenRowIds((prev) => { const next = new Set(prev); next.delete(dvid); return next; });
-                                } else {
-                                  setHiddenRowIds((prev) => { const next = new Set(prev); next.add(dvid); return next; });
-                                  if (selectedRowId === dvid) setSelectedRowId(null);
-                                }
+                              ? `${getTransactionDisplayType(voucher.voucherType)}${accountNameCache[voucher.id] ? ` — ${accountNameCache[voucher.id]}` : ""}`
+                              : getTransactionDisplayType(voucher.voucherType));
+                          return (
+                            <TableRow
+                              key={dvid}
+                              data-row-id={dvid}
+                              data-testid={`row-voucher-${voucher.id}`}
+                              className={cn(
+                                "cursor-pointer",
+                                selectedRowId === dvid && "bg-accent/30",
+                                isDvHidden && showHidden && "opacity-50",
+                              )}
+                              onClick={() => {
+                                setSelectedRowId(dvid);
+                                handleView(voucher);
                               }}
-                              data-testid={isDvHidden ? `button-unhide-${voucher.id}` : `button-hide-${voucher.id}`}
-                              title={isDvHidden ? "Unhide row" : "Hide row"}
                             >
-                              {isDvHidden
-                                ? <Eye className="w-4 h-4 text-muted-foreground" />
-                                : <EyeOff className="w-4 h-4 text-muted-foreground" />}
-                            </Button>
-                            {canDelete() && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => { e.stopPropagation(); handleDelete(voucher); }}
-                                data-testid={`button-delete-${voucher.id}`}
-                              >
-                                <Trash2 className="w-4 h-4 text-destructive" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                              <TableCell>
+                                <div className="text-xs text-muted-foreground">
+                                  {format(parseISO(voucher.voucherDate), "d MMM")}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {format(new Date(voucher.createdAt), "hh:mm a")}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  {...getVoucherTypeBadge(voucher.voucherType)}
+                                  data-testid={`badge-type-${voucher.id}`}
+                                  className={cn(
+                                    "block w-fit mb-1",
+                                    (getVoucherTypeBadge(voucher.voucherType) as any).className,
+                                  )}
+                                >
+                                  {getTransactionDisplayType(voucher.voucherType)}
+                                </Badge>
+                                <p className="text-xs text-muted-foreground font-mono">
+                                  {voucher.voucherNumber}
+                                </p>
+                                {isDvHidden && (
+                                  <Badge variant="outline" className="text-xs mt-1">
+                                    Hidden
+                                  </Badge>
+                                )}
+                                {voucher.optional && (
+                                  <Badge variant="outline" className="text-xs mt-1">
+                                    Optional
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                                {detailsText}
+                              </TableCell>
+                              {!hideAmounts && (
+                                <TableCell className="text-right font-mono font-medium text-sm">
+                                  {amountDisplay}
+                                </TableCell>
+                              )}
+                              <TableCell className="text-right">
+                                <div
+                                  className="flex items-center justify-end gap-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleView(voucher)}
+                                    data-testid={`button-view-${voucher.id}`}
+                                    title="View"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                        <MoreHorizontal className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      {canEdit(voucher) && (
+                                        <DropdownMenuItem
+                                          onClick={() => handleEdit(voucher)}
+                                          data-testid={`button-edit-${voucher.id}`}
+                                        >
+                                          <Edit className="w-4 h-4 mr-2" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                      )}
+                                      {isDvHidden ? (
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            setHiddenRowIds((prev) => {
+                                              const next = new Set(prev);
+                                              next.delete(dvid);
+                                              return next;
+                                            })
+                                          }
+                                          data-testid={`button-unhide-${voucher.id}`}
+                                        >
+                                          <Eye className="w-4 h-4 mr-2" />
+                                          Show in my view
+                                        </DropdownMenuItem>
+                                      ) : (
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setHiddenRowIds((prev) => {
+                                              const next = new Set(prev);
+                                              next.add(dvid);
+                                              return next;
+                                            });
+                                            if (selectedRowId === dvid) setSelectedRowId(null);
+                                          }}
+                                          data-testid={`button-hide-${voucher.id}`}
+                                        >
+                                          <EyeOff className="w-4 h-4 mr-2" />
+                                          Hide from my view
+                                        </DropdownMenuItem>
+                                      )}
+                                      {canDelete() && (
+                                        <DropdownMenuItem
+                                          onClick={() => handleDelete(voucher)}
+                                          data-testid={`button-delete-${voucher.id}`}
+                                          className="text-destructive focus:text-destructive"
+                                        >
+                                          <Trash2 className="w-4 h-4 mr-2" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </>
           )}
         </CardContent>
@@ -2177,9 +2341,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                 <div>
                   <p className="text-sm text-muted-foreground">Type</p>
                   <div className="flex gap-2 items-center">
-                    <Badge
-                      {...getVoucherTypeBadge(selectedVoucher.voucherType)}
-                    >
+                    <Badge {...getVoucherTypeBadge(selectedVoucher.voucherType)}>
                       {selectedVoucher.voucherType}
                     </Badge>
                     {selectedVoucher.optional && (
@@ -2192,9 +2354,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
               </div>
               {selectedVoucher.description && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Description
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-1">Description</p>
                   <p className="text-sm">{selectedVoucher.description}</p>
                 </div>
               )}
@@ -2215,24 +2375,18 @@ export default function Daybook({ user }: { user?: any } = {}) {
                   // For Receipt: debit entry is the source (cash/bank account where money goes INTO)
                   const sourceEntry =
                     selectedVoucher.voucherType === "Payment"
-                      ? viewVoucherEntries.find(
-                          (e: any) => parseFloat(e.creditAmount || "0") > 0,
-                        )
-                      : viewVoucherEntries.find(
-                          (e: any) => parseFloat(e.debitAmount || "0") > 0,
-                        );
+                      ? viewVoucherEntries.find((e: any) => parseFloat(e.creditAmount || "0") > 0)
+                      : viewVoucherEntries.find((e: any) => parseFloat(e.debitAmount || "0") > 0);
 
                   // Total = sum of the opposite side entries
                   const totalAmount =
                     selectedVoucher.voucherType === "Payment"
                       ? viewVoucherEntries.reduce(
-                          (sum: number, e: any) =>
-                            sum + parseFloat(e.debitAmount || "0"),
+                          (sum: number, e: any) => sum + parseFloat(e.debitAmount || "0"),
                           0,
                         )
                       : viewVoucherEntries.reduce(
-                          (sum: number, e: any) =>
-                            sum + parseFloat(e.creditAmount || "0"),
+                          (sum: number, e: any) => sum + parseFloat(e.creditAmount || "0"),
                           0,
                         );
 
@@ -2255,9 +2409,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                           </div>
                         </div>
                         <div className="sm:text-right">
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Total Amount
-                          </p>
+                          <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
                           <div className="text-xl md:text-2xl font-bold font-mono">
                             {formatAmount(totalAmount)}
                           </div>
@@ -2276,9 +2428,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : viewVoucherEntries.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No entries found
-                  </p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No entries found</p>
                 ) : selectedVoucher.voucherType === "Sales" ? (
                   // Special rendering for Sales vouchers
                   (() => {
@@ -2307,14 +2457,10 @@ export default function Daybook({ user }: { user?: any } = {}) {
                           <div className="p-3 bg-muted/50 rounded-md mb-4">
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                               <div>
-                                <div className="font-medium">
-                                  {cashEntry.accountName}
-                                </div>
+                                <div className="font-medium">{cashEntry.accountName}</div>
                               </div>
                               <div className="text-right">
-                                <div className="text-sm text-muted-foreground mb-1">
-                                  Balance
-                                </div>
+                                <div className="text-sm text-muted-foreground mb-1">Balance</div>
                                 <div className="font-mono font-bold">
                                   {formatAmount(cashAccountBalance)}
                                 </div>
@@ -2326,80 +2472,111 @@ export default function Daybook({ user }: { user?: any } = {}) {
                         {/* Sales Items Table */}
                         {salesItems.length > 0 && (
                           <div>
-                            <p className="text-xs text-muted-foreground text-right mb-1">Hover or use ↑↓ to select · Alt+S to view item</p>
+                            <p className="text-xs text-muted-foreground text-right mb-1">
+                              Hover or use ↑↓ to select · Alt+S to view item
+                            </p>
                             <div className="border rounded-md">
-                            <Table>
-                              <TableHeader className="sticky top-0 z-10 bg-background">
-                                <TableRow>
-                                  <TableHead>Item Name</TableHead>
-                                  <TableHead className="text-right">Qty</TableHead>
-                                  <TableHead className="text-right">Price</TableHead>
-                                  {canSeeProfitCost && <TableHead className="text-right">Cost</TableHead>}
-                                  <TableHead className="text-right">Total</TableHead>
-                                  {canSeeProfitCost && <TableHead className="text-right">Profit</TableHead>}
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {salesItems.map((item: ViewVoucherEntry, idx: number) => {
-                                  const qty = parseFloat(item.quantity || "0");
-                                  const rate = parseFloat(item.rate || item.sellingPrice || "0");
-                                  const totalAmount = parseFloat(item.totalSales || item.creditAmount || "0");
-                                  const profit = parseFloat(item.profit || "0");
-                                  const isPositiveProfit = profit >= 0;
-                                  return (
-                                    <TableRow
-                                      key={item.id}
-                                      data-dialog-row={idx}
-                                      className={`cursor-pointer ${selectedDialogRow === idx ? "bg-accent" : ""}`}
-                                      onMouseEnter={() => setSelectedDialogRow(idx)}
-                                    >
-                                      <TableCell>
-                                        <div className="font-medium">
-                                          {item.stockItemName || item.accountName}
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="text-right font-mono">
-                                        {formatNumber(qty)}
-                                      </TableCell>
-                                      <TableCell className="text-right font-mono">
-                                        {formatAmount(rate)}
-                                      </TableCell>
-                                      {canSeeProfitCost && (
-                                        <TableCell className="text-right font-mono text-muted-foreground">
-                                          {item.costPrice ? formatAmount(parseFloat(item.costPrice)) : "-"}
+                              <Table>
+                                <TableHeader className="sticky top-0 z-10 bg-background">
+                                  <TableRow>
+                                    <TableHead>Item Name</TableHead>
+                                    <TableHead className="text-right">Qty</TableHead>
+                                    <TableHead className="text-right">Price</TableHead>
+                                    {canSeeProfitCost && (
+                                      <TableHead className="text-right">Cost</TableHead>
+                                    )}
+                                    <TableHead className="text-right">Total</TableHead>
+                                    {canSeeProfitCost && (
+                                      <TableHead className="text-right">Profit</TableHead>
+                                    )}
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {salesItems.map((item: ViewVoucherEntry, idx: number) => {
+                                    const qty = parseFloat(item.quantity || "0");
+                                    const rate = parseFloat(item.rate || item.sellingPrice || "0");
+                                    const totalAmount = parseFloat(
+                                      item.totalSales || item.creditAmount || "0",
+                                    );
+                                    const profit = parseFloat(item.profit || "0");
+                                    const isPositiveProfit = profit >= 0;
+                                    return (
+                                      <TableRow
+                                        key={item.id}
+                                        data-dialog-row={idx}
+                                        className={`cursor-pointer ${selectedDialogRow === idx ? "bg-accent" : ""}`}
+                                        onMouseEnter={() => setSelectedDialogRow(idx)}
+                                      >
+                                        <TableCell>
+                                          <div className="font-medium">
+                                            {item.stockItemName || item.accountName}
+                                          </div>
                                         </TableCell>
-                                      )}
-                                      <TableCell className="text-right font-mono font-semibold">
-                                        {formatAmount(totalAmount)}
-                                      </TableCell>
-                                      {canSeeProfitCost && (
-                                        <TableCell className={`text-right font-mono font-semibold ${item.profit ? (isPositiveProfit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400") : ""}`}>
-                                          {item.profit ? formatAmount(profit) : "-"}
+                                        <TableCell className="text-right font-mono">
+                                          {formatNumber(qty)}
                                         </TableCell>
-                                      )}
-                                    </TableRow>
-                                  );
-                                })}
-                                {/* Totals Row */}
-                                <TableRow className="font-bold bg-muted/50">
-                                  <TableCell>Total</TableCell>
-                                  <TableCell className="text-right font-mono">
-                                    {formatNumber(salesItems.reduce((sum: number, item: ViewVoucherEntry) => sum + parseFloat(item.quantity || "0"), 0))}
-                                  </TableCell>
-                                  <TableCell></TableCell>
-                                  {canSeeProfitCost && <TableCell></TableCell>}
-                                  <TableCell className="text-right font-mono">
-                                    {formatAmount(salesItems.reduce((sum: number, item: ViewVoucherEntry) => sum + parseFloat(item.totalSales || item.creditAmount || "0"), 0))}
-                                  </TableCell>
-                                  {canSeeProfitCost && (
+                                        <TableCell className="text-right font-mono">
+                                          {formatAmount(rate)}
+                                        </TableCell>
+                                        {canSeeProfitCost && (
+                                          <TableCell className="text-right font-mono text-muted-foreground">
+                                            {item.costPrice
+                                              ? formatAmount(parseFloat(item.costPrice))
+                                              : "-"}
+                                          </TableCell>
+                                        )}
+                                        <TableCell className="text-right font-mono font-semibold">
+                                          {formatAmount(totalAmount)}
+                                        </TableCell>
+                                        {canSeeProfitCost && (
+                                          <TableCell
+                                            className={`text-right font-mono font-semibold ${item.profit ? (isPositiveProfit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400") : ""}`}
+                                          >
+                                            {item.profit ? formatAmount(profit) : "-"}
+                                          </TableCell>
+                                        )}
+                                      </TableRow>
+                                    );
+                                  })}
+                                  {/* Totals Row */}
+                                  <TableRow className="font-bold bg-muted/50">
+                                    <TableCell>Total</TableCell>
                                     <TableCell className="text-right font-mono">
-                                      {formatAmount(salesItems.reduce((sum: number, item: ViewVoucherEntry) => sum + parseFloat(item.profit || "0"), 0))}
+                                      {formatNumber(
+                                        salesItems.reduce(
+                                          (sum: number, item: ViewVoucherEntry) =>
+                                            sum + parseFloat(item.quantity || "0"),
+                                          0,
+                                        ),
+                                      )}
                                     </TableCell>
-                                  )}
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </div>
+                                    <TableCell></TableCell>
+                                    {canSeeProfitCost && <TableCell></TableCell>}
+                                    <TableCell className="text-right font-mono">
+                                      {formatAmount(
+                                        salesItems.reduce(
+                                          (sum: number, item: ViewVoucherEntry) =>
+                                            sum +
+                                            parseFloat(item.totalSales || item.creditAmount || "0"),
+                                          0,
+                                        ),
+                                      )}
+                                    </TableCell>
+                                    {canSeeProfitCost && (
+                                      <TableCell className="text-right font-mono">
+                                        {formatAmount(
+                                          salesItems.reduce(
+                                            (sum: number, item: ViewVoucherEntry) =>
+                                              sum + parseFloat(item.profit || "0"),
+                                            0,
+                                          ),
+                                        )}
+                                      </TableCell>
+                                    )}
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2434,9 +2611,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                       if (e.isPurchaseItem || e.isStockItem) return false;
                       if (purchaseItems.length === 0) return true;
                       const name = (e.accountName || "").toLowerCase();
-                      return chargeKeywords.some((keyword) =>
-                        name.startsWith(keyword),
-                      );
+                      return chargeKeywords.some((keyword) => name.startsWith(keyword));
                     });
 
                     return (
@@ -2446,9 +2621,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                           <div className="p-3 bg-muted/50 rounded-md space-y-2">
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                               <div>
-                                <div className="font-medium">
-                                  {purchaseOrderData.supplierName}
-                                </div>
+                                <div className="font-medium">{purchaseOrderData.supplierName}</div>
                                 <div className="text-xs text-muted-foreground">
                                   Container: {purchaseOrderData.containerNumber}
                                 </div>
@@ -2456,18 +2629,12 @@ export default function Daybook({ user }: { user?: any } = {}) {
                               <div className="flex items-center gap-2 flex-wrap">
                                 {!isPOSUser && purchaseOrderData.itemsTotal && (
                                   <div className="font-mono font-bold">
-                                    {formatAmount(
-                                      parseFloat(
-                                        purchaseOrderData.itemsTotal || "0",
-                                      ),
-                                    )}
+                                    {formatAmount(parseFloat(purchaseOrderData.itemsTotal || "0"))}
                                   </div>
                                 )}
                                 <Badge
                                   variant={
-                                    purchaseOrderData.status === "Closed"
-                                      ? "secondary"
-                                      : "default"
+                                    purchaseOrderData.status === "Closed" ? "secondary" : "default"
                                   }
                                 >
                                   {purchaseOrderData.status}
@@ -2477,9 +2644,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                   variant="outline"
                                   onClick={() => {
                                     setViewDialogOpen(false);
-                                    navigate(
-                                      `/purchase-orders/${purchaseOrderData.id}/edit`,
-                                    );
+                                    navigate(`/purchase-orders/${purchaseOrderData.id}/edit`);
                                   }}
                                   data-testid="button-edit-po"
                                 >
@@ -2497,17 +2662,11 @@ export default function Daybook({ user }: { user?: any } = {}) {
                               <TableHeader className="sticky top-0 z-10 bg-background">
                                 <TableRow>
                                   <TableHead>Item Name</TableHead>
-                                  <TableHead className="text-right">
-                                    Qty
-                                  </TableHead>
+                                  <TableHead className="text-right">Qty</TableHead>
                                   {!isPOSUser && (
                                     <>
-                                      <TableHead className="text-right">
-                                        Rate
-                                      </TableHead>
-                                      <TableHead className="text-right">
-                                        Total
-                                      </TableHead>
+                                      <TableHead className="text-right">Rate</TableHead>
+                                      <TableHead className="text-right">Total</TableHead>
                                     </>
                                   )}
                                 </TableRow>
@@ -2516,20 +2675,14 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                 {/* Purchase Items */}
                                 {purchaseItems.map((item: ViewVoucherEntry) => {
                                   const qty = parseFloat(item.quantity || "0");
-                                  const rate =
-                                    item.rate != null
-                                      ? parseFloat(item.rate)
-                                      : 0;
+                                  const rate = item.rate != null ? parseFloat(item.rate) : 0;
                                   const totalAmount =
-                                    item.totalAmount != null
-                                      ? parseFloat(item.totalAmount)
-                                      : 0;
+                                    item.totalAmount != null ? parseFloat(item.totalAmount) : 0;
                                   return (
                                     <TableRow key={item.id}>
                                       <TableCell>
                                         <div className="font-medium">
-                                          {item.stockItemName ||
-                                            item.accountName}
+                                          {item.stockItemName || item.accountName}
                                         </div>
                                       </TableCell>
                                       <TableCell className="text-right font-mono">
@@ -2552,15 +2705,12 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                 {/* Items Subtotal */}
                                 {purchaseItems.length > 0 && (
                                   <TableRow className="bg-muted/30">
-                                    <TableCell className="font-semibold">
-                                      Items Subtotal
-                                    </TableCell>
+                                    <TableCell className="font-semibold">Items Subtotal</TableCell>
                                     <TableCell className="text-right font-mono">
                                       {Math.round(
                                         purchaseItems.reduce(
                                           (sum: number, item: ViewVoucherEntry) =>
-                                            sum +
-                                            parseFloat(item.quantity || "0"),
+                                            sum + parseFloat(item.quantity || "0"),
                                           0,
                                         ),
                                       ).toLocaleString()}
@@ -2591,52 +2741,36 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                     const charges = [
                                       {
                                         label: "Freight",
-                                        amount: parseFloat(
-                                          purchaseOrderData.freight || "0",
-                                        ),
+                                        amount: parseFloat(purchaseOrderData.freight || "0"),
                                       },
                                       {
                                         label: "Fumigation",
-                                        amount: parseFloat(
-                                          purchaseOrderData.fumigation || "0",
-                                        ),
+                                        amount: parseFloat(purchaseOrderData.fumigation || "0"),
                                       },
                                       {
                                         label: "Surcharge",
-                                        amount: parseFloat(
-                                          purchaseOrderData.surcharge || "0",
-                                        ),
+                                        amount: parseFloat(purchaseOrderData.surcharge || "0"),
                                       },
                                       {
                                         label: "Document Charges",
                                         amount: parseFloat(
-                                          purchaseOrderData.documentCharges ||
-                                            "0",
+                                          purchaseOrderData.documentCharges || "0",
                                         ),
                                       },
                                       {
                                         label: "Other Charges",
-                                        amount: parseFloat(
-                                          purchaseOrderData.otherCharges || "0",
-                                        ),
+                                        amount: parseFloat(purchaseOrderData.otherCharges || "0"),
                                       },
                                       {
                                         label: "Discount",
-                                        amount: -parseFloat(
-                                          purchaseOrderData.discount || "0",
-                                        ),
+                                        amount: -parseFloat(purchaseOrderData.discount || "0"),
                                       },
                                     ].filter((c) => c.amount !== 0);
 
                                     return charges.map((charge, idx) => (
-                                      <TableRow
-                                        key={`charge-${idx}`}
-                                        className="bg-muted/20"
-                                      >
+                                      <TableRow key={`charge-${idx}`} className="bg-muted/20">
                                         <TableCell>
-                                          <div className="font-medium text-sm">
-                                            {charge.label}
-                                          </div>
+                                          <div className="font-medium text-sm">{charge.label}</div>
                                         </TableCell>
                                         <TableCell></TableCell>
                                         {!isPOSUser && (
@@ -2660,8 +2794,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                     {Math.round(
                                       purchaseItems.reduce(
                                         (sum: number, item: ViewVoucherEntry) =>
-                                          sum +
-                                          parseFloat(item.quantity || "0"),
+                                          sum + parseFloat(item.quantity || "0"),
                                         0,
                                       ),
                                     ).toLocaleString()}
@@ -2680,30 +2813,14 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                             0,
                                           ) +
                                             (purchaseOrderData
-                                              ? parseFloat(
-                                                  purchaseOrderData.freight ||
-                                                    "0",
+                                              ? parseFloat(purchaseOrderData.freight || "0") +
+                                                parseFloat(purchaseOrderData.fumigation || "0") +
+                                                parseFloat(purchaseOrderData.surcharge || "0") +
+                                                parseFloat(
+                                                  purchaseOrderData.documentCharges || "0",
                                                 ) +
-                                                parseFloat(
-                                                  purchaseOrderData.fumigation ||
-                                                    "0",
-                                                ) +
-                                                parseFloat(
-                                                  purchaseOrderData.surcharge ||
-                                                    "0",
-                                                ) +
-                                                parseFloat(
-                                                  purchaseOrderData.documentCharges ||
-                                                    "0",
-                                                ) +
-                                                parseFloat(
-                                                  purchaseOrderData.otherCharges ||
-                                                    "0",
-                                                ) -
-                                                parseFloat(
-                                                  purchaseOrderData.discount ||
-                                                    "0",
-                                                )
+                                                parseFloat(purchaseOrderData.otherCharges || "0") -
+                                                parseFloat(purchaseOrderData.discount || "0")
                                               : 0),
                                         )}
                                       </TableCell>
@@ -2722,12 +2839,8 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                   <TableHead>Account</TableHead>
                                   {!isPOSUser && (
                                     <>
-                                      <TableHead className="text-right">
-                                        Debit
-                                      </TableHead>
-                                      <TableHead className="text-right">
-                                        Credit
-                                      </TableHead>
+                                      <TableHead className="text-right">Debit</TableHead>
+                                      <TableHead className="text-right">Credit</TableHead>
                                     </>
                                   )}
                                 </TableRow>
@@ -2736,9 +2849,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                 {ledgerEntries.map((entry: ViewVoucherEntry) => (
                                   <TableRow key={entry.id}>
                                     <TableCell>
-                                      <div className="font-medium">
-                                        {entry.accountName}
-                                      </div>
+                                      <div className="font-medium">{entry.accountName}</div>
                                     </TableCell>
                                     {!isPOSUser && (
                                       <>
@@ -2781,12 +2892,8 @@ export default function Daybook({ user }: { user?: any } = {}) {
                               <TableHead className="text-right">Qty</TableHead>
                               {user && !user?.role?.startsWith("POS") && (
                                 <>
-                                  <TableHead className="text-right">
-                                    Amount
-                                  </TableHead>
-                                  <TableHead className="text-right">
-                                    Total Amount
-                                  </TableHead>
+                                  <TableHead className="text-right">Amount</TableHead>
+                                  <TableHead className="text-right">Total Amount</TableHead>
                                 </>
                               )}
                             </>
@@ -2795,19 +2902,13 @@ export default function Daybook({ user }: { user?: any } = {}) {
                             selectedVoucher.voucherType === "Journal" ? (
                             <>
                               <TableHead>Account</TableHead>
-                              <TableHead className="text-right">
-                                Amount
-                              </TableHead>
+                              <TableHead className="text-right">Amount</TableHead>
                             </>
                           ) : (
                             <>
                               <TableHead>Account</TableHead>
-                              <TableHead className="text-right">
-                                Debit
-                              </TableHead>
-                              <TableHead className="text-right">
-                                Credit
-                              </TableHead>
+                              <TableHead className="text-right">Debit</TableHead>
+                              <TableHead className="text-right">Credit</TableHead>
                               <TableHead>Narration</TableHead>
                             </>
                           )}
@@ -2815,8 +2916,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                       </TableHeader>
                       <TableBody>
                         {(() => {
-                          const isPOSUser =
-                            !user || user?.role?.startsWith("POS");
+                          const isPOSUser = !user || user?.role?.startsWith("POS");
 
                           // For Consumption/Production/Mixed/Stock Transfer, show stock items
                           if (
@@ -2828,8 +2928,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                           ) {
                             return viewVoucherEntries.map((entry: ViewVoucherEntry) => {
                               const qty = parseFloat(entry.quantity || "0");
-                              const rate =
-                                entry.rate != null ? parseFloat(entry.rate) : 0;
+                              const rate = entry.rate != null ? parseFloat(entry.rate) : 0;
                               const totalAmount =
                                 entry.totalAmount != null
                                   ? parseFloat(entry.totalAmount)
@@ -2851,9 +2950,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                         }
                                       >
                                         {entry.adjustmentType ||
-                                          (qty > 0
-                                            ? "Production"
-                                            : "Consumption")}
+                                          (qty > 0 ? "Production" : "Consumption")}
                                       </Badge>
                                     </TableCell>
                                   )}
@@ -2884,18 +2981,10 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                   // Payment: show only debit entries (accounts being paid)
                                   // Receipt: show only credit entries (accounts receiving)
                                   // Journal: show all entries (no filtering)
-                                  if (
-                                    selectedVoucher.voucherType === "Payment"
-                                  ) {
-                                    return (
-                                      parseFloat(entry.debitAmount || "0") > 0
-                                    );
-                                  } else if (
-                                    selectedVoucher.voucherType === "Receipt"
-                                  ) {
-                                    return (
-                                      parseFloat(entry.creditAmount || "0") > 0
-                                    );
+                                  if (selectedVoucher.voucherType === "Payment") {
+                                    return parseFloat(entry.debitAmount || "0") > 0;
+                                  } else if (selectedVoucher.voucherType === "Receipt") {
+                                    return parseFloat(entry.creditAmount || "0") > 0;
                                   } else {
                                     // Journal: show all entries
                                     return true;
@@ -2906,9 +2995,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                           return displayEntries.map((entry: ViewVoucherEntry) => (
                             <TableRow key={entry.id}>
                               <TableCell>
-                                <div className="font-medium">
-                                  {entry.accountName}
-                                </div>
+                                <div className="font-medium">{entry.accountName}</div>
                                 {(selectedVoucher.voucherType === "Payment" ||
                                   selectedVoucher.voucherType === "Receipt" ||
                                   selectedVoucher.voucherType === "Journal") && (
@@ -2960,8 +3047,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                 {viewVoucherEntries
                                   .reduce(
                                     (sum: number, e: ViewVoucherEntry) =>
-                                      sum +
-                                      Math.abs(parseFloat(e.quantity || "0")),
+                                      sum + Math.abs(parseFloat(e.quantity || "0")),
                                     0,
                                   )
                                   .toFixed(3)}
@@ -2971,22 +3057,17 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                   <TableCell></TableCell>
                                   <TableCell className="text-right font-mono">
                                     {formatAmount(
-                                      viewVoucherEntries.reduce((sum: number, e: ViewVoucherEntry) => {
-                                        if (e.totalAmount != null) {
-                                          return (
-                                            sum +
-                                            Math.abs(parseFloat(e.totalAmount))
-                                          );
-                                        }
-                                        const qty = Math.abs(
-                                          parseFloat(e.quantity || "0"),
-                                        );
-                                        const rate =
-                                          e.rate != null
-                                            ? parseFloat(e.rate)
-                                            : 0;
-                                        return sum + qty * rate;
-                                      }, 0),
+                                      viewVoucherEntries.reduce(
+                                        (sum: number, e: ViewVoucherEntry) => {
+                                          if (e.totalAmount != null) {
+                                            return sum + Math.abs(parseFloat(e.totalAmount));
+                                          }
+                                          const qty = Math.abs(parseFloat(e.quantity || "0"));
+                                          const rate = e.rate != null ? parseFloat(e.rate) : 0;
+                                          return sum + qty * rate;
+                                        },
+                                        0,
+                                      ),
                                     )}
                                   </TableCell>
                                 </>
@@ -3068,18 +3149,11 @@ export default function Daybook({ user }: { user?: any } = {}) {
           </DialogHeader>
           {voucherToEdit && !entriesLoading && (
             <Form {...editForm}>
-              <form
-                onSubmit={editForm.handleSubmit(handleSaveEdit)}
-                className="space-y-4"
-              >
+              <form onSubmit={editForm.handleSubmit(handleSaveEdit)} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Voucher Number
-                    </p>
-                    <p className="font-mono font-medium">
-                      {voucherToEdit.voucherNumber}
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">Voucher Number</p>
+                    <p className="font-mono font-medium">{voucherToEdit.voucherNumber}</p>
                   </div>
 
                   <FormField
@@ -3089,11 +3163,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                       <FormItem>
                         <FormLabel>Date</FormLabel>
                         <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            data-testid="input-edit-voucher-date"
-                          />
+                          <Input type="date" {...field} data-testid="input-edit-voucher-date" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -3108,10 +3178,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-edit-voucher-type">
                               <SelectValue />
@@ -3121,9 +3188,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                             <SelectItem value="Journal">Journal</SelectItem>
                             <SelectItem value="Payment">Payment</SelectItem>
                             <SelectItem value="Receipt">Receipt</SelectItem>
-                            <SelectItem value="Stock Transfer">
-                              Stock Transfer
-                            </SelectItem>
+                            <SelectItem value="Stock Transfer">Stock Transfer</SelectItem>
                             <SelectItem value="Sales">Sales</SelectItem>
                             <SelectItem value="Purchase">Purchase</SelectItem>
                             <SelectItem value="Contra">Contra</SelectItem>
@@ -3141,9 +3206,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                       <FormItem className="flex flex-row items-center justify-between rounded-md border p-3 space-y-0">
                         <div className="space-y-0.5">
                           <FormLabel className="text-sm">Optional</FormLabel>
-                          <div className="text-xs text-muted-foreground">
-                            Does not affect books
-                          </div>
+                          <div className="text-xs text-muted-foreground">Does not affect books</div>
                         </div>
                         <FormControl>
                           <Switch
@@ -3203,10 +3266,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                   </div>
 
                   {editFields.map((field, index) => (
-                    <div
-                      key={field.id}
-                      className="border rounded-md p-4 space-y-3"
-                    >
+                    <div key={field.id} className="border rounded-md p-4 space-y-3">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-muted-foreground">
                           Entry {index + 1}
@@ -3236,28 +3296,15 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                   editForm.watch(`entries.${index}.accountId`)
                                     ? {
                                         type: typeField.value,
-                                        id: editForm.watch(
-                                          `entries.${index}.accountId`,
-                                        ),
-                                        name: editForm.watch(
-                                          `entries.${index}.accountName`,
-                                        ),
+                                        id: editForm.watch(`entries.${index}.accountId`),
+                                        name: editForm.watch(`entries.${index}.accountName`),
                                       }
                                     : null
                                 }
                                 onChange={(type, id, name) => {
-                                  editForm.setValue(
-                                    `entries.${index}.accountType`,
-                                    type,
-                                  );
-                                  editForm.setValue(
-                                    `entries.${index}.accountId`,
-                                    id,
-                                  );
-                                  editForm.setValue(
-                                    `entries.${index}.accountName`,
-                                    name,
-                                  );
+                                  editForm.setValue(`entries.${index}.accountType`, type);
+                                  editForm.setValue(`entries.${index}.accountId`, id);
+                                  editForm.setValue(`entries.${index}.accountName`, name);
                                 }}
                                 ledgerAccounts={ledgerAccounts}
                                 bankAccounts={bankAccounts}
@@ -3285,39 +3332,22 @@ export default function Daybook({ user }: { user?: any } = {}) {
                               className="font-mono"
                               data-testid={`input-edit-amount-${index}`}
                               value={
-                                parseFloat(
-                                  editForm.watch(
-                                    `entries.${index}.debitAmount`,
-                                  ) || "0",
-                                ) > 0
-                                  ? editForm.watch(
-                                      `entries.${index}.debitAmount`,
-                                    )
-                                  : editForm.watch(
-                                      `entries.${index}.creditAmount`,
-                                    ) || ""
+                                parseFloat(editForm.watch(`entries.${index}.debitAmount`) || "0") >
+                                0
+                                  ? editForm.watch(`entries.${index}.debitAmount`)
+                                  : editForm.watch(`entries.${index}.creditAmount`) || ""
                               }
                               onChange={(e) => {
-                                const voucherType =
-                                  editForm.watch("voucherType");
+                                const voucherType = editForm.watch("voucherType");
                                 if (voucherType === "Payment") {
-                                  editForm.setValue(
-                                    `entries.${index}.debitAmount`,
-                                    e.target.value,
-                                  );
-                                  editForm.setValue(
-                                    `entries.${index}.creditAmount`,
-                                    "0",
-                                  );
+                                  editForm.setValue(`entries.${index}.debitAmount`, e.target.value);
+                                  editForm.setValue(`entries.${index}.creditAmount`, "0");
                                 } else {
                                   editForm.setValue(
                                     `entries.${index}.creditAmount`,
                                     e.target.value,
                                   );
-                                  editForm.setValue(
-                                    `entries.${index}.debitAmount`,
-                                    "0",
-                                  );
+                                  editForm.setValue(`entries.${index}.debitAmount`, "0");
                                 }
                               }}
                             />
@@ -3393,84 +3423,59 @@ export default function Daybook({ user }: { user?: any } = {}) {
                   ))}
 
                   {/* Totals Display */}
-                  {editForm.watch("entries") &&
-                    editForm.watch("entries").length > 0 && (
-                      <div className="mt-4 pt-4 border-t">
-                        {editForm.watch("voucherType") === "Payment" ||
-                        editForm.watch("voucherType") === "Receipt" ? (
-                          <div className="text-right text-sm font-mono">
-                            <span className="text-muted-foreground mr-2">
-                              Total:
-                            </span>
+                  {editForm.watch("entries") && editForm.watch("entries").length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      {editForm.watch("voucherType") === "Payment" ||
+                      editForm.watch("voucherType") === "Receipt" ? (
+                        <div className="text-right text-sm font-mono">
+                          <span className="text-muted-foreground mr-2">Total:</span>
+                          <span className="font-bold">
+                            $
+                            {formatAmount(
+                              Math.max(
+                                editForm
+                                  .watch("entries")
+                                  .reduce((sum, e) => sum + parseFloat(e?.debitAmount || "0"), 0),
+                                editForm
+                                  .watch("entries")
+                                  .reduce((sum, e) => sum + parseFloat(e?.creditAmount || "0"), 0),
+                              ),
+                            )}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm font-mono">
+                          <div className="text-right">
+                            <span className="text-muted-foreground mr-2">Total Debits:</span>
                             <span className="font-bold">
                               $
                               {formatAmount(
-                                Math.max(
-                                  editForm
-                                    .watch("entries")
-                                    .reduce(
-                                      (sum, e) =>
-                                        sum + parseFloat(e?.debitAmount || "0"),
-                                      0,
-                                    ),
-                                  editForm
-                                    .watch("entries")
-                                    .reduce(
-                                      (sum, e) =>
-                                        sum +
-                                        parseFloat(e?.creditAmount || "0"),
-                                      0,
-                                    ),
-                                ),
+                                editForm
+                                  .watch("entries")
+                                  .reduce((sum, e) => sum + parseFloat(e?.debitAmount || "0"), 0),
                               )}
                             </span>
                           </div>
-                        ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm font-mono">
-                            <div className="text-right">
-                              <span className="text-muted-foreground mr-2">
-                                Total Debits:
-                              </span>
-                              <span className="font-bold">
-                                $
-                                {formatAmount(
-                                  editForm
-                                    .watch("entries")
-                                    .reduce(
-                                      (sum, e) =>
-                                        sum + parseFloat(e?.debitAmount || "0"),
-                                      0,
-                                    ),
-                                )}
-                              </span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-muted-foreground mr-2">
-                                Total Credits:
-                              </span>
-                              <span className="font-bold">
-                                $
-                                {formatAmount(
-                                  editForm
-                                    .watch("entries")
-                                    .reduce(
-                                      (sum, e) =>
-                                        sum +
-                                        parseFloat(e?.creditAmount || "0"),
-                                      0,
-                                    ),
-                                )}
-                              </span>
-                            </div>
+                          <div className="text-right">
+                            <span className="text-muted-foreground mr-2">Total Credits:</span>
+                            <span className="font-bold">
+                              $
+                              {formatAmount(
+                                editForm
+                                  .watch("entries")
+                                  .reduce((sum, e) => sum + parseFloat(e?.creditAmount || "0"), 0),
+                              )}
+                            </span>
                           </div>
-                        )}
-                        {editForm.formState.errors.entries && (
-                          <p className="text-sm text-destructive mt-2 text-center">
-                            {editForm.formState.errors.entries.message}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      )}
+                      {editForm.formState.errors.entries && (
+                        <p className="text-sm text-destructive mt-2 text-center">
+                          {editForm.formState.errors.entries.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4">
@@ -3509,16 +3514,12 @@ export default function Daybook({ user }: { user?: any } = {}) {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete voucher{" "}
-              <span className="font-mono font-semibold">
-                {voucherToDelete?.voucherNumber}
-              </span>
-              . This action cannot be undone.
+              <span className="font-mono font-semibold">{voucherToDelete?.voucherNumber}</span>.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-destructive hover:bg-destructive/90"
