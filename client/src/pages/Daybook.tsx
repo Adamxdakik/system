@@ -324,6 +324,25 @@ interface ViewVoucherEntry {
   adjustmentType?: string;
 }
 
+// Minimal shape of an account returned by /api/accounts/all
+interface CombinedAccount {
+  type: string;
+  accountId?: number | string | null;
+  id?: number | string | null;
+  name: string;
+  balance?: string | number | null;
+  balanceSide?: string;
+}
+
+// Map a view-entry row to { type, id } so we can find it in accountsBalanceQuery
+function getEntryAccountIdentity(entry: ViewVoucherEntry): { type: string; id: number } | null {
+  if (entry.ledgerAccountId != null) return { type: "ledger", id: entry.ledgerAccountId };
+  if (entry.bankAccountId != null) return { type: "bank", id: entry.bankAccountId };
+  if (entry.employeeId != null) return { type: "employee", id: entry.employeeId };
+  if (entry.supplierId != null) return { type: "supplier", id: entry.supplierId };
+  return null;
+}
+
 // Account Combobox Component
 function focusDaybookEditById(id: string) {
   const el = document.querySelector<HTMLElement>(`[data-testid="${id}"]`);
@@ -514,29 +533,30 @@ export default function Daybook({ user }: { user?: any } = {}) {
   const scrollYRef = useRef(0);
 
   // Fetch ledger accounts, bank accounts, and suppliers for dropdowns
+  // These are only needed when the edit Dialog is open — defer until then
   const { data: ledgerAccounts = [] } = useQuery<LedgerAccount[]>({
     queryKey: ["/api/ledger-accounts", selectedCompany?.id],
-    enabled: !!selectedCompany,
+    enabled: !!selectedCompany?.id && editDialogOpen,
   });
 
   const { data: bankAccounts = [] } = useQuery<BankAccount[]>({
     queryKey: ["/api/bank-accounts", selectedCompany?.id],
-    enabled: !!selectedCompany,
+    enabled: !!selectedCompany?.id && editDialogOpen,
   });
 
   const { data: suppliers = [] } = useQuery<Supplier[]>({
     queryKey: ["/api/suppliers", selectedCompany?.id],
-    enabled: !!selectedCompany,
+    enabled: !!selectedCompany?.id && editDialogOpen,
   });
 
   const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ["/api/employees", selectedCompany?.id],
-    enabled: !!selectedCompany,
+    enabled: !!selectedCompany?.id && editDialogOpen,
   });
 
   const { data: fixedAssets = [] } = useQuery<FixedAsset[]>({
     queryKey: ["/api/fixed-assets", selectedCompany?.id],
-    enabled: !!selectedCompany,
+    enabled: !!selectedCompany?.id && editDialogOpen,
   });
 
   // State for purchase order data (for Purchase vouchers)
@@ -549,8 +569,10 @@ export default function Daybook({ user }: { user?: any } = {}) {
     isError: viewEntriesError,
     refetch: viewEntriesRefetch,
   } = useQuery<any>({
-    queryKey: selectedVoucher ? [`/api/vouchers/${selectedVoucher.id}/view-entries`] : [],
-    enabled: !!selectedVoucher && detailSheetOpen,
+    queryKey: selectedVoucher
+      ? [`/api/vouchers/${selectedVoucher.id}/view-entries`, selectedCompany?.id]
+      : [],
+    enabled: detailSheetOpen && !!selectedVoucher && !!selectedCompany?.id,
   });
 
   // Handle the response which can be either array (most types) or object with entries/purchaseOrder (Purchase type)
@@ -576,126 +598,16 @@ export default function Daybook({ user }: { user?: any } = {}) {
     }
   }, [viewVoucherEntriesRaw]);
 
-  // Extract cash account ID for fetching balance (works for Sales, POS, Payment, Receipt, and Journal)
-  // Note: viewVoucherEntries has ledgerAccountId, bankAccountId, etc. NOT accountId
-  const cashAccountId = useMemo(() => {
-    if (!selectedVoucher) return null;
-
-    // For Sales and POS vouchers, find the cash entry (debit > 0)
-    if (selectedVoucher.voucherType === "Sales" || selectedVoucher.voucherType === "POS") {
-      const ledgerEntries = viewVoucherEntries.filter(
-        (e: ViewVoucherEntry) => !e.isStockItem && !e.stockItemId,
-      );
-      const cashEntry = ledgerEntries.find(
-        (e: ViewVoucherEntry) => parseFloat(e.debitAmount || "0") > 0,
-      );
-      // Use ledgerAccountId or bankAccountId (the actual field names from storage)
-      return cashEntry?.ledgerAccountId || cashEntry?.bankAccountId || null;
-    }
-
-    // For Payment vouchers, find the source account (credit > 0 - money going out)
-    if (selectedVoucher.voucherType === "Payment") {
-      const sourceEntry = viewVoucherEntries.find(
-        (e: ViewVoucherEntry) => parseFloat(e.creditAmount || "0") > 0,
-      );
-      return sourceEntry?.ledgerAccountId || sourceEntry?.bankAccountId || null;
-    }
-
-    // For Receipt vouchers, find the source account (debit > 0 - money going in)
-    if (selectedVoucher.voucherType === "Receipt") {
-      const sourceEntry = viewVoucherEntries.find(
-        (e: ViewVoucherEntry) => parseFloat(e.debitAmount || "0") > 0,
-      );
-      return sourceEntry?.ledgerAccountId || sourceEntry?.bankAccountId || null;
-    }
-
-    // For Journal vouchers, find the first account (any debit or credit)
-    if (selectedVoucher.voucherType === "Journal") {
-      const firstEntry = viewVoucherEntries.find(
-        (e: ViewVoucherEntry) => !e.isStockItem && !e.stockItemId,
-      );
-      return firstEntry?.ledgerAccountId || firstEntry?.bankAccountId || null;
-    }
-
-    return null;
-  }, [selectedVoucher, viewVoucherEntries]);
-
-  // State to store cash account balance
-  const [cashAccountBalance, setCashAccountBalance] = useState<string>("0");
-
-  // State to store per-entry balances for the entries table
-  const [entryBalances, setEntryBalances] = useState<Record<number, string>>({});
-
-  // Fetch balance when cash account ID is available and sheet is open
-  useEffect(() => {
-    const fetchBalance = async () => {
-      if (!cashAccountId || !detailSheetOpen) {
-        return;
-      }
-      try {
-        const res = await fetch(`/api/accounts/ledger/${cashAccountId}/balance`, {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setCashAccountBalance(data.balance?.toString() || "0");
-        }
-      } catch (error) {
-        console.error("Error fetching balance:", error);
-      }
-    };
-    fetchBalance();
-  }, [cashAccountId, detailSheetOpen]);
-
-  // Fetch balances for all displayed entries in Payment/Receipt/Journal vouchers
-  // Keyed by entry.id to avoid collisions between ledger/bank/employee numeric IDs
-  useEffect(() => {
-    if (!detailSheetOpen || !selectedVoucher) {
-      setEntryBalances({});
-      return;
-    }
-    const type = selectedVoucher.voucherType;
-    if (type !== "Payment" && type !== "Receipt" && type !== "Journal") {
-      setEntryBalances({});
-      return;
-    }
-
-    const displayEntries = viewVoucherEntries.filter((entry: ViewVoucherEntry) => {
-      if (type === "Payment") return parseFloat(entry.debitAmount || "0") > 0;
-      if (type === "Receipt") return parseFloat(entry.creditAmount || "0") > 0;
-      return true;
-    });
-
-    const fetchAll = async () => {
-      const results: Record<number, string> = {};
-      await Promise.all(
-        displayEntries.map(async (entry: ViewVoucherEntry) => {
-          try {
-            let url: string | null = null;
-            if (entry.ledgerAccountId) {
-              url = `/api/accounts/ledger/${entry.ledgerAccountId}/balance`;
-            } else if (entry.bankAccountId) {
-              url = `/api/accounts/ledger/${entry.bankAccountId}/balance`;
-            } else if (entry.employeeId) {
-              url = `/api/employees/${entry.employeeId}/balance`;
-            } else if (entry.supplierId) {
-              url = `/api/suppliers/${entry.supplierId}/balance`;
-            }
-            if (!url) return;
-            const res = await fetch(url, { credentials: "include" });
-            if (res.ok) {
-              const data = await res.json();
-              results[entry.id] = data.balance?.toString() || "0";
-            }
-          } catch {
-            // ignore individual failures
-          }
-        }),
-      );
-      setEntryBalances(results);
-    };
-    fetchAll();
-  }, [detailSheetOpen, selectedVoucher, viewVoucherEntries]);
+  // Single query to fetch account balances for the detail Sheet
+  // Replaces per-entry balance fetch loops and the incorrect ledger-endpoint-for-bank-IDs bug
+  const accountsBalanceQuery = useQuery<CombinedAccount[]>({
+    queryKey: ["/api/accounts/all", selectedCompany?.id, "daybook-details"],
+    enabled:
+      !!selectedCompany?.id &&
+      detailSheetOpen &&
+      !!selectedVoucher &&
+      ["Payment", "Receipt", "Journal", "Contra"].includes(selectedVoucher?.voucherType ?? ""),
+  });
 
   // Reset highlighted row when sheet opens/closes
   useEffect(() => {
@@ -754,8 +666,10 @@ export default function Daybook({ user }: { user?: any } = {}) {
 
   // Fetch voucher entries when editing
   const { data: voucherEntries = [], isLoading: entriesLoading } = useQuery<VoucherEntry[]>({
-    queryKey: voucherToEdit ? [`/api/vouchers/${voucherToEdit.id}/entries`] : [],
-    enabled: !!voucherToEdit && editDialogOpen,
+    queryKey: voucherToEdit
+      ? [`/api/vouchers/${voucherToEdit.id}/entries`, selectedCompany?.id]
+      : [],
+    enabled: editDialogOpen && !!voucherToEdit && !!selectedCompany?.id,
   });
 
   // Edit form with react-hook-form and zod
@@ -801,11 +715,13 @@ export default function Daybook({ user }: { user?: any } = {}) {
     }
   }, [voucherToEdit, voucherEntries, entriesLoading, editFormInitialized, editForm]);
 
-  // State to cache first account names for Payment/Receipt/Journal vouchers
-  const [accountNameCache, setAccountNameCache] = useState<Record<number, string>>({});
-
   // Fetch all vouchers with date filtering
-  const { data: vouchers = [], isLoading } = useQuery<Voucher[]>({
+  const {
+    data: vouchers = [],
+    isLoading,
+    isError: vouchersError,
+    refetch: vouchersRefetch,
+  } = useQuery<Voucher[]>({
     queryKey: ["/api/vouchers", selectedCompany?.id, periodFilter.fromDate, periodFilter.toDate],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -817,11 +733,16 @@ export default function Daybook({ user }: { user?: any } = {}) {
       if (!res.ok) throw new Error("Failed to fetch vouchers");
       return res.json();
     },
-    enabled: !!selectedCompany,
+    enabled: !!selectedCompany?.id,
   });
 
   // Fetch offloads for the same date range
-  const { data: offloads = [], isLoading: offloadsLoading } = useQuery<OffloadListItem[]>({
+  const {
+    data: offloads = [],
+    isLoading: offloadsLoading,
+    isError: offloadsError,
+    refetch: offloadsRefetch,
+  } = useQuery<OffloadListItem[]>({
     queryKey: ["/api/offloads", selectedCompany?.id, periodFilter.fromDate, periodFilter.toDate],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -832,42 +753,21 @@ export default function Daybook({ user }: { user?: any } = {}) {
       if (!res.ok) throw new Error("Failed to fetch offloads");
       return res.json();
     },
-    enabled: !!selectedCompany,
+    enabled: !!selectedCompany?.id,
   });
 
-  // Fetch account names for Payment/Receipt/Journal vouchers
+  // Clear per-company state when the active company changes
+  const companyId = selectedCompany?.id;
   useEffect(() => {
-    const paymentVouchers = vouchers.filter(
-      (v) =>
-        v.voucherType === "Payment" || v.voucherType === "Receipt" || v.voucherType === "Journal",
-    );
-
-    const fetchAccountNames = async () => {
-      const newCache = { ...accountNameCache };
-      for (const voucher of paymentVouchers) {
-        if (!(voucher.id in newCache)) {
-          try {
-            const res = await fetch(`/api/vouchers/${voucher.id}/view-entries`, {
-              credentials: "include",
-            });
-            if (res.ok) {
-              const entries = await res.json();
-              if (entries.length > 0) {
-                newCache[voucher.id] = entries[0].accountName || "Unknown";
-              }
-            }
-          } catch (error) {
-            console.error("Error fetching account name:", error);
-          }
-        }
-      }
-      setAccountNameCache(newCache);
-    };
-
-    if (paymentVouchers.length > 0) {
-      fetchAccountNames();
-    }
-  }, [vouchers, accountNameCache]);
+    setSelectedVoucher(null);
+    setSelectedOffload(null);
+    setDetailSheetOpen(false);
+    setEditDialogOpen(false);
+    setDeleteDialogOpen(false);
+    setSelectedRowId(null);
+    setHiddenRowIds(new Set());
+    setShowHidden(false);
+  }, [companyId]);
 
   // Keyboard date navigation: "-" = back 1 day, Shift+"+" = forward 1 day
   useEffect(() => {
@@ -1071,21 +971,12 @@ export default function Daybook({ user }: { user?: any } = {}) {
         refetchType: "all",
       });
       queryClient.invalidateQueries({
-        queryKey: ["/api/employees", selectedCompany?.id],
-        refetchType: "all",
-      });
-      queryClient.invalidateQueries({
         queryKey: ["/api/payroll/employees-with-balances", selectedCompany?.id],
         refetchType: "all",
       });
       queryClient.invalidateQueries({
         queryKey: ["/api/suppliers", selectedCompany?.id],
       });
-      if (cashAccountId) {
-        queryClient.invalidateQueries({
-          queryKey: [`/api/ledger-accounts/${cashAccountId}`],
-        });
-      }
       toast({
         title: "Success",
         description: "Voucher updated successfully",
@@ -1123,21 +1014,12 @@ export default function Daybook({ user }: { user?: any } = {}) {
         refetchType: "all",
       });
       queryClient.invalidateQueries({
-        queryKey: ["/api/employees", selectedCompany?.id],
-        refetchType: "all",
-      });
-      queryClient.invalidateQueries({
         queryKey: ["/api/payroll/employees-with-balances", selectedCompany?.id],
         refetchType: "all",
       });
       queryClient.invalidateQueries({
         queryKey: ["/api/suppliers", selectedCompany?.id],
       });
-      if (cashAccountId) {
-        queryClient.invalidateQueries({
-          queryKey: [`/api/ledger-accounts/${cashAccountId}`],
-        });
-      }
       toast({
         title: "Success",
         description: "Voucher deleted successfully",
@@ -1280,6 +1162,40 @@ export default function Daybook({ user }: { user?: any } = {}) {
 
   const [isExportingDetailed, setIsExportingDetailed] = useState(false);
 
+  // Run up to `limit` async workers in parallel
+  async function mapWithConcurrency<T, R>(
+    items: T[],
+    limit: number,
+    worker: (item: T) => Promise<R>,
+  ): Promise<R[]> {
+    const results: R[] = new Array(items.length);
+    let index = 0;
+    async function run() {
+      while (index < items.length) {
+        const i = index++;
+        results[i] = await worker(items[i]);
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
+    return results;
+  }
+
+  type DetailRow = {
+    "Voucher Number": string;
+    Date: string;
+    Type: string;
+    Description: string;
+    Location: string;
+    Optional: string;
+    "Account Name": string;
+    "Account Type": string;
+    "Item Code": string;
+    "Item Name": string;
+    Debit: string;
+    Credit: string;
+    Narration: string;
+  };
+
   const handleExportDetailedToExcel = async () => {
     if (filteredVouchers.length === 0) {
       toast({
@@ -1293,104 +1209,93 @@ export default function Daybook({ user }: { user?: any } = {}) {
     setIsExportingDetailed(true);
 
     try {
-      const detailedData: Array<{
-        "Voucher Number": string;
-        Date: string;
-        Type: string;
-        Description: string;
-        Location: string;
-        Optional: string;
-        "Account Name": string;
-        "Account Type": string;
-        "Item Code": string;
-        "Item Name": string;
-        Debit: string;
-        Credit: string;
-        Narration: string;
-      }> = [];
-
-      // Fetch entries for each voucher
-      for (const voucher of filteredVouchers) {
-        try {
-          const res = await fetch(`/api/vouchers/${voucher.id}/view-entries`, {
-            credentials: "include",
-          });
-
-          if (res.ok) {
+      let failureCount = 0;
+      const voucherRows = await mapWithConcurrency<Voucher, DetailRow[]>(
+        filteredVouchers,
+        4,
+        async (voucher) => {
+          try {
+            const res = await fetch(`/api/vouchers/${voucher.id}/view-entries`, {
+              credentials: "include",
+            });
+            if (!res.ok) {
+              failureCount++;
+              return [];
+            }
             const response = await res.json();
             const entries = Array.isArray(response) ? response : response.entries || [];
 
             if (entries.length === 0) {
-              // Voucher with no entries - still add a row
-              detailedData.push({
-                "Voucher Number": voucher.voucherNumber,
-                Date: formatDisplayDate(voucher.voucherDate),
-                Type: voucher.voucherType,
-                Description: voucher.description || "",
-                Location: (voucher as any).locationName || "",
-                Optional: voucher.optional ? "Yes" : "No",
-                "Account Name": "",
-                "Account Type": "",
-                "Item Code": "",
-                "Item Name": "",
-                Debit: "",
-                Credit: "",
-                Narration: "",
-              });
-            } else {
-              // Add a row for each entry (including stock items)
-              for (const entry of entries) {
-                // Determine account name - could be ledger account, stock item, supplier, employee, or asset
-                let accountName = "";
-                let accountType = "";
-
-                if (entry.isStockItem || entry.stockItemId) {
-                  accountName = entry.stockItemName || entry.accountName || "";
-                  accountType = "Stock Item";
-                } else if (entry.supplierName) {
-                  accountName = entry.supplierName;
-                  accountType = "Supplier";
-                } else if (entry.employeeName) {
-                  accountName = entry.employeeName;
-                  accountType = "Employee";
-                } else if (entry.assetName) {
-                  accountName = entry.assetName;
-                  accountType = "Fixed Asset";
-                } else {
-                  accountName = entry.accountName || "";
-                  accountType = entry.accountType || "";
-                }
-
-                detailedData.push({
+              return [
+                {
                   "Voucher Number": voucher.voucherNumber,
                   Date: formatDisplayDate(voucher.voucherDate),
                   Type: voucher.voucherType,
                   Description: voucher.description || "",
                   Location: (voucher as any).locationName || "",
                   Optional: voucher.optional ? "Yes" : "No",
-                  "Account Name": accountName,
-                  "Account Type": accountType,
-                  "Item Code":
-                    entry.isStockItem || entry.stockItemId ? entry.stockItemCode || "" : "",
-                  "Item Name":
-                    entry.isStockItem || entry.stockItemId ? entry.stockItemName || "" : "",
-                  Debit:
-                    entry.debitAmount && parseFloat(entry.debitAmount) > 0
-                      ? formatAmount(entry.debitAmount)
-                      : "",
-                  Credit:
-                    entry.creditAmount && parseFloat(entry.creditAmount) > 0
-                      ? formatAmount(entry.creditAmount)
-                      : "",
-                  Narration: entry.narration || "",
-                });
-              }
+                  "Account Name": "",
+                  "Account Type": "",
+                  "Item Code": "",
+                  "Item Name": "",
+                  Debit: "",
+                  Credit: "",
+                  Narration: "",
+                },
+              ];
             }
+
+            return entries.map((entry: any) => {
+              let accountName = "";
+              let accountType = "";
+              if (entry.isStockItem || entry.stockItemId) {
+                accountName = entry.stockItemName || entry.accountName || "";
+                accountType = "Stock Item";
+              } else if (entry.supplierName) {
+                accountName = entry.supplierName;
+                accountType = "Supplier";
+              } else if (entry.employeeName) {
+                accountName = entry.employeeName;
+                accountType = "Employee";
+              } else if (entry.assetName) {
+                accountName = entry.assetName;
+                accountType = "Fixed Asset";
+              } else {
+                accountName = entry.accountName || "";
+                accountType = entry.accountType || "";
+              }
+              return {
+                "Voucher Number": voucher.voucherNumber,
+                Date: formatDisplayDate(voucher.voucherDate),
+                Type: voucher.voucherType,
+                Description: voucher.description || "",
+                Location: (voucher as any).locationName || "",
+                Optional: voucher.optional ? "Yes" : "No",
+                "Account Name": accountName,
+                "Account Type": accountType,
+                "Item Code":
+                  entry.isStockItem || entry.stockItemId ? entry.stockItemCode || "" : "",
+                "Item Name":
+                  entry.isStockItem || entry.stockItemId ? entry.stockItemName || "" : "",
+                Debit:
+                  entry.debitAmount && parseFloat(entry.debitAmount) > 0
+                    ? formatAmount(entry.debitAmount)
+                    : "",
+                Credit:
+                  entry.creditAmount && parseFloat(entry.creditAmount) > 0
+                    ? formatAmount(entry.creditAmount)
+                    : "",
+                Narration: entry.narration || "",
+              };
+            });
+          } catch {
+            failureCount++;
+            return [];
           }
-        } catch (error) {
-          console.error(`Error fetching entries for voucher ${voucher.id}:`, error);
-        }
-      }
+        },
+      );
+
+      const detailedData: DetailRow[] = voucherRows.flat();
 
       if (detailedData.length === 0) {
         toast({
@@ -1464,10 +1369,17 @@ export default function Daybook({ user }: { user?: any } = {}) {
       const fileName = `Daybook_Detailed_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
       writeFile(workbook, fileName);
 
-      toast({
-        title: "Export successful",
-        description: `Downloaded ${fileName} with ${detailedData.length} entries from ${filteredVouchers.length} vouchers across ${sortedTypes.length} sheets.`,
-      });
+      if (failureCount > 0) {
+        toast({
+          title: "Export completed with warnings",
+          description: `Downloaded ${fileName} — ${failureCount} transaction detail${failureCount === 1 ? "" : "s"} could not be fetched.`,
+        });
+      } else {
+        toast({
+          title: "Export successful",
+          description: `Downloaded ${fileName} with ${detailedData.length} entries from ${filteredVouchers.length} vouchers across ${sortedTypes.length} sheets.`,
+        });
+      }
     } catch (error) {
       console.error("Export error:", error);
       toast({
@@ -1839,13 +1751,42 @@ export default function Daybook({ user }: { user?: any } = {}) {
             </div>
           )}
 
+          {/* Error states */}
+          {vouchersError && offloadsError ? (
+            <div className="text-center py-12 space-y-3">
+              <p className="text-sm text-muted-foreground">Could not load transaction history.</p>
+              <div className="flex justify-center gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => vouchersRefetch()}>
+                  Retry Transactions
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => offloadsRefetch()}>
+                  Retry Shipments
+                </Button>
+              </div>
+            </div>
+          ) : vouchersError ? (
+            <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive flex items-center justify-between gap-2">
+              <span>Some accounting transactions could not be loaded.</span>
+              <Button variant="outline" size="sm" onClick={() => vouchersRefetch()}>
+                Retry
+              </Button>
+            </div>
+          ) : offloadsError ? (
+            <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive flex items-center justify-between gap-2">
+              <span>Shipment receiving records could not be loaded.</span>
+              <Button variant="outline" size="sm" onClick={() => offloadsRefetch()}>
+                Retry
+              </Button>
+            </div>
+          ) : null}
+
           {isLoading || offloadsLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : allRows.length === 0 ? (
+          ) : vouchersError && offloadsError ? null : allRows.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               {hasActiveFilters ? (
                 <div>
@@ -1943,11 +1884,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                   const isVoucherHidden = hiddenRowIds.has(vid);
                   const displayDesc =
                     voucher.description ||
-                    (voucher.voucherType === "Payment" ||
-                    voucher.voucherType === "Receipt" ||
-                    voucher.voucherType === "Journal"
-                      ? `${getTransactionDisplayType(voucher.voucherType)}${accountNameCache[voucher.id] ? ` — ${accountNameCache[voucher.id]}` : ""}`
-                      : getTransactionDisplayType(voucher.voucherType));
+                    `${getTransactionDisplayType(voucher.voucherType)} · ${voucher.voucherNumber}`;
                   return (
                     <div
                       key={vid}
@@ -2156,7 +2093,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                       size="icon"
                                       onClick={() => openOffloadDetails(o)}
                                       data-testid={`button-view-offload-${o.id}`}
-                                      title="View"
+                                      aria-label="View shipment"
                                     >
                                       <Eye className="w-4 h-4" />
                                     </Button>
@@ -2200,11 +2137,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                             : null;
                           const detailsText =
                             voucher.description ||
-                            (voucher.voucherType === "Payment" ||
-                            voucher.voucherType === "Receipt" ||
-                            voucher.voucherType === "Journal"
-                              ? `${getTransactionDisplayType(voucher.voucherType)}${accountNameCache[voucher.id] ? ` — ${accountNameCache[voucher.id]}` : ""}`
-                              : getTransactionDisplayType(voucher.voucherType));
+                            `${getTransactionDisplayType(voucher.voucherType)} · ${voucher.voucherNumber}`;
                           return (
                             <TableRow
                               key={dvid}
@@ -2271,7 +2204,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                     size="icon"
                                     onClick={() => handleView(voucher)}
                                     data-testid={`button-view-${voucher.id}`}
-                                    title="View"
+                                    aria-label="View transaction"
                                   >
                                     <Eye className="w-4 h-4" />
                                   </Button>
@@ -2557,11 +2490,22 @@ export default function Daybook({ user }: { user?: any } = {}) {
                               <div className="rounded-md bg-muted/50 p-3">
                                 <p className="text-xs text-muted-foreground mb-1">Paid From</p>
                                 <p className="font-medium">{paidFrom.accountName}</p>
-                                {!hideAmounts && (
-                                  <p className="text-xs text-muted-foreground font-mono mt-1">
-                                    Balance: {formatAmount(cashAccountBalance)}
-                                  </p>
-                                )}
+                                {!hideAmounts &&
+                                  (() => {
+                                    const identity = getEntryAccountIdentity(paidFrom);
+                                    const acct = identity
+                                      ? accountsBalanceQuery.data?.find(
+                                          (a) =>
+                                            a.type === identity.type &&
+                                            Number(a.accountId ?? a.id) === identity.id,
+                                        )
+                                      : null;
+                                    return acct?.balance != null ? (
+                                      <p className="text-xs text-muted-foreground font-mono mt-1">
+                                        Balance: {formatAmount(acct.balance)}
+                                      </p>
+                                    ) : null;
+                                  })()}
                               </div>
                             )}
                             {paidTo.length > 0 && (
@@ -2609,11 +2553,22 @@ export default function Daybook({ user }: { user?: any } = {}) {
                               <div className="rounded-md bg-muted/50 p-3">
                                 <p className="text-xs text-muted-foreground mb-1">Received Into</p>
                                 <p className="font-medium">{receivedInto.accountName}</p>
-                                {!hideAmounts && (
-                                  <p className="text-xs text-muted-foreground font-mono mt-1">
-                                    Balance: {formatAmount(cashAccountBalance)}
-                                  </p>
-                                )}
+                                {!hideAmounts &&
+                                  (() => {
+                                    const identity = getEntryAccountIdentity(receivedInto);
+                                    const acct = identity
+                                      ? accountsBalanceQuery.data?.find(
+                                          (a) =>
+                                            a.type === identity.type &&
+                                            Number(a.accountId ?? a.id) === identity.id,
+                                        )
+                                      : null;
+                                    return acct?.balance != null ? (
+                                      <p className="text-xs text-muted-foreground font-mono mt-1">
+                                        Balance: {formatAmount(acct.balance)}
+                                      </p>
+                                    ) : null;
+                                  })()}
                               </div>
                             )}
                             {receivedFrom.length > 0 && (
@@ -3146,11 +3101,25 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                   {(selectedVoucher.voucherType === "Payment" ||
                                     selectedVoucher.voucherType === "Receipt" ||
                                     selectedVoucher.voucherType === "Journal") &&
-                                    entryBalances[entry.id] !== undefined && (
-                                      <div className="text-xs text-muted-foreground">
-                                        Balance: {formatAmount(entryBalances[entry.id])}
-                                      </div>
-                                    )}
+                                    (() => {
+                                      const identity = getEntryAccountIdentity(entry);
+                                      const acct = identity
+                                        ? accountsBalanceQuery.data?.find(
+                                            (a) =>
+                                              a.type === identity.type &&
+                                              Number(a.accountId ?? a.id) === identity.id,
+                                          )
+                                        : null;
+                                      return acct?.balance != null ? (
+                                        <div className="text-xs text-muted-foreground">
+                                          Balance: {formatAmount(acct.balance)}
+                                        </div>
+                                      ) : accountsBalanceQuery.data && identity ? (
+                                        <div className="text-xs text-muted-foreground">
+                                          Balance: —
+                                        </div>
+                                      ) : null;
+                                    })()}
                                 </TableCell>
                                 <TableCell className="text-xs text-muted-foreground">
                                   {entry.narration || "—"}
