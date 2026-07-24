@@ -548,12 +548,9 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Product</TableHead>
-                            <TableHead>Code</TableHead>
                             <TableHead>Category</TableHead>
                             <TableHead className="text-right">Total Qty</TableHead>
-                            <TableHead className="text-right">Locations</TableHead>
                             <TableHead className="text-right">Avg Cost</TableHead>
-                            <TableHead className="text-right">Selling Price</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead></TableHead>
                           </TableRow>
@@ -562,7 +559,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                           {filteredOverviewItems.length === 0 ? (
                             <TableRow>
                               <TableCell
-                                colSpan={9}
+                                colSpan={6}
                                 className="text-center py-10 text-muted-foreground"
                               >
                                 {overviewSearch
@@ -591,9 +588,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                                       {item.name}
                                     </div>
                                   </TableCell>
-                                  <TableCell className="font-mono text-sm text-muted-foreground">
-                                    {item.code}
-                                  </TableCell>
                                   <TableCell className="text-sm">
                                     {getStockGroupName(item.stockGroupId)}
                                   </TableCell>
@@ -604,16 +598,10 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                                         : totals.totalQuantity.toFixed(2)
                                       : "0"}
                                   </TableCell>
-                                  <TableCell className="text-right text-sm">
-                                    {totals.locationCount}
-                                  </TableCell>
                                   <TableCell className="text-right font-mono text-sm">
                                     {totals.averageCost > 0
                                       ? `$${totals.averageCost.toFixed(2)}`
                                       : "—"}
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono text-sm">
-                                    ${parseFloat(item.sellingPrice || "0").toFixed(2)}
                                   </TableCell>
                                   <TableCell>{statusBadge(item)}</TableCell>
                                   <TableCell>
