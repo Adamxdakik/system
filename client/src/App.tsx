@@ -43,7 +43,9 @@ const Payroll = lazy(() => import("@/pages/Payroll"));
 const ImportStockItems = lazy(() => import("@/pages/ImportStockItems"));
 const StockItemDetail = lazy(() => import("@/pages/StockItemDetail"));
 const Sales = lazy(() => import("@/pages/Sales"));
-const Inventory = lazy(() => import("@/pages/Inventory"));
+const StockItems = lazy(() => import("@/pages/StockItems"));
+const Containers = lazy(() => import("@/pages/Containers"));
+const LocationInsights = lazy(() => import("@/pages/LocationInsights"));
 const POSDaybook = lazy(() => import("@/pages/POSDaybook"));
 const OffloadDetail = lazy(() => import("@/pages/OffloadDetail"));
 const EditSupplier = lazy(() => import("@/pages/EditSupplier"));
@@ -138,16 +140,16 @@ function Router({ user }: { user: any }) {
         <Route path="/suppliers" component={Suppliers} />
         <Route path="/containers/new" component={AddContainer} />
         <Route path="/containers/:id" component={ContainerDetail} />
-        <Route path="/containers">{() => <Inventory initialTab="shipments" />}</Route>
+        <Route path="/containers" component={Containers} />
         <Route path="/stock-items/:id/history/:year/:month" component={StockItemVouchers} />
         <Route path="/stock-items/:id/history" component={StockItemHistory} />
         <Route
           path="/stock-items/:stockItemId/monthly-summary"
           component={LocationMonthlySummary}
         />
-        <Route path="/stock-items">{() => <Inventory initialTab="parts" />}</Route>
+        <Route path="/stock-items" component={StockItems} />
         <Route path="/stock-query/:id" component={StockItemDetail} />
-        <Route path="/stock-query">{() => <Inventory initialTab="parts" />}</Route>
+        <Route path="/stock-query" component={StockItems} />
         <Route
           path="/locations/:locationId/stock-items/:stockItemId/vouchers/:year/:month"
           component={LocationVouchers}
@@ -164,7 +166,7 @@ function Router({ user }: { user: any }) {
         <Route path="/ledger-monthly/:accountId" component={LedgerMonthlySummary} />
         <Route path="/location-inventory">{() => <LocationInventory />}</Route>
         <Route path="/location-summary" component={LocationSummary} />
-        <Route path="/location-insights">{() => <Inventory initialTab="locations" />}</Route>
+        <Route path="/location-insights" component={LocationInsights} />
         <Route path="/po-import" component={POImport} />
         <Route path="/accounts" component={Accounts} />
         <Route path="/daybook">{() => <Daybook user={user} />}</Route>
