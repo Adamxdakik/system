@@ -69,7 +69,7 @@ interface ContainersProps {
 // ── Component ───────────────────────────────────────────────────────────────
 
 export default function Containers({ embedded = false }: ContainersProps = {}) {
-  const [shipmentTab, setShipmentTab] = useState<"otw" | "arrived" | "completed">("otw");
+  const [shipmentTab, setShipmentTab] = useState<"otw" | "completed">("otw");
   const [completedVisited, setCompletedVisited] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("ALL");
@@ -142,12 +142,7 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
 
   // ── Export ───────────────────────────────────────────────────────────────
   const exportToExcel = async () => {
-    const list =
-      shipmentTab === "otw"
-        ? filteredOtw
-        : shipmentTab === "arrived"
-          ? filteredArrived
-          : filteredCompleted;
+    const list = shipmentTab === "otw" ? filteredOtw : filteredCompleted;
 
     const data = list.map((container) => ({
       "Container Number": container.containerNumber,
@@ -164,12 +159,7 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
   };
 
   // ── Summary values ───────────────────────────────────────────────────────
-  const activeList =
-    shipmentTab === "otw"
-      ? filteredOtw
-      : shipmentTab === "arrived"
-        ? filteredArrived
-        : filteredCompleted;
+  const activeList = shipmentTab === "otw" ? filteredOtw : filteredCompleted;
 
   const activeTotal = activeList.reduce((sum, c) => sum + parseFloat(c.grandTotal || "0"), 0);
 
@@ -235,11 +225,7 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
               {list.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    {shipmentTab === "otw"
-                      ? "No shipments on the way"
-                      : shipmentTab === "arrived"
-                        ? "No shipments ready to receive"
-                        : "No received shipments"}
+                    {shipmentTab === "otw" ? "No shipments on the way" : "No received shipments"}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -259,30 +245,17 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
                     <TableCell className="text-right">
                       <Button
                         size="sm"
-                        variant={shipmentTab === "arrived" ? "default" : "outline"}
+                        variant="outline"
                         onClick={() =>
                           primaryAction
                             ? primaryAction(container)
                             : navigate(`/containers/${container.id}`)
                         }
-                        data-testid={
-                          shipmentTab === "arrived"
-                            ? `button-receive-shipment-${container.id}`
-                            : `button-view-${container.id}`
-                        }
+                        data-testid={`button-view-${container.id}`}
                         className="gap-2"
                       >
-                        {shipmentTab === "arrived" ? (
-                          <>
-                            <Package className="h-4 w-4" />
-                            Receive Stock
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="h-4 w-4" />
-                            {primaryLabel}
-                          </>
-                        )}
+                        <Eye className="h-4 w-4" />
+                        {primaryLabel}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -395,13 +368,6 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
               {otwContainers.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="arrived" className="gap-2 px-4" data-testid="tab-shipments-arrived">
-            <Package className="h-4 w-4" />
-            Ready to Receive
-            <Badge variant="secondary" className="ml-1 px-1.5">
-              {arrivedContainers.length}
-            </Badge>
-          </TabsTrigger>
           <TabsTrigger
             value="completed"
             className="gap-2 px-4"
@@ -444,34 +410,6 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
             </Card>
           </div>
           <ActiveTable list={filteredOtw} primaryLabel="Open Shipment" />
-        </TabsContent>
-
-        {/* ── Ready to Receive ───────────────────────────────────────────── */}
-        <TabsContent value="arrived" className="space-y-4 mt-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-                  Shipments
-                </p>
-                <p className="text-2xl font-bold">{filteredArrived.length}</p>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-                  Total Value
-                </p>
-                <p className="text-2xl font-bold font-mono">
-                  $
-                  {formatNumber(
-                    filteredArrived.reduce((s, c) => s + parseFloat(c.grandTotal || "0"), 0),
-                  )}
-                </p>
-              </CardHeader>
-            </Card>
-          </div>
-          <ActiveTable list={filteredArrived} primaryLabel="Receive Stock" />
         </TabsContent>
 
         {/* ── Completed ─────────────────────────────────────────────────── */}
