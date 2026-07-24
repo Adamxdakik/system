@@ -1,0 +1,33 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": ".typescript-build/tests",
+    "types": ["node", "vitest/globals"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["client/src/*"],
+      "@shared/*": ["shared/*"]
+    }
+  },
+  "include": [
+    "server/__tests__/authSecurity.test.ts",
+    "server/__tests__/httpSafety.test.ts",
+    "server/__tests__/securityHeaders.test.ts",
+    "server/__tests__/typescriptConfig.test.ts",
+    "server/__tests__/testTypes.d.ts",
+    "server/lib/__tests__/**/*.test.ts",
+    "server/authSecurity.ts",
+    "server/erpPagePermissions.ts",
+    "server/httpSafety.ts",
+    "server/roleAuthorization.ts",
+    "server/securityHeaders.ts",
+    "server/lib/asyncHandler.ts",
+    "server/lib/excel.ts",
+    "server/lib/validate.ts"
+  ],
+  "exclude": ["node_modules", "dist", ".cache", "_trash"],
+  "references": [{ "path": "./tsconfig.shared.json" }]
+}

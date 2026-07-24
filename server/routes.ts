@@ -2,9 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import * as XLSX from "./lib/excel";
-import bcrypt from "bcryptjs";
 import { createHash } from "crypto";
-import CryptoJS from "crypto-js";
 import { z } from "zod";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -40,6 +38,7 @@ import {
   updateStockTransferSchema,
   updateStockAdjustmentSchema,
   insertUserSchema,
+  updateUserSchema,
   insertUserCompanyRoleSchema,
   InsertPurchaseOrder,
   insertCustomerSchema,
@@ -94,17 +93,28 @@ import {
 } from "@shared/schema";
 import { eq, and, inArray, sql, like, ne, desc, asc, or, isNotNull, lt, gte, lte, isNull } from "drizzle-orm";
 import { format } from "date-fns";
+import {
+  createLogoutHandler,
+  createLoginHandler,
+  hashPassword,
+  loginRateLimiter,
+  loginSchema,
+  resetLoginRateLimit,
+} from "./authSecurity";
+import { createErpPageAccessHandler } from "./erpPagePermissions";
+import {
+  applicationHealthPayload,
+  databaseHealthPayload,
+  MULTIPART_FILE_LIMIT_BYTES,
+} from "./httpSafety";
 
 // Configure multer with file size limit (10MB) to prevent memory exhaustion
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: MULTIPART_FILE_LIMIT_BYTES, // 10MB limit
   }
 });
-
-// Bcrypt configuration
-const BCRYPT_SALT_ROUNDS = 12;
 
 // ─── Active-user tracking (in-memory) ────────────────────────────────────────
 interface ActiveUserEntry {
@@ -116,42 +126,6 @@ interface ActiveUserEntry {
 }
 const activeUsers = new Map<string, ActiveUserEntry>();
 const ACTIVE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-
-// Auth request schemas (validated via the validate() middleware)
-const loginSchema = z.object({
-  username: z.string().min(1, "Username is required").max(255),
-  password: z.string().min(1, "Password is required").max(1024),
-});
-
-// Helper function to hash passwords with bcrypt (async)
-async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
-}
-
-// Check if a hash is a legacy SHA256 hash
-function isLegacySHA256Hash(hash: string): boolean {
-  return hash.length === 64 && /^[a-f0-9]+$/i.test(hash);
-}
-
-// Verify password using legacy SHA256 (for migration)
-// Normalize case since some hashes may be stored uppercase
-function verifyLegacyPassword(password: string, hash: string): boolean {
-  const sha256Hash = CryptoJS.SHA256(password).toString().toLowerCase();
-  return sha256Hash === hash.toLowerCase();
-}
-
-// Helper function to verify password against hash
-async function verifyPassword(password: string, hash: string): Promise<{ valid: boolean; needsMigration: boolean }> {
-  // Handle legacy SHA256 hashes (for backward compatibility during migration)
-  if (isLegacySHA256Hash(hash)) {
-    // Verify using legacy SHA256
-    const isValid = verifyLegacyPassword(password, hash);
-    return { valid: isValid, needsMigration: isValid }; // Flag for migration if valid
-  }
-  // Use bcrypt for new hashes
-  const isValid = await bcrypt.compare(password, hash);
-  return { valid: isValid, needsMigration: false };
-}
 
 // Helper function to sync employee payroll balances from voucher entries
 // Handles both:
@@ -253,125 +227,51 @@ async function syncEmployeeBalancesFromEntries(
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Database health check endpoint
-  app.get("/api/health/db", async (_req, res) => {
+  app.get("/api/health/db", async (req, res) => {
     try {
-      const result = await db.execute(sql`SELECT 1 as test`);
-      res.json({ status: "ok", message: "Database connection successful" });
-    } catch (error: any) {
-      console.error("Database connection failed:", error);
-      res.status(500).json({ status: "error", message: error.message });
+      await db.execute(sql`SELECT 1 as test`);
+      res.json(databaseHealthPayload("ok", req.requestId));
+    } catch (error: unknown) {
+      console.error(`[health/db] requestId=${req.requestId} database check failed`, error);
+      res.status(503).json(databaseHealthPayload("down", req.requestId));
     }
   });
 
-  // T10: full health endpoint — DB, uptime, version. No auth (used by deploy probes).
-  app.get("/api/health", async (_req, res) => {
+  // T10: health endpoint. No auth (used by deploy probes).
+  app.get("/api/health", async (req, res) => {
     let dbStatus: "ok" | "down" = "down";
-    let dbError: string | undefined;
     try {
       await db.execute(sql`SELECT 1`);
       dbStatus = "ok";
-    } catch (e: any) {
-      dbError = e?.message ?? "unknown";
+    } catch (error: unknown) {
+      console.error(`[health] requestId=${req.requestId} database check failed`, error);
     }
-    res.status(dbStatus === "ok" ? 200 : 503).json({
-      status: dbStatus === "ok" ? "ok" : "degraded",
-      db: dbStatus,
-      ...(dbError ? { dbError } : {}),
-      uptimeSeconds: Math.round(process.uptime()),
-      timestamp: new Date().toISOString(),
-      nodeEnv: process.env.NODE_ENV ?? "development",
-    });
+    res
+      .status(dbStatus === "ok" ? 200 : 503)
+      .json(applicationHealthPayload(dbStatus, req.requestId));
   });
 
   // Authentication routes
   // Validates body with Zod, races the DB lookup against a timeout, and
-  // explicitly persists the session before responding so the Set-Cookie
-  // header is guaranteed to be present on the response.
-  app.post(
-    "/api/auth/login",
-    validate(loginSchema),
-    asyncHandler(async (req, res) => {
-      const { username, password } = req.body as { username: string; password: string };
-
-      const user = (await Promise.race([
-        storage.getUserByUsername(username),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Database query timeout")), 5000),
-        ),
-      ])) as Awaited<ReturnType<typeof storage.getUserByUsername>>;
-
-      if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const { valid: passwordValid, needsMigration } = await verifyPassword(
-        password,
-        user.password,
-      );
-      if (!passwordValid) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      // Migrate legacy SHA256 password to bcrypt on successful login
-      if (needsMigration) {
-        const newHash = await hashPassword(password);
-        await storage.updateUser(user.id, { password: newHash });
-      }
-
-      if (!user.active) {
-        return res.status(403).json({ message: "Account is inactive" });
-      }
-
-      req.session.userId = user.id;
-
-      // Auto-select first company
-      const userCompanies = await storage.getUserCompaniesWithRoles(user.id);
-      if (userCompanies.length > 0) {
-        const firstCompany = userCompanies[0];
-        req.session.currentCompanyId = firstCompany.companyId;
-        req.session.currentRole = firstCompany.role;
-        req.session.currentLocationId = firstCompany.assignedLocationId;
-        req.session.currentPOSStation = firstCompany.posStation;
-        req.session.cashAccountId = firstCompany.cashAccountId;
-      }
-
-      // Record login history (non-blocking — failures here must not fail login)
-      try {
-        await db.insert(loginHistory).values({
-          userId: user.id,
-          username: user.username,
-          ipAddress:
-            (req.headers["x-forwarded-for"] as string) ||
-            req.socket?.remoteAddress ||
-            null,
-          userAgent: req.headers["user-agent"] || null,
-        });
-      } catch {
-        /* non-blocking */
-      }
-
-      // Explicitly persist the session before responding so the Set-Cookie
-      // header is guaranteed to land on the response. With async work
-      // happening between mutating req.session and res.json(), the implicit
-      // save can race the response and leave the client unauthenticated.
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => (err ? reject(err) : resolve()));
-      });
-
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
-    }),
-  );
-
-  app.post("/api/auth/logout", (req, res) => {
-    if (req.session?.userId) activeUsers.delete(req.session.userId);
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Failed to logout" });
-      }
-      res.json({ message: "Logged out successfully" });
-    });
+  // regenerates and explicitly persists the authenticated session.
+  const loginHandler = createLoginHandler({
+    getUserByUsername: (username) => storage.getUserByUsername(username),
+    updateUserPassword: async (userId, password) => {
+      await storage.updateUser(userId, { password });
+    },
+    getUserCompaniesWithRoles: (userId) => storage.getUserCompaniesWithRoles(userId),
+    recordLogin: async (input) => {
+      await db.insert(loginHistory).values(input);
+    },
+    resetRateLimit: resetLoginRateLimit,
   });
+
+  app.post("/api/auth/login", loginRateLimiter, validate(loginSchema), asyncHandler(loginHandler));
+
+  app.post(
+    "/api/auth/logout",
+    createLogoutHandler((userId) => activeUsers.delete(userId)),
+  );
 
   // ─── Active Users heartbeat ──────────────────────────────────────────────
   app.post("/api/users/heartbeat", requireAuth, (req, res) => {
@@ -387,7 +287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ ok: true });
   });
 
-  app.get("/api/active-users", requireAuth, (_req, res) => {
+  app.get("/api/active-users", requireAuth, requireRole("Admin"), (_req, res) => {
     const cutoff = new Date(Date.now() - ACTIVE_TIMEOUT_MS);
     const result: ActiveUserEntry[] = [];
     for (const [id, entry] of activeUsers) {
@@ -401,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ─── Login History ───────────────────────────────────────────────────────
-  app.get("/api/login-history", requireAuth, async (req, res) => {
+  app.get("/api/login-history", requireAuth, requireRole("Admin"), async (req, res) => {
     try {
       const usernameFilter = (req.query.username as string) || "";
       let rows = await db
@@ -410,7 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(loginHistory.createdAt))
         .limit(200);
       if (usernameFilter) {
-        rows = rows.filter(r => r.username.toLowerCase().includes(usernameFilter.toLowerCase()));
+        rows = rows.filter((r) => r.username.toLowerCase().includes(usernameFilter.toLowerCase()));
       }
       res.json(rows);
     } catch (error: any) {
@@ -475,49 +375,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
-  app.patch(
-    "/api/users/:id",
-    requireAuth,
-    requireRole("Admin"),
-    async (req, res) => {
-      try {
-        const { id } = req.params;
-        const updates = req.body;
+  app.patch("/api/users/:id", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = updateUserSchema.parse(req.body);
 
-        // If password is being updated, hash it with bcrypt
-        if (updates.password) {
-          updates.password = await hashPassword(updates.password);
-        }
-
-        const user = await storage.updateUser(id, updates);
-        const { password: _, ...userWithoutPassword } = user;
-        res.json(userWithoutPassword);
-      } catch (error: any) {
-        res.status(400).json({ message: error.message });
+      // If password is being updated, hash it with bcrypt
+      if (updates.password) {
+        updates.password = await hashPassword(updates.password);
       }
-    },
-  );
 
-  app.delete(
-    "/api/users/:id",
-    requireAuth,
-    requireRole("Admin"),
-    async (req, res) => {
-      try {
-        const { id } = req.params;
-        
-        // Prevent deleting yourself
-        if (req.user?.id === id) {
-          return res.status(400).json({ message: "Cannot delete your own account" });
-        }
-        
-        await storage.deleteUser(id);
-        res.json({ message: "User deleted successfully" });
-      } catch (error: any) {
-        res.status(400).json({ message: error.message });
+      const user = await storage.updateUser(id, updates);
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/users/:id", requireAuth, requireRole("Admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Prevent deleting yourself
+      if (req.user?.id === id) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
       }
-    },
-  );
+
+      await storage.deleteUser(id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
 
   // User-Company-Role management routes
   app.get(
@@ -2452,27 +2342,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== Round-4 follow-ups =====
   // A1: deep health check (auth'd — leaks schema metadata + row counts)
-  app.get("/api/health/deep", requireAuth, async (_req, res) => {
+  app.get("/api/health/deep", requireAuth, requireRole("Admin"), async (_req, res) => {
     const startedAt = Date.now();
-    const checks: any = { db: "unknown", migrations: "unknown", auditTable: "unknown" };
+    const checks: any = {
+      db: "unknown",
+      migrations: "unknown",
+      auditTable: "unknown",
+    };
     try {
       const r: any = await db.execute(sql`SELECT 1 AS ok`);
       checks.db = (r.rows?.[0]?.ok ?? r[0]?.ok) === 1 ? "ok" : "down";
-    } catch (e: any) { checks.db = `error: ${e.message}`; }
+    } catch (e: any) {
+      checks.db = `error: ${e.message}`;
+    }
     try {
-      const r: any = await db.execute(sql`SELECT MAX(version)::text AS v FROM drizzle.__drizzle_migrations`);
+      const r: any = await db.execute(
+        sql`SELECT MAX(version)::text AS v FROM drizzle.__drizzle_migrations`,
+      );
       checks.migrations = r.rows?.[0]?.v ?? r[0]?.v ?? null;
     } catch (e: any) {
       // Migration runner uses a different table; fall back to file count
       try {
-        const r2: any = await db.execute(sql`SELECT COUNT(*)::int AS c FROM information_schema.tables WHERE table_schema = 'public'`);
+        const r2: any = await db.execute(
+          sql`SELECT COUNT(*)::int AS c FROM information_schema.tables WHERE table_schema = 'public'`,
+        );
         checks.migrations = `tables=${r2.rows?.[0]?.c ?? r2[0]?.c}`;
-      } catch { checks.migrations = "unknown"; }
+      } catch {
+        checks.migrations = "unknown";
+      }
     }
     try {
       const r: any = await db.execute(sql`SELECT COUNT(*)::int AS c FROM moto_rate_audit`);
       checks.auditTable = `rows=${r.rows?.[0]?.c ?? r[0]?.c}`;
-    } catch (e: any) { checks.auditTable = `error: ${e.message}`; }
+    } catch (e: any) {
+      checks.auditTable = `error: ${e.message}`;
+    }
     const allOk = checks.db === "ok" && !String(checks.auditTable).startsWith("error");
     res.status(allOk ? 200 : 503).json({
       status: allOk ? "ok" : "degraded",
@@ -27850,17 +27754,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ERP page access — which pages/features the current user can access
-  app.get("/api/my-erp-pages", requireAuth, async (req, res) => {
-    try {
-      const role = req.session.currentRole;
-      if (!role) return res.status(400).json({ message: "No role selected" });
-      // Admins and Owners get full access; others get all pages (permissions managed elsewhere)
-      const { FEATURE_KEYS } = await import("@shared/schema");
-      return res.json({ pageKeys: [...FEATURE_KEYS], fullAccess: true, hiddenErpCostFields: [] });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  app.get(
+    "/api/my-erp-pages",
+    requireAuth,
+    asyncHandler(
+      createErpPageAccessHandler((companyId) => storage.getRoleFeaturePermissions(companyId)),
+    ),
+  );
 
   const httpServer = createServer(app);
 

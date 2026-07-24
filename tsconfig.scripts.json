@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": ".typescript-build/scripts",
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["shared/*"]
+    }
+  },
+  "include": ["scripts/**/*.ts"],
+  "exclude": ["scripts/**/*.test.ts", "node_modules", "dist", ".cache", "_trash"],
+  "references": [{ "path": "./tsconfig.server.json" }, { "path": "./tsconfig.shared.json" }]
+}

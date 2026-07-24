@@ -1,0 +1,24 @@
+{
+  "command": "npm run check:all",
+  "typescriptVersion": "5.6.3",
+  "diagnostics": {
+    "client/src/App.tsx::TS2322": 4,
+    "client/src/components/vouchers/PaymentVoucherTab.tsx::TS7030": 1,
+    "client/src/pages/Dashboard.tsx::TS2305": 3,
+    "client/src/pages/Vouchers.tsx::TS2552": 1,
+    "client/src/pages/Vouchers.tsx::TS2577": 1,
+    "client/src/pages/Vouchers.tsx::TS7006": 1,
+    "client/src/pages/Vouchers.tsx::TS7022": 1,
+    "scripts/create-admin.ts::TS6305": 1,
+    "scripts/seed-dev.ts::TS6305": 1,
+    "scripts/seed-dev.ts::TS7006": 1,
+    "server/__tests__/moto-rates-authed.test.ts::TS18046": 15,
+    "server/__tests__/moto-rates-authed.test.ts::TS6305": 1,
+    "server/__tests__/moto-rates-authed.test.ts::TS7006": 4,
+    "server/__tests__/moto-rates-storage.test.ts::TS6305": 2,
+    "server/__tests__/moto-rates-storage.test.ts::TS7006": 4,
+    "server/auth.ts::TS7030": 3,
+    "server/routes.ts::TS18046": 8,
+    "server/routes.ts::TS7030": 315
+  }
+}

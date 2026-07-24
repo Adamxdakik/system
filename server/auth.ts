@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
+import { sendNoCompanyAccess } from "./roleAuthorization";
+export { requireRole } from "./roleAuthorization";
 
 // Authentication middleware - checks if user is logged in
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -18,7 +20,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (!req.session.currentCompanyId) {
     const userCompanies = await storage.getUserCompaniesWithRoles(req.session.userId);
     if (userCompanies.length === 0) {
-      return res.status(403).json({ message: "No company access", code: "NO_COMPANY_ACCESS" });
+      return sendNoCompanyAccess(req, res);
     }
     const first = userCompanies[0];
     req.session.currentCompanyId = first.companyId;
@@ -33,9 +35,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 
   // Load the user's role for the current company
-  const userCompanyRole = await storage.getUserCompanyRole(req.session.userId, req.session.currentCompanyId);
+  const userCompanyRole = await storage.getUserCompanyRole(
+    req.session.userId,
+    req.session.currentCompanyId,
+  );
   if (!userCompanyRole) {
-    return res.status(403).json({ message: "You do not have access to this company" });
+    return sendNoCompanyAccess(req, res);
   }
 
   // Attach user with company-specific role and location info
@@ -46,26 +51,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     posStation: userCompanyRole.posStation,
     cashAccountId: userCompanyRole.cashAccountId,
     // Admin always has negative stock permission
-    canSellNegativeStock: userCompanyRole.role === "Admin" ? true : userCompanyRole.canSellNegativeStock,
+    canSellNegativeStock:
+      userCompanyRole.role === "Admin" ? true : userCompanyRole.canSellNegativeStock,
     canEditDaybook: userCompanyRole.canEditDaybook,
   };
 
   next();
-}
-
-// Role-based authorization middleware
-export function requireRole(...roles: string[]) {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user || !req.user.role) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    next();
-  };
 }
 
 // Permission check for delete operations (Owner can't delete)
@@ -96,12 +87,12 @@ export function canModifyDate(dateField: string = "voucherDate") {
     // Manager and POS users can only modify today's date
     const isPOS = req.user.role.startsWith("POS");
     if (req.user.role === "Manager" || isPOS) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split("T")[0];
       const recordDate = req.body[dateField];
-      
+
       if (recordDate && recordDate !== today) {
-        return res.status(403).json({ 
-          message: "You can only create or modify records for today's date" 
+        return res.status(403).json({
+          message: "You can only create or modify records for today's date",
         });
       }
     }
@@ -123,10 +114,10 @@ export function checkPOSLocation(req: Request, res: Response, next: NextFunction
 
   // POS users can only access their assigned location
   const locationId = parseInt(req.params.locationId || req.body.locationId || req.query.locationId);
-  
+
   if (locationId && req.user.assignedLocationId !== locationId) {
-    return res.status(403).json({ 
-      message: "You can only access data for your assigned location" 
+    return res.status(403).json({
+      message: "You can only access data for your assigned location",
     });
   }
 
@@ -141,8 +132,8 @@ export function requireNonPOS(req: Request, res: Response, next: NextFunction) {
 
   const isPOS = req.user.role.startsWith("POS");
   if (isPOS) {
-    return res.status(403).json({ 
-      message: "Access denied: This resource is not available for POS users" 
+    return res.status(403).json({
+      message: "Access denied: This resource is not available for POS users",
     });
   }
 
