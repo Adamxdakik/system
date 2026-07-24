@@ -63,6 +63,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -490,8 +497,9 @@ export default function Daybook({ user }: { user?: any } = {}) {
     searchQuery: "",
     sortOrder: "desc" as "asc" | "desc",
   });
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+  const [selectedOffload, setSelectedOffload] = useState<OffloadListItem | null>(null);
   const [selectedDialogRow, setSelectedDialogRow] = useState<number | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [voucherToEdit, setVoucherToEdit] = useState<Voucher | null>(null);
@@ -535,9 +543,14 @@ export default function Daybook({ user }: { user?: any } = {}) {
   const [purchaseOrderData, setPurchaseOrderData] = useState<any>(null);
 
   // Fetch voucher entries when viewing (includes account names and stock items)
-  const { data: viewVoucherEntriesRaw, isLoading: viewEntriesLoading } = useQuery<any>({
+  const {
+    data: viewVoucherEntriesRaw,
+    isLoading: viewEntriesLoading,
+    isError: viewEntriesError,
+    refetch: viewEntriesRefetch,
+  } = useQuery<any>({
     queryKey: selectedVoucher ? [`/api/vouchers/${selectedVoucher.id}/view-entries`] : [],
-    enabled: !!selectedVoucher && viewDialogOpen,
+    enabled: !!selectedVoucher && detailSheetOpen,
   });
 
   // Handle the response which can be either array (most types) or object with entries/purchaseOrder (Purchase type)
@@ -613,10 +626,10 @@ export default function Daybook({ user }: { user?: any } = {}) {
   // State to store per-entry balances for the entries table
   const [entryBalances, setEntryBalances] = useState<Record<number, string>>({});
 
-  // Fetch balance when cash account ID is available and dialog is open
+  // Fetch balance when cash account ID is available and sheet is open
   useEffect(() => {
     const fetchBalance = async () => {
-      if (!cashAccountId || !viewDialogOpen) {
+      if (!cashAccountId || !detailSheetOpen) {
         return;
       }
       try {
@@ -632,12 +645,12 @@ export default function Daybook({ user }: { user?: any } = {}) {
       }
     };
     fetchBalance();
-  }, [cashAccountId, viewDialogOpen]);
+  }, [cashAccountId, detailSheetOpen]);
 
   // Fetch balances for all displayed entries in Payment/Receipt/Journal vouchers
   // Keyed by entry.id to avoid collisions between ledger/bank/employee numeric IDs
   useEffect(() => {
-    if (!viewDialogOpen || !selectedVoucher) {
+    if (!detailSheetOpen || !selectedVoucher) {
       setEntryBalances({});
       return;
     }
@@ -682,12 +695,12 @@ export default function Daybook({ user }: { user?: any } = {}) {
       setEntryBalances(results);
     };
     fetchAll();
-  }, [viewDialogOpen, selectedVoucher, viewVoucherEntries]);
+  }, [detailSheetOpen, selectedVoucher, viewVoucherEntries]);
 
-  // Reset highlighted row when view dialog opens/closes
+  // Reset highlighted row when sheet opens/closes
   useEffect(() => {
     setSelectedDialogRow(null);
-  }, [viewDialogOpen]);
+  }, [detailSheetOpen]);
 
   // Scroll highlighted row into view when navigating with arrow keys
   useEffect(() => {
@@ -696,9 +709,9 @@ export default function Daybook({ user }: { user?: any } = {}) {
     if (row) row.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selectedDialogRow]);
 
-  // Keyboard navigation for sales items in view dialog (↑↓ to select, Alt+S to open item)
+  // Keyboard navigation for sales items in detail sheet (↑↓ to select, Alt+S to open item)
   useEffect(() => {
-    if (!viewDialogOpen || !selectedVoucher) return;
+    if (!detailSheetOpen || !selectedVoucher) return;
     const salesItems = viewVoucherEntries.filter(
       (e: ViewVoucherEntry) => e.isStockItem || e.stockItemId,
     );
@@ -729,7 +742,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
           const itemId = (salesItems[selectedDialogRow] as ViewVoucherEntry).stockItemId;
           if (itemId) {
             navigate(`/stock-query/${itemId}?from=daybook`);
-            setViewDialogOpen(false);
+            setDetailSheetOpen(false);
           }
         }
       }
@@ -737,7 +750,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
 
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [viewDialogOpen, selectedVoucher, viewVoucherEntries, navigate, selectedDialogRow]);
+  }, [detailSheetOpen, selectedVoucher, viewVoucherEntries, navigate, selectedDialogRow]);
 
   // Fetch voucher entries when editing
   const { data: voucherEntries = [], isLoading: entriesLoading } = useQuery<VoucherEntry[]>({
@@ -1143,9 +1156,22 @@ export default function Daybook({ user }: { user?: any } = {}) {
 
   // Handler functions
   const handleView = (voucher: Voucher) => {
-    setSelectedVoucher(voucher);
-    setViewDialogOpen(true);
+    openVoucherDetails(voucher);
   };
+
+  function openVoucherDetails(voucher: Voucher) {
+    setSelectedVoucher(voucher);
+    setSelectedOffload(null);
+    setPurchaseOrderData(null);
+    setDetailSheetOpen(true);
+  }
+
+  function openOffloadDetails(offload: OffloadListItem) {
+    setSelectedOffload(offload);
+    setSelectedVoucher(null);
+    setPurchaseOrderData(null);
+    setDetailSheetOpen(true);
+  }
 
   const handleEdit = (voucher: Voucher) => {
     // Sales vouchers use the dedicated edit page
@@ -1601,9 +1627,9 @@ export default function Daybook({ user }: { user?: any } = {}) {
         const row = visibleRows.find((r) => rowId(r) === selectedRowId);
         if (!row) return;
         if (row._type === "offload") {
-          navigate(`/offloads/${row.data.id}`);
+          navigate(`/offloads/${(row.data as OffloadListItem).id}`);
         } else {
-          handleView(row.data as Voucher);
+          openVoucherDetails(row.data as Voucher);
         }
         return;
       }
@@ -2323,7 +2349,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
       </Card>
 
       {/* View Voucher Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+      <Dialog open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
         <DialogContent className="w-full max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Voucher Details</DialogTitle>
@@ -2643,7 +2669,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => {
-                                    setViewDialogOpen(false);
+                                    setDetailSheetOpen(false);
                                     navigate(`/purchase-orders/${purchaseOrderData.id}/edit`);
                                   }}
                                   data-testid="button-edit-po"
