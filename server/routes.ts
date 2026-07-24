@@ -253,33 +253,34 @@ async function syncEmployeeBalancesFromEntries(
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Database health check endpoint
-  app.get("/api/health/db", async (_req, res) => {
+  app.get("/api/health/db", async (req, res) => {
     try {
-      const result = await db.execute(sql`SELECT 1 as test`);
-      res.json({ status: "ok", message: "Database connection successful" });
-    } catch (error: any) {
-      console.error("Database connection failed:", error);
-      res.status(500).json({ status: "error", message: error.message });
+      await db.execute(sql`SELECT 1 as test`);
+      res.json({ status: "ok" });
+    } catch (error: unknown) {
+      console.error(
+        `[health/db] requestId=${req.requestId} database check failed`,
+        error,
+      );
+      res.status(503).json({ status: "degraded" });
     }
   });
 
-  // T10: full health endpoint — DB, uptime, version. No auth (used by deploy probes).
-  app.get("/api/health", async (_req, res) => {
+  // T10: health endpoint. No auth (used by deploy probes).
+  app.get("/api/health", async (req, res) => {
     let dbStatus: "ok" | "down" = "down";
-    let dbError: string | undefined;
     try {
       await db.execute(sql`SELECT 1`);
       dbStatus = "ok";
-    } catch (e: any) {
-      dbError = e?.message ?? "unknown";
+    } catch (error: unknown) {
+      console.error(
+        `[health] requestId=${req.requestId} database check failed`,
+        error,
+      );
     }
     res.status(dbStatus === "ok" ? 200 : 503).json({
       status: dbStatus === "ok" ? "ok" : "degraded",
       db: dbStatus,
-      ...(dbError ? { dbError } : {}),
-      uptimeSeconds: Math.round(process.uptime()),
-      timestamp: new Date().toISOString(),
-      nodeEnv: process.env.NODE_ENV ?? "development",
     });
   });
 

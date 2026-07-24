@@ -1,4 +1,4 @@
-import express, { type Request, Response, NextFunction } from "express";
+import express from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import path from "path";
@@ -6,6 +6,12 @@ import fs from "fs";
 import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";
 import type { User } from "@shared/schema";
+import {
+  apiRequestLogger,
+  errorHandler,
+  requestBodyParsers,
+  requestIdMiddleware,
+} from "./httpSafety";
 
 // Build version for cache busting and deployment tracking
 const BUILD_VERSION = process.env.BUILD_VERSION || 
@@ -49,12 +55,8 @@ declare module 'express-session' {
   }
 }
 
-app.use(express.json({
-  verify: (req, _res, buf) => {
-    req.rawBody = buf;
-  }
-}));
-app.use(express.urlencoded({ extended: false }));
+app.use(requestIdMiddleware);
+app.use(requestBodyParsers());
 
 // Trust proxy for HTTPS termination
 // This is required for both Replit (development) and Render (production)
@@ -119,35 +121,7 @@ app.use((_req, res, next) => {
   next();
 });
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
-});
+app.use(apiRequestLogger(log));
 
 (async () => {
   // Build info endpoint for frontend version checking (must be before registerRoutes)
@@ -157,32 +131,7 @@ app.use((req, res, next) => {
 
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    // Centralized error handler. Handles Zod validation errors with 400 + details,
-    // honors err.status/err.statusCode for thrown HTTP errors, and never leaks
-    // stack traces to clients in production.
-    if (err?.name === "ZodError" && Array.isArray(err.errors)) {
-      return res.status(400).json({
-        message: "Invalid request",
-        errors: err.errors.map((e: any) => ({
-          path: Array.isArray(e.path) ? e.path.join(".") : String(e.path ?? ""),
-          message: e.message,
-          code: e.code,
-        })),
-      });
-    }
-
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    if (status >= 500) {
-      console.error("[error-middleware]", err);
-    }
-
-    const payload: Record<string, unknown> = { message };
-    if (err.code) payload.code = err.code;
-    res.status(status).json(payload);
-  });
+  app.use(errorHandler);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
