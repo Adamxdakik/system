@@ -587,7 +587,7 @@ export default function Settings() {
     }
 
     if (editingUser && !data.password) {
-      const { password, ...dataWithoutPassword } = data;
+      const { password: _password, ...dataWithoutPassword } = data;
       createUserMutation.mutate(dataWithoutPassword as UserFormData);
     } else {
       createUserMutation.mutate(data);

@@ -37,9 +37,7 @@ describe("excel shim (exceljs-backed)", () => {
 
     const buf = await XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
     const wb2 = await XLSX.read(buf, { type: "buffer" });
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-      wb2.Sheets["Sheet1"],
-    );
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb2.Sheets["Sheet1"]);
     expect(rows).toEqual([
       { Name: "Apple", Qty: 5 },
       { Name: "Pear", Qty: 8 },
@@ -48,18 +46,36 @@ describe("excel shim (exceljs-backed)", () => {
 
   it("preserves multiple sheets", async () => {
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.json_to_sheet([{ a: 1 }]),
-      "First",
-    );
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.json_to_sheet([{ b: 2 }]),
-      "Second",
-    );
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{ a: 1 }]), "First");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{ b: 2 }]), "Second");
     const buf = await XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
     const wb2 = await XLSX.read(buf, { type: "buffer" });
     expect(wb2.SheetNames).toEqual(["First", "Second"]);
+  });
+
+  it.each([
+    [
+      "PO",
+      {
+        "Item Name": "Brake Pad",
+        Barcode: "PO-001",
+        Quantity: 4,
+        Rate: 12.5,
+        "Charge Type": "Freight",
+      },
+    ],
+    ["POS", { Barcode: "POS-001", Quantity: 2, Rate: 25 }],
+    ["stock transfer", { Barcode: "ST-001", Quantity: 3 }],
+    ["multi-source stock transfer", { "Source Location": "WH-1", Barcode: "STM-001", Quantity: 1 }],
+  ])("parses a representative %s XLSX fixture", async (_name, fixture) => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([fixture]), "Import");
+    const buffer = await XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx",
+    });
+    const parsed = await XLSX.read(buffer, { type: "buffer" });
+
+    expect(XLSX.utils.sheet_to_json(parsed.Sheets[parsed.SheetNames[0]])).toEqual([fixture]);
   });
 });

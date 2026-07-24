@@ -9,12 +9,10 @@ import {
   hashPassword,
   loginSchema,
   SESSION_COOKIE_NAME,
+  verifyPassword,
   type LoginDependencies,
 } from "../authSecurity";
-import {
-  createErpPageAccessHandler,
-  resolveErpPageAccess,
-} from "../erpPagePermissions";
+import { createErpPageAccessHandler, resolveErpPageAccess } from "../erpPagePermissions";
 import { asyncHandler } from "../lib/asyncHandler";
 import { errorHandler, requestIdMiddleware } from "../httpSafety";
 import { requireRole } from "../roleAuthorization";
@@ -112,10 +110,7 @@ function authApp(dependencies = defaultDependencies()) {
     req.session.currentRole = "PreAuth";
     res.json({ sessionId: req.sessionID });
   });
-  app.post(
-    "/login",
-    asyncHandler(createLoginHandler(dependencies)),
-  );
+  app.post("/login", asyncHandler(createLoginHandler(dependencies)));
   app.get("/session", (req, res) => {
     res.json({
       sessionId: req.sessionID,
@@ -135,7 +130,10 @@ function authApp(dependencies = defaultDependencies()) {
     }
     return res.json({ ok: true });
   });
-  app.post("/logout", createLogoutHandler(() => undefined));
+  app.post(
+    "/logout",
+    createLogoutHandler(() => undefined),
+  );
   app.use(errorHandler);
   return app;
 }
@@ -151,11 +149,7 @@ async function login(baseUrl: string, password = "historical", cookie?: string) 
   });
 }
 
-function permission(
-  role: string,
-  featureKey: string,
-  enabled = true,
-): RoleFeaturePermission {
+function permission(role: string, featureKey: string, enabled = true): RoleFeaturePermission {
   return {
     id: 1,
     companyId: 42,
@@ -227,9 +221,7 @@ describe("login hardening", () => {
   it("returns a session cookie after successful login", async () => {
     const response = await login(await listen(authApp()));
     expect(response.status).toBe(200);
-    expect(response.headers.get("set-cookie")).toContain(
-      `${SESSION_COOKIE_NAME}=`,
-    );
+    expect(response.headers.get("set-cookie")).toContain(`${SESSION_COOKIE_NAME}=`);
   });
 
   it("regenerates the pre-authentication session ID", async () => {
@@ -279,9 +271,38 @@ describe("login hardening", () => {
   });
 
   it("accepts historical short passwords in login input validation", () => {
-    expect(
-      loginSchema.safeParse({ username: "known", password: "four" }).success,
-    ).toBe(true);
+    expect(loginSchema.safeParse({ username: "known", password: "four" }).success).toBe(true);
+  });
+
+  it("migrates a valid legacy SHA-256 password to bcrypt", async () => {
+    const dependencies = defaultDependencies();
+    const legacyHash = await import("crypto-js").then(({ default: CryptoJS }) =>
+      CryptoJS.SHA256("legacy-short").toString(),
+    );
+    vi.mocked(dependencies.getUserByUsername).mockResolvedValue({
+      id: "user-1",
+      username: "known",
+      password: legacyHash,
+      active: true,
+    });
+    const response = await login(await listen(authApp(dependencies)), "legacy-short");
+
+    expect(response.status).toBe(200);
+    expect(dependencies.updateUserPassword).toHaveBeenCalledOnce();
+    const migrated = vi.mocked(dependencies.updateUserPassword).mock.calls[0][1];
+    expect(await verifyPassword("legacy-short", migrated)).toMatchObject({
+      valid: true,
+      needsMigration: false,
+    });
+  });
+
+  it("does not block login when login-history recording fails", async () => {
+    const dependencies = defaultDependencies();
+    vi.mocked(dependencies.recordLogin).mockRejectedValue(new Error("history unavailable"));
+
+    const response = await login(await listen(authApp(dependencies)));
+
+    expect(response.status).toBe(200);
   });
 });
 
@@ -331,6 +352,17 @@ describe("logout and password policy", () => {
     const result = updateUserSchema.safeParse({ password: "short" });
     expect(result.success).toBe(false);
   });
+
+  it("accepts every non-password field submitted by Settings", () => {
+    expect(
+      updateUserSchema.safeParse({
+        username: "updated-user",
+        active: false,
+        chatbotEnabled: true,
+        employeeInventoryAccess: true,
+      }).success,
+    ).toBe(true);
+  });
 });
 
 describe("sensitive endpoint roles", () => {
@@ -349,16 +381,8 @@ describe("sensitive endpoint roles", () => {
       };
       next();
     });
-    app.get(
-      "/api/login-history",
-      requireRole("Admin"),
-      (_req, res) => res.json([]),
-    );
-    app.get(
-      "/api/active-users",
-      requireRole("Admin"),
-      (_req, res) => res.json([]),
-    );
+    app.get("/api/login-history", requireRole("Admin"), (_req, res) => res.json([]));
+    app.get("/api/active-users", requireRole("Admin"), (_req, res) => res.json([]));
     app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
     return app;
   }
@@ -406,6 +430,28 @@ describe("ERP page permissions", () => {
     expect(access.fullAccess).toBe(false);
   });
 
+  it("gives Owner only stored enabled feature keys", () => {
+    const access = resolveErpPageAccess("Owner", [
+      permission("Owner", "dashboard"),
+      permission("Owner", "settings", false),
+    ]);
+    expect(access.pageKeys).toEqual(["dashboard"]);
+    expect(access.fullAccess).toBe(false);
+  });
+
+  it.each(["POS1", "POS2", "POS3", "POS4", "POS5", "POS6"])(
+    "intersects stored %s permissions with POS-safe keys",
+    (role) => {
+      const access = resolveErpPageAccess(role, [
+        permission(role, "pos"),
+        permission(role, "settings"),
+        permission(role, "sales_report", false),
+      ]);
+      expect(access.pageKeys).toEqual(["pos"]);
+      expect(access.fullAccess).toBe(false);
+    },
+  );
+
   it("intersects stored POS permissions with POS-safe keys", () => {
     const access = resolveErpPageAccess("POS1", [
       permission("POS1", "pos"),
@@ -413,6 +459,21 @@ describe("ERP page permissions", () => {
       permission("POS1", "sales_report"),
     ]);
     expect(access.pageKeys).toEqual(["pos", "sales_report"]);
+  });
+
+  it.each(["Owner", "Manager"])(
+    "uses the documented non-admin fallback when %s has no permission rows",
+    (role) => {
+      const access = resolveErpPageAccess(role, []);
+      expect(access.pageKeys).not.toContain("settings");
+      expect(access.pageKeys).toContain("dashboard");
+    },
+  );
+
+  it("uses the documented POS-safe fallback when a POS role has no rows", () => {
+    const access = resolveErpPageAccess("POS6", []);
+    expect(access.pageKeys).toContain("pos");
+    expect(access.pageKeys).not.toContain("settings");
   });
 
   it("returns 403 when there is no current company access", async () => {
@@ -425,16 +486,12 @@ describe("ERP page permissions", () => {
         saveUninitialized: false,
       }),
     );
-    app.get(
-      "/api/my-erp-pages",
-      asyncHandler(createErpPageAccessHandler(async () => [])),
-    );
+    app.get("/api/my-erp-pages", asyncHandler(createErpPageAccessHandler(async () => [])));
     app.use(errorHandler);
 
-    const response = await fetch(
-      `${await listen(app)}/api/my-erp-pages`,
-      { headers: { "X-Request-Id": "no-company-test" } },
-    );
+    const response = await fetch(`${await listen(app)}/api/my-erp-pages`, {
+      headers: { "X-Request-Id": "no-company-test" },
+    });
 
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({

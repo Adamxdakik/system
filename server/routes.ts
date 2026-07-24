@@ -102,12 +102,17 @@ import {
   resetLoginRateLimit,
 } from "./authSecurity";
 import { createErpPageAccessHandler } from "./erpPagePermissions";
+import {
+  applicationHealthPayload,
+  databaseHealthPayload,
+  MULTIPART_FILE_LIMIT_BYTES,
+} from "./httpSafety";
 
 // Configure multer with file size limit (10MB) to prevent memory exhaustion
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: MULTIPART_FILE_LIMIT_BYTES, // 10MB limit
   }
 });
 
@@ -225,13 +230,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/health/db", async (req, res) => {
     try {
       await db.execute(sql`SELECT 1 as test`);
-      res.json({ status: "ok" });
+      res.json(databaseHealthPayload("ok", req.requestId));
     } catch (error: unknown) {
       console.error(
         `[health/db] requestId=${req.requestId} database check failed`,
         error,
       );
-      res.status(503).json({ status: "degraded" });
+      res.status(503).json(databaseHealthPayload("down", req.requestId));
     }
   });
 
@@ -247,10 +252,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error,
       );
     }
-    res.status(dbStatus === "ok" ? 200 : 503).json({
-      status: dbStatus === "ok" ? "ok" : "degraded",
-      db: dbStatus,
-    });
+    res
+      .status(dbStatus === "ok" ? 200 : 503)
+      .json(applicationHealthPayload(dbStatus, req.requestId));
   });
 
   // Authentication routes

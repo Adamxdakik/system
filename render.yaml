@@ -3,7 +3,7 @@ services:
     name: erp-pos-system
     runtime: node
     plan: starter
-    buildCommand: npm ci && npm run build && npm run db:migrate
+    buildCommand: npm ci --include=dev && npm run build && npm run db:migrate
     startCommand: npm start
     envVars:
       - key: NODE_ENV

@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -25,16 +27,29 @@ jobs:
           cache: npm
 
       - name: Install exact dependencies
-        run: npm ci
+        run: npm ci --include=dev
 
-      - name: Check formatting
-        run: npm run format:check
+      - name: Select changed-file comparison
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "CHANGED_FILES_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+            echo "CHANGED_FILES_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
+          else
+            echo "CHANGED_FILES_RANGE=${{ github.event.before }}..${{ github.sha }}" >> "$GITHUB_ENV"
+          fi
 
-      - name: Lint
-        run: npm run lint
+      - name: Check formatting on changed lines
+        run: npm run format:changed
+
+      - name: Lint changed source lines with zero warnings
+        run: npm run lint:changed
 
       - name: Check TypeScript packages
         run: npm run check
+
+      - name: Enforce whole-application TypeScript baseline
+        run: npm run check:all:baseline
 
       - name: Run CI-safe tests
         run: npm run test:ci
