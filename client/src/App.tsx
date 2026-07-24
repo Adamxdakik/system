@@ -61,8 +61,7 @@ const ClosingStockDetail = lazy(() => import("@/pages/ClosingStockDetail"));
 const LedgerMonthlySummary = lazy(() => import("@/pages/LedgerMonthlySummary"));
 const LedgerVouchers = lazy(() => import("@/pages/LedgerVouchers"));
 const VoucherDetail = lazy(() => import("@/pages/VoucherDetail"));
-const MotoAssembly = lazy(() => import("@/pages/MotoAssembly"));
-const AssemblyHistory = lazy(() => import("@/pages/AssemblyHistory"));
+const Assembly = lazy(() => import("@/pages/Assembly"));
 const IncomeStatement = lazy(() => import("@/pages/IncomeStatement"));
 const Customers = lazy(() => import("@/pages/Customers"));
 const EmployeeInventory = lazy(() => import("@/pages/EmployeeInventory"));
@@ -179,8 +178,8 @@ function Router({ user }: { user: any }) {
         <Route path="/sales-report">{() => <Sales initialTab="history" />}</Route>
         <Route path="/voucher-detail/:voucherId" component={VoucherDetail} />
         <Route path="/sold-containers" component={SoldContainers} />
-        <Route path="/moto-assembly" component={MotoAssembly} />
-        <Route path="/assembly-history" component={AssemblyHistory} />
+        <Route path="/moto-assembly">{() => <Assembly initialTab="assembly" />}</Route>
+        <Route path="/assembly-history">{() => <Assembly initialTab="history" />}</Route>
         <Route path="/income-statement" component={IncomeStatement} />
         <Route path="/customers" component={Customers} />
         <Route path="/service" component={Service} />

@@ -113,8 +113,12 @@ export const moreSections: NavigationSection[] = [
   {
     title: "Assembly",
     items: [
-      { title: "Moto Assembly", url: "/moto-assembly", icon: Wrench },
-      { title: "Assembly History", url: "/assembly-history", icon: History },
+      {
+        title: "Moto Assembly",
+        url: "/moto-assembly",
+        icon: Wrench,
+        activePrefixes: ["/moto-assembly", "/assembly-history"],
+      },
     ],
   },
   {
