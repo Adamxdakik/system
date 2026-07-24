@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -36,12 +36,12 @@ import {
   FileText,
   TrendingUp,
   TrendingDown,
-  ChevronRight,
   RefreshCw,
   ShoppingCart,
   ArrowLeft,
   Pencil,
   BarChart2,
+  ChevronRight,
 } from "lucide-react";
 import * as XLSX from "@/lib/excelHelper";
 import { format, parseISO, startOfDay, startOfMonth, startOfYear } from "date-fns";
@@ -149,8 +149,6 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
   const [showAdvancedReport, setShowAdvancedReport] = useState(false);
   const [grouping, setGrouping] = useState<GroupingType>("daily");
   const [profitFilter, setProfitFilter] = useState<ProfitFilter>("all");
-  const [selectedDaySummary, setSelectedDaySummary] = useState<DailySummary | null>(null);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -371,12 +369,7 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
     setHighlightedIndex(null);
   };
 
-  const handleRowClick = (summary: DailySummary) => {
-    setSelectedDaySummary(summary);
-    setDetailsDialogOpen(true);
-  };
-
-  // Advanced keyboard navigation
+  // Advanced keyboard navigation (Arrow keys scroll between groups)
   useEffect(() => {
     if (!showAdvancedReport) return;
     const handler = (e: KeyboardEvent) => {
@@ -386,7 +379,7 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
         tag === "textarea" ||
         tag === "select" ||
         (e.target as HTMLElement)?.isContentEditable;
-      if (detailsDialogOpen || isInput) return;
+      if (isInput) return;
       if (e.key === "ArrowUp") {
         e.preventDefault();
         setHighlightedIndex((p) => {
@@ -402,15 +395,11 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
           return p + 1;
         });
       }
-      if (e.key === "Enter" && highlightedIndex !== null && filteredGroupedData[highlightedIndex]) {
-        e.preventDefault();
-        handleRowClick(filteredGroupedData[highlightedIndex]);
-      }
       if (e.key === "Escape") setHighlightedIndex(null);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [showAdvancedReport, detailsDialogOpen, filteredGroupedData, highlightedIndex]);
+  }, [showAdvancedReport, filteredGroupedData, highlightedIndex]);
 
   useEffect(() => {
     if (highlightedIndex !== null && tableRef.current) {
@@ -726,7 +715,7 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                 Sales by {grouping.charAt(0).toUpperCase() + grouping.slice(1)} (
                 {filteredGroupedData.length})
               </CardTitle>
-              <CardDescription>Click on any row to view detailed breakdown</CardDescription>
+              <CardDescription>All items shown inline per {grouping === "daily" ? "day" : grouping === "monthly" ? "month" : "year"}</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -740,59 +729,103 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Items</TableHead>
-                        <TableHead className="text-right">Total Sales</TableHead>
-                        <TableHead className="text-right">Cost Price Total</TableHead>
-                        <TableHead className="text-right">Cost Profit</TableHead>
-                        <TableHead></TableHead>
+                        <TableHead className="w-[130px]">Date</TableHead>
+                        <TableHead>Item Name</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Sold Price</TableHead>
+                        <TableHead className="text-right">Cost Price</TableHead>
+                        <TableHead className="text-right">Cost Total</TableHead>
+                        <TableHead className="text-right">Profit</TableHead>
+                        <TableHead className="text-right">%</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredGroupedData.map((group, idx) => (
-                        <TableRow
-                          key={group.date}
-                          data-testid={`row-sale-${group.date}`}
-                          data-row-index={idx}
-                          className={cn(
-                            "cursor-pointer hover-elevate",
-                            highlightedIndex === idx &&
-                              "bg-primary/10 ring-1 ring-inset ring-primary/30",
-                          )}
-                          onClick={() => {
-                            setHighlightedIndex(idx);
-                            handleRowClick(group);
-                          }}
-                        >
-                          <TableCell className="font-medium">{group.displayDate}</TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatNumber(group.itemCount)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatCurrency(group.totalSales)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatCurrency(group.totalCost)}
-                          </TableCell>
-                          <TableCell
-                            className={`text-right font-mono font-semibold ${group.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                        <React.Fragment key={group.date}>
+                          {/* ── Group summary header row ── */}
+                          <TableRow
+                            key={`hdr-${group.date}`}
+                            data-testid={`row-sale-${group.date}`}
+                            data-row-index={idx}
+                            className={cn(
+                              "bg-muted/60 font-semibold text-sm border-t-2 border-border",
+                              highlightedIndex === idx &&
+                                "bg-primary/10 ring-1 ring-inset ring-primary/30",
+                            )}
                           >
-                            {group.costProfit < 0 ? "-" : ""}
-                            {formatCurrency(group.costProfit)}
-                          </TableCell>
-                          <TableCell>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          </TableCell>
-                        </TableRow>
+                            <TableCell className="font-bold">{group.displayDate}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {formatNumber(group.itemCount)} item{group.itemCount !== 1 ? "s" : ""}
+                            </TableCell>
+                            <TableCell />
+                            <TableCell />
+                            <TableCell className="text-right font-mono">
+                              {formatCurrency(group.totalSales)}
+                            </TableCell>
+                            <TableCell />
+                            <TableCell className="text-right font-mono">
+                              {formatCurrency(group.totalCost)}
+                            </TableCell>
+                            <TableCell
+                              className={`text-right font-mono ${group.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {group.costProfit < 0 ? "-" : ""}
+                              {formatCurrency(group.costProfit)}
+                            </TableCell>
+                            <TableCell />
+                          </TableRow>
+
+                          {/* ── Item rows ── */}
+                          {group.items.map((item) => (
+                            <TableRow key={`item-${item.id}`} className="hover:bg-muted/30 text-sm">
+                              <TableCell className="text-muted-foreground text-xs pl-6">
+                                {formatDisplayDate(parseISO(item.voucherDate))}
+                              </TableCell>
+                              <TableCell className="font-medium">{item.stockItemName}</TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {item.locationName || "—"}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatNumber(item.quantity)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatCurrency(item.actualSellingPrice)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatCurrency(item.costPrice)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatCurrency(item.totalCost)}
+                              </TableCell>
+                              <TableCell
+                                className={`text-right font-mono ${parseFloat(item.costProfit) >= 0 ? "text-green-600" : "text-red-600"}`}
+                              >
+                                {parseFloat(item.costProfit) < 0 ? "-" : ""}
+                                {formatCurrency(item.costProfit)}
+                              </TableCell>
+                              <TableCell
+                                className={`text-right font-mono text-xs ${item.costProfitPercentage >= 0 ? "text-green-600" : "text-red-600"}`}
+                              >
+                                {item.costProfitPercentage.toFixed(1)}%
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </React.Fragment>
                       ))}
-                      <TableRow className="font-bold bg-muted/50">
+
+                      {/* ── Grand total row ── */}
+                      <TableRow className="font-bold bg-muted/50 border-t-2 border-border">
                         <TableCell>TOTAL</TableCell>
-                        <TableCell className="text-right font-mono">
-                          {formatNumber(totals.itemCount)}
+                        <TableCell className="text-muted-foreground">
+                          {formatNumber(totals.itemCount)} items
                         </TableCell>
+                        <TableCell />
+                        <TableCell />
                         <TableCell className="text-right font-mono">
                           {formatCurrency(totals.totalSales)}
                         </TableCell>
+                        <TableCell />
                         <TableCell className="text-right font-mono">
                           {formatCurrency(totals.totalCost)}
                         </TableCell>
@@ -802,7 +835,7 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                           {totals.costProfit < 0 ? "-" : ""}
                           {formatCurrency(totals.costProfit)}
                         </TableCell>
-                        <TableCell></TableCell>
+                        <TableCell />
                       </TableRow>
                     </TableBody>
                   </Table>
@@ -811,113 +844,6 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
             </CardContent>
           </Card>
 
-          {/* Advanced Details Dialog */}
-          <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Sales Details — {selectedDaySummary?.displayDate}</DialogTitle>
-                <DialogDescription>
-                  All items sold on this{" "}
-                  {grouping === "daily" ? "day" : grouping === "monthly" ? "month" : "year"}
-                </DialogDescription>
-              </DialogHeader>
-              {selectedDaySummary && (
-                <div className="space-y-4">
-                  <div className="sticky top-0 z-10 bg-background pt-2 pb-3 -mx-6 px-6 border-b">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription className="text-xs">Total Qty</CardDescription>
-                          <CardTitle className="text-lg">
-                            {formatNumber(
-                              selectedDaySummary.items.reduce(
-                                (s, i) => s + parseFloat(i.quantity),
-                                0,
-                              ),
-                            )}
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription className="text-xs">Total Sales</CardDescription>
-                          <CardTitle className="text-lg">
-                            {formatCurrency(selectedDaySummary.totalSales)}
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription className="text-xs">Cost Total</CardDescription>
-                          <CardTitle className="text-lg">
-                            {formatCurrency(selectedDaySummary.totalCost)}
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardDescription className="text-xs">Cost Profit</CardDescription>
-                          <CardTitle
-                            className={`text-lg ${selectedDaySummary.costProfit >= 0 ? "text-green-600" : "text-red-600"}`}
-                          >
-                            {selectedDaySummary.costProfit < 0 ? "-" : ""}
-                            {formatCurrency(selectedDaySummary.costProfit)}
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-                    </div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Item Name</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead className="text-right">Qty</TableHead>
-                          <TableHead className="text-right">Sold Price</TableHead>
-                          <TableHead className="text-right">Cost Price</TableHead>
-                          <TableHead className="text-right">Total Cost</TableHead>
-                          <TableHead className="text-right">Cost Profit</TableHead>
-                          <TableHead className="text-right">Cost %</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedDaySummary.items.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.stockItemName}</TableCell>
-                            <TableCell>{item.locationName || "—"}</TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatNumber(item.quantity)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatCurrency(item.actualSellingPrice)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatCurrency(item.costPrice)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {formatCurrency(item.totalCost)}
-                            </TableCell>
-                            <TableCell
-                              className={`text-right font-mono ${parseFloat(item.costProfit) >= 0 ? "text-green-600" : "text-red-600"}`}
-                            >
-                              {parseFloat(item.costProfit) < 0 ? "-" : ""}
-                              {formatCurrency(item.costProfit)}
-                            </TableCell>
-                            <TableCell
-                              className={`text-right font-mono text-sm ${item.costProfitPercentage >= 0 ? "text-green-600" : "text-red-600"}`}
-                            >
-                              {item.costProfitPercentage.toFixed(1)}%
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
 
           <style>{`
             @media print {
