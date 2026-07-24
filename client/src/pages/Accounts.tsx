@@ -322,8 +322,17 @@ export default function Accounts() {
   // Filter out inventory accounts - they have their own dedicated page
   // Note: Suppliers are included here so users can view supplier statements
   // Type comparison uses lowercase to match API response
+  // Auto-created system codes used purely to balance journal entries — not meaningful to browse
+  const SYSTEM_ACCOUNT_CODES = new Set([
+    "PURCHASES",
+    "IMPORT_CHARGES",
+    "SALES_REV",
+    "SALES",
+    "COGS",
+    "MANUAL_ADJ",
+  ]);
   const baseAccounts = allAccounts.filter(
-    (account) => account.code !== "PURCHASES" && account.code !== "IMPORT_CHARGES",
+    (account) => !SYSTEM_ACCOUNT_CODES.has(account.code),
   );
 
   // In factory mode, append factory suppliers as accounts
@@ -2296,7 +2305,7 @@ export default function Accounts() {
                             return null;
                           if (account.type === "employee" || account.type === "factoryWorker")
                             return null;
-                          const parts = [account.code, la?.accountType].filter(Boolean);
+                          const parts = [la?.accountType].filter(Boolean);
                           return parts.join(" · ") || null;
                         })();
                         const typeBadgeEl = (() => {
