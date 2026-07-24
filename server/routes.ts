@@ -101,6 +101,7 @@ import {
   loginSchema,
   resetLoginRateLimit,
 } from "./authSecurity";
+import { createErpPageAccessHandler } from "./erpPagePermissions";
 
 // Configure multer with file size limit (10MB) to prevent memory exhaustion
 const upload = multer({ 
@@ -27772,17 +27773,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ERP page access — which pages/features the current user can access
-  app.get("/api/my-erp-pages", requireAuth, async (req, res) => {
-    try {
-      const role = req.session.currentRole;
-      if (!role) return res.status(400).json({ message: "No role selected" });
-      // Admins and Owners get full access; others get all pages (permissions managed elsewhere)
-      const { FEATURE_KEYS } = await import("@shared/schema");
-      return res.json({ pageKeys: [...FEATURE_KEYS], fullAccess: true, hiddenErpCostFields: [] });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  app.get(
+    "/api/my-erp-pages",
+    requireAuth,
+    asyncHandler(
+      createErpPageAccessHandler((companyId) =>
+        storage.getRoleFeaturePermissions(companyId),
+      ),
+    ),
+  );
 
   const httpServer = createServer(app);
 
