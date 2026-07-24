@@ -499,7 +499,6 @@ export default function LocationInsights({ embedded = false }: LocationInsightsP
                         <TableHeader>
                           <TableRow>
                             <TableHead>Product</TableHead>
-                            <TableHead>Code</TableHead>
                             <TableHead>Category</TableHead>
                             <TableHead className="text-right">Quantity</TableHead>
                             <TableHead className="text-right">Average Cost</TableHead>
@@ -511,7 +510,7 @@ export default function LocationInsights({ embedded = false }: LocationInsightsP
                           {filteredSimpleInventory.length === 0 ? (
                             <TableRow>
                               <TableCell
-                                colSpan={7}
+                                colSpan={6}
                                 className="text-center py-10 text-muted-foreground"
                               >
                                 {inventory.length === 0
@@ -532,9 +531,6 @@ export default function LocationInsights({ embedded = false }: LocationInsightsP
                                     <Package className="h-4 w-4 text-muted-foreground shrink-0" />
                                     {item.stockItemName}
                                   </div>
-                                </TableCell>
-                                <TableCell className="font-mono text-sm text-muted-foreground">
-                                  {item.stockItemCode}
                                 </TableCell>
                                 <TableCell className="text-sm">
                                   {item.stockGroupName || "Uncategorized"}
