@@ -1,0 +1,169 @@
+name: Program 2 Stock Patch
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out writable PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Wire service, clients, and CI
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          routes = Path('server/routes.ts')
+          source = routes.read_text()
+          import_line = 'import { registerAtomicStockMovementRoutes } from "./routes/atomicStockMovementRoutes";\n'
+          anchor = 'import { registerFinancialCorrectionRoutes } from "./financialCorrectionRoutes";\n'
+          if import_line not in source:
+              if anchor not in source:
+                  raise SystemExit('Financial correction import anchor not found')
+              source = source.replace(anchor, anchor + import_line, 1)
+          call = '  registerAtomicStockMovementRoutes(app);\n'
+          call_anchor = '  registerFinancialCorrectionRoutes(app);\n'
+          if call not in source:
+              if call_anchor not in source:
+                  raise SystemExit('Financial correction registration anchor not found')
+              source = source.replace(call_anchor, call + call_anchor, 1)
+          routes.write_text(source)
+
+          vouchers = Path('client/src/pages/Vouchers.tsx')
+          source = vouchers.read_text()
+          transfer_pattern = re.compile(
+              r'          let voucherRes;\n.*?          return voucher;\n',
+              re.S,
+          )
+          transfer_replacement = '''          const transferRes = await modeApiRequest("POST", "/api/stock-transfers", {
+            voucher: voucherPayload,
+            destinationLocationId: data.destinationLocationId,
+            notes: data.notes || "",
+            allowNegativeInventory: allowNegativeInventory || false,
+            items: validEntries.map((entry) => ({
+              sourceLocationId: entry.sourceLocationId,
+              stockItemId: entry.stockItemId,
+              quantity: entry.quantity,
+              rate: entry.rate,
+            })),
+          });
+          const transferResult = await transferRes.json();
+          return transferResult.voucher ?? transferResult;
+'''
+          source, count = transfer_pattern.subn(transfer_replacement, source, count=1)
+          if count != 1:
+              raise SystemExit(f'Stock transfer create block replacement count: {count}')
+
+          adjustment_pattern = re.compile(
+              r'        // CREATE MODE: Create new voucher and stock adjustment\n.*?        return voucher;\n',
+              re.S,
+          )
+          adjustment_replacement = '''        // CREATE MODE: voucher, movement rows, cost evidence, and inventory commit together.
+        const adjustmentRes = await modeApiRequest("POST", "/api/stock-adjustments", {
+          voucher: {
+            companyId: selectedCompany?.id,
+            voucherType: adjustmentType,
+            voucherNumber: `${adjustmentType.toUpperCase()}-${Date.now()}`,
+            voucherDate: format(data.voucherDate, "yyyy-MM-dd"),
+            description: `Stock ${adjustmentType.toLowerCase()} at ${locations.find((l) => l.id === data.locationId)?.name}`,
+            totalAmount: totalAmount.toString(),
+            optional: data.optional,
+            currency: selectedCurrency,
+            exchangeRate: exchangeRate ? exchangeRate.toString() : undefined,
+          },
+          locationId: data.locationId,
+          adjustmentType,
+          notes: data.notes || "",
+          items,
+        });
+        const adjustmentResult = await adjustmentRes.json();
+        return adjustmentResult.voucher ?? adjustmentResult;
+'''
+          source, count = adjustment_pattern.subn(adjustment_replacement, source, count=1)
+          if count != 1:
+              raise SystemExit(f'Stock adjustment create block replacement count: {count}')
+          vouchers.write_text(source)
+
+          order = Path('client/src/pages/StockTransferOrder.tsx')
+          source = order.read_text()
+          order_anchor = '''            quantity: item.quantity.toString(),
+          })),'''
+          order_replacement = '''            quantity: item.quantity.toString(),
+            rate: item.rate.toString(),
+          })),'''
+          if order_replacement not in source:
+              if order_anchor not in source:
+                  raise SystemExit('Stock transfer order rate anchor not found')
+              source = source.replace(order_anchor, order_replacement, 1)
+          order.write_text(source)
+
+          ci = Path('.github/workflows/ci.yml')
+          source = ci.read_text()
+          stock_step = '''      - name: Run exact stock movement PostgreSQL regressions
+        run: >-
+          npx tsx --tsconfig tsconfig.tests.json
+          server/__tests__/stockMovement.postgres.ts --confirm-disposable
+
+'''
+          payroll_anchor = '''      - name: Run transactional payroll PostgreSQL regressions
+        run: >-
+          npx tsx --tsconfig tsconfig.integration-tests.json
+          server/__tests__/payrollPosting.postgres.ts --confirm-disposable
+
+'''
+          if stock_step not in source:
+              if payroll_anchor not in source:
+                  raise SystemExit('Payroll CI anchor not found')
+              source = source.replace(payroll_anchor, payroll_anchor + stock_step, 1)
+          ci.write_text(source)
+          PY
+
+      - name: Format focused files
+        run: |
+          npm ci --include=dev
+          npx prettier --write \
+            server/routes.ts \
+            server/routes/atomicStockMovementRoutes.ts \
+            server/services/accounting/stockMovementService.ts \
+            server/services/accounting/stockMovementEvidenceSchema.ts \
+            server/__tests__/stockMovement.postgres.ts \
+            client/src/pages/Vouchers.tsx \
+            client/src/pages/StockTransferOrder.tsx \
+            .github/workflows/ci.yml
+
+      - name: Commit atomic stock movement wiring
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Atomic stock movement wiring is already applied."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            server/routes.ts \
+            server/routes/atomicStockMovementRoutes.ts \
+            server/services/accounting/stockMovementService.ts \
+            server/services/accounting/stockMovementEvidenceSchema.ts \
+            server/__tests__/stockMovement.postgres.ts \
+            client/src/pages/Vouchers.tsx \
+            client/src/pages/StockTransferOrder.tsx \
+            .github/workflows/ci.yml
+          git commit -m "feat(accounting): wire atomic exact-cost stock movements"
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
