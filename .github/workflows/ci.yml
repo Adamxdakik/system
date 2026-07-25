@@ -10,59 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  apply-payroll-format:
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-
-    steps:
-      - name: Check out writable PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install exact dependencies
-        run: npm ci --include=dev
-
-      - name: Format payroll completion files
-        run: >-
-          npx prettier --write
-          server/services/accounting/payrollPostingService.ts
-          server/routes/transactionalPayrollRoutes.ts
-          server/routes/finalizedFinancialMutationGuards.ts
-          docs/accounting-test-matrix.md
-          docs/program-2-final-audit.md
-
-      - name: Commit formatted payroll files
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "Payroll completion files are already formatted."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            server/services/accounting/payrollPostingService.ts \
-            server/routes/transactionalPayrollRoutes.ts \
-            server/routes/finalizedFinancialMutationGuards.ts \
-            docs/accounting-test-matrix.md \
-            docs/program-2-final-audit.md
-          git commit -m "style(accounting): format payroll completion files"
-          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
-
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
