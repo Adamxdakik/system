@@ -23,7 +23,7 @@ import type {
   VoucherPostingInput,
 } from "./types";
 
-type DrizzleTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type DrizzleTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 function mapVoucher(row: typeof vouchers.$inferSelect): PostedVoucher {
   return {
@@ -287,9 +287,13 @@ class DrizzleAccountingTransaction implements AccountingTransaction {
   }
 }
 
+export function accountingTransactionFor(tx: DrizzleTransaction): AccountingTransaction {
+  return new DrizzleAccountingTransaction(tx);
+}
+
 export class DrizzleAccountingStore implements AccountingStore {
   transaction<T>(work: (tx: AccountingTransaction) => Promise<T>): Promise<T> {
-    return db.transaction((tx) => work(new DrizzleAccountingTransaction(tx)));
+    return db.transaction((tx) => work(accountingTransactionFor(tx)));
   }
 }
 
