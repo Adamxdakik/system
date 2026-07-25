@@ -1,6 +1,15 @@
 ALTER TABLE suppliers
   ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
 
+ALTER TABLE locations
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+
+ALTER TABLE stock_groups
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+
+ALTER TABLE stock_items
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+
 CREATE TABLE IF NOT EXISTS container_offload_inventory_evidence (
   id SERIAL PRIMARY KEY,
   offload_id INTEGER NOT NULL,
