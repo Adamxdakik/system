@@ -1,0 +1,81 @@
+name: Program 2 Stock Diagnostics
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Capture changed-line lint
+        shell: bash
+        run: |
+          echo "CHANGED_FILES_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+          echo "CHANGED_FILES_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
+          set +e
+          npm run lint:changed > program2-stock-lint.log 2>&1
+          echo $? > program2-stock-lint.exit
+          cat program2-stock-lint.log
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: program2-stock-lint-diagnostics
+          path: |
+            program2-stock-lint.log
+            program2-stock-lint.exit
+          retention-days: 1
+
+  postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/program2_disposable_test
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: program2_disposable_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d program2_disposable_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --include=dev
+      - run: npm run db:migrate
+      - name: Capture exact stock movement regression
+        shell: bash
+        run: |
+          set +e
+          npx tsx --tsconfig tsconfig.tests.json server/__tests__/stockMovement.postgres.ts --confirm-disposable > program2-stock-postgres.log 2>&1
+          echo $? > program2-stock-postgres.exit
+          cat program2-stock-postgres.log
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: program2-stock-postgres-diagnostics
+          path: |
+            program2-stock-postgres.log
+            program2-stock-postgres.exit
+          retention-days: 1
