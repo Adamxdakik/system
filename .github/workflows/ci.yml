@@ -32,20 +32,19 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           path = Path('scripts/test-financial-integrity-postgres.ts')
           source = path.read_text()
-          old = '''        ON CONFLICT (company_id, idempotency_key) WHERE idempotency_key IS NOT NULL
-          DO NOTHING'''
-          new = '''        ON CONFLICT DO NOTHING'''
-          if old not in source:
+          pattern = r'ON CONFLICT \(company_id, idempotency_key\) WHERE idempotency_key IS NOT NULL\s+DO NOTHING'
+          updated, count = re.subn(pattern, 'ON CONFLICT DO NOTHING', source, count=1)
+          if count != 1:
               raise SystemExit('Concurrency conflict target anchor not found')
-          path.write_text(source.replace(old, new, 1))
+          path.write_text(updated)
           PY
 
-      - name: Format and commit fixture fix
+      - name: Commit fixture fix
         shell: bash
         run: |
-          npx prettier --write scripts/test-financial-integrity-postgres.ts
           if git diff --quiet; then
             echo "Accounting race fixture fix is already applied."
             exit 0
