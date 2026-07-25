@@ -40,6 +40,8 @@ Make the ERP faster and easier for daily users by simplifying navigation, dashbo
 
 ## Phase 3B — Inventory and product workflow
 
+Implementation is complete on draft PR #4. Permanent CI validation is tracked on the PR head.
+
 ### Scope
 
 - stock and inventory list pages
