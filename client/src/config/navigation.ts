@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   ShoppingCart,
   ReceiptText,
-  Package,
   Layers,
   Truck,
   MapPin,
@@ -14,7 +13,6 @@ import {
   HeartHandshake,
   Building2,
   Cog,
-  BadgeCheck,
   Settings,
   BookOpen,
 } from "lucide-react";
