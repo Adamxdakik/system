@@ -34,9 +34,6 @@ jobs:
           npx prettier --write
           .github/workflows/ci.yml
           .github/workflows/program2-workspace.yml
-          migrations/0004_add_bale_products.sql
-          migrations/0014_financial_integrity.sql
-          migrations/0015_finalize_bale_product_columns.sql
           scripts/audit-supplier-company-assignments.ts
           server/services/accounting/voucherPostingService.ts
           server/__tests__/accountingIdempotencyRegression.test.ts
@@ -79,9 +76,6 @@ jobs:
           zip -q -u source.zip \
             .github/workflows/ci.yml \
             .github/workflows/program2-workspace.yml \
-            migrations/0004_add_bale_products.sql \
-            migrations/0014_financial_integrity.sql \
-            migrations/0015_finalize_bale_product_columns.sql \
             scripts/audit-supplier-company-assignments.ts \
             server/services/accounting/voucherPostingService.ts \
             server/__tests__/accountingIdempotencyRegression.test.ts \
