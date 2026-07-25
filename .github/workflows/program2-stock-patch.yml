@@ -29,7 +29,7 @@ jobs:
       - name: Apply final atomic stock movement corrections
         run: python scripts/apply-program2-stock-wiring.py
 
-      - name: Format focused files
+      - name: Format focused code files
         run: |
           npx prettier --write \
             server/routes.ts \
@@ -38,8 +38,7 @@ jobs:
             server/services/accounting/stockMovementEvidenceSchema.ts \
             server/__tests__/stockMovement.postgres.ts \
             client/src/pages/Vouchers.tsx \
-            client/src/pages/StockTransferOrder.tsx \
-            .github/workflows/ci.yml
+            client/src/pages/StockTransferOrder.tsx
 
       - name: Stage and commit final atomic stock corrections
         id: commit
@@ -56,7 +55,6 @@ jobs:
             server/__tests__/stockMovement.postgres.ts \
             client/src/pages/Vouchers.tsx \
             client/src/pages/StockTransferOrder.tsx \
-            .github/workflows/ci.yml \
             scripts/apply-program2-stock-wiring.py
           if git diff --cached --quiet; then
             echo "created=false" >> "$GITHUB_OUTPUT"
