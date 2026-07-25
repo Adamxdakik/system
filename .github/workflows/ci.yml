@@ -39,8 +39,32 @@ jobs:
             echo "CHANGED_FILES_RANGE=${{ github.event.before }}..${{ github.sha }}" >> "$GITHUB_ENV"
           fi
 
-      - name: Check formatting on changed lines
-        run: npm run format:changed
+      - name: Capture changed-line formatting result
+        id: format
+        shell: bash
+        run: |
+          set +e
+          npm run format:changed > changed-format.log 2>&1
+          code=$?
+          echo "$code" > changed-format.exit
+          cat changed-format.log
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload changed-line formatting diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: changed-format-diagnostics
+          path: |
+            changed-format.log
+            changed-format.exit
+          retention-days: 1
+
+      - name: Enforce changed-line formatting result
+        if: always()
+        shell: bash
+        run: test "${{ steps.format.outputs.exit_code }}" = "0"
 
       - name: Lint changed source lines with zero warnings
         run: npm run lint:changed
@@ -110,10 +134,34 @@ jobs:
           npx tsx --tsconfig tsconfig.integration-tests.json
           server/__tests__/stockMovement.postgres.ts --confirm-disposable
 
-      - name: Run exact container offload reversal PostgreSQL regressions
-        run: >-
-          npx tsx --tsconfig tsconfig.integration-tests.json
-          server/__tests__/containerOffloadReversal.postgres.ts --confirm-disposable
+      - name: Capture exact container offload reversal PostgreSQL regression
+        id: offload
+        shell: bash
+        run: |
+          set +e
+          npx tsx --tsconfig tsconfig.integration-tests.json \
+            server/__tests__/containerOffloadReversal.postgres.ts \
+            --confirm-disposable > container-offload-reversal.log 2>&1
+          code=$?
+          echo "$code" > container-offload-reversal.exit
+          cat container-offload-reversal.log
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload container offload reversal diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-offload-reversal-diagnostics
+          path: |
+            container-offload-reversal.log
+            container-offload-reversal.exit
+          retention-days: 1
+
+      - name: Enforce container offload reversal regression result
+        if: always()
+        shell: bash
+        run: test "${{ steps.offload.outputs.exit_code }}" = "0"
 
       - name: Run POS inventory value regressions
         run: npx vitest run server/__tests__/posInventoryValue.test.ts
