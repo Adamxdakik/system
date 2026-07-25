@@ -65,7 +65,7 @@ Implementation is complete on draft PR #4. Permanent CI validation is tracked on
 
 ## Phase 3C — Sale and purchase forms
 
-Implementation, cleanup, formatting, and zero-warning lint preparation are complete on draft PR #4. Permanent CI validation is tracked on the PR head.
+Implementation, cleanup, formatting, and zero-warning lint preparation are complete on draft PR #4. Definitive permanent CI validation is tracked on the PR head.
 
 ### Scope
 
