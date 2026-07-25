@@ -64,9 +64,15 @@ function requirePositiveAmount(value: string): bigint {
   return amount;
 }
 
-function normalizeLines(lines: PayrollMovementLine[]): Array<PayrollMovementLine & { amountMinor: bigint }> {
+function normalizeLines(
+  lines: PayrollMovementLine[],
+): Array<PayrollMovementLine & { amountMinor: bigint }> {
   if (!Array.isArray(lines) || lines.length === 0) {
-    throw new AccountingIntegrityError("At least one payroll line is required", "PAYROLL_LINES_REQUIRED", 400);
+    throw new AccountingIntegrityError(
+      "At least one payroll line is required",
+      "PAYROLL_LINES_REQUIRED",
+      400,
+    );
   }
 
   const totals = new Map<number, bigint>();
@@ -135,7 +141,11 @@ function paymentEntry(
   description: string,
 ): PostingEntryInput {
   if (!Number.isInteger(id) || id <= 0) {
-    throw new AccountingIntegrityError("Payment account is required", "PAYROLL_ACCOUNT_REQUIRED", 400);
+    throw new AccountingIntegrityError(
+      "Payment account is required",
+      "PAYROLL_ACCOUNT_REQUIRED",
+      400,
+    );
   }
   return {
     ledgerAccountId: type === "cash" ? id : null,
@@ -170,11 +180,16 @@ async function loadEmployeesForUpdate(
 
 function buildDescription(input: PayrollPostingInput, employeeCount: number): string {
   if (input.notes?.trim()) return input.notes.trim();
-  const noun = input.kind === "bonus" ? "bonus" : input.kind === "withdrawal" ? "withdrawal" : "salary";
+  const noun =
+    input.kind === "bonus" ? "bonus" : input.kind === "withdrawal" ? "withdrawal" : "salary";
   if (input.kind === "worker_payment") {
-    return employeeCount === 1 ? "Salary payment" : `Bulk salary payment for ${employeeCount} workers`;
+    return employeeCount === 1
+      ? "Salary payment"
+      : `Bulk salary payment for ${employeeCount} workers`;
   }
-  return employeeCount === 1 ? `${noun[0].toUpperCase()}${noun.slice(1)} posting` : `Bulk ${noun} posting for ${employeeCount} employees`;
+  return employeeCount === 1
+    ? `${noun[0].toUpperCase()}${noun.slice(1)} posting`
+    : `Bulk ${noun} posting for ${employeeCount} employees`;
 }
 
 function resultRows(
@@ -186,7 +201,11 @@ function resultRows(
     const employee = lockedEmployees.get(line.employeeId)!;
     const oldBalance = decimalToScaledInteger(employee.currentBalance, 2);
     const newBalance =
-      kind === "withdrawal" ? oldBalance - line.amountMinor : kind === "worker_payment" ? oldBalance : oldBalance + line.amountMinor;
+      kind === "withdrawal"
+        ? oldBalance - line.amountMinor
+        : kind === "worker_payment"
+          ? oldBalance
+          : oldBalance + line.amountMinor;
     return {
       employeeId: employee.id,
       name: `${employee.firstName} ${employee.lastName}`,
@@ -204,7 +223,10 @@ export class PayrollPostingService {
 
     return db.transaction(async (tx) => {
       const accountingTx = accountingTransactionFor(tx);
-      const existing = await accountingTx.findByIdempotencyKey(input.companyId, input.idempotencyKey);
+      const existing = await accountingTx.findByIdempotencyKey(
+        input.companyId,
+        input.idempotencyKey,
+      );
       if (existing) {
         const [voucher] = await tx
           .select()

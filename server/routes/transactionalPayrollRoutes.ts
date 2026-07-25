@@ -47,7 +47,11 @@ function userId(req: Request): string | null {
 
 function requireDate(value: unknown): string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    throw new AccountingIntegrityError("Date is required in YYYY-MM-DD format", "PAYROLL_DATE_REQUIRED", 400);
+    throw new AccountingIntegrityError(
+      "Date is required in YYYY-MM-DD format",
+      "PAYROLL_DATE_REQUIRED",
+      400,
+    );
   }
   return value;
 }
@@ -81,7 +85,10 @@ function lines(value: unknown, emptyMessage: string, filterInvalid = false): Pay
   return result;
 }
 
-function paymentAccount(req: Request, requireExplicitType = false): {
+function paymentAccount(
+  req: Request,
+  requireExplicitType = false,
+): {
   type: PayrollPaymentAccountType;
   id: number;
 } {
@@ -96,7 +103,11 @@ function paymentAccount(req: Request, requireExplicitType = false): {
   }
   const id = Number(req.body.paymentAccountId ?? req.body.bankAccountId);
   if (!Number.isInteger(id) || id <= 0) {
-    throw new AccountingIntegrityError("Payment account is required", "PAYROLL_ACCOUNT_REQUIRED", 400);
+    throw new AccountingIntegrityError(
+      "Payment account is required",
+      "PAYROLL_ACCOUNT_REQUIRED",
+      400,
+    );
   }
   return { type, id };
 }
@@ -118,7 +129,9 @@ function sendError(res: Response, error: unknown): Response {
     return res.status(error.status).json({ message: error.message, code: error.code });
   }
   console.error("Transactional payroll route failed", error);
-  return res.status(500).json({ message: error instanceof Error ? error.message : "Payroll posting failed" });
+  return res
+    .status(500)
+    .json({ message: error instanceof Error ? error.message : "Payroll posting failed" });
 }
 
 export function registerTransactionalPayrollRoutes(app: Express): void {
@@ -145,7 +158,10 @@ export function registerTransactionalPayrollRoutes(app: Express): void {
         }),
         createdBy: userId(req),
       });
-      return res.json({ voucher: result.voucher, employee: await employeeRow(company, movement.employeeId) });
+      return res.json({
+        voucher: result.voucher,
+        employee: await employeeRow(company, movement.employeeId),
+      });
     } catch (error) {
       return sendError(res, error);
     }
@@ -174,7 +190,11 @@ export function registerTransactionalPayrollRoutes(app: Express): void {
         }),
         createdBy: userId(req),
       });
-      return res.json({ voucher: result.voucher, deposits: result.employees, totalAmount: result.totalAmount });
+      return res.json({
+        voucher: result.voucher,
+        deposits: result.employees,
+        totalAmount: result.totalAmount,
+      });
     } catch (error) {
       return sendError(res, error);
     }
@@ -203,7 +223,10 @@ export function registerTransactionalPayrollRoutes(app: Express): void {
         }),
         createdBy: userId(req),
       });
-      return res.json({ voucher: result.voucher, employee: await employeeRow(company, movement.employeeId) });
+      return res.json({
+        voucher: result.voucher,
+        employee: await employeeRow(company, movement.employeeId),
+      });
     } catch (error) {
       return sendError(res, error);
     }
@@ -232,7 +255,11 @@ export function registerTransactionalPayrollRoutes(app: Express): void {
         }),
         createdBy: userId(req),
       });
-      return res.json({ voucher: result.voucher, bonuses: result.employees, totalAmount: result.totalAmount });
+      return res.json({
+        voucher: result.voucher,
+        bonuses: result.employees,
+        totalAmount: result.totalAmount,
+      });
     } catch (error) {
       return sendError(res, error);
     }
@@ -263,7 +290,10 @@ export function registerTransactionalPayrollRoutes(app: Express): void {
         }),
         createdBy: userId(req),
       });
-      return res.json({ voucher: result.voucher, employee: await employeeRow(company, movement.employeeId) });
+      return res.json({
+        voucher: result.voucher,
+        employee: await employeeRow(company, movement.employeeId),
+      });
     } catch (error) {
       return sendError(res, error);
     }
@@ -294,7 +324,11 @@ export function registerTransactionalPayrollRoutes(app: Express): void {
         }),
         createdBy: userId(req),
       });
-      return res.json({ voucher: result.voucher, withdrawals: result.employees, totalAmount: result.totalAmount });
+      return res.json({
+        voucher: result.voucher,
+        withdrawals: result.employees,
+        totalAmount: result.totalAmount,
+      });
     } catch (error) {
       return sendError(res, error);
     }
@@ -327,7 +361,10 @@ export function registerTransactionalPayrollRoutes(app: Express): void {
         }),
         createdBy: userId(req),
       });
-      return res.json({ voucher: result.voucher, employee: await employeeRow(company, movement.employeeId) });
+      return res.json({
+        voucher: result.voucher,
+        employee: await employeeRow(company, movement.employeeId),
+      });
     } catch (error) {
       return sendError(res, error);
     }
