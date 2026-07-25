@@ -13,6 +13,7 @@ import { FinalizedVoucherCorrectionService } from "./services/accounting/finaliz
 import { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";
 import { OpeningBalanceImportService } from "./services/accounting/openingBalanceImportService";
 import { SalaryAdvanceService } from "./services/accounting/salaryAdvanceService";
+import { registerContainerOffloadReversalRoutes } from "./routes/containerOffloadReversalRoutes";
 
 const correctionService = new FinalizedVoucherCorrectionService(accountingStore);
 const reversalService = new VoucherReversalService(accountingStore);
@@ -145,6 +146,7 @@ async function correctVoucher(
 }
 
 export function registerFinancialCorrectionRoutes(app: Express): void {
+  registerContainerOffloadReversalRoutes(app);
   app.patch(
     "/api/vouchers/:id",
     requireAuth,

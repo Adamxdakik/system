@@ -2,20 +2,14 @@ import { and, desc, eq } from "drizzle-orm";
 
 import { db } from "../../db";
 import { containerOffloads, containers, inventory } from "@shared/schema";
-import {
-  accountingTransactionFor,
-  type DrizzleTransaction,
-} from "./drizzleAccountingStore";
+import { accountingTransactionFor, type DrizzleTransaction } from "./drizzleAccountingStore";
 import {
   containerOffloadInventoryEvidence,
   containerOffloadReversalLog,
   containerOffloadVoucherLinks,
 } from "./containerOffloadEvidenceSchema";
 import type { VoucherPostingInput } from "./types";
-import {
-  AccountingIntegrityError,
-  postVoucherInTransaction,
-} from "./voucherPostingService";
+import { AccountingIntegrityError, postVoucherInTransaction } from "./voucherPostingService";
 
 export interface ReverseContainerOffloadInput {
   companyId: number;
@@ -91,10 +85,7 @@ async function reverseLinkedVoucher(
   const accountingTx = accountingTransactionFor(tx);
   const original = await accountingTx.loadVoucherForReversal(input.companyId, voucherId);
   if (!original) {
-    integrity(
-      `Linked offload voucher ${voucherId} is missing`,
-      "OFFLOAD_LINKED_VOUCHER_MISSING",
-    );
+    integrity(`Linked offload voucher ${voucherId} is missing`, "OFFLOAD_LINKED_VOUCHER_MISSING");
   }
   if (original.voucher.reversedAt) {
     integrity(
@@ -138,11 +129,7 @@ async function reverseLinkedVoucher(
     })),
   };
 
-  const reversal = await postVoucherInTransaction(
-    accountingTx,
-    reversalInput,
-    original.voucher.id,
-  );
+  const reversal = await postVoucherInTransaction(accountingTx, reversalInput, original.voucher.id);
   if (!reversal.duplicate) {
     await accountingTx.markReversed(original.voucher.id, new Date());
   }
@@ -160,9 +147,7 @@ export class ContainerOffloadReversalService {
       const [container] = await tx
         .select()
         .from(containers)
-        .where(
-          and(eq(containers.id, input.containerId), eq(containers.companyId, input.companyId)),
-        )
+        .where(and(eq(containers.id, input.containerId), eq(containers.companyId, input.companyId)))
         .for("update")
         .limit(1);
       if (!container) integrity("Container not found", "CONTAINER_NOT_FOUND", 404);

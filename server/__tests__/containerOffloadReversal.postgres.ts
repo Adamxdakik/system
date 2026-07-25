@@ -155,7 +155,10 @@ async function exactReversalScenario() {
       ),
     )
     .limit(1);
-  assert(!remainingInventory, "reversal must restore the exact pre-offload missing inventory state");
+  assert(
+    !remainingInventory,
+    "reversal must restore the exact pre-offload missing inventory state",
+  );
 
   const [updatedContainer] = await db
     .select()
@@ -231,7 +234,10 @@ async function changedInventoryScenario() {
   } catch (caught) {
     error = caught;
   }
-  assert(error instanceof AccountingIntegrityError, "changed inventory must fail with integrity error");
+  assert(
+    error instanceof AccountingIntegrityError,
+    "changed inventory must fail with integrity error",
+  );
   assert(error.code === "OFFLOAD_INVENTORY_CHANGED", "changed inventory must fail closed");
 
   const [stillOffloaded] = await db
@@ -249,7 +255,10 @@ async function changedInventoryScenario() {
 
 async function legacyScenario() {
   const data = await fixture("LEGACY");
-  await db.update(containers).set({ status: "OFFLOADED" }).where(eq(containers.id, data.container.id));
+  await db
+    .update(containers)
+    .set({ status: "OFFLOADED" })
+    .where(eq(containers.id, data.container.id));
   const [offload] = await db
     .insert(containerOffloads)
     .values({
@@ -277,7 +286,10 @@ async function legacyScenario() {
   } catch (caught) {
     error = caught;
   }
-  assert(error instanceof AccountingIntegrityError, "legacy reversal must fail with integrity error");
+  assert(
+    error instanceof AccountingIntegrityError,
+    "legacy reversal must fail with integrity error",
+  );
   assert(
     error.code === "LEGACY_OFFLOAD_EVIDENCE_MISSING",
     "legacy reversal must refuse to invent inventory history",

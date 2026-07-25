@@ -1,6 +1,10 @@
 import { eq, and, or, sql, inArray, desc, ne, isNull } from "drizzle-orm";
 import { db } from "./db";
 import * as schema from "@shared/schema";
+import {
+  containerOffloadInventoryEvidence,
+  containerOffloadVoucherLinks,
+} from "./services/accounting/containerOffloadEvidenceSchema";
 import type {
   User,
   InsertUser,
@@ -2474,6 +2478,22 @@ export class DbStorage implements IStorage {
     const voucherDate = offloadDate || new Date().toISOString().split("T")[0];
 
     return await db.transaction(async (tx) => {
+      const inventoryEvidence: Array<{
+        inventoryId: number;
+        stockItemId: number;
+        beforeExists: boolean;
+        beforeQuantity: string;
+        beforeAverageRate: string;
+        beforeTotalValue: string;
+        afterQuantity: string;
+        afterAverageRate: string;
+        afterTotalValue: string;
+      }> = [];
+      const offloadVoucherLinks: Array<{
+        voucherId: number;
+        role: "DUTIES" | "TRANSPORT" | "ADDITIONAL_CHARGE";
+      }> = [];
+
       // Add inventory to destination location with weighted average cost
       for (const [stockItemId, data] of Array.from(itemsMap.entries())) {
         // Safety check for division by zero
@@ -2527,6 +2547,17 @@ export class DbStorage implements IStorage {
                 lastUpdated: new Date(),
               })
               .where(eq(schema.inventory.id, existing.id));
+            inventoryEvidence.push({
+              inventoryId: existing.id,
+              stockItemId,
+              beforeExists: true,
+              beforeQuantity: existing.quantity,
+              beforeAverageRate: existing.averageRate,
+              beforeTotalValue: existing.totalValue,
+              afterQuantity: data.totalQuantity.toFixed(3),
+              afterAverageRate: newRate.toFixed(2),
+              afterTotalValue: newTotalValue.toFixed(2),
+            });
             continue;
           }
 
@@ -2560,17 +2591,42 @@ export class DbStorage implements IStorage {
               lastUpdated: new Date(),
             })
             .where(eq(schema.inventory.id, existing.id));
+          inventoryEvidence.push({
+            inventoryId: existing.id,
+            stockItemId,
+            beforeExists: true,
+            beforeQuantity: existing.quantity,
+            beforeAverageRate: existing.averageRate,
+            beforeTotalValue: existing.totalValue,
+            afterQuantity: newQty.toFixed(3),
+            afterAverageRate: weightedAvgRate.toFixed(2),
+            afterTotalValue: newTotalValue.toFixed(2),
+          });
         } else {
           // Create new inventory record
           const totalValue = data.totalQuantity * newRate;
-          await tx.insert(schema.inventory).values({
-            companyId: location.companyId,
-            locationId,
+          const [createdInventory] = await tx
+            .insert(schema.inventory)
+            .values({
+              companyId: location.companyId,
+              locationId,
+              stockItemId,
+              quantity: data.totalQuantity.toString(),
+              averageRate: newRate.toFixed(2),
+              totalValue: totalValue.toFixed(2),
+              lastUpdated: new Date(),
+            })
+            .returning();
+          inventoryEvidence.push({
+            inventoryId: createdInventory.id,
             stockItemId,
-            quantity: data.totalQuantity.toString(),
-            averageRate: newRate.toFixed(2),
-            totalValue: totalValue.toFixed(2),
-            lastUpdated: new Date(),
+            beforeExists: false,
+            beforeQuantity: "0.000",
+            beforeAverageRate: "0.00",
+            beforeTotalValue: "0.00",
+            afterQuantity: data.totalQuantity.toFixed(3),
+            afterAverageRate: newRate.toFixed(2),
+            afterTotalValue: totalValue.toFixed(2),
           });
         }
       }
@@ -2679,6 +2735,7 @@ export class DbStorage implements IStorage {
             totalAmount: duties,
           })
           .returning();
+        offloadVoucherLinks.push({ voucherId: voucher.id, role: "DUTIES" });
 
         // Debit: Duties Expense (Expense increases)
         await tx.insert(schema.voucherEntries).values({
@@ -2718,6 +2775,7 @@ export class DbStorage implements IStorage {
             totalAmount: transportFees,
           })
           .returning();
+        offloadVoucherLinks.push({ voucherId: voucher.id, role: "TRANSPORT" });
 
         // Debit: Transport Expense (Expense increases)
         await tx.insert(schema.voucherEntries).values({
@@ -2753,6 +2811,7 @@ export class DbStorage implements IStorage {
               totalAmount: charge.amount.toFixed(2),
             })
             .returning();
+          offloadVoucherLinks.push({ voucherId: voucher.id, role: "ADDITIONAL_CHARGE" });
 
           // Debit: Additional Charge Expense (Expense increases)
           const additionalExpenseAccountId = await findOrCreateExpenseAccount(
@@ -2795,6 +2854,28 @@ export class DbStorage implements IStorage {
           offloadedAt: offloadDate ? new Date(offloadDate) : new Date(),
         })
         .returning();
+
+      if (inventoryEvidence.length > 0) {
+        await tx.insert(containerOffloadInventoryEvidence).values(
+          inventoryEvidence.map((row) => ({
+            ...row,
+            offloadId: offload.id,
+            containerId,
+            companyId: container.companyId,
+            locationId,
+          })),
+        );
+      }
+      if (offloadVoucherLinks.length > 0) {
+        await tx.insert(containerOffloadVoucherLinks).values(
+          offloadVoucherLinks.map((row) => ({
+            ...row,
+            offloadId: offload.id,
+            containerId,
+            companyId: container.companyId,
+          })),
+        );
+      }
 
       return offload;
     });
