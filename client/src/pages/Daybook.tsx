@@ -1909,9 +1909,6 @@ export default function Daybook({ user }: { user?: any } = {}) {
                           >
                             {getTransactionDisplayType(voucher.voucherType)}
                           </Badge>
-                          <p className="text-xs text-muted-foreground font-mono">
-                            {voucher.voucherNumber}
-                          </p>
                         </div>
                         {!hideAmounts && (
                           <span className="font-mono font-medium text-sm whitespace-nowrap">
@@ -2079,7 +2076,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                   {o.locationName || o.containerNumber}
                                 </TableCell>
                                 {!hideAmounts && (
-                                  <TableCell className="text-right font-mono font-medium text-sm">
+                                  <TableCell className="text-right font-mono font-medium text-sm whitespace-nowrap">
                                     {formatAmount(Number(o.itemsTotal))}
                                   </TableCell>
                                 )}
@@ -2172,9 +2169,6 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                 >
                                   {getTransactionDisplayType(voucher.voucherType)}
                                 </Badge>
-                                <p className="text-xs text-muted-foreground font-mono">
-                                  {voucher.voucherNumber}
-                                </p>
                                 {isDvHidden && (
                                   <Badge variant="outline" className="text-xs mt-1">
                                     Hidden
@@ -2190,7 +2184,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                                 {detailsText}
                               </TableCell>
                               {!hideAmounts && (
-                                <TableCell className="text-right font-mono font-medium text-sm">
+                                <TableCell className="text-right font-mono font-medium text-sm whitespace-nowrap">
                                   {amountDisplay}
                                 </TableCell>
                               )}
