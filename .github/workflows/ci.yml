@@ -56,3 +56,55 @@ jobs:
 
       - name: Build production bundles
         run: npm run build
+
+  accounting-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/program2_disposable_test
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: program2_disposable_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d program2_disposable_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Run full migration chain
+        run: npm run db:migrate
+
+      - name: Verify migration rerun is idempotent
+        run: npm run db:migrate
+
+      - name: Run PostgreSQL accounting integration tests
+        run: npm run test:accounting:integration -- --confirm-disposable
+
+      - name: Run accounting report reconciliation tests
+        run: npm run test:accounting:reports
+
+      - name: Run read-only financial audit
+        run: npm run audit:financial -- --confirm-non-production --output json
+
+      - name: Run read-only supplier company audit
+        run: npm run audit:supplier-companies -- --confirm-non-production --output json
