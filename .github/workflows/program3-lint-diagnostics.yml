@@ -1,0 +1,39 @@
+name: Program 3 Lint Diagnostics
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Capture focused lint output
+        shell: bash
+        run: |
+          set +e
+          npx eslint \
+            client/src/config/navigation.ts \
+            client/src/components/AppSidebar.tsx \
+            client/src/pages/Dashboard.tsx \
+            --max-warnings=0 > program3-lint.log 2>&1
+          echo $? > program3-lint.exit
+          cat program3-lint.log
+          exit 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: program3-lint-diagnostics
+          path: |
+            program3-lint.log
+            program3-lint.exit
+          retention-days: 1
