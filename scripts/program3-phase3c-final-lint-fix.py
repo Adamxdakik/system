@@ -13,22 +13,14 @@ pos = pos_path.read_text()
 pos = replace_once(
     pos,
     '''  const {
-    data: inventoryData,
+    data: apiInventory = [],
     isLoading: inventoryLoading,
     error: inventoryError,
   } = useQuery<APIInventoryItem[]>({
 ''',
-    '''  const { data: inventoryData, error: inventoryError } = useQuery<APIInventoryItem[]>({
+    '''  const { data: apiInventory = [], error: inventoryError } = useQuery<APIInventoryItem[]>({
 ''',
     "unused inventory loading value",
-)
-pos = replace_once(
-    pos,
-    '''  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-''',
-    '''  const [, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-''',
-    "unused selected cell value",
 )
 summary_start = pos.index("          {/* Order summary + actions */}\n")
 product_panel = pos.index("        {/* Product search panel */}\n", summary_start)
