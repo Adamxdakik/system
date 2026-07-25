@@ -12,7 +12,7 @@ Status meanings: **covered** is enforced by automated assertions in this branch,
 | Direct finalized mutation | `finalizedFinancialMutationGuards` | drafts remain editable; finalized voucher/domain rows cannot be destructively changed | yes | route policy | n/a | n/a | required | n/a | covered |
 | Inter-company transfer | `POST /api/inter-company-transfers` | both company vouchers and transfer link commit together | shared invariants | constraint fixture | shared | idempotency | shared | n/a | partial: dedicated reversal fixture remains |
 | Salary advance / deduction | `SalaryAdvanceService`, salary-advance routes | voucher, cache, advance and deduction share one transaction | service coverage | rollback primitive | shared | idempotency | cancellation reversal | n/a | covered for salary advances |
-| Legacy payroll deposit / bonus / withdrawal / worker payment | legacy payroll routes | voucher, entries and employee cache must commit together and be reversable | shared voucher rules only | no domain fixture | partial | no | generic ledger only | n/a | **gap** |
+| Payroll deposit / bonus / withdrawal / worker payment | `PayrollPostingService`, transactional payroll routes | voucher, entries, employee cache and payroll totals commit together; retries are idempotent and insufficient withdrawals roll back | shared posting rules | dedicated deposit/retry/withdrawal/rollback fixture | shared | source and idempotency keys | generic immutable voucher correction | base currency | covered |
 | Employee supporting balance | posting service / sync helper | cache changes in posting transaction | yes | audit fixture | statement primitive | n/a | yes | n/a | covered for shared service |
 | Customer running balance | `addCustomerBalanceEntry` | no concurrent lost update | invariant | yes | audit fixture | yes | adjustment | n/a | covered |
 | Supplier identity | supplier routes, posting resolver and supplier-company audit | supplier belongs to selected company; ambiguity is never guessed | company mismatch | audit fixture | audit fixture | n/a | shared | n/a | partial: unresolved legacy null assignments require reviewed data mapping |
@@ -36,6 +36,7 @@ Status meanings: **covered** is enforced by automated assertions in this branch,
 - `npm run test:accounting:reports` — exact daybook, trial-balance, income-statement and net-position reconciliation.
 - `npm run test:accounting:ci` — infrastructure-independent accounting suite.
 - `npm run test:accounting:integration -- --confirm-disposable` — PostgreSQL rollback, uniqueness, reversal, concurrency and audit fixtures. `DATABASE_URL` must identify a localhost database whose name includes `test`, `disposable`, or `preview`.
+- `npx tsx --tsconfig tsconfig.integration-tests.json server/__tests__/payrollPosting.postgres.ts --confirm-disposable` — transactional payroll deposit, retry, withdrawal, balance-cache and rollback assertions.
 - `npx vitest run server/__tests__/posInventoryValue.test.ts` — exact persisted POS inventory quantity/value restoration; CI runs this inside the disposable PostgreSQL job.
 
 The integration harness creates uniquely named fixtures and removes only those fixtures. It never truncates a database.
