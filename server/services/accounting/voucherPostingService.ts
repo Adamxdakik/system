@@ -140,11 +140,11 @@ export function validatePostingEntries(entries: PostingEntryInput[]): {
   };
 }
 
-export async function postVoucherInTransaction(
-  tx: AccountingTransaction,
-  input: VoucherPostingInput,
-  reversalOfVoucherId?: number | null,
-): Promise<PostingResult> {
+function normalizePostingInput(input: VoucherPostingInput): {
+  normalizedInput: VoucherPostingInput;
+  totalAmount: string;
+  fingerprint: string;
+} {
   const { normalizedEntries, totalAmount } = validatePostingEntries(input.entries);
   const normalizedInput: VoucherPostingInput = {
     ...input,
@@ -152,13 +152,20 @@ export async function postVoucherInTransaction(
     exchangeRate: normalizeExchangeRate(input.exchangeRate ?? "1"),
     entries: normalizedEntries,
   };
-  const fingerprint = stableFingerprint(normalizedInput);
+  return {
+    normalizedInput,
+    totalAmount,
+    fingerprint: stableFingerprint(normalizedInput),
+  };
+}
 
-  if (normalizedInput.idempotencyKey) {
-    const existing = await tx.findByIdempotencyKey(
-      normalizedInput.companyId,
-      normalizedInput.idempotencyKey,
-    );
+async function resolveExistingPosting(
+  tx: AccountingTransaction,
+  input: VoucherPostingInput,
+  fingerprint: string,
+): Promise<PostingResult | null> {
+  if (input.idempotencyKey) {
+    const existing = await tx.findByIdempotencyKey(input.companyId, input.idempotencyKey);
     if (existing) {
       if (existing.voucher.idempotencyFingerprint !== fingerprint) {
         throw new AccountingIntegrityError(
@@ -171,18 +178,44 @@ export async function postVoucherInTransaction(
     }
   }
 
-  if (normalizedInput.sourceType && normalizedInput.sourceId) {
-    const existing = await tx.findBySource(
-      normalizedInput.companyId,
-      normalizedInput.sourceType,
-      normalizedInput.sourceId,
-    );
-    if (existing) return { ...existing, duplicate: true };
+  if (input.sourceType && input.sourceId) {
+    const existing = await tx.findBySource(input.companyId, input.sourceType, input.sourceId);
+    if (existing) {
+      if (existing.voucher.idempotencyFingerprint !== fingerprint) {
+        throw new AccountingIntegrityError(
+          "Source reference was already used for a different posting",
+          "SOURCE_REFERENCE_REUSED",
+          409,
+        );
+      }
+      return { ...existing, duplicate: true };
+    }
   }
+
+  return null;
+}
+
+function isPostgresUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "23505"
+  );
+}
+
+export async function postVoucherInTransaction(
+  tx: AccountingTransaction,
+  input: VoucherPostingInput,
+  reversalOfVoucherId?: number | null,
+): Promise<PostingResult> {
+  const { normalizedInput, totalAmount, fingerprint } = normalizePostingInput(input);
+  const existing = await resolveExistingPosting(tx, normalizedInput, fingerprint);
+  if (existing) return existing;
 
   const referenceIssues = await tx.validateReferences(
     normalizedInput.companyId,
-    normalizedEntries,
+    normalizedInput.entries,
     normalizedInput.locationId,
   );
   if (referenceIssues.length > 0) {
@@ -199,9 +232,9 @@ export async function postVoucherInTransaction(
     fingerprint,
     reversalOfVoucherId,
   );
-  const createdEntries = await tx.createEntries(voucher.id, normalizedEntries);
+  const createdEntries = await tx.createEntries(voucher.id, normalizedInput.entries);
   if (!voucher.optional) {
-    await tx.applySupportingBalances(normalizedEntries, 1);
+    await tx.applySupportingBalances(normalizedInput.entries, 1);
   }
   return { voucher, entries: createdEntries, duplicate: false };
 }
@@ -209,7 +242,18 @@ export async function postVoucherInTransaction(
 export class VoucherPostingService {
   constructor(private readonly store: AccountingStore) {}
 
-  post(input: VoucherPostingInput): Promise<PostingResult> {
-    return this.store.transaction((tx) => postVoucherInTransaction(tx, input));
+  async post(input: VoucherPostingInput): Promise<PostingResult> {
+    try {
+      return await this.store.transaction((tx) => postVoucherInTransaction(tx, input));
+    } catch (error) {
+      if (!isPostgresUniqueViolation(error)) throw error;
+
+      const { normalizedInput, fingerprint } = normalizePostingInput(input);
+      const existing = await this.store.transaction((tx) =>
+        resolveExistingPosting(tx, normalizedInput, fingerprint),
+      );
+      if (existing) return existing;
+      throw error;
+    }
   }
 }
