@@ -11,6 +11,7 @@ import {
   vouchers,
 } from "@shared/schema";
 import { decideFinalizedVoucherMutation } from "../services/accounting/finalizedMutationPolicy";
+import { registerTransactionalPayrollRoutes } from "./transactionalPayrollRoutes";
 
 interface VoucherState {
   id: number;
@@ -159,6 +160,8 @@ export function registerFinalizedFinancialMutationGuards(
   app: Express,
   requireAuth: RequestHandler,
 ): void {
+  registerTransactionalPayrollRoutes(app);
+
   app.use("/api/vouchers/:id", requireAuth, guardFinalizedMutation(voucherById));
   app.use("/api/voucher-entries/:id", requireAuth, guardFinalizedMutation(voucherByEntryId));
   app.use(
