@@ -1,22 +1,24 @@
 name: Program 2 Harden Offload Concurrency
 
 on:
-  push:
-    branches:
-      - agent/program-2-financial-integrity-final
+  pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   harden:
-    if: github.actor != 'github-actions[bot]'
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/program-2-financial-integrity-final
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -126,5 +128,5 @@ await concurrentOffloadScenario();'''
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add server/storage.ts server/__tests__/containerOffloadReversal.postgres.ts
           git commit -m "fix(accounting): serialize concurrent container offloads"
-          git pull --rebase origin agent/program-2-financial-integrity-final
-          git push origin HEAD:agent/program-2-financial-integrity-final
+          git pull --rebase origin "${{ github.event.pull_request.head.ref }}"
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
