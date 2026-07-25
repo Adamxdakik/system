@@ -1,0 +1,46 @@
+name: Program 3 POS Type Line
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Capture POS compiler line
+        shell: bash
+        run: |
+          set +e
+          npx tsc -b --force --pretty false > /tmp/typescript-output.txt 2>&1
+          grep 'client/src/pages/POS.tsx' /tmp/typescript-output.txt > docs/program3-pos-type-line.txt || true
+          if [[ ! -s docs/program3-pos-type-line.txt ]]; then
+            echo 'No POS TypeScript line found' > docs/program3-pos-type-line.txt
+          fi
+      - name: Commit diagnostic
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/program3-pos-type-line.txt
+          git commit -m "chore(program-3): record POS type error line"
+          git pull --rebase origin "${{ github.event.pull_request.head.ref }}"
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
