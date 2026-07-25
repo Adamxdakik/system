@@ -84,6 +84,24 @@ new = '''            quantity: item.quantity.toString(),
             rate: item.rate.toString(),
           })),'''
 source = replace_once(source, old, new, "stock transfer order rate")
+old_dependencies = '''    [flatItems, selectedLocations, quantityPicker.open, openQuantityPicker, focusedCell, navigate],'''
+new_dependencies = '''    [
+      flatItems,
+      selectedLocations,
+      quantityPicker.open,
+      openQuantityPicker,
+      focusedCell,
+      navigate,
+      orderItems,
+      destinationLocationId,
+      expandedGroups,
+    ],'''
+source = replace_once(
+    source,
+    old_dependencies,
+    new_dependencies,
+    "stock matrix callback dependencies",
+)
 order.write_text(source)
 
 ci = Path(".github/workflows/ci.yml")
