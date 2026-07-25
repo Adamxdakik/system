@@ -131,6 +131,7 @@ import {
   VoucherPostingService,
 } from "./services/accounting/voucherPostingService";
 import { VoucherReversalService } from "./services/accounting/voucherReversalService";
+import { registerFinancialCorrectionRoutes } from "./financialCorrectionRoutes";
 import {
   decimalToScaledInteger,
   normalizeMoney,
@@ -275,6 +276,8 @@ async function syncEmployeeBalancesFromEntries(
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  registerFinancialCorrectionRoutes(app);
+
   // Database health check endpoint
   app.get("/api/health/db", async (req, res) => {
     try {
