@@ -61,8 +61,29 @@ jobs:
       - name: Enforce whole-application TypeScript baseline
         run: npm run check:all:baseline
 
-      - name: Run CI-safe tests
-        run: npm run test:ci
+      - name: Run CI-safe tests with diagnostics
+        id: ci_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npm run test:ci > ci-tests.log 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          tail -n 160 ci-tests.log
+          exit 0
+
+      - name: Upload test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: program2-test-diagnostics
+          path: ci-tests.log
+          retention-days: 1
+
+      - name: Fail when CI-safe tests failed
+        if: steps.ci_tests.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Build production bundles
         run: npm run build
@@ -126,8 +147,29 @@ jobs:
       - name: Install exact dependencies
         run: npm ci --include=dev
 
-      - name: Run full migration chain
-        run: npm run db:migrate
+      - name: Run full migration chain with diagnostics
+        id: migrate
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npm run db:migrate > migration.log 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          tail -n 200 migration.log
+          exit 0
+
+      - name: Upload migration diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: program2-migration-diagnostics
+          path: migration.log
+          retention-days: 1
+
+      - name: Stop when migration failed
+        if: steps.migrate.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Verify migration rerun is idempotent
         run: npm run db:migrate
