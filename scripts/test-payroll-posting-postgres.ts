@@ -25,7 +25,10 @@ function connectionString(): string {
   return value;
 }
 
-async function voucherBalance(pool: Pool, voucherId: number): Promise<{ debit: string; credit: string }> {
+async function voucherBalance(
+  pool: Pool,
+  voucherId: number,
+): Promise<{ debit: string; credit: string }> {
   const result = await pool.query(
     `
       SELECT
@@ -126,7 +129,10 @@ async function main() {
       idempotencyKey: depositKey,
     });
     assert(duplicateDeposit.duplicate, "Payroll retry did not return the existing posting");
-    assert(duplicateDeposit.voucher.id === deposit.voucher.id, "Payroll retry returned another voucher");
+    assert(
+      duplicateDeposit.voucher.id === deposit.voucher.id,
+      "Payroll retry returned another voucher",
+    );
     state = await employeeState(pool, employeeId);
     assert(state.current_balance === "100.00", "Payroll retry changed employee balance twice");
     assert(state.total_deposits === "100.00", "Payroll retry changed total deposits twice");
