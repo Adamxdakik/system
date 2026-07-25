@@ -1,0 +1,37 @@
+name: Program 2 Format Route
+
+on:
+  push:
+    branches:
+      - agent/program-2-financial-integrity-final
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/program-2-financial-integrity-final
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Format resolved route file
+        run: npx prettier --write server/routes.ts
+      - name: Commit focused formatting
+        shell: bash
+        run: |
+          if git diff --quiet -- server/routes.ts; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/routes.ts
+          git commit -m "style: format resolved Program 2 route file"
+          git push origin HEAD:agent/program-2-financial-integrity-final
