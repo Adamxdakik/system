@@ -14,7 +14,7 @@ jobs:
   apply:
     if: github.event.pull_request.head.ref == 'agent/program-2-financial-integrity-final'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Check out Program 2 branch
@@ -23,8 +23,30 @@ jobs:
           ref: agent/program-2-financial-integrity-final
           fetch-depth: 0
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
       - name: Apply deterministic Program 2 patches
         run: python .program2/apply.py
+
+      - name: Format scoped Program 2 source
+        run: >-
+          npx prettier --write
+          server/financialCorrectionRoutes.ts
+          server/services/accounting/drizzleAccountingStore.ts
+          server/services/accounting/finalizedVoucherCorrectionService.ts
+          server/services/accounting/posSaleCorrectionService.ts
+          server/services/accounting/voucherPostingService.ts
+          server/__tests__/accountingIdempotencyRegression.test.ts
+          server/__tests__/finalizedVoucherCorrection.test.ts
+          scripts/audit-supplier-company-assignments.ts
+          package.json
 
       - name: Remove one-time marker
         run: rm -f .program2/apply.ready
