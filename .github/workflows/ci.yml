@@ -49,28 +49,7 @@ jobs:
         run: npm run check
 
       - name: Enforce whole-application TypeScript baseline
-        id: typescript_baseline
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          npm run check:all:baseline > typescript-baseline.log 2>&1
-          status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
-          cat typescript-baseline.log
-          exit 0
-
-      - name: Upload TypeScript baseline diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: program2-typescript-baseline-diagnostics
-          path: typescript-baseline.log
-          retention-days: 1
-
-      - name: Stop when TypeScript baseline failed
-        if: steps.typescript_baseline.outputs.exit_code != '0'
-        run: exit 1
+        run: npm run check:all:baseline
 
       - name: Run CI-safe tests
         run: npm run test:ci
@@ -119,45 +98,12 @@ jobs:
         run: npm run db:migrate
 
       - name: Run PostgreSQL accounting integration tests
-        id: accounting_test
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          npm run test:accounting:integration -- --confirm-disposable > accounting-postgres.log 2>&1
-          status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
-          cat accounting-postgres.log
-          exit 0
+        run: npm run test:accounting:integration -- --confirm-disposable
 
       - name: Run transactional payroll PostgreSQL regressions
-        id: payroll_test
-        if: always()
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          npx tsx --tsconfig tsconfig.tests.json scripts/test-payroll-posting-postgres.ts --confirm-disposable > payroll-postgres.log 2>&1
-          status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
-          cat payroll-postgres.log
-          exit 0
-
-      - name: Upload PostgreSQL diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: program2-postgres-diagnostics
-          path: |
-            accounting-postgres.log
-            payroll-postgres.log
-          retention-days: 1
-
-      - name: Stop when PostgreSQL regressions failed
-        if: >-
-          steps.accounting_test.outputs.exit_code != '0' ||
-          steps.payroll_test.outputs.exit_code != '0'
-        run: exit 1
+        run: >-
+          npx tsx --tsconfig tsconfig.integration-tests.json
+          server/__tests__/payrollPosting.postgres.ts --confirm-disposable
 
       - name: Run POS inventory value regressions
         run: npx vitest run server/__tests__/posInventoryValue.test.ts
