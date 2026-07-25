@@ -1,0 +1,11 @@
+client/src/App.tsx
+client/src/pages/AssemblyHistory.tsx
+client/src/pages/Dashboard.tsx
+client/src/pages/Daybook.tsx
+client/src/pages/EditSupplier.tsx
+client/src/pages/IncomeStatement.tsx
+client/src/pages/MotoAssembly.tsx
+client/src/pages/SalesReport.tsx
+client/src/pages/Suppliers.tsx
+migrations/0013_add_offload_tables.sql
+server/routes.ts
