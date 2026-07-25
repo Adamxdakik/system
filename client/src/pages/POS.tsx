@@ -89,7 +89,6 @@ interface POSProps {
 export default function POS({
   posUser,
   editVoucherId,
-  embedded = false,
   onDirtyChange,
 }: POSProps = {}) {
   const { selectedLocation, setSelectedLocation } = useLocationContext();
