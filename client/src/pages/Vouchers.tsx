@@ -2924,14 +2924,8 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
             data.voucherDate instanceof Date ? data.voucherDate : new Date(data.voucherDate);
           const editFormattedVoucherDate = format(editVoucherDateObj, "yyyy-MM-dd");
 
-          const voucherRes = await modeApiRequest("PATCH", `/api/vouchers/${_voucherIdToEdit}`, {
-            voucherDate: editFormattedVoucherDate,
-            description: `Stock transfer from ${sourceNames} to ${destName}`,
-            totalAmount: _transferTotal.toString(),
-            optional: data.optional,
-          });
-
-          // Update stock transfer
+          // Save draft line changes before activation. If activation fails, the
+          // movement remains an editable draft and inventory is untouched.
           if (_stockTransferToEditId) {
             await modeApiRequest("PUT", `/api/stock-transfers/${_stockTransferToEditId}`, {
               destinationLocationId: data.destinationLocationId,
@@ -2945,6 +2939,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
             });
           }
 
+          const voucherRes = await modeApiRequest("PATCH", `/api/vouchers/${_voucherIdToEdit}`, {
+            voucherDate: editFormattedVoucherDate,
+            description: `Stock transfer from ${sourceNames} to ${destName}`,
+            totalAmount: _transferTotal.toString(),
+            optional: data.optional,
+          });
+
           return await voucherRes.json();
         } else {
           // CREATE MODE: Create new voucher and stock transfer
@@ -2956,7 +2957,6 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           const voucherPayload = {
             companyId: _companyId,
             voucherType: "StockTransfer",
-            voucherNumber: `TRANSFER-${Date.now()}`,
             voucherDate: formattedVoucherDate,
             description: `Stock transfer from ${sourceNames} to ${destName}`,
             totalAmount: _transferTotal.toString(),
@@ -3519,14 +3519,8 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
       if (isEditMode) {
         // UPDATE MODE: Use PATCH to update existing voucher and stock adjustment
-        const voucherRes = await modeApiRequest("PATCH", `/api/vouchers/${voucherIdToEdit}`, {
-          voucherDate: format(data.voucherDate, "yyyy-MM-dd"),
-          description: `Stock ${adjustmentType.toLowerCase()} at ${locations.find((l) => l.id === data.locationId)?.name}`,
-          totalAmount: totalAmount.toString(),
-          optional: data.optional,
-        });
-
-        // Update stock adjustment (assuming stockAdjustmentToEdit has an id)
+        // Save the draft movement first. Finalization then applies inventory
+        // and exact cost evidence together in the server transaction.
         if (stockAdjustmentToEdit?.id) {
           await modeApiRequest("PUT", `/api/stock-adjustments/${stockAdjustmentToEdit.id}`, {
             locationId: data.locationId,
@@ -3536,6 +3530,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           });
         }
 
+        const voucherRes = await modeApiRequest("PATCH", `/api/vouchers/${voucherIdToEdit}`, {
+          voucherDate: format(data.voucherDate, "yyyy-MM-dd"),
+          description: `Stock ${adjustmentType.toLowerCase()} at ${locations.find((l) => l.id === data.locationId)?.name}`,
+          totalAmount: totalAmount.toString(),
+          optional: data.optional,
+        });
+
         return await voucherRes.json();
       } else {
         // CREATE MODE: voucher, movement rows, cost evidence, and inventory commit together.
@@ -3543,7 +3544,6 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           voucher: {
             companyId: selectedCompany?.id,
             voucherType: adjustmentType,
-            voucherNumber: `${adjustmentType.toUpperCase()}-${Date.now()}`,
             voucherDate: format(data.voucherDate, "yyyy-MM-dd"),
             description: `Stock ${adjustmentType.toLowerCase()} at ${locations.find((l) => l.id === data.locationId)?.name}`,
             totalAmount: totalAmount.toString(),

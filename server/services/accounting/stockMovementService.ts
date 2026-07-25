@@ -978,7 +978,11 @@ export class StockMovementService {
     return adjustment ? "ADJUSTMENT" : null;
   }
 
-  activate(companyId: number, voucherId: number): Promise<MovementResult> {
+  activate(
+    companyId: number,
+    voucherId: number,
+    updates?: { voucherDate?: string; description?: string | null },
+  ): Promise<MovementResult> {
     return db.transaction(async (tx) => {
       const [voucher] = await tx
         .select()
@@ -1027,6 +1031,10 @@ export class StockMovementService {
           .set({
             optional: false,
             totalAmount: scaledIntegerToDecimal(applied.totalMinor, MONEY_SCALE),
+            ...(updates?.voucherDate == null
+              ? {}
+              : { voucherDate: normalizeDate(updates.voucherDate) }),
+            ...(updates?.description === undefined ? {} : { description: updates.description }),
           })
           .where(eq(vouchers.id, voucherId))
           .returning();
@@ -1071,6 +1079,10 @@ export class StockMovementService {
         .set({
           optional: false,
           totalAmount: scaledIntegerToDecimal(applied.totalMinor, MONEY_SCALE),
+          ...(updates?.voucherDate == null
+            ? {}
+            : { voucherDate: normalizeDate(updates.voucherDate) }),
+          ...(updates?.description === undefined ? {} : { description: updates.description }),
         })
         .where(eq(vouchers.id, voucherId))
         .returning();
