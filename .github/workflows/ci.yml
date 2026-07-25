@@ -29,16 +29,6 @@ jobs:
       - name: Install exact dependencies
         run: npm ci --include=dev
 
-      - name: Format Program 2 completion files in workspace
-        run: >-
-          npx prettier --write
-          .github/workflows/ci.yml
-          .github/workflows/program2-workspace.yml
-          scripts/audit-supplier-company-assignments.ts
-          server/services/accounting/voucherPostingService.ts
-          server/__tests__/accountingIdempotencyRegression.test.ts
-          package.json
-
       - name: Select changed-file comparison
         shell: bash
         run: |
@@ -61,57 +51,11 @@ jobs:
       - name: Enforce whole-application TypeScript baseline
         run: npm run check:all:baseline
 
-      - name: Run CI-safe tests with diagnostics
-        id: ci_tests
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          npm run test:ci > ci-tests.log 2>&1
-          status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
-          tail -n 160 ci-tests.log
-          exit 0
-
-      - name: Upload test diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: program2-test-diagnostics
-          path: ci-tests.log
-          retention-days: 1
-
-      - name: Fail when CI-safe tests failed
-        if: steps.ci_tests.outputs.exit_code != '0'
-        run: exit 1
+      - name: Run CI-safe tests
+        run: npm run test:ci
 
       - name: Build production bundles
         run: npm run build
-
-      - name: Package exact source and Git tree metadata
-        if: always()
-        run: |
-          git show -s --format=%T HEAD > tree-sha.txt
-          git rev-parse HEAD > commit-sha.txt
-          git archive --format=zip --output=source.zip HEAD
-          zip -q -u source.zip \
-            .github/workflows/ci.yml \
-            .github/workflows/program2-workspace.yml \
-            scripts/audit-supplier-company-assignments.ts \
-            server/services/accounting/voucherPostingService.ts \
-            server/__tests__/accountingIdempotencyRegression.test.ts \
-            package.json
-
-      - name: Upload workspace artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: program2-workspace
-          path: |
-            source.zip
-            tree-sha.txt
-            commit-sha.txt
-          retention-days: 1
 
   accounting-postgres:
     runs-on: ubuntu-latest
@@ -147,56 +91,14 @@ jobs:
       - name: Install exact dependencies
         run: npm ci --include=dev
 
-      - name: Run full migration chain with diagnostics
-        id: migrate
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          npm run db:migrate > migration.log 2>&1
-          status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
-          tail -n 200 migration.log
-          exit 0
-
-      - name: Upload migration diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: program2-migration-diagnostics
-          path: migration.log
-          retention-days: 1
-
-      - name: Stop when migration failed
-        if: steps.migrate.outputs.exit_code != '0'
-        run: exit 1
+      - name: Run full migration chain
+        run: npm run db:migrate
 
       - name: Verify migration rerun is idempotent
         run: npm run db:migrate
 
-      - name: Run PostgreSQL accounting integration tests with diagnostics
-        id: postgres_tests
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          npm run test:accounting:integration -- --confirm-disposable > postgres-tests.log 2>&1
-          status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
-          tail -n 240 postgres-tests.log
-          exit 0
-
-      - name: Upload PostgreSQL integration diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: program2-postgres-test-diagnostics
-          path: postgres-tests.log
-          retention-days: 1
-
-      - name: Stop when PostgreSQL integration tests failed
-        if: steps.postgres_tests.outputs.exit_code != '0'
-        run: exit 1
+      - name: Run PostgreSQL accounting integration tests
+        run: npm run test:accounting:integration -- --confirm-disposable
 
       - name: Run accounting report reconciliation tests
         run: npm run test:accounting:reports
