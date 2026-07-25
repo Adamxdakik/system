@@ -371,8 +371,9 @@ async function concurrencyChecks(
     `
       INSERT INTO vouchers (
         company_id, voucher_number, voucher_type, voucher_date, total_amount,
-        source_type, source_id, idempotency_key
-      ) VALUES ($1, $2, 'Journal', '2024-05-02', 1, 'REVERSAL_CONCURRENCY', $3, $3)
+        currency, exchange_rate, source_type, source_id, idempotency_key
+      ) VALUES ($1, $2, 'Journal', '2024-05-02', 1, 'USD', 1,
+        'REVERSAL_CONCURRENCY', $3, $3)
       RETURNING id
     `,
     [companyId, `REV-CONCURRENCY-${key}`, `rev-original-${key}`],
@@ -383,8 +384,10 @@ async function concurrencyChecks(
       `
         INSERT INTO vouchers (
           company_id, voucher_number, voucher_type, voucher_date, total_amount,
-          source_type, source_id, idempotency_key, reversal_of_voucher_id
-        ) VALUES ($1, $2, 'Journal', '2024-05-03', 1, 'VOUCHER_REVERSAL', $3, $3, $4)
+          currency, exchange_rate, source_type, source_id, idempotency_key,
+          reversal_of_voucher_id
+        ) VALUES ($1, $2, 'Journal', '2024-05-03', 1, 'USD', 1,
+          'VOUCHER_REVERSAL', $3, $3, $4)
         ON CONFLICT (reversal_of_voucher_id) WHERE reversal_of_voucher_id IS NOT NULL
         DO NOTHING
         RETURNING id
