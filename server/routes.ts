@@ -131,6 +131,7 @@ import {
   VoucherPostingService,
 } from "./services/accounting/voucherPostingService";
 import { VoucherReversalService } from "./services/accounting/voucherReversalService";
+import { registerFinalizedFinancialMutationGuards } from "./routes/finalizedFinancialMutationGuards";
 import { registerFinancialCorrectionRoutes } from "./financialCorrectionRoutes";
 import {
   decimalToScaledInteger,
@@ -324,6 +325,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/auth/logout",
     createLogoutHandler((userId) => activeUsers.delete(userId)),
   );
+
+  // Finalized financial records are corrected through reversal, never destructive mutation.
+  registerFinalizedFinancialMutationGuards(app, requireAuth);
 
   // ─── Active Users heartbeat ──────────────────────────────────────────────
   app.post("/api/users/heartbeat", requireAuth, (req, res) => {
