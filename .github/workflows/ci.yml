@@ -10,42 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  apply-offload-concurrency-hardening:
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci --include=dev
-      - name: Apply concurrency hardening
-        run: |
-          python scripts/apply-offload-concurrency-hardening.py
-          npx prettier --write server/storage.ts server/__tests__/containerOffloadReversal.postgres.ts
-      - name: Commit concurrency hardening
-        shell: bash
-        run: |
-          if git diff --quiet -- server/storage.ts server/__tests__/containerOffloadReversal.postgres.ts; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add server/storage.ts server/__tests__/containerOffloadReversal.postgres.ts
-          git commit -m "fix(accounting): serialize concurrent container offloads"
-          git pull --rebase origin "${{ github.event.pull_request.head.ref }}"
-          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
-
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -146,35 +110,10 @@ jobs:
           npx tsx --tsconfig tsconfig.integration-tests.json
           server/__tests__/stockMovement.postgres.ts --confirm-disposable
 
-      - name: Capture exact container offload reversal PostgreSQL regression
-        id: offload
-        shell: bash
-        run: |
-          set +e
-          npx tsx --tsconfig tsconfig.integration-tests.json \
-            server/__tests__/containerOffloadReversal.postgres.ts \
-            --confirm-disposable > container-offload-reversal.log 2>&1
-          code=$?
-          echo "$code" > container-offload-reversal.exit
-          cat container-offload-reversal.log
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Upload container offload reversal diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: container-offload-reversal-diagnostics
-          path: |
-            container-offload-reversal.log
-            container-offload-reversal.exit
-          retention-days: 1
-
-      - name: Enforce container offload reversal regression result
-        if: always()
-        shell: bash
-        run: |
-          test "${{ steps.offload.outputs.exit_code }}" = "0"
+      - name: Run exact container offload reversal PostgreSQL regressions
+        run: >-
+          npx tsx --tsconfig tsconfig.integration-tests.json
+          server/__tests__/containerOffloadReversal.postgres.ts --confirm-disposable
 
       - name: Run POS inventory value regressions
         run: npx vitest run server/__tests__/posInventoryValue.test.ts
