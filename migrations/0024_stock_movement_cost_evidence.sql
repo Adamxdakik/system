@@ -1,3 +1,6 @@
+ALTER TABLE stock_transfer_items
+  ADD COLUMN IF NOT EXISTS source_location_id INTEGER;
+
 CREATE TABLE IF NOT EXISTS stock_movement_cost_evidence (
   id SERIAL PRIMARY KEY,
   company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE RESTRICT,
