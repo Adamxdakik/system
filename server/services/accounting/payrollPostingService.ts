@@ -6,7 +6,7 @@ import { db } from "../../db";
 import { employees, ledgerAccounts, vouchers } from "@shared/schema";
 import { accountingTransactionFor, type DrizzleTransaction } from "./drizzleAccountingStore";
 import { decimalToScaledInteger, normalizeMoney, scaledIntegerToDecimal } from "./money";
-import type { PostingEntryInput, PostedVoucher, VoucherType } from "./types";
+import type { PostingEntryInput, VoucherType } from "./types";
 import { AccountingIntegrityError, postVoucherInTransaction } from "./voucherPostingService";
 
 export type PayrollMovementKind = "deposit" | "bonus" | "withdrawal" | "worker_payment";
