@@ -1,3 +1,4 @@
+-- Align historical schemas before exact container offload evidence is recorded.
 ALTER TABLE suppliers
   ADD COLUMN IF NOT EXISTS company_id INTEGER,
   ADD COLUMN IF NOT EXISTS phone TEXT,
