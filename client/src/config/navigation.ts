@@ -42,6 +42,18 @@ export const primaryItems: NavigationItem[] = [
     activePrefixes: ["/"],
   },
   {
+    title: "New Sale",
+    url: "/pos",
+    icon: ShoppingCart,
+    activePrefixes: ["/pos"],
+  },
+  {
+    title: "Stock & Parts",
+    url: "/stock-items",
+    icon: Layers,
+    activePrefixes: ["/stock-items", "/stock-query"],
+  },
+  {
     title: "Transaction History",
     url: "/daybook",
     icon: BookOpen,
@@ -53,12 +65,6 @@ export const primaryItems: NavigationItem[] = [
 
 export const salesItems: NavigationItem[] = [
   {
-    title: "New Sale",
-    url: "/pos",
-    icon: ShoppingCart,
-    activePrefixes: ["/pos"],
-  },
-  {
     title: "Sales History",
     url: "/sales-report",
     icon: ReceiptText,
@@ -69,12 +75,6 @@ export const salesItems: NavigationItem[] = [
 // ── Inventory ─────────────────────────────────────────────────────────────────
 
 export const inventoryItems: NavigationItem[] = [
-  {
-    title: "Parts & Stock",
-    url: "/stock-items",
-    icon: Layers,
-    activePrefixes: ["/stock-items", "/stock-query"],
-  },
   {
     title: "Shipments",
     url: "/containers",
@@ -119,7 +119,7 @@ export const financeItems: NavigationItem[] = [
 
 export const customerSectionItems: NavigationItem[] = [
   {
-    title: "Customer Center",
+    title: "Customers & Service",
     url: "/service",
     icon: HeartHandshake,
     activePrefixes: [

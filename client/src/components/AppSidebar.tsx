@@ -185,7 +185,7 @@ export function AppSidebar({ user }: { user?: any }) {
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-bold tracking-tight leading-tight">Huanghe Motors</span>
             <span className="text-[10px] text-sidebar-foreground/40 leading-tight">
-              Business Management
+              Daily Operations
             </span>
           </div>
         </div>
@@ -198,7 +198,9 @@ export function AppSidebar({ user }: { user?: any }) {
         <SidebarGroup className="p-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {/* Dashboard */}
+              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+                Daily work
+              </div>
               {primaryItems.filter(isItemVisible).map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
@@ -216,7 +218,10 @@ export function AppSidebar({ user }: { user?: any }) {
                 </SidebarMenuItem>
               ))}
 
-              <div className="my-1" />
+              <SidebarSeparator className="my-2 opacity-40" />
+              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+                More tools
+              </div>
 
               {/* Sales */}
               <NavGroup
