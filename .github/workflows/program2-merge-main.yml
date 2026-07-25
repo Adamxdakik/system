@@ -1,0 +1,107 @@
+name: Program 2 Merge Main
+
+on:
+  push:
+    branches:
+      - agent/program-2-financial-integrity-final
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/program-2-financial-integrity-final
+          fetch-depth: 0
+      - name: Merge current main and resolve route conflict
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          set +e
+          git merge --no-ff --no-commit origin/main
+          MERGE_STATUS=$?
+          set -e
+          if [[ $MERGE_STATUS -ne 0 ]]; then
+            CONFLICTS=$(git diff --name-only --diff-filter=U)
+            echo "Conflicts:"
+            echo "$CONFLICTS"
+            if [[ "$CONFLICTS" != "server/routes.ts" ]]; then
+              echo "Unexpected merge conflicts; aborting safely."
+              git merge --abort
+              exit 1
+            fi
+            git checkout --ours server/routes.ts
+          fi
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("server/routes.ts")
+          source = path.read_text()
+
+          source, comment_count = re.subn(
+              r"// 1\. Stock by group — moto groups \(allocateImportCosts=true\) vs parts",
+              "// 1. Stock by group — moto groups (name contains moto/bike/motorcycle) vs parts",
+              source,
+              count=1,
+          )
+          if comment_count != 1 and "name contains moto/bike/motorcycle" not in source:
+              raise SystemExit("Inventory summary comment anchor not found")
+
+          old_select = "allocateImportCosts: stockGroups.allocateImportCosts,"
+          new_select = "averageRate: inventory.averageRate,\n          groupName: stockGroups.name,"
+          if old_select in source:
+              source = source.replace(old_select, new_select, 1)
+          elif "groupName: stockGroups.name" not in source:
+              raise SystemExit("Inventory summary select anchor not found")
+
+          pattern = re.compile(
+              r'(?P<i>\s*)const val = parseFloat\(row\.totalValue \|\| "0"\);\s*'
+              r'const qty = parseFloat\(row\.quantity \|\| "0"\);\s*'
+              r'if \(row\.allocateImportCosts\)\s*\{?\s*'
+              r'motoValue \+= val;\s*motoQty \+= qty;\s*\}?\s*'
+              r'else\s*\{?\s*partsValue \+= val;\s*partsQty \+= qty;\s*\}?',
+              re.S,
+          )
+
+          def replacement(match: re.Match[str]) -> str:
+              i = match.group("i")
+              return (
+                  f'{i}const qty = parseFloat(row.quantity || "0");\n'
+                  f'{i}if (qty <= 0) continue;\n'
+                  f'{i}const val =\n'
+                  f'{i}  parseFloat(row.totalValue || "0") || qty * parseFloat(row.averageRate || "0");\n'
+                  f'{i}const gName = (row.groupName || "").toLowerCase();\n'
+                  f'{i}const isMoto =\n'
+                  f'{i}  gName.includes("moto") ||\n'
+                  f'{i}  gName.includes("bike") ||\n'
+                  f'{i}  gName.includes("motorcycle");\n'
+                  f'{i}if (isMoto) {{\n'
+                  f'{i}  motoValue += val;\n'
+                  f'{i}  motoQty += qty;\n'
+                  f'{i}}} else {{\n'
+                  f'{i}  partsValue += val;\n'
+                  f'{i}  partsQty += qty;\n'
+                  f'{i}}}'
+              )
+
+          source, loop_count = pattern.subn(replacement, source, count=1)
+          if loop_count != 1 and "gName.includes(\"motorcycle\")" not in source:
+              raise SystemExit("Inventory summary loop anchor not found")
+
+          path.write_text(source)
+          PY
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Branch already contains current main."
+            exit 0
+          fi
+          git commit -m "Merge current main into Program 2"
+          git push origin HEAD:agent/program-2-financial-integrity-final
