@@ -58,9 +58,7 @@ function voucherInput(
     optional: Boolean(source.optional ?? req.body?.optional ?? false),
     currency: source.currency == null ? "USD" : String(source.currency),
     exchangeRate:
-      source.exchangeRate == null || source.exchangeRate === ""
-        ? "1"
-        : String(source.exchangeRate),
+      source.exchangeRate == null || source.exchangeRate === "" ? "1" : String(source.exchangeRate),
   };
 }
 
@@ -68,7 +66,9 @@ function userId(req: Request): string | null {
   return req.user?.id ?? req.session.userId ?? null;
 }
 
-function compatibleTransferResponse(result: Awaited<ReturnType<typeof stockMovementService.createTransfer>>) {
+function compatibleTransferResponse(
+  result: Awaited<ReturnType<typeof stockMovementService.createTransfer>>,
+) {
   return {
     ...result,
     transfer: result.movement,
@@ -134,7 +134,11 @@ export function registerAtomicStockMovementRoutes(app: Express): void {
         const companyId = req.session.currentCompanyId;
         if (!companyId) return res.status(400).json({ message: "No company selected" });
         const adjustmentType = String(req.body?.adjustmentType ?? "");
-        if (!(["Production", "Consumption", "Mixed"] as const).includes(adjustmentType as AdjustmentKind)) {
+        if (
+          !(["Production", "Consumption", "Mixed"] as const).includes(
+            adjustmentType as AdjustmentKind,
+          )
+        ) {
           return res.status(400).json({
             message: "Adjustment type must be Production, Consumption, or Mixed",
           });
@@ -226,12 +230,7 @@ export function registerAtomicStockMovementRoutes(app: Express): void {
     }
   };
 
-  app.post(
-    "/api/vouchers/:id/reverse",
-    requireAuth,
-    requireRole("Admin"),
-    reverseHandler,
-  );
+  app.post("/api/vouchers/:id/reverse", requireAuth, requireRole("Admin"), reverseHandler);
   app.post(
     "/api/stock-transfers/:voucherId/reverse",
     requireAuth,

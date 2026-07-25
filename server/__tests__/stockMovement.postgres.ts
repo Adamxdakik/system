@@ -125,12 +125,7 @@ async function main() {
     assert(transfer.items[0].totalAmount === "37.04", "Transfer item did not store exact value");
 
     let source = await inventoryState(pool, companyId, sourceLocationId, stockItemId);
-    let destination = await inventoryState(
-      pool,
-      companyId,
-      destinationLocationId,
-      stockItemId,
-    );
+    let destination = await inventoryState(pool, companyId, destinationLocationId, stockItemId);
     assert(source.quantity === "7.000", "Transfer source quantity is wrong");
     assert(source.total_value === "86.41", "Transfer source value is wrong");
     assert(destination.quantity === "8.000", "Transfer destination quantity is wrong");
@@ -353,8 +348,7 @@ async function main() {
       });
     } catch (error) {
       legacyRejected =
-        error instanceof AccountingIntegrityError &&
-        error.code === "LEGACY_STOCK_COST_UNRESOLVED";
+        error instanceof AccountingIntegrityError && error.code === "LEGACY_STOCK_COST_UNRESOLVED";
     }
     assert(legacyRejected, "Legacy movement without exact cost evidence was not refused");
 

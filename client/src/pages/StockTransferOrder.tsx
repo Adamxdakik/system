@@ -23,17 +23,25 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, ChevronRight, MapPin, Package, Trash2, Check, AlertCircle, ArrowRight, Settings2, CalendarIcon, FileDown, List } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  MapPin,
+  Package,
+  Trash2,
+  Check,
+  AlertCircle,
+  ArrowRight,
+  Settings2,
+  CalendarIcon,
+  FileDown,
+  List,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,22 +131,25 @@ export default function StockTransferOrder() {
     if (editVoucherId !== null) return null; // don't restore when editing existing voucher
     try {
       const ss = sessionStorage.getItem(SESSION_STATE_KEY);
-      if (ss) { sessionStorage.removeItem(SESSION_STATE_KEY); return JSON.parse(ss); }
+      if (ss) {
+        sessionStorage.removeItem(SESSION_STATE_KEY);
+        return JSON.parse(ss);
+      }
     } catch {}
     return null;
   })();
 
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(
-    () => new Set<number>(_sessionSnapshot?.expandedGroups || [])
+    () => new Set<number>(_sessionSnapshot?.expandedGroups || []),
   );
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [destinationLocationId, setDestinationLocationId] = useState<number | null>(
-    () => _sessionSnapshot?.destinationLocationId ?? null
+    () => _sessionSnapshot?.destinationLocationId ?? null,
   );
   const [orderItems, setOrderItems] = useState<OrderItem[]>(
-    () => _sessionSnapshot?.orderItems || []
+    () => _sessionSnapshot?.orderItems || [],
   );
-  
+
   const [quantityPicker, setQuantityPicker] = useState<QuantityPickerState>({
     open: false,
     stockItem: null,
@@ -147,20 +158,22 @@ export default function StockTransferOrder() {
     availableQty: 0,
   });
   const [pickerQuantity, setPickerQuantity] = useState("");
-  
+
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transferDate, setTransferDate] = useState<Date>(new Date());
   const [isOptional, setIsOptional] = useState(false);
   const [editDataLoaded, setEditDataLoaded] = useState(false);
-  
+
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const matrixRef = useRef<HTMLDivElement>(null);
   const [focusedCell, setFocusedCell] = useState<{ row: number; col: number } | null>(null);
   const prevDialogOpen = useRef(false);
 
   // Autosave draft state (new transfers only)
-  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "failed">(
+    "idle",
+  );
   const [hasDraft, setHasDraft] = useState<boolean>(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -171,7 +184,9 @@ export default function StockTransferOrder() {
   const { data: existingTransfer } = useQuery<any>({
     queryKey: ["/api/stock-transfers", editVoucherId],
     queryFn: async () => {
-      const res = await fetch(`/api/stock-transfers?voucherId=${editVoucherId}`, { credentials: "include" });
+      const res = await fetch(`/api/stock-transfers?voucherId=${editVoucherId}`, {
+        credentials: "include",
+      });
       if (!res.ok) throw new Error("Failed to fetch transfer");
       return res.json();
     },
@@ -188,22 +203,24 @@ export default function StockTransferOrder() {
     enabled: !!editVoucherId,
   });
 
-  const { data: stockItems = [] } = useQuery<Array<{ id: number; name: string; code: string; uom: string }>>({
+  const { data: stockItems = [] } = useQuery<
+    Array<{ id: number; name: string; code: string; uom: string }>
+  >({
     queryKey: ["/api/stock-items"],
     enabled: !!editVoucherId,
   });
 
   const { data: summaryData, isLoading } = useQuery<LocationSummaryResponse>({
-    queryKey: ["/api/location-summary", { locationIds: selectedLocationIds.join(',') }],
+    queryKey: ["/api/location-summary", { locationIds: selectedLocationIds.join(",") }],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedLocationIds.length > 0) {
-        params.append('locationIds', selectedLocationIds.join(','));
+        params.append("locationIds", selectedLocationIds.join(","));
       }
       const res = await fetch(`/api/location-summary?${params.toString()}`, {
-        credentials: 'include',
+        credentials: "include",
       });
-      if (!res.ok) throw new Error('Failed to fetch location summary');
+      if (!res.ok) throw new Error("Failed to fetch location summary");
       return res.json();
     },
     enabled: selectedLocationIds.length > 0,
@@ -231,7 +248,14 @@ export default function StockTransferOrder() {
 
   // Load items and destination once both transfer data and reference data are ready
   useEffect(() => {
-    if (editVoucherId && existingTransfer && existingVoucher && locations.length > 0 && stockItems.length > 0 && !editDataLoaded) {
+    if (
+      editVoucherId &&
+      existingTransfer &&
+      existingVoucher &&
+      locations.length > 0 &&
+      stockItems.length > 0 &&
+      !editDataLoaded
+    ) {
       const destId = existingTransfer.destinationLocationId;
       if (destId) setDestinationLocationId(destId);
 
@@ -272,7 +296,7 @@ export default function StockTransferOrder() {
         }
       }
     } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Autosave debounce effect (new transfers only)
@@ -283,19 +307,24 @@ export default function StockTransferOrder() {
     autosaveTimer.current = setTimeout(() => {
       setAutosaveStatus("saving");
       try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          destinationLocationId,
-          orderItems,
-          transferDate: transferDate.toISOString(),
-          isOptional,
-          savedAt: new Date().toISOString(),
-        }));
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({
+            destinationLocationId,
+            orderItems,
+            transferDate: transferDate.toISOString(),
+            isOptional,
+            savedAt: new Date().toISOString(),
+          }),
+        );
         setAutosaveStatus("saved");
       } catch {
         setAutosaveStatus("failed");
       }
     }, 800);
-    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
   }, [destinationLocationId, orderItems, transferDate, isOptional, editVoucherId]);
 
   const restoreDraft = () => {
@@ -335,13 +364,13 @@ export default function StockTransferOrder() {
   }, [focusedCell]);
 
   const selectedLocations = selectedLocationIds
-    .map(id => locations.find(loc => loc.id === id))
+    .map((id) => locations.find((loc) => loc.id === id))
     .filter((loc): loc is Location => loc !== undefined);
 
   const availableDestinations = locations;
 
   const toggleGroup = (groupId: number) => {
-    setExpandedGroups(prev => {
+    setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(groupId)) {
         next.delete(groupId);
@@ -353,10 +382,8 @@ export default function StockTransferOrder() {
   };
 
   const toggleLocation = (locationId: number) => {
-    setSelectedLocationIds(prev => 
-      prev.includes(locationId) 
-        ? prev.filter(id => id !== locationId)
-        : [...prev, locationId]
+    setSelectedLocationIds((prev) =>
+      prev.includes(locationId) ? prev.filter((id) => id !== locationId) : [...prev, locationId],
     );
   };
 
@@ -364,118 +391,123 @@ export default function StockTransferOrder() {
     return [...items].sort((a, b) => a.sourceLocationName.localeCompare(b.sourceLocationName));
   };
 
-  const flatItems = summaryData?.stockGroups.flatMap((group) => 
-    expandedGroups.has(group.id) 
-      ? [...group.items].sort((a, b) => a.name.localeCompare(b.name))
-      : []
-  ) || [];
+  const flatItems =
+    summaryData?.stockGroups.flatMap((group) =>
+      expandedGroups.has(group.id)
+        ? [...group.items].sort((a, b) => a.name.localeCompare(b.name))
+        : [],
+    ) || [];
 
-  const openQuantityPicker = useCallback((
-    item: StockItemData,
-    locationId: number,
-    locationName: string,
-    availableQty: number
-  ) => {
-    if (availableQty <= 0) {
-      toast({
-        title: "No Stock",
-        description: `${item.name} has no available stock at ${locationName}`,
-        variant: "destructive",
+  const openQuantityPicker = useCallback(
+    (item: StockItemData, locationId: number, locationName: string, availableQty: number) => {
+      if (availableQty <= 0) {
+        toast({
+          title: "No Stock",
+          description: `${item.name} has no available stock at ${locationName}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setQuantityPicker({
+        open: true,
+        stockItem: item,
+        locationId,
+        locationName,
+        availableQty,
       });
-      return;
-    }
+      setPickerQuantity("");
 
-    setQuantityPicker({
-      open: true,
-      stockItem: item,
-      locationId,
-      locationName,
-      availableQty,
-    });
-    setPickerQuantity("");
-    
-    setTimeout(() => {
-      quantityInputRef.current?.focus();
-    }, 100);
-  }, [toast]);
+      setTimeout(() => {
+        quantityInputRef.current?.focus();
+      }, 100);
+    },
+    [toast],
+  );
 
-  const handleMatrixKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (quantityPicker.open) return;
-    if (flatItems.length === 0 || selectedLocations.length === 0) return;
+  const handleMatrixKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (quantityPicker.open) return;
+      if (flatItems.length === 0 || selectedLocations.length === 0) return;
 
-    const { key } = e;
-    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter'].includes(key)) return;
+      const { key } = e;
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Enter"].includes(key)) return;
 
-    e.preventDefault();
+      e.preventDefault();
 
-    if (key === 'Enter' && focusedCell !== null) {
-      const item = flatItems[focusedCell.row];
-      const loc = selectedLocations[focusedCell.col];
-      if (item && loc) {
-        // Save current order state so it survives the navigation round-trip
-        sessionStorage.setItem(SESSION_STATE_KEY, JSON.stringify({
-          orderItems,
-          destinationLocationId,
-          expandedGroups: Array.from(expandedGroups),
-        }));
-        navigate(`/locations/${loc.id}/stock-items/${item.id}/history`);
-      }
-      return;
-    }
-
-    setFocusedCell((current) => {
-      const maxRow = flatItems.length - 1;
-      const maxCol = selectedLocations.length - 1;
-
-      if (current === null) {
-        return { row: 0, col: 0 };
-      }
-
-      let { row, col } = current;
-
-      switch (key) {
-        case 'ArrowUp':
-          row = Math.max(0, row - 1);
-          break;
-        case 'ArrowDown':
-          row = Math.min(maxRow, row + 1);
-          break;
-        case 'ArrowLeft':
-          col = Math.max(0, col - 1);
-          break;
-        case 'ArrowRight':
-          col = Math.min(maxCol, col + 1);
-          break;
-        case ' ': {
-          const item = flatItems[row];
-          const loc = selectedLocations[col];
-          if (item && loc) {
-            const locData = item.locationData[loc.id];
-            const qty = locData?.quantity || 0;
-            if (qty > 0) {
-              openQuantityPicker(item, loc.id, loc.name, qty);
-            }
-          }
-          return current;
+      if (key === "Enter" && focusedCell !== null) {
+        const item = flatItems[focusedCell.row];
+        const loc = selectedLocations[focusedCell.col];
+        if (item && loc) {
+          // Save current order state so it survives the navigation round-trip
+          sessionStorage.setItem(
+            SESSION_STATE_KEY,
+            JSON.stringify({
+              orderItems,
+              destinationLocationId,
+              expandedGroups: Array.from(expandedGroups),
+            }),
+          );
+          navigate(`/locations/${loc.id}/stock-items/${item.id}/history`);
         }
+        return;
       }
 
-      return { row, col };
-    });
-  }, [flatItems, selectedLocations, quantityPicker.open, openQuantityPicker, focusedCell, navigate]);
+      setFocusedCell((current) => {
+        const maxRow = flatItems.length - 1;
+        const maxCol = selectedLocations.length - 1;
+
+        if (current === null) {
+          return { row: 0, col: 0 };
+        }
+
+        let { row, col } = current;
+
+        switch (key) {
+          case "ArrowUp":
+            row = Math.max(0, row - 1);
+            break;
+          case "ArrowDown":
+            row = Math.min(maxRow, row + 1);
+            break;
+          case "ArrowLeft":
+            col = Math.max(0, col - 1);
+            break;
+          case "ArrowRight":
+            col = Math.min(maxCol, col + 1);
+            break;
+          case " ": {
+            const item = flatItems[row];
+            const loc = selectedLocations[col];
+            if (item && loc) {
+              const locData = item.locationData[loc.id];
+              const qty = locData?.quantity || 0;
+              if (qty > 0) {
+                openQuantityPicker(item, loc.id, loc.name, qty);
+              }
+            }
+            return current;
+          }
+        }
+
+        return { row, col };
+      });
+    },
+    [flatItems, selectedLocations, quantityPicker.open, openQuantityPicker, focusedCell, navigate],
+  );
 
   const handleCellClick = (
     item: StockItemData,
     locationId: number,
     locationName: string,
-    availableQty: number
+    availableQty: number,
   ) => {
     openQuantityPicker(item, locationId, locationName, availableQty);
   };
 
   const handleAddToOrder = () => {
     const qty = parseFloat(pickerQuantity);
-    
+
     if (isNaN(qty) || qty <= 0) {
       toast({
         title: "Invalid Quantity",
@@ -486,11 +518,11 @@ export default function StockTransferOrder() {
     }
 
     const { stockItem, locationId, locationName, availableQty } = quantityPicker;
-    
+
     if (!stockItem) return;
 
     const existingIdx = orderItems.findIndex(
-      item => item.stockItemId === stockItem.id && item.sourceLocationId === locationId
+      (item) => item.stockItemId === stockItem.id && item.sourceLocationId === locationId,
     );
 
     const currentAllocated = existingIdx >= 0 ? orderItems[existingIdx].quantity : 0;
@@ -544,7 +576,7 @@ export default function StockTransferOrder() {
 
   const validateOrder = (): string[] => {
     const errors: string[] = [];
-    
+
     if (!destinationLocationId) {
       errors.push("Please select a destination location");
     }
@@ -555,7 +587,9 @@ export default function StockTransferOrder() {
 
     for (const item of orderItems) {
       if (item.quantity > item.availableQty) {
-        errors.push(`${item.stockItemName} from ${item.sourceLocationName}: Requested ${formatNumber(item.quantity)} but only ${formatNumber(item.availableQty)} available`);
+        errors.push(
+          `${item.stockItemName} from ${item.sourceLocationName}: Requested ${formatNumber(item.quantity)} but only ${formatNumber(item.availableQty)} available`,
+        );
       }
       if (item.sourceLocationId === destinationLocationId) {
         errors.push(`${item.stockItemName}: Source and destination cannot be the same location`);
@@ -568,7 +602,7 @@ export default function StockTransferOrder() {
   const handleValidate = () => {
     const errors = validateOrder();
     setValidationErrors(errors);
-    
+
     if (errors.length === 0) {
       toast({
         title: "Validation Passed",
@@ -592,51 +626,53 @@ export default function StockTransferOrder() {
       });
       return;
     }
-    
-    const destLocation = locations.find(l => l.id === destinationLocationId);
+
+    const destLocation = locations.find((l) => l.id === destinationLocationId);
     const exportDate = format(transferDate, "yyyy-MM-dd");
-    
+
     if (detailed) {
       const exportData = orderItems.map((item) => ({
-        "Date": exportDate,
+        Date: exportDate,
         "Source Location": item.sourceLocationName,
         "Destination Location": destLocation?.name || "",
         "Stock Item Code": item.stockItemCode,
         "Stock Item Name": item.stockItemName,
-        "UOM": item.uom,
-        "Quantity": item.quantity,
+        UOM: item.uom,
+        Quantity: item.quantity,
         "Available Qty": item.availableQty,
-        "Rate": item.rate.toFixed(2),
-        "Amount": (item.quantity * item.rate).toFixed(2),
+        Rate: item.rate.toFixed(2),
+        Amount: (item.quantity * item.rate).toFixed(2),
       }));
-      
+
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Transfer Order Detailed");
       const fileName = `Stock_Transfer_Order_Detailed_${exportDate}.xlsx`;
       writeFile(workbook, fileName);
-      
+
       toast({
         title: "Export successful",
         description: `Downloaded ${fileName} with ${orderItems.length} items.`,
       });
     } else {
-      const totalAmount = orderItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
-      const exportData = [{
-        "Date": exportDate,
-        "Destination Location": destLocation?.name || "",
-        "Total Items": orderItems.length,
-        "Total Quantity": totalUnits,
-        "Total Amount": totalAmount.toFixed(2),
-        "Optional": isOptional ? "Yes" : "No",
-      }];
-      
+      const totalAmount = orderItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+      const exportData = [
+        {
+          Date: exportDate,
+          "Destination Location": destLocation?.name || "",
+          "Total Items": orderItems.length,
+          "Total Quantity": totalUnits,
+          "Total Amount": totalAmount.toFixed(2),
+          Optional: isOptional ? "Yes" : "No",
+        },
+      ];
+
       const worksheet = utils.json_to_sheet(exportData);
       const workbook = utils.book_new();
       utils.book_append_sheet(workbook, worksheet, "Transfer Order Summary");
       const fileName = `Stock_Transfer_Order_Summary_${exportDate}.xlsx`;
       writeFile(workbook, fileName);
-      
+
       toast({
         title: "Export successful",
         description: `Downloaded ${fileName}.`,
@@ -645,7 +681,12 @@ export default function StockTransferOrder() {
   };
 
   const processOrderMutation = useMutation({
-    mutationFn: async (data: { orderItems: OrderItem[]; destinationLocationId: number; voucherDate: string; optional: boolean }) => {
+    mutationFn: async (data: {
+      orderItems: OrderItem[];
+      destinationLocationId: number;
+      voucherDate: string;
+      optional: boolean;
+    }) => {
       if (editVoucherId && existingTransfer?.id) {
         await apiRequest("PATCH", `/api/vouchers/${editVoucherId}`, {
           voucherDate: data.voucherDate,
@@ -654,7 +695,7 @@ export default function StockTransferOrder() {
         const response = await apiRequest("PUT", `/api/stock-transfers/${existingTransfer.id}`, {
           destinationLocationId: data.destinationLocationId,
           notes: `Stock Transfer Order - ${data.orderItems.length} items`,
-          items: data.orderItems.map(item => ({
+          items: data.orderItems.map((item) => ({
             stockItemId: item.stockItemId,
             sourceLocationId: item.sourceLocationId,
             quantity: item.quantity,
@@ -668,10 +709,11 @@ export default function StockTransferOrder() {
           notes: `Stock Transfer Order - ${data.orderItems.length} items`,
           voucherDate: data.voucherDate,
           optional: data.optional,
-          items: data.orderItems.map(item => ({
+          items: data.orderItems.map((item) => ({
             stockItemId: item.stockItemId,
             sourceLocationId: item.sourceLocationId,
             quantity: item.quantity.toString(),
+            rate: item.rate.toString(),
           })),
         });
         return response.json();
@@ -682,7 +724,9 @@ export default function StockTransferOrder() {
       setAutosaveStatus("idle");
       toast({
         title: editVoucherId ? "Order Updated" : "Order Processed",
-        description: editVoucherId ? "Successfully updated stock transfer voucher" : "Successfully created stock transfer voucher",
+        description: editVoucherId
+          ? "Successfully updated stock transfer voucher"
+          : "Successfully created stock transfer voucher",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stock-transfers", editVoucherId] });
@@ -737,11 +781,25 @@ export default function StockTransferOrder() {
   return (
     <div className="space-y-4">
       {hasDraft && !editVoucherId && (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-4 py-2 text-sm" data-testid="banner-draft-restore">
-          <span className="text-amber-800 dark:text-amber-300">You have an unsaved draft. Restore it to continue where you left off.</span>
+        <div
+          className="flex items-center justify-between gap-3 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-4 py-2 text-sm"
+          data-testid="banner-draft-restore"
+        >
+          <span className="text-amber-800 dark:text-amber-300">
+            You have an unsaved draft. Restore it to continue where you left off.
+          </span>
           <div className="flex gap-2 flex-shrink-0">
-            <Button size="sm" variant="outline" onClick={discardDraft} data-testid="button-discard-draft">Discard</Button>
-            <Button size="sm" onClick={restoreDraft} data-testid="button-restore-draft">Restore Draft</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={discardDraft}
+              data-testid="button-discard-draft"
+            >
+              Discard
+            </Button>
+            <Button size="sm" onClick={restoreDraft} data-testid="button-restore-draft">
+              Restore Draft
+            </Button>
           </div>
         </div>
       )}
@@ -751,10 +809,12 @@ export default function StockTransferOrder() {
             {editVoucherId ? "Edit Stock Transfer Order" : "Stock Transfer Order"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {editVoucherId ? "Edit and update this stock transfer using the order view" : "Build orders by selecting items from multiple source locations"}
+            {editVoucherId
+              ? "Edit and update this stock transfer using the order view"
+              : "Build orders by selecting items from multiple source locations"}
           </p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Label className="text-sm whitespace-nowrap">Destination:</Label>
@@ -767,8 +827,8 @@ export default function StockTransferOrder() {
               </SelectTrigger>
               <SelectContent>
                 {availableDestinations.map((loc) => (
-                  <SelectItem 
-                    key={loc.id} 
+                  <SelectItem
+                    key={loc.id}
                     value={loc.id.toString()}
                     data-testid={`select-destination-option-${loc.id}`}
                   >
@@ -778,10 +838,10 @@ export default function StockTransferOrder() {
               </SelectContent>
             </Select>
           </div>
-          
+
           <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setLocationDialogOpen(true)}
               data-testid="button-select-sources"
             >
@@ -816,14 +876,14 @@ export default function StockTransferOrder() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          
+
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 className={cn(
                   "w-full sm:w-[140px] justify-start text-left font-normal",
-                  !transferDate && "text-muted-foreground"
+                  !transferDate && "text-muted-foreground",
                 )}
                 data-testid="button-select-date"
               >
@@ -840,7 +900,7 @@ export default function StockTransferOrder() {
               />
             </PopoverContent>
           </Popover>
-          
+
           <div className="flex items-center gap-2">
             <Switch
               id="optional-mode"
@@ -879,10 +939,16 @@ export default function StockTransferOrder() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExportOrder(false)} data-testid="export-order-summary">
+              <DropdownMenuItem
+                onClick={() => handleExportOrder(false)}
+                data-testid="export-order-summary"
+              >
                 Summary Export
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExportOrder(true)} data-testid="export-order-detailed">
+              <DropdownMenuItem
+                onClick={() => handleExportOrder(true)}
+                data-testid="export-order-detailed"
+              >
                 Detailed Export
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -916,7 +982,9 @@ export default function StockTransferOrder() {
                 <MapPin className="h-5 w-5" />
                 <CardTitle className="text-base">Inventory Matrix</CardTitle>
               </div>
-              <p className="text-xs text-muted-foreground">Click to focus, then use arrow keys + spacebar to add / Enter to view history</p>
+              <p className="text-xs text-muted-foreground">
+                Click to focus, then use arrow keys + spacebar to add / Enter to view history
+              </p>
             </div>
           </CardHeader>
           <CardContent>
@@ -939,7 +1007,7 @@ export default function StockTransferOrder() {
                 ))}
               </div>
             ) : (
-              <div 
+              <div
                 ref={matrixRef}
                 tabIndex={0}
                 onKeyDown={handleMatrixKeyDown}
@@ -986,7 +1054,10 @@ export default function StockTransferOrder() {
                             const locData = group.locationData[loc.id];
                             const qty = locData?.quantity || 0;
                             return (
-                              <td key={loc.id} className="p-4 align-middle text-center font-mono text-sm">
+                              <td
+                                key={loc.id}
+                                className="p-4 align-middle text-center font-mono text-sm"
+                              >
                                 {qty > 0 ? formatNumber(qty, 0) : "-"}
                               </td>
                             );
@@ -997,42 +1068,52 @@ export default function StockTransferOrder() {
                           [...group.items]
                             .sort((a, b) => a.name.localeCompare(b.name))
                             .map((item) => {
-                              const flatRowIndex = flatItems.findIndex(fi => fi.id === item.id);
+                              const flatRowIndex = flatItems.findIndex((fi) => fi.id === item.id);
                               return (
-                              <tr key={item.id} data-testid={`item-row-${item.id}`} className="border-b transition-colors hover:bg-muted/50 bg-background">
-                                <td className="p-4 align-middle pl-8 sticky left-0 bg-background z-20 border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
-                                  <p className="text-sm">{item.name}</p>
-                                </td>
-                                {selectedLocations.map((loc, colIndex) => {
-                                  const locData = item.locationData[loc.id];
-                                  const qty = locData?.quantity || 0;
-                                  const hasStock = qty > 0;
-                                  const isFocused = focusedCell?.row === flatRowIndex && focusedCell?.col === colIndex;
-                                  
-                                  return (
-                                    <td key={loc.id} className="p-1 align-middle" data-focused={isFocused ? "true" : undefined}>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className={cn(
-                                          "w-full font-mono",
-                                          hasStock && "hover:bg-primary/10 cursor-pointer",
-                                          isFocused && "ring-2 ring-primary ring-offset-1"
-                                        )}
-                                        disabled={!hasStock}
-                                        onClick={() => {
-                                          setFocusedCell({ row: flatRowIndex, col: colIndex });
-                                          handleCellClick(item, loc.id, loc.name, qty);
-                                        }}
-                                        data-testid={`cell-item-${item.id}-loc-${loc.id}`}
+                                <tr
+                                  key={item.id}
+                                  data-testid={`item-row-${item.id}`}
+                                  className="border-b transition-colors hover:bg-muted/50 bg-background"
+                                >
+                                  <td className="p-4 align-middle pl-8 sticky left-0 bg-background z-20 border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                                    <p className="text-sm">{item.name}</p>
+                                  </td>
+                                  {selectedLocations.map((loc, colIndex) => {
+                                    const locData = item.locationData[loc.id];
+                                    const qty = locData?.quantity || 0;
+                                    const hasStock = qty > 0;
+                                    const isFocused =
+                                      focusedCell?.row === flatRowIndex &&
+                                      focusedCell?.col === colIndex;
+
+                                    return (
+                                      <td
+                                        key={loc.id}
+                                        className="p-1 align-middle"
+                                        data-focused={isFocused ? "true" : undefined}
                                       >
-                                        {hasStock ? formatNumber(qty, 0) : "-"}
-                                      </Button>
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            );
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className={cn(
+                                            "w-full font-mono",
+                                            hasStock && "hover:bg-primary/10 cursor-pointer",
+                                            isFocused && "ring-2 ring-primary ring-offset-1",
+                                          )}
+                                          disabled={!hasStock}
+                                          onClick={() => {
+                                            setFocusedCell({ row: flatRowIndex, col: colIndex });
+                                            handleCellClick(item, loc.id, loc.name, qty);
+                                          }}
+                                          data-testid={`cell-item-${item.id}-loc-${loc.id}`}
+                                        >
+                                          {hasStock ? formatNumber(qty, 0) : "-"}
+                                        </Button>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
                             })}
                       </Fragment>
                     ))}
@@ -1051,13 +1132,13 @@ export default function StockTransferOrder() {
                   <ArrowRight className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">Sending to:</span>
                   <span className="font-medium">
-                    {locations.find(l => l.id === destinationLocationId)?.name}
+                    {locations.find((l) => l.id === destinationLocationId)?.name}
                   </span>
                 </div>
               </CardContent>
             </Card>
           )}
-          
+
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between gap-2">
@@ -1074,7 +1155,9 @@ export default function StockTransferOrder() {
               {orderItems.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Click on quantities or use arrow keys + spacebar to add / Enter to view history</p>
+                  <p className="text-sm">
+                    Click on quantities or use arrow keys + spacebar to add / Enter to view history
+                  </p>
                 </div>
               ) : (
                 <>
@@ -1089,7 +1172,8 @@ export default function StockTransferOrder() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{item.stockItemName}</p>
                             <p className="text-xs text-muted-foreground">
-                              From: {item.sourceLocationName} | {formatNumber(item.quantity)} {item.uom}
+                              From: {item.sourceLocationName} | {formatNumber(item.quantity)}{" "}
+                              {item.uom}
                             </p>
                           </div>
                           <Button
@@ -1104,16 +1188,23 @@ export default function StockTransferOrder() {
                       ))}
                     </div>
                   </ScrollArea>
-                  
+
                   <div className="pt-2 border-t space-y-3">
                     <div className="flex justify-between text-sm font-medium">
                       <span>Total Units:</span>
                       <span className="font-mono text-lg">{formatNumber(totalUnits, 0)}</span>
                     </div>
-                    
+
                     {!editVoucherId && autosaveStatus !== "idle" && (
-                      <p className={`text-xs text-center ${autosaveStatus === "saved" ? "text-green-600 dark:text-green-400" : autosaveStatus === "failed" ? "text-destructive" : "text-muted-foreground"}`} data-testid="text-autosave-status">
-                        {autosaveStatus === "saving" ? "Saving draft..." : autosaveStatus === "saved" ? "Draft saved" : "Draft save failed"}
+                      <p
+                        className={`text-xs text-center ${autosaveStatus === "saved" ? "text-green-600 dark:text-green-400" : autosaveStatus === "failed" ? "text-destructive" : "text-muted-foreground"}`}
+                        data-testid="text-autosave-status"
+                      >
+                        {autosaveStatus === "saving"
+                          ? "Saving draft..."
+                          : autosaveStatus === "saved"
+                            ? "Draft saved"
+                            : "Draft save failed"}
                       </p>
                     )}
                     <div className="flex gap-2">
@@ -1134,7 +1225,13 @@ export default function StockTransferOrder() {
                         className="flex-1"
                         data-testid="button-process-order"
                       >
-                        {isProcessing ? (editVoucherId ? "Updating..." : "Processing...") : (editVoucherId ? "Update Order" : "Process")}
+                        {isProcessing
+                          ? editVoucherId
+                            ? "Updating..."
+                            : "Processing..."
+                          : editVoucherId
+                            ? "Update Order"
+                            : "Process"}
                       </Button>
                     </div>
                   </div>
@@ -1156,15 +1253,14 @@ export default function StockTransferOrder() {
           <div className="space-y-4">
             <div className="p-3 bg-muted rounded-md">
               <p className="font-medium">{quantityPicker.stockItem?.name}</p>
+              <p className="text-sm text-muted-foreground">From: {quantityPicker.locationName}</p>
               <p className="text-sm text-muted-foreground">
-                From: {quantityPicker.locationName}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Available: <span className="font-mono">{formatNumber(quantityPicker.availableQty)}</span>{" "}
+                Available:{" "}
+                <span className="font-mono">{formatNumber(quantityPicker.availableQty)}</span>{" "}
                 {quantityPicker.stockItem?.uom}
               </p>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="picker-quantity">Quantity to transfer</Label>
               <Input

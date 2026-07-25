@@ -156,7 +156,13 @@ interface FactorySupplierBasic {
 
 interface VoucherEntry {
   accountType:
-    "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier";
+    | "ledger"
+    | "bank"
+    | "supplier"
+    | "employee"
+    | "fixedAsset"
+    | "customer"
+    | "factorySupplier";
   accountId: number;
   accountName: string;
   amount: string;
@@ -165,7 +171,13 @@ interface VoucherEntry {
 interface JournalEntry {
   type: "DR" | "CR";
   accountType:
-    "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "customer" | "factorySupplier";
+    | "ledger"
+    | "bank"
+    | "supplier"
+    | "employee"
+    | "fixedAsset"
+    | "customer"
+    | "factorySupplier";
   accountId: number;
   accountName: string;
   amount: string;
@@ -1720,7 +1732,12 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         id: account.id,
         name: account.name,
         type: account.type as
-          "ledger" | "bank" | "supplier" | "employee" | "fixedAsset" | "factorySupplier",
+          | "ledger"
+          | "bank"
+          | "supplier"
+          | "employee"
+          | "fixedAsset"
+          | "factorySupplier",
         code: "",
       };
       handleSidebarAccountSelect(accountObj);
@@ -2953,28 +2970,8 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
             JSON.stringify(voucherPayload),
           );
 
-          let voucherRes;
-          try {
-            console.log("[StockTransfer] MUTATION STEP D3: About to call apiRequest");
-            voucherRes = await modeApiRequest("POST", "/api/vouchers", voucherPayload);
-            console.log(
-              "[StockTransfer] MUTATION STEP D4: apiRequest completed, response:",
-              voucherRes,
-            );
-          } catch (apiError: any) {
-            console.error("[StockTransfer] MUTATION STEP D-ERROR: apiRequest failed:", apiError);
-            console.error("[StockTransfer] Error message:", apiError?.message);
-            console.error("[StockTransfer] Error stack:", apiError?.stack);
-            throw apiError;
-          }
-          console.log("[StockTransfer] MUTATION STEP E: Voucher created, parsing response");
-          const voucher = await voucherRes.json();
-          console.log("[StockTransfer] MUTATION STEP F: Voucher:", voucher);
-
-          // Create stock transfer with items (including per-item source locations)
-          console.log("[StockTransfer] MUTATION STEP G: Creating stock transfer");
-          await modeApiRequest("POST", "/api/stock-transfers", {
-            voucherId: voucher.id,
+          const transferRes = await modeApiRequest("POST", "/api/stock-transfers", {
+            voucher: voucherPayload,
             destinationLocationId: data.destinationLocationId,
             notes: data.notes || "",
             allowNegativeInventory: allowNegativeInventory || false,
@@ -2985,8 +2982,8 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
               rate: entry.rate,
             })),
           });
-
-          return voucher;
+          const transferResult = await transferRes.json();
+          return transferResult.voucher ?? transferResult;
         }
       } catch (error: any) {
         console.error("[StockTransfer] Mutation error:", error);
@@ -3541,30 +3538,26 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
         return await voucherRes.json();
       } else {
-        // CREATE MODE: Create new voucher and stock adjustment
-        const voucherRes = await modeApiRequest("POST", "/api/vouchers", {
-          companyId: selectedCompany?.id,
-          voucherType: adjustmentType,
-          voucherNumber: `${adjustmentType.toUpperCase()}-${Date.now()}`,
-          voucherDate: format(data.voucherDate, "yyyy-MM-dd"),
-          description: `Stock ${adjustmentType.toLowerCase()} at ${locations.find((l) => l.id === data.locationId)?.name}`,
-          totalAmount: totalAmount.toString(),
-          optional: data.optional,
-          currency: selectedCurrency,
-          exchangeRate: exchangeRate ? exchangeRate.toString() : undefined,
-        });
-        const voucher = await voucherRes.json();
-
-        // Create stock adjustment
-        await modeApiRequest("POST", "/api/stock-adjustments", {
-          voucherId: voucher.id,
+        // CREATE MODE: voucher, movement rows, cost evidence, and inventory commit together.
+        const adjustmentRes = await modeApiRequest("POST", "/api/stock-adjustments", {
+          voucher: {
+            companyId: selectedCompany?.id,
+            voucherType: adjustmentType,
+            voucherNumber: `${adjustmentType.toUpperCase()}-${Date.now()}`,
+            voucherDate: format(data.voucherDate, "yyyy-MM-dd"),
+            description: `Stock ${adjustmentType.toLowerCase()} at ${locations.find((l) => l.id === data.locationId)?.name}`,
+            totalAmount: totalAmount.toString(),
+            optional: data.optional,
+            currency: selectedCurrency,
+            exchangeRate: exchangeRate ? exchangeRate.toString() : undefined,
+          },
           locationId: data.locationId,
-          adjustmentType: adjustmentType,
+          adjustmentType,
           notes: data.notes || "",
-          items: items,
+          items,
         });
-
-        return voucher;
+        const adjustmentResult = await adjustmentRes.json();
+        return adjustmentResult.voucher ?? adjustmentResult;
       }
     },
     onSuccess: () => {

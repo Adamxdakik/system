@@ -1,4 +1,12 @@
-import { decimal, integer, pgTable, serial, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import {
+  decimal,
+  integer,
+  pgTable,
+  serial,
+  timestamp,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 export const stockMovementCostEvidence = pgTable(
   "stock_movement_cost_evidence",

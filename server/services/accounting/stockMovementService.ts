@@ -92,12 +92,8 @@ interface InventoryState {
 
 interface MovementResult {
   voucher: typeof vouchers.$inferSelect;
-  movement:
-    | typeof stockTransferVouchers.$inferSelect
-    | typeof stockAdjustmentVouchers.$inferSelect;
-  items: Array<
-    typeof stockTransferItems.$inferSelect | typeof stockAdjustmentItems.$inferSelect
-  >;
+  movement: typeof stockTransferVouchers.$inferSelect | typeof stockAdjustmentVouchers.$inferSelect;
+  items: Array<typeof stockTransferItems.$inferSelect | typeof stockAdjustmentItems.$inferSelect>;
   duplicate: boolean;
 }
 
@@ -149,7 +145,7 @@ function nonNegativeRate(value: string | null | undefined): bigint {
 
 function roundDivide(numerator: bigint, denominator: bigint): bigint {
   if (denominator === 0n) integrity("Cannot divide by zero", "INVALID_STOCK_COST");
-  const negative = (numerator < 0n) !== (denominator < 0n);
+  const negative = numerator < 0n !== denominator < 0n;
   const left = numerator < 0n ? -numerator : numerator;
   const right = denominator < 0n ? -denominator : denominator;
   const quotient = left / right;
@@ -190,7 +186,7 @@ function averageRate(valueMinor: bigint, quantityMinor: bigint): string {
     }
     return "0.00";
   }
-  if ((quantityMinor < 0n) !== (valueMinor < 0n)) {
+  if (quantityMinor < 0n !== valueMinor < 0n) {
     integrity("Inventory quantity and value signs do not match", "INVENTORY_VALUE_MISMATCH");
   }
   const centsPerUnit = roundDivide(valueMinor * 1000n, quantityMinor);
@@ -345,11 +341,7 @@ async function validateCompanyReferences(
     .from(locations)
     .where(and(eq(locations.companyId, companyId), inArray(locations.id, uniqueLocations)));
   if (ownedLocations.length !== uniqueLocations.length) {
-    integrity(
-      "A stock location does not belong to the selected company",
-      "WRONG_COMPANY",
-      403,
-    );
+    integrity("A stock location does not belong to the selected company", "WRONG_COMPANY", 403);
   }
   const ownedItems = await tx
     .select({ id: stockItems.id })
@@ -588,12 +580,7 @@ async function applyTransfer(
   const resultItems: Array<typeof stockTransferItems.$inferSelect> = [];
   let totalMinor = 0n;
   for (const line of lines) {
-    const source = await loadInventory(
-      tx,
-      companyId,
-      line.sourceLocationId,
-      line.stockItemId,
-    );
+    const source = await loadInventory(tx, companyId, line.sourceLocationId, line.stockItemId);
     if (!source || source.quantityMinor < line.quantityMinor || source.quantityMinor <= 0n) {
       integrity(
         `Insufficient inventory at source location ${line.sourceLocationId} for stock item ${line.stockItemId}`,
@@ -619,12 +606,7 @@ async function applyTransfer(
       source.valueMinor - actualValueMinor,
     );
 
-    const destination = await loadInventory(
-      tx,
-      companyId,
-      destinationLocationId,
-      line.stockItemId,
-    );
+    const destination = await loadInventory(tx, companyId, destinationLocationId, line.stockItemId);
     await writeInventory(
       tx,
       companyId,
@@ -800,10 +782,7 @@ export class StockMovementService {
     );
     const identity = validateIdentity(input.idempotencyKey);
     const lines = normalizeTransferLines(input.items, destinationLocationId);
-    const requestedTotalMinor = lines.reduce(
-      (sum, line) => sum + line.requestedTotalMinor,
-      0n,
-    );
+    const requestedTotalMinor = lines.reduce((sum, line) => sum + line.requestedTotalMinor, 0n);
     const fingerprint = hash({
       kind: "TRANSFER",
       companyId,
@@ -894,10 +873,7 @@ export class StockMovementService {
     const locationId = positiveInteger(input.locationId, "Location");
     const identity = validateIdentity(input.idempotencyKey);
     const lines = normalizeAdjustmentLines(input.items, input.adjustmentType);
-    const requestedTotalMinor = lines.reduce(
-      (sum, line) => sum + line.requestedTotalMinor,
-      0n,
-    );
+    const requestedTotalMinor = lines.reduce((sum, line) => sum + line.requestedTotalMinor, 0n);
     const fingerprint = hash({
       kind: "ADJUSTMENT",
       companyId,
@@ -1311,8 +1287,7 @@ export class StockMovementService {
           locationId: original.locationId,
           locationName: original.locationName,
           voucherNumber: `REV-STOCK-${original.id}-${suffix(identity).slice(0, 8)}`,
-          voucherType:
-            kind === "TRANSFER" ? "StockTransferReversal" : "StockAdjustmentReversal",
+          voucherType: kind === "TRANSFER" ? "StockTransferReversal" : "StockAdjustmentReversal",
           voucherDate: normalizeDate(input.transactionDate),
           description: input.reason ?? `Exact reversal of ${original.voucherNumber}`,
           totalAmount: original.totalAmount,
