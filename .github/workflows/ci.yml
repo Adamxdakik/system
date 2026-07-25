@@ -57,6 +57,24 @@ jobs:
       - name: Build production bundles
         run: npm run build
 
+      - name: Package exact source and Git tree metadata
+        if: always()
+        run: |
+          git show -s --format=%T HEAD > tree-sha.txt
+          git rev-parse HEAD > commit-sha.txt
+          git archive --format=zip --output=source.zip HEAD
+
+      - name: Upload workspace artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: program2-workspace
+          path: |
+            source.zip
+            tree-sha.txt
+            commit-sha.txt
+          retention-days: 1
+
   accounting-postgres:
     runs-on: ubuntu-latest
     timeout-minutes: 30
