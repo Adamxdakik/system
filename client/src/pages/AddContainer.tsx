@@ -205,10 +205,13 @@ export default function AddContainer() {
           {/* ── Container Details ──────────────────────────────────────── */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Container Details</CardTitle>
+              <CardTitle className="text-lg">Shipment details</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Start with the container and supplier. Dates and status are available below.
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="containerNumber"
@@ -233,7 +236,7 @@ export default function AddContainer() {
                     <FormItem>
                       <FormLabel>Supplier *</FormLabel>
                       <Select
-                        onValueChange={(v) => field.onChange(parseInt(v))}
+                        onValueChange={(value) => field.onChange(parseInt(value, 10))}
                         value={field.value ? field.value.toString() : ""}
                       >
                         <FormControl>
@@ -242,9 +245,9 @@ export default function AddContainer() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {suppliers?.map((s) => (
-                            <SelectItem key={s.id} value={s.id.toString()}>
-                              {s.legalName}
+                          {suppliers?.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                              {supplier.legalName}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -255,50 +258,76 @@ export default function AddContainer() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="importDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Import Date *</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="date" data-testid="input-import-date" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-status">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="OTW">OTW (On The Way)</SelectItem>
-                          <SelectItem value="ARRIVED">Arrived</SelectItem>
-                          <SelectItem value="AVAILABLE">Available</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+                <div className="rounded-lg border">
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto w-full justify-between rounded-lg px-4 py-3 text-left"
+                    >
+                      <span>
+                        <span className="block text-sm font-medium">Shipment date and status</span>
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          Advanced receiving and transit settings.
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="border-t px-4 py-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="importDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Import Date *</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="date" data-testid="input-import-date" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-status">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="OTW">OTW (On The Way)</SelectItem>
+                                <SelectItem value="ARRIVED">Arrived</SelectItem>
+                                <SelectItem value="AVAILABLE">Available</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
             </CardContent>
           </Card>
 
           {/* ── Items ──────────────────────────────────────────────────── */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Items</CardTitle>
+              <CardTitle className="text-lg">Purchase items</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Add each product, quantity, and purchase rate. Totals update automatically.
+              </p>
             </CardHeader>
             <CardContent className="space-y-3">
               {itemFields.map((field, index) => {
@@ -598,11 +627,19 @@ export default function AddContainer() {
           </Collapsible>
 
           {/* ── Grand Total ─────────────────────────────────────────────── */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="py-4">
-              <div className="flex justify-between items-center text-lg font-bold">
-                <span>Grand Total:</span>
-                <span className="font-mono">${grandTotal.toFixed(2)}</span>
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="grid grid-cols-3 gap-4 py-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Items</p>
+                <p className="font-mono font-semibold">${itemsTotal.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Charges</p>
+                <p className="font-mono font-semibold">${chargesTotal.toFixed(2)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Grand Total</p>
+                <p className="font-mono text-xl font-bold">${grandTotal.toFixed(2)}</p>
               </div>
             </CardContent>
           </Card>

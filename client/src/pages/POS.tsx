@@ -834,13 +834,15 @@ export default function POS({
 
   return (
     <div className="space-y-4">
-      {/* Page heading — only when not embedded */}
-      {!embedded && (
-        <div>
-          <h1 className="text-2xl font-semibold">New Sale</h1>
-          <p className="text-sm text-muted-foreground">
-            Sell motorcycles, spare parts and workshop items.
-          </p>
+      {!posUser && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{editVoucherId ? "Edit Sale" : "New Sale"}</h1>
+            <p className="text-sm text-muted-foreground">
+              Add products, confirm payment details, and review the total before saving.
+            </p>
+          </div>
+          {editVoucherId && <Badge variant="secondary">Editing existing sale</Badge>}
         </div>
       )}
 
@@ -970,16 +972,18 @@ export default function POS({
         </div>
 
         {/* More Options collapsible */}
-        <Collapsible>
+        <Collapsible open={moreOptionsOpen} onOpenChange={setMoreOptionsOpen}>
           <CollapsibleTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className="gap-1.5 text-muted-foreground -ml-2"
+              className="-ml-2 gap-1.5 text-muted-foreground"
               data-testid="button-more-options"
             >
-              <ChevronDown className="h-4 w-4" />
-              More Options
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${moreOptionsOpen ? "rotate-180" : ""}`}
+              />
+              Sale details and drafts
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
