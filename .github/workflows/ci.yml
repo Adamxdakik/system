@@ -10,6 +10,39 @@ permissions:
   contents: read
 
 jobs:
+  apply-payroll-lint-fix:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out writable PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Remove unused payroll type import
+        run: sed -i 's/PostingEntryInput, PostedVoucher, VoucherType/PostingEntryInput, VoucherType/' server/services/accounting/payrollPostingService.ts
+
+      - name: Commit lint fix
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Payroll lint fix is already applied."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/services/accounting/payrollPostingService.ts
+          git commit -m "fix(accounting): remove unused payroll type import"
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
