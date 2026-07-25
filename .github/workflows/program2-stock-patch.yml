@@ -41,10 +41,13 @@ jobs:
             client/src/pages/StockTransferOrder.tsx \
             .github/workflows/ci.yml
 
-      - name: Commit atomic stock movement wiring
+      - name: Stage and commit atomic stock movement wiring
+        id: commit
         shell: bash
         run: |
+          git status --short
           if git diff --quiet; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
             echo "Atomic stock movement wiring is already applied."
             exit 0
           fi
@@ -59,5 +62,10 @@ jobs:
             client/src/pages/Vouchers.tsx \
             client/src/pages/StockTransferOrder.tsx \
             .github/workflows/ci.yml
+          git diff --cached --stat
           git commit -m "feat(accounting): wire atomic exact-cost stock movements"
-          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+
+      - name: Push atomic stock movement wiring
+        if: steps.commit.outputs.created == 'true'
+        run: git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
