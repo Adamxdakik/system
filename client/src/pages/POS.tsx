@@ -86,11 +86,7 @@ interface POSProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-export default function POS({
-  posUser,
-  editVoucherId,
-  onDirtyChange,
-}: POSProps = {}) {
+export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps = {}) {
   const { selectedLocation, setSelectedLocation } = useLocationContext();
   const [_location, navigate] = useLocation();
 

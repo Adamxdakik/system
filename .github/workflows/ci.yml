@@ -10,61 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  phase3c-eslint-fix:
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-
-    steps:
-      - name: Check out PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install exact dependencies
-        run: npm ci --include=dev
-
-      - name: Auto-fix Phase 3C source
-        run: |
-          npx eslint \
-            client/src/pages/POS.tsx \
-            client/src/pages/PurchaseOrderEdit.tsx \
-            client/src/pages/AddContainer.tsx \
-            --fix
-          npx prettier --write \
-            client/src/pages/POS.tsx \
-            client/src/pages/PurchaseOrderEdit.tsx \
-            client/src/pages/AddContainer.tsx
-
-      - name: Restore permanent workflow and commit fix
-        shell: bash
-        run: |
-          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            client/src/pages/POS.tsx \
-            client/src/pages/PurchaseOrderEdit.tsx \
-            client/src/pages/AddContainer.tsx \
-            .github/workflows/ci.yml
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "fix(program-3): auto-fix phase 3C lint"
-          git pull --rebase origin "${{ github.event.pull_request.head.ref }}"
-          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
-
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
