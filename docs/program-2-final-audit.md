@@ -4,7 +4,7 @@
 
 Program 2A established the accounting invariants and identified the highest-risk financial flows. Program 2B now provides exact-money posting, immutable correction and reversal services, company validation, historical FX controls, transaction boundaries, idempotency, diagnostics and controlled repair. Program 2C adds permanent invariant, report, migration and PostgreSQL concurrency coverage.
 
-The pull request remains **draft** because four domain-level merge blockers remain under “Remaining risks.” No production database was queried or modified.
+The pull request remains **draft** because three domain-level merge blockers remain under “Remaining risks.” No production database was queried or modified.
 
 ## Program 2A findings and current disposition
 
@@ -17,6 +17,7 @@ The pull request remains **draft** because four domain-level merge blockers rema
 | Main offload posting is non-atomic | fixed for creation: inventory, container status, charge accounts/vouchers and offload record use one transaction |
 | Employee balance sync escapes transactions | fixed for shared posting/correction flows: exact SQL deltas run through the transaction executor |
 | Salary advances/deductions are non-atomic | fixed: advance accounting, source record, cache and deduction boundaries are transactional and cancellation is linked to reversal |
+| Payroll deposits, bonuses, withdrawals and worker payments use split writes | fixed: the existing endpoints now route through one row-locked transaction with exact entries, employee-cache updates, source idempotency and insufficient-balance rollback |
 | Historical FX is discarded or guessed | fixed for new postings; legacy unproven rows are marked `UNRESOLVED_LEGACY` and exact reversal is refused |
 | Payment/receipt account ownership is incomplete | fixed through central company reference validation, including optional location ownership |
 | Timestamp-generated numbers do not prevent duplicates | fixed through company-scoped idempotency/source uniqueness and stable fingerprints |
@@ -33,6 +34,8 @@ The pull request remains **draft** because four domain-level merge blockers rema
 - `server/services/accounting/posSaleCorrectionService.ts`: atomic POS correction/cancellation with exact inventory quantity/value restoration.
 - `server/services/accounting/openingBalanceImportService.ts`: exact parsing, duplicate-file prevention, locks and all-or-nothing stock opening import.
 - `server/services/accounting/salaryAdvanceService.ts`: transactional salary-advance creation, deduction and cancellation.
+- `server/services/accounting/payrollPostingService.ts`: transactional payroll deposits, bonuses, withdrawals and worker payments with row locks, exact balance updates and idempotency.
+- `server/routes/transactionalPayrollRoutes.ts`: compatibility routes that preserve the existing payroll endpoints while replacing split legacy writes.
 - `server/routes/finalizedFinancialMutationGuards.ts`: permits draft edits but blocks destructive mutation of finalized vouchers, entries, transfers and adjustments.
 - `server/services/accounting/drizzleAccountingStore.ts`: PostgreSQL transaction adapter and supporting employee-cache synchronization.
 - `scripts/audit-financial-integrity.ts`: read-only reconciliation.
@@ -51,6 +54,7 @@ The permanent CI now proves:
 - full migration chain from an empty PostgreSQL database;
 - a second idempotent migration run;
 - posting rollback, uniqueness, exact reversal, FX and concurrency fixtures;
+- transactional payroll deposit, duplicate retry, withdrawal, employee-cache and insufficient-balance rollback behavior;
 - POS historical quantity/value restoration after average cost changes;
 - daybook, trial balance, income statement and net-position reconciliation;
 - read-only financial and supplier-company audits.
@@ -59,10 +63,9 @@ See `docs/accounting-test-matrix.md` for flow-level coverage and explicit partia
 
 ## Remaining risks and merge blockers
 
-1. **Legacy payroll operations:** employee deposits, bonuses, withdrawals and worker-payment routes still perform voucher, entry and employee-cache writes across separate statements. They need one transactional service with source idempotency and a confirmed cancellation/correction contract.
-2. **Stock transfer/adjustment parent accounting:** domain rows and inventory mutations are transactional, and finalized direct edits are blocked, but the parent voucher is created outside the domain transaction. Historical rows also do not always preserve the actual inventory value removed, so an exact reversal cannot be fabricated safely.
-3. **Container reverse-offload:** offload creation is transactional, but the legacy reversal route subtracts quantities with floating-point arithmetic and hard-deletes charge vouchers. It must be replaced by a linked immutable reversal that restores exact inventory value and charge/accounting state, or fail closed for legacy rows whose cost history is not provable.
-4. **Legacy supplier ownership data:** suppliers with `company_id IS NULL` require reviewed evidence-based assignment before strict non-null enforcement or production deployment. Ambiguous rows must remain unresolved.
+1. **Stock transfer/adjustment parent accounting:** domain rows and inventory mutations are transactional, and finalized direct edits are blocked, but the parent voucher is created outside the domain transaction. Historical rows also do not always preserve the actual inventory value removed, so an exact reversal cannot be fabricated safely.
+2. **Container reverse-offload:** offload creation is transactional, but the legacy reversal route subtracts quantities with floating-point arithmetic and hard-deletes charge vouchers. It must be replaced by a linked immutable reversal that restores exact inventory value and charge/accounting state, or fail closed for legacy rows whose cost history is not provable.
+3. **Legacy supplier ownership data:** suppliers with `company_id IS NULL` require reviewed evidence-based assignment before strict non-null enforcement or production deployment. Ambiguous rows must remain unresolved.
 
 Additional non-blocking coverage work remains for dedicated route-level injected failures on POS create, opening imports and offload creation, plus controlled-repair role-boundary tests.
 
@@ -72,10 +75,10 @@ Additional non-blocking coverage work remains for dedicated route-level injected
 2. Run `npm run audit:financial -- --company-id <id> --confirm-non-production` on a disposable recent snapshot.
 3. Run `npm run audit:supplier-companies -- --confirm-non-production --output json`; review every unresolved supplier manually.
 4. Apply the full migration chain to the disposable snapshot twice and confirm the second run is a no-op.
-5. Run `npm run test:accounting:integration -- --confirm-disposable` and the full CI workflow.
+5. Run `npm run test:accounting:integration -- --confirm-disposable`, the payroll PostgreSQL fixture and the full CI workflow.
 6. Deploy to preview with non-production data and complete role, POS, voucher, payroll, statement, report, import, stock-movement and container smoke tests.
 7. Apply production migrations in a maintenance window, deploy the exact reviewed commit, then run read-only health and reconciliation checks.
-8. Keep the pull request draft until the four domain blockers are resolved and CI is green against current `main`.
+8. Keep the pull request draft until the three domain blockers are resolved and CI is green against current `main`.
 
 ## Rollback plan
 
