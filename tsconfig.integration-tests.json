@@ -16,7 +16,6 @@
     "server/__tests__/moto-rates-authed.test.ts",
     "server/__tests__/moto-rates-routes.test.ts",
     "server/__tests__/moto-rates-storage.test.ts",
-    "server/__tests__/payrollPosting.postgres.ts",
     "server/__tests__/testTypes.d.ts"
   ],
   "exclude": ["node_modules", "dist", ".cache", "_trash"],
