@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS stock_movement_cost_evidence (
-  id BIGSERIAL PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE RESTRICT,
   original_voucher_id INTEGER NOT NULL REFERENCES vouchers(id) ON DELETE RESTRICT,
   movement_kind VARCHAR(20) NOT NULL,
@@ -28,6 +28,5 @@ CREATE TABLE IF NOT EXISTS stock_movement_cost_evidence (
 CREATE INDEX IF NOT EXISTS stock_movement_evidence_voucher_idx
   ON stock_movement_cost_evidence (company_id, original_voucher_id);
 
-CREATE UNIQUE INDEX IF NOT EXISTS stock_movement_evidence_reversal_item_unique
-  ON stock_movement_cost_evidence (reversed_by_voucher_id, id)
-  WHERE reversed_by_voucher_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS stock_movement_evidence_voucher_item_unique
+  ON stock_movement_cost_evidence (original_voucher_id, movement_kind, movement_item_id);
