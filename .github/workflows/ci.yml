@@ -107,7 +107,7 @@ jobs:
 
       - name: Run exact stock movement PostgreSQL regressions
         run: >-
-          npx tsx --tsconfig tsconfig.tests.json
+          npx tsx --tsconfig tsconfig.integration-tests.json
           server/__tests__/stockMovement.postgres.ts --confirm-disposable
 
       - name: Run POS inventory value regressions
