@@ -11,11 +11,9 @@ import { AccountingIntegrityError } from "./services/accounting/voucherPostingSe
 import { VoucherReversalService } from "./services/accounting/voucherReversalService";
 import { FinalizedVoucherCorrectionService } from "./services/accounting/finalizedVoucherCorrectionService";
 import { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";
-import { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";
 
 const correctionService = new FinalizedVoucherCorrectionService(accountingStore);
 const reversalService = new VoucherReversalService(accountingStore);
-const posSaleCorrectionService = new PosSaleCorrectionService();
 const posSaleCorrectionService = new PosSaleCorrectionService();
 
 function bodyHash(body: unknown): string {
