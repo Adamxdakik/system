@@ -49,11 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import * as XLSX from "@/lib/excelHelper";
@@ -251,9 +247,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
     return group ? group.name : "Unknown";
   };
 
-  const getItemStatus = (
-    item: StockItem,
-  ): "inactive" | "in-stock" | "out-of-stock" => {
+  const getItemStatus = (item: StockItem): "inactive" | "in-stock" | "out-of-stock" => {
     if (!item.active) return "inactive";
     const totals = productTotals.get(item.id);
     return (totals?.totalQuantity ?? 0) > 0 ? "in-stock" : "out-of-stock";
@@ -277,14 +271,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
       const matchesZeroStock = !hideZeroStock || (totals?.totalQuantity ?? 0) > 0;
       return matchesSearch && matchesGroup && matchesStatus && matchesZeroStock;
     });
-  }, [
-    stockItems,
-    overviewSearch,
-    overviewGroup,
-    overviewStatus,
-    hideZeroStock,
-    productTotals,
-  ]);
+  }, [stockItems, overviewSearch, overviewGroup, overviewStatus, hideZeroStock, productTotals]);
 
   const overviewStats = useMemo(
     () => ({
@@ -430,9 +417,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
         <CardContent className="space-y-3 p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="relative min-w-0 flex-1">
-              <Search
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search name, code or barcode"
                 value={overviewSearch}
@@ -491,11 +476,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                   onClick={() => setHideZeroStock((current) => !current)}
                   data-testid="button-toggle-zero-stock"
                 >
-                  {hideZeroStock ? (
-                    <Eye className="h-4 w-4" />
-                  ) : (
-                    <EyeOff className="h-4 w-4" />
-                  )}
+                  {hideZeroStock ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                   {hideZeroStock ? "Show zero stock" : "Hide zero stock"}
                 </Button>
               </CollapsibleContent>
@@ -735,9 +716,8 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete selected products?</AlertDialogTitle>
             <AlertDialogDescription>
-              You are about to delete {selectedIds.length} selected {selectedIds.length === 1
-                ? "product"
-                : "products"}. This action cannot be undone.
+              You are about to delete {selectedIds.length} selected{" "}
+              {selectedIds.length === 1 ? "product" : "products"}. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

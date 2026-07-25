@@ -27,11 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -57,10 +53,7 @@ const formSchema = insertStockItemSchema.extend({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function StockItemCreateDialog({
-  open,
-  onOpenChange,
-}: StockItemCreateDialogProps) {
+export function StockItemCreateDialog({ open, onOpenChange }: StockItemCreateDialogProps) {
   const { toast } = useToast();
   const { selectedCompany } = useCompany();
   const [advancedOpen, setAdvancedOpen] = useState(false);

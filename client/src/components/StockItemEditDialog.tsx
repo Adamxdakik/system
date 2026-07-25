@@ -28,11 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertCircle, ChevronDown, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -62,11 +58,7 @@ interface StockGroup {
   name: string;
 }
 
-export function StockItemEditDialog({
-  open,
-  onOpenChange,
-  stockItemId,
-}: StockItemEditDialogProps) {
+export function StockItemEditDialog({ open, onOpenChange, stockItemId }: StockItemEditDialogProps) {
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -332,9 +324,7 @@ export function StockItemEditDialog({
                           <Select
                             value={stockGroupId?.toString() || "none"}
                             onValueChange={(value) =>
-                              setStockGroupId(
-                                value === "none" ? null : Number.parseInt(value, 10),
-                              )
+                              setStockGroupId(value === "none" ? null : Number.parseInt(value, 10))
                             }
                           >
                             <SelectTrigger id="stockGroup" data-testid="select-stock-group">
