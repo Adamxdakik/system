@@ -1,0 +1,76 @@
+name: Program 2 Stock Patch
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out writable PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Apply final atomic stock movement corrections
+        run: |
+          python scripts/apply-program2-stock-wiring.py
+          python scripts/apply-program2-stock-lint-fix.py
+
+      - name: Format focused code files
+        run: |
+          npx prettier --write \
+            server/routes.ts \
+            server/routes/atomicStockMovementRoutes.ts \
+            server/services/accounting/stockMovementService.ts \
+            server/services/accounting/stockMovementEvidenceSchema.ts \
+            server/__tests__/stockMovement.postgres.ts \
+            client/src/pages/Vouchers.tsx \
+            client/src/pages/StockTransferOrder.tsx
+
+      - name: Stage and commit final atomic stock corrections
+        id: commit
+        shell: bash
+        run: |
+          git status --short
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            server/routes.ts \
+            server/routes/atomicStockMovementRoutes.ts \
+            server/services/accounting/stockMovementService.ts \
+            server/services/accounting/stockMovementEvidenceSchema.ts \
+            server/__tests__/stockMovement.postgres.ts \
+            client/src/pages/Vouchers.tsx \
+            client/src/pages/StockTransferOrder.tsx \
+            scripts/apply-program2-stock-wiring.py \
+            scripts/apply-program2-stock-lint-fix.py
+          if git diff --cached --quiet; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            echo "Final atomic stock corrections are already applied."
+            exit 0
+          fi
+          git diff --cached --stat
+          git commit -m "fix(accounting): close atomic stock movement bypasses"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+
+      - name: Rebase and push final atomic stock corrections
+        if: steps.commit.outputs.created == 'true'
+        shell: bash
+        run: |
+          git pull --rebase origin "${{ github.event.pull_request.head.ref }}"
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
