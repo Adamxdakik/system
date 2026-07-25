@@ -93,8 +93,7 @@ async function committedPostingAndReversal(
         currency, exchange_rate, source_type, source_id, idempotency_key
       ) VALUES ($1, $2, 'Journal', '2030-12-31', 125, 'EUR', 1.25,
         'INTEGRATION_RETRY', $3, $3)
-      ON CONFLICT (company_id, idempotency_key) WHERE idempotency_key IS NOT NULL
-      DO NOTHING
+      ON CONFLICT DO NOTHING
       RETURNING id
     `,
     [companyId, `RETRY-${key}`, `post-${key}`],
