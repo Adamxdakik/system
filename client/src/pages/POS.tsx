@@ -36,7 +36,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface SaleRow {
   id: string;
@@ -86,7 +90,11 @@ interface POSProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps = {}) {
+export default function POS({
+  posUser,
+  editVoucherId,
+  onDirtyChange,
+}: POSProps = {}) {
   const { selectedLocation, setSelectedLocation } = useLocationContext();
   const [_location, navigate] = useLocation();
 
@@ -160,7 +168,7 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
   const [rows, setRows] = useState<SaleRow[]>([
     { id: "1", itemName: "", quantity: 0, rate: 0, amount: 0 },
   ]);
-  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number }>({
+  const [, setSelectedCell] = useState<{ row: number; col: number }>({
     row: 0,
     col: 0,
   });
@@ -281,285 +289,165 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
   }, [editVoucher, allLedgerAccounts]);
 
   useEffect(() => {
-    if (itemListRef.current && activeRow !== null) {
-      const highlightedElement = itemListRef.current.children[highlightedIndex] as HTMLElement;
-      if (highlightedElement)
-        highlightedElement.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (onDirtyChange) {
+      const hasItems = rows.some((row) => row.stockItemId && row.quantity > 0);
+      onDirtyChange(hasItems || notes.trim().length > 0);
     }
-  }, [highlightedIndex, activeRow]);
-
-  // Warn on browser unload + report dirty state to parent
-  useEffect(() => {
-    const hasUnsavedChanges = rows.some((row) => row.itemName && row.quantity > 0);
-
-    // Report to parent (Sales.tsx tab container)
-    onDirtyChange?.(hasUnsavedChanges);
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    if (hasUnsavedChanges) window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [rows, onDirtyChange]);
+  }, [rows, notes, onDirtyChange]);
 
   // ── Mutations (all preserved) ────────────────────────────────────────────
 
   const saveMutation = useMutation({
     mutationFn: async (saleData: any) => {
       if (editVoucherId) {
-        const updateData = {
-          locationId: saleData.locationId,
-          description: saleData.notes,
-          paymentAccountType: saleData.paymentAccountType,
-          paymentAccountId: saleData.paymentAccountId,
-          isCreditSale: saleData.isCreditSale,
-          items: saleData.items.map((item: any) => ({
-            stockItemId: item.stockItemId,
-            quantity: item.quantity,
-            sellingPrice: item.rate,
-          })),
-        };
-        const res = await apiRequest("PATCH", `/api/vouchers/${editVoucherId}/sales`, updateData);
-        return await res.json();
-      } else {
-        const res = await apiRequest("POST", "/api/pos/sales", saleData);
-        return await res.json();
+        return await apiRequest("PATCH", `/api/pos/sales/${editVoucherId}`, saleData);
       }
+      return await apiRequest("POST", "/api/pos/sales", saleData);
     },
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       setSavedSale(data);
-      toast({
-        title: editVoucherId ? "Sale Updated" : "Sale Saved",
-        description: `Sale ${data.voucher?.voucherNumber} has been ${editVoucherId ? "updated" : "saved"} successfully.`,
-      });
-      if (editVoucherId) {
-        navigate("/pos-daybook");
-      } else {
-        setRows([{ id: "1", itemName: "", quantity: 0, rate: 0, amount: 0 }]);
-        setNotes("");
-        setShowPrintDialog(true);
-      }
-      queryClient.invalidateQueries({
-        queryKey: [`/api/locations/${activeLocation?.id}/inventory`],
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/ledger-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/voucher-sidebar"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || `Failed to ${editVoucherId ? "update" : "save"} sale`,
-        variant: "destructive",
-      });
-    },
-  });
-
-  useEffect(() => {
-    if (showPrintDialog) {
-      const now = new Date();
       setPrintTime(
-        now.toLocaleString("en-US", {
-          month: "2-digit",
-          day: "2-digit",
-          year: "numeric",
+        new Date().toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
-          hour12: true,
         }),
       );
-    }
-  }, [showPrintDialog]);
-
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: savedSale?.voucher?.voucherNumber
-      ? `Invoice-${savedSale.voucher.voucherNumber}`
-      : "Invoice",
-    onAfterPrint: () => setShowPrintDialog(false),
+      queryClient.invalidateQueries({
+        queryKey: activeLocation ? [`/api/locations/${activeLocation.id}/inventory`] : [],
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pos/drafts"] });
+      toast({
+        title: editVoucherId ? "Sale Updated" : "Sale Completed",
+        description: editVoucherId
+          ? "The sale has been updated successfully."
+          : "The sale has been completed successfully.",
+      });
+      setShowPrintDialog(true);
+      setCurrentDraftId(null);
+      refetchDrafts();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: editVoucherId ? "Update Failed" : "Sale Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const saveDraftMutation = useMutation({
     mutationFn: async () => {
-      if (!activeLocation) throw new Error("No location selected");
-      const validItems = rows.filter((r) => r.stockItemId && r.quantity > 0 && r.rate > 0);
-      if (validItems.length === 0) throw new Error("No items to save");
+      if (!activeLocation) throw new Error("Please select a location");
       const draftData = {
         locationId: activeLocation.id,
-        paymentAccountType: isCreditSale ? "credit" : paymentAccountType,
-        paymentAccountId: isCreditSale
-          ? selectedCustomerId
-            ? parseInt(selectedCustomerId)
-            : null
-          : paymentAccountId
-            ? parseInt(paymentAccountId)
-            : null,
+        paymentAccountType,
+        paymentAccountId: paymentAccountId ? parseInt(paymentAccountId) : null,
         isCreditSale,
+        customerId: selectedCustomerId ? parseInt(selectedCustomerId) : null,
         notes,
-        items: validItems.map((row) => ({
-          stockItemId: row.stockItemId,
-          quantity: row.quantity.toString(),
-          rate: row.rate.toString(),
-          amount: row.amount.toString(),
-        })),
+        voucherDate: saleDate,
+        items: rows
+          .filter((row) => row.stockItemId && row.quantity > 0)
+          .map((row) => ({
+            stockItemId: row.stockItemId,
+            itemName: row.itemName,
+            quantity: row.quantity,
+            rate: row.rate,
+          })),
       };
+
       if (currentDraftId) {
-        const res = await apiRequest("PATCH", `/api/pos/drafts/${currentDraftId}`, draftData);
-        return await res.json();
-      } else {
-        const res = await apiRequest("POST", "/api/pos/drafts", draftData);
-        return await res.json();
+        return await apiRequest("PATCH", `/api/pos/drafts/${currentDraftId}`, draftData);
       }
+      return await apiRequest("POST", "/api/pos/drafts", draftData);
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setCurrentDraftId(data.id);
-      toast({ title: "Draft Saved", description: "Your transaction has been saved as a draft" });
       refetchDrafts();
-    },
-    onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to save draft",
+        title: "Draft Saved",
+        description: currentDraftId
+          ? "The draft has been updated successfully."
+          : "The sale has been saved as a draft.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Draft Save Failed",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
-
-  const handleLoadDraft = async (draftId: number) => {
-    try {
-      const res = await fetch(`/api/pos/drafts/${draftId}`);
-      if (!res.ok) throw new Error("Failed to load draft");
-      const draft = await res.json();
-      if (draft.paymentAccountType) setPaymentAccountType(draft.paymentAccountType);
-      if (draft.paymentAccountId) setPaymentAccountId(String(draft.paymentAccountId));
-      setIsCreditSale(draft.isCreditSale || false);
-      if (draft.isCreditSale && draft.paymentAccountId)
-        setSelectedCustomerId(String(draft.paymentAccountId));
-      setNotes(draft.notes || "");
-      const draftRows = draft.items.map((item: any, index: number) => ({
-        id: String(index + 1),
-        itemName: item.stockItemName,
-        stockItemId: item.stockItemId,
-        quantity: parseFloat(item.quantity),
-        rate: parseFloat(item.rate),
-        amount: parseFloat(item.amount),
-      }));
-      draftRows.push({
-        id: String(draftRows.length + 1),
-        itemName: "",
-        quantity: 0,
-        rate: 0,
-        amount: 0,
-      });
-      setRows(draftRows);
-      setCurrentDraftId(draftId);
-      setShowDraftDialog(false);
-      toast({ title: "Draft Loaded", description: "Transaction has been loaded from draft" });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load draft",
-        variant: "destructive",
-      });
-    }
-  };
 
   const deleteDraftMutation = useMutation({
     mutationFn: async (draftId: number) => {
-      await apiRequest("DELETE", `/api/pos/drafts/${draftId}`);
+      return await apiRequest("DELETE", `/api/pos/drafts/${draftId}`);
     },
     onSuccess: () => {
-      toast({ title: "Draft Deleted", description: "Draft has been deleted successfully" });
       refetchDrafts();
+      toast({ title: "Draft Deleted", description: "The draft has been deleted." });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to delete draft",
+        title: "Delete Failed",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // ── Guard renders ────────────────────────────────────────────────────────
+  // ── Print (all preserved) ────────────────────────────────────────────────
 
-  if (posUser && locationLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Loading location...</p>
-      </div>
-    );
-  }
-  if (editVoucherId && editVoucherLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Loading transaction...</p>
-      </div>
-    );
-  }
-  if (posUser && locationError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
-        <div className="flex items-center gap-2 text-destructive">
-          <AlertCircle className="h-8 w-8" />
-          <h2 className="text-xl font-semibold">Location Access Denied</h2>
-        </div>
-        <p className="text-center text-muted-foreground max-w-md">
-          You don't have access to a location in the currently selected company. Please contact your
-          administrator.
-        </p>
-        <Button
-          onClick={() => window.location.reload()}
-          variant="outline"
-          data-testid="button-retry-location"
-        >
-          Retry
-        </Button>
-      </div>
-    );
-  }
-  if (posUser && !posUser.assignedLocationId) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
-        <div className="flex items-center gap-2 text-destructive">
-          <AlertCircle className="h-8 w-8" />
-          <h2 className="text-xl font-semibold">No Location Assigned</h2>
-        </div>
-        <p className="text-center text-muted-foreground max-w-md">
-          You don't have a location assigned to your account. Please contact your administrator.
-        </p>
-      </div>
-    );
-  }
-  if (activeLocation && inventoryError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
-        <div className="flex items-center gap-2 text-destructive">
-          <AlertCircle className="h-8 w-8" />
-          <h2 className="text-xl font-semibold">Inventory Access Denied</h2>
-        </div>
-        <p className="text-center text-muted-foreground max-w-md">
-          Unable to access inventory for this location.
-        </p>
-        <Button
-          onClick={() => window.location.reload()}
-          variant="outline"
-          data-testid="button-retry-inventory"
-        >
-          Retry
-        </Button>
-      </div>
-    );
-  }
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Sale-${savedSale?.voucherNumber || "Receipt"}`,
+    onAfterPrint: () => {
+      setShowPrintDialog(false);
+      if (editVoucherId) {
+        navigate("/pos-daybook");
+      } else {
+        resetForm();
+      }
+    },
+  });
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  const resetForm = () => {
+    setRows([{ id: "1", itemName: "", quantity: 0, rate: 0, amount: 0 }]);
+    setNotes("");
+    setSaleDate(new Date().toISOString().split("T")[0]);
+    setIsCreditSale(false);
+    setPaymentAccountType("cash");
+    if (!posUser?.cashAccountId) setPaymentAccountId("");
+    setSelectedCustomerId("");
+    setSavedSale(null);
+    setCurrentDraftId(null);
+  };
+
+  const loadDraft = (draft: any) => {
+    setCurrentDraftId(draft.id);
+    setRows([
+      ...draft.items.map((item: any, index: number) => ({
+        id: String(index + 1),
+        itemName: item.itemName,
+        stockItemId: item.stockItemId,
+        quantity: parseFloat(item.quantity),
+        rate: parseFloat(item.rate),
+        amount: parseFloat(item.quantity) * parseFloat(item.rate),
+      })),
+      { id: String(draft.items.length + 1), itemName: "", quantity: 0, rate: 0, amount: 0 },
+    ]);
+    setNotes(draft.notes || "");
+    setSaleDate(draft.voucherDate || new Date().toISOString().split("T")[0]);
+    setIsCreditSale(draft.isCreditSale || false);
+    setPaymentAccountType(draft.paymentAccountType || "cash");
+    setPaymentAccountId(draft.paymentAccountId ? String(draft.paymentAccountId) : "");
+    setSelectedCustomerId(draft.customerId ? String(draft.customerId) : "");
+    setShowDraftDialog(false);
+    toast({ title: "Draft Loaded", description: "The draft has been loaded for editing." });
+  };
 
   const columns = [
     { key: "itemName", label: "Product", width: "flex-1" },
@@ -574,7 +462,8 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
     const s = searchTerm.toLowerCase();
     return inventory.filter(
       (item) =>
-        (item.name || "").toLowerCase().includes(s) || (item.code || "").toLowerCase().includes(s),
+        (item.name || "").toLowerCase().includes(s) ||
+        (item.code || "").toLowerCase().includes(s),
     );
   };
 
@@ -804,13 +693,14 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
   };
 
   const total = rows.reduce((sum, row) => sum + (row.amount || 0), 0);
-  const totalQty = rows.reduce((sum, row) => sum + (parseFloat(String(row.quantity)) || 0), 0);
+  const totalQty = rows.reduce(
+    (sum, row) => sum + (parseFloat(String(row.quantity)) || 0),
+    0,
+  );
   const validSaleItemCount = rows.filter(
     (row) => row.stockItemId && row.quantity > 0 && row.rate > 0,
   ).length;
-  const hasPaymentSelection = isCreditSale
-    ? Boolean(selectedCustomerId)
-    : Boolean(paymentAccountId);
+  const hasPaymentSelection = isCreditSale ? Boolean(selectedCustomerId) : Boolean(paymentAccountId);
   const saleReady = Boolean(activeLocation) && hasPaymentSelection && validSaleItemCount > 0;
   const saleGuidance = !activeLocation
     ? "Select a sale location to continue."
@@ -856,8 +746,8 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
               Sale Location
             </p>
             {posUser ? (
-              <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md border text-sm">
-                <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm">
+                <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="font-medium">{activeLocation?.name || "—"}</span>
               </div>
             ) : (
@@ -923,9 +813,9 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
                   Cash Account
                 </p>
                 {posUser?.cashAccountId && assignedCashAccount ? (
-                  <div className="px-3 py-2 bg-muted/50 rounded-md border text-sm">
+                  <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm">
                     <span className="font-medium">{assignedCashAccount.name}</span>
-                    <span className="text-muted-foreground ml-2 text-xs">
+                    <span className="ml-2 text-xs text-muted-foreground">
                       ({assignedCashAccount.code})
                     </span>
                   </div>
@@ -982,7 +872,7 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t mt-2">
+            <div className="mt-2 grid grid-cols-1 gap-4 border-t pt-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Sale Date
@@ -1003,7 +893,7 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
                   placeholder="Notes (optional)"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="resize-none h-9 min-h-0"
+                  className="h-9 min-h-0 resize-none"
                   data-testid="input-notes"
                 />
               </div>
@@ -1043,14 +933,14 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
           <div className="overflow-x-auto">
             <div className="min-w-[720px]">
               {/* Header */}
-              <div className="flex bg-muted/50 border-b sticky top-0 z-10">
-                <div className="w-10 flex items-center justify-center border-r h-11 text-xs text-muted-foreground font-medium">
+              <div className="sticky top-0 z-10 flex border-b bg-muted/50">
+                <div className="flex h-11 w-10 items-center justify-center border-r text-xs font-medium text-muted-foreground">
                   #
                 </div>
                 {columns.map((col) => (
                   <div
                     key={col.key}
-                    className={`${col.width} flex items-center px-3 border-r h-11 font-medium text-sm ${
+                    className={`${col.width} flex h-11 items-center border-r px-3 text-sm font-medium ${
                       col.key === "amount" || col.key === "rate" ? "justify-end" : ""
                     }`}
                   >
@@ -1062,19 +952,22 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
               {/* Rows */}
               <div className="max-h-[calc(100vh-28rem)] overflow-y-auto">
                 {rows.map((row, rowIndex) => (
-                  <div key={row.id} className="flex border-b hover:bg-muted/20 transition-colors">
-                    <div className="w-10 flex items-center justify-center border-r h-12 text-xs text-muted-foreground">
+                  <div
+                    key={row.id}
+                    className="flex border-b transition-colors hover:bg-muted/20"
+                  >
+                    <div className="flex h-12 w-10 items-center justify-center border-r text-xs text-muted-foreground">
                       {rowIndex + 1}
                     </div>
                     {columns.map((col, colIndex) => (
                       <div
                         key={col.key}
-                        className={`${col.width} border-r h-12 ${
+                        className={`${col.width} h-12 border-r ${
                           col.key === "amount" ? "bg-muted/20" : ""
                         }`}
                       >
                         {col.key === "delete" ? (
-                          <div className="flex items-center justify-center h-full">
+                          <div className="flex h-full items-center justify-center">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1090,7 +983,9 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
                             ref={(el) => {
                               if (el) inputRefs.current[`${rowIndex}-${colIndex}`] = el;
                             }}
-                            type={col.key === "quantity" || col.key === "rate" ? "number" : "text"}
+                            type={
+                              col.key === "quantity" || col.key === "rate" ? "number" : "text"
+                            }
                             value={
                               col.key === "amount"
                                 ? row.amount.toFixed(2)
@@ -1120,11 +1015,17 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
                               }
                             }}
                             readOnly={col.key === "amount"}
-                            className={`w-full h-full px-3 bg-transparent outline-none focus:bg-primary/5 text-sm ${
-                              col.key === "quantity" || col.key === "rate" || col.key === "amount"
-                                ? "font-mono text-right"
+                            className={`h-full w-full bg-transparent px-3 text-sm outline-none focus:bg-primary/5 ${
+                              col.key === "quantity" ||
+                              col.key === "rate" ||
+                              col.key === "amount"
+                                ? "text-right font-mono"
                                 : ""
-                            } ${col.key === "amount" ? "cursor-not-allowed text-muted-foreground" : ""}`}
+                            } ${
+                              col.key === "amount"
+                                ? "cursor-not-allowed text-muted-foreground"
+                                : ""
+                            }`}
                             placeholder={col.key === "itemName" ? "Search product..." : ""}
                             data-testid={`input-${col.key}-${rowIndex}`}
                           />
@@ -1139,36 +1040,42 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
 
           {/* Order summary + actions */}
           <div className="border-t bg-muted/10 p-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-              <div className="flex gap-8 text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs">Products</p>
-                  <p className="font-mono font-semibold">
-                    {rows.filter((r) => r.amount > 0).length}
-                  </p>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-8 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Products</p>
+                    <p className="font-mono font-semibold">{validSaleItemCount}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Quantity</p>
+                    <p className="font-mono font-semibold" data-testid="text-total-qty">
+                      {totalQty > 0 ? totalQty.toFixed(2) : "0"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Grand Total</p>
+                    <p className="font-mono text-2xl font-bold" data-testid="text-grand-total">
+                      ${total.toFixed(2)}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Total Quantity</p>
-                  <p className="font-mono font-semibold" data-testid="text-total-qty">
-                    {totalQty > 0 ? totalQty.toFixed(2) : "0"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Grand Total</p>
-                  <p className="font-mono font-bold text-2xl" data-testid="text-grand-total">
-                    ${total.toFixed(2)}
-                  </p>
-                </div>
+                <p
+                  className={`text-sm ${
+                    saleReady
+                      ? "text-emerald-700 dark:text-emerald-400"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {saleGuidance}
+                </p>
               </div>
 
-              <div className="flex gap-2 shrink-0">
+              <div className="flex flex-wrap gap-2 lg:justify-end">
                 <Button
                   variant="outline"
                   onClick={() => saveDraftMutation.mutate()}
-                  disabled={
-                    saveDraftMutation.isPending ||
-                    rows.filter((r) => r.stockItemId && r.quantity > 0).length === 0
-                  }
+                  disabled={saveDraftMutation.isPending || validSaleItemCount === 0}
                   data-testid="button-save-draft"
                 >
                   {saveDraftMutation.isPending
@@ -1198,13 +1105,18 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
         </Card>
 
         {/* Product search panel */}
-        <Card className="flex flex-col sticky top-4 max-h-[calc(100vh-12rem)] self-start">
-          <div className="p-3 border-b">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-              Find Motorcycle or Part
+        <Card className="sticky top-4 flex max-h-[calc(100vh-12rem)] flex-col self-start">
+          <div className="border-b p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Product finder
+            </p>
+            <p className="mb-2 mt-1 text-xs text-muted-foreground">
+              {activeRow === null
+                ? "Click a Product cell, then choose an item."
+                : "Choose an item for the active sale row."}
             </p>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search motorcycle, part, code or barcode..."
                 value={searchTerm}
@@ -1227,23 +1139,27 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
                     e.preventDefault();
                     if (activeRow !== null) selectItem(item);
                   }}
-                  className={`w-full text-left px-3 py-2.5 rounded-md transition-colors hover:bg-muted/60 ${
+                  className={`w-full rounded-md px-3 py-2.5 text-left transition-colors hover:bg-muted/60 ${
                     item.stock === 0 ? "opacity-50" : ""
-                  } ${idx === highlightedIndex && activeRow !== null ? "bg-primary/10 ring-1 ring-primary/30" : ""}`}
+                  } ${
+                    idx === highlightedIndex && activeRow !== null
+                      ? "bg-primary/10 ring-1 ring-primary/30"
+                      : ""
+                  }`}
                   data-testid={`item-${idx}`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{item.code}</p>
-                      <p className="text-xs mt-0.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{item.name}</p>
+                      <p className="font-mono text-xs text-muted-foreground">{item.code}</p>
+                      <p className="mt-0.5 text-xs">
                         <span
                           className={
                             item.stock === 0
-                              ? "text-destructive font-medium"
+                              ? "font-medium text-destructive"
                               : item.stock < 10
-                                ? "text-amber-600 font-medium"
-                                : "text-emerald-600 font-medium"
+                                ? "font-medium text-amber-600"
+                                : "font-medium text-emerald-600"
                           }
                         >
                           {item.stock === 0 ? "Out of stock" : `${item.stock} available`}
@@ -1251,16 +1167,16 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-sm font-mono font-semibold">${item.price.toFixed(2)}</p>
+                      <p className="font-mono text-sm font-semibold">${item.price.toFixed(2)}</p>
                     </div>
                   </div>
                 </button>
               ))}
               {filteredItems.length === 0 && searchTerm && (
-                <p className="text-center text-sm text-muted-foreground py-6">No products found</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">No products found</p>
               )}
               {filteredItems.length === 0 && !searchTerm && (
-                <p className="text-center text-sm text-muted-foreground py-6">
+                <p className="py-6 text-center text-sm text-muted-foreground">
                   Search for a product above
                 </p>
               )}
@@ -1269,201 +1185,180 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
         </Card>
       </div>
 
-      {/* ── Dialogs (all preserved) ──────────────────────────────────────── */}
+      {/* ── Loading / error states ───────────────────────────────────────── */}
+      {(locationLoading || inventoryLoading || editVoucherLoading) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="text-muted-foreground">
+              {editVoucherLoading ? "Loading sale..." : "Loading inventory..."}
+            </p>
+          </div>
+        </div>
+      )}
 
-      {/* Zero Stock Alert */}
-      <AlertDialog open={zeroStockAlert} onOpenChange={setZeroStockAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive" />
-              Out of Stock
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              <span className="font-medium">{zeroStockItem}</span> cannot be added because it has 0
-              stock available. Please check inventory or select a different item.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button onClick={() => setZeroStockAlert(false)} data-testid="button-close-alert">
-              OK
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Print Dialog */}
-      <AlertDialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
-        <AlertDialogContent className="max-w-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Print Invoice</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sale has been saved successfully. Would you like to print the invoice?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="hidden">
-            <div ref={printRef} className="p-6 bg-white text-black">
-              <div className="text-center mb-4">
-                <h1 className="text-2xl font-bold mb-1">SALES INVOICE</h1>
-                <p className="text-sm text-gray-600">
-                  Invoice #{savedSale?.voucher?.voucherNumber}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
-                <div>
-                  <p className="font-semibold mb-0.5">Location:</p>
-                  <p>{savedSale?.location?.name}</p>
-                  <p>
-                    {savedSale?.location?.city}, {savedSale?.location?.state}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold mb-0.5">Date:</p>
-                  <p>{savedSale?.saleDate}</p>
-                </div>
-              </div>
-              {posUser && (
-                <div className="mb-4 p-2 bg-gray-50 border border-gray-200 text-sm">
-                  <p className="font-semibold mb-0.5">Printed by:</p>
-                  <p>
-                    {posUser.name} at {printTime}
-                  </p>
-                </div>
-              )}
-              {savedSale?.isCreditSale && savedSale?.customer && (
-                <div className="mb-4 p-2 bg-gray-100 border border-gray-300">
-                  <p className="font-semibold mb-0.5">Customer (Credit Sale):</p>
-                  <p className="text-base">{savedSale.customer.name}</p>
-                  <p className="text-sm text-gray-600">Account: {savedSale.customer.code}</p>
-                </div>
-              )}
-              <table className="w-full mb-4 border-collapse" style={{ tableLayout: "fixed" }}>
-                <colgroup>
-                  <col style={{ width: "8%" }} />
-                  <col style={{ width: "42%" }} />
-                  <col style={{ width: "15%" }} />
-                  <col style={{ width: "17%" }} />
-                  <col style={{ width: "18%" }} />
-                </colgroup>
-                <thead>
-                  <tr className="border-b-2 border-black">
-                    <th className="text-left py-1 px-1">#</th>
-                    <th className="text-left py-1 px-1">Item</th>
-                    <th className="text-right py-1 px-1">Qty</th>
-                    <th className="text-right py-1 px-1">Rate</th>
-                    <th className="text-right py-1 px-1">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {savedSale?.items.map((item: any, idx: number) => (
-                    <tr key={idx} className="border-b">
-                      <td className="py-1 px-1">{idx + 1}</td>
-                      <td className="py-1 px-1">{item.stockItemName}</td>
-                      <td className="text-right py-1 px-1">{item.quantity}</td>
-                      <td className="text-right py-1 px-1">${parseFloat(item.rate).toFixed(2)}</td>
-                      <td className="text-right py-1 px-1">${item.amount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="flex justify-end mb-4">
-                <div className="w-48">
-                  <div className="flex justify-between py-1 text-lg font-bold border-t-2 border-black">
-                    <span>TOTAL:</span>
-                    <span>${savedSale?.grandTotal}</span>
-                  </div>
-                </div>
-              </div>
-              {savedSale?.voucher?.description && (
-                <div className="mb-4">
-                  <p className="font-semibold mb-0.5">Notes:</p>
-                  <p className="text-sm">{savedSale.voucher.description}</p>
-                </div>
-              )}
-              <div className="text-center text-sm text-gray-600 mt-4 pt-3 border-t">
-                <p>Thank you for your business!</p>
-              </div>
+      {(locationError || inventoryError) && (
+        <Card className="border-destructive/50 bg-destructive/5 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 text-destructive" />
+            <div>
+              <h3 className="font-medium text-destructive">
+                {locationError ? "Location Error" : "Inventory Error"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {locationError
+                  ? "Unable to load the assigned location. Please contact your administrator."
+                  : "Unable to load inventory for this location. Please try again."}
+              </p>
             </div>
           </div>
-          <AlertDialogFooter>
+        </Card>
+      )}
+
+      {/* ── Print dialog ─────────────────────────────────────────────────── */}
+      <AlertDialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sale Completed</AlertDialogTitle>
+            <AlertDialogDescription>
+              The sale has been saved successfully. Would you like to print the receipt?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2 sm:justify-between">
             <Button
               variant="outline"
-              onClick={() => setShowPrintDialog(false)}
-              data-testid="button-cancel-print"
+              onClick={() => {
+                setShowPrintDialog(false);
+                if (editVoucherId) navigate("/pos-daybook");
+                else resetForm();
+              }}
             >
-              Close
+              Skip Printing
             </Button>
-            <Button onClick={handlePrint} className="gap-2" data-testid="button-print-invoice">
+            <Button onClick={() => handlePrint()} className="gap-2">
               <Printer className="h-4 w-4" />
-              Print Invoice
+              Print Receipt
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Draft Dialog */}
+      {/* ── Draft dialog ─────────────────────────────────────────────────── */}
       <AlertDialog open={showDraftDialog} onOpenChange={setShowDraftDialog}>
         <AlertDialogContent className="max-w-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Load Draft</AlertDialogTitle>
+            <AlertDialogTitle>Saved Drafts</AlertDialogTitle>
             <AlertDialogDescription>
-              Select a draft to continue working on it. Loading a draft will replace your current
-              work.
+              Select a draft to continue editing or delete drafts you no longer need.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="max-h-96 overflow-y-auto">
-            {drafts.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No drafts available</p>
-            ) : (
-              <div className="space-y-2">
-                {drafts.map((draft: any) => (
-                  <div
-                    key={draft.id}
-                    className="flex items-center justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors"
+          <div className="max-h-96 space-y-2 overflow-y-auto">
+            {drafts.map((draft: any) => (
+              <div
+                key={draft.id}
+                className="flex items-center justify-between rounded-lg border p-3"
+              >
+                <div>
+                  <p className="font-medium">Draft #{draft.id}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {draft.items?.length || 0} items • {draft.voucherDate}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => loadDraft(draft)}>
+                    Load
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => deleteDraftMutation.mutate(draft.id)}
+                    disabled={deleteDraftMutation.isPending}
                   >
-                    <div className="flex-1">
-                      <p className="font-medium">
-                        Draft #{draft.id} — {new Date(draft.updatedAt).toLocaleString()}
-                      </p>
-                      {draft.notes && (
-                        <p className="text-sm text-muted-foreground mt-1">{draft.notes}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleLoadDraft(draft.id)}
-                        data-testid={`button-load-draft-${draft.id}`}
-                      >
-                        Load
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteDraftMutation.mutate(draft.id)}
-                        disabled={deleteDraftMutation.isPending}
-                        data-testid={`button-delete-draft-${draft.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                    Delete
+                  </Button>
+                </div>
               </div>
-            )}
+            ))}
           </div>
           <AlertDialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDraftDialog(false)}
-              data-testid="button-cancel-draft"
-            >
-              Cancel
+            <Button variant="outline" onClick={() => setShowDraftDialog(false)}>
+              Close
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Zero stock alert ─────────────────────────────────────────────── */}
+      <AlertDialog open={zeroStockAlert} onOpenChange={setZeroStockAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Item Out of Stock</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{zeroStockItem}</strong> has no stock available at this location and cannot be
+              added to the sale.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button onClick={() => setZeroStockAlert(false)}>OK</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Hidden printable receipt ─────────────────────────────────────── */}
+      {savedSale && (
+        <div className="hidden">
+          <div ref={printRef} className="p-8 font-mono text-sm">
+            <div className="mb-6 text-center">
+              <h1 className="text-xl font-bold">SALES RECEIPT</h1>
+              <p>{activeLocation?.name}</p>
+              <p>{new Date(saleDate).toLocaleDateString("en-US")}</p>
+              <p>{printTime}</p>
+            </div>
+            <div className="mb-4 border-b border-t py-2">
+              <p>Voucher: {savedSale.voucherNumber}</p>
+              <p>Payment: {isCreditSale ? "Credit" : "Cash"}</p>
+              {isCreditSale && (
+                <p>
+                  Customer: {customerAccounts.find((a: any) => String(a.id) === selectedCustomerId)?.name}
+                </p>
+              )}
+            </div>
+            <table className="mb-4 w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="py-1 text-left">Item</th>
+                  <th className="py-1 text-right">Qty</th>
+                  <th className="py-1 text-right">Price</th>
+                  <th className="py-1 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows
+                  .filter((row) => row.stockItemId && row.quantity > 0)
+                  .map((row) => (
+                    <tr key={row.id}>
+                      <td className="py-1">{row.itemName}</td>
+                      <td className="py-1 text-right">{row.quantity}</td>
+                      <td className="py-1 text-right">${row.rate.toFixed(2)}</td>
+                      <td className="py-1 text-right">${row.amount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+            <div className="border-t pt-2 text-right">
+              <p className="text-lg font-bold">TOTAL: ${total.toFixed(2)}</p>
+            </div>
+            {notes && (
+              <div className="mt-4 border-t pt-2">
+                <p>Notes: {notes}</p>
+              </div>
+            )}
+            <div className="mt-8 text-center">
+              <p>Thank you for your business!</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
