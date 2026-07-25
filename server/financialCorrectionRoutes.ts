@@ -10,9 +10,11 @@ import type { PostingEntryInput, VoucherPostingInput } from "./services/accounti
 import { AccountingIntegrityError } from "./services/accounting/voucherPostingService";
 import { VoucherReversalService } from "./services/accounting/voucherReversalService";
 import { FinalizedVoucherCorrectionService } from "./services/accounting/finalizedVoucherCorrectionService";
+import { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";
 
 const correctionService = new FinalizedVoucherCorrectionService(accountingStore);
 const reversalService = new VoucherReversalService(accountingStore);
+const posSaleCorrectionService = new PosSaleCorrectionService();
 
 function bodyHash(body: unknown): string {
   return createHash("sha256")
@@ -80,7 +82,8 @@ async function loadEditableVoucher(req: Request, voucherId: number) {
 
   const role = req.session.currentRole;
   if (role !== "Admin" && role !== "Owner") {
-    if (role !== "Manager") {
+    const isSameDayEditor = role === "Manager" || /^POS\d+$/.test(role ?? "");
+    if (!isSameDayEditor) {
       throw new AccountingIntegrityError(
         "Insufficient permissions to edit vouchers",
         "VOUCHER_EDIT_FORBIDDEN",
@@ -92,7 +95,7 @@ async function loadEditableVoucher(req: Request, voucherId: number) {
     today.setHours(0, 0, 0, 0);
     if (voucherDate.getTime() !== today.getTime()) {
       throw new AccountingIntegrityError(
-        "Managers can only edit today's vouchers",
+        "Managers and POS users can only edit today's vouchers",
         "VOUCHER_EDIT_FORBIDDEN",
         403,
       );
@@ -304,6 +307,52 @@ export function registerFinancialCorrectionRoutes(app: Express): void {
     },
   );
 
+  app.put(
+    "/api/vouchers/:id/sales",
+    requireAuth,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const voucherId = Number(req.params.id);
+        if (!Number.isInteger(voucherId) || voucherId <= 0) {
+          return res.status(400).json({ message: "Invalid voucher ID" });
+        }
+        const existing = await loadEditableVoucher(req, voucherId);
+        if (existing.optional) return next();
+        if (existing.voucherType !== "Sales") {
+          return res.status(409).json({
+            message: "Only finalized sales vouchers can use POS correction",
+            code: "VOUCHER_TYPE_MISMATCH",
+          });
+        }
+        const { description, voucherDate, items } = req.body ?? {};
+        if (!Array.isArray(items) || items.length === 0) {
+          return res.status(400).json({ message: "At least one item is required" });
+        }
+        const result = await posSaleCorrectionService.correct({
+          companyId: req.session.currentCompanyId!,
+          voucherId,
+          description: description ?? null,
+          transactionDate: typeof voucherDate === "string" ? voucherDate : null,
+          idempotencyKey: correctionIdentity(req, voucherId),
+          createdBy: req.user?.id ?? req.session.userId ?? null,
+          canSellNegativeStock: req.user?.canSellNegativeStock ?? false,
+          items: (items as Array<Record<string, unknown>>).map((item) => ({
+            id: Number(item.id) || null,
+            stockItemId: Number(item.stockItemId),
+            quantity: String(item.quantity ?? "0"),
+            sellingPrice: String(item.sellingPrice ?? item.rate ?? "0"),
+          })),
+        });
+        return res.status(result.duplicate ? 200 : 201).json({
+          message: "Sales voucher corrected successfully",
+          ...result,
+        });
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
   app.delete(
     "/api/vouchers/:id",
     requireAuth,
@@ -317,9 +366,25 @@ export function registerFinancialCorrectionRoutes(app: Express): void {
         const existing = await loadEditableVoucher(req, voucherId);
         if (existing.optional) return next();
 
+        const identity =
+          req.get("idempotency-key") ??
+          String(req.body?.idempotencyKey ?? `DELETE_VOUCHER:${voucherId}`);
+        if (
+          existing.voucherType === "Sales" ||
+          existing.sourceType === "POS_SALE" ||
+          existing.sourceType === "POS_SALE_REPLACEMENT"
+        ) {
+          const result = await posSaleCorrectionService.cancel({
+            companyId: req.session.currentCompanyId!,
+            voucherId,
+            idempotencyKey: identity,
+            createdBy: req.user?.id ?? req.session.userId ?? null,
+            reason: String(req.body?.reason ?? `Cancellation of ${existing.voucherNumber}`),
+          });
+          return res.status(result.duplicate ? 200 : 201).json(result);
+        }
+
         const domainSourceTypes = new Set([
-          "POS_SALE",
-          "POS_SALE_REPLACEMENT",
           "PURCHASE",
           "STOCK_TRANSFER",
           "STOCK_ADJUSTMENT",
@@ -337,9 +402,6 @@ export function registerFinancialCorrectionRoutes(app: Express): void {
           });
         }
 
-        const identity =
-          req.get("idempotency-key") ??
-          String(req.body?.idempotencyKey ?? `DELETE_VOUCHER:${voucherId}`);
         const result = await reversalService.reverse({
           companyId: req.session.currentCompanyId!,
           voucherId,
