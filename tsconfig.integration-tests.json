@@ -16,7 +16,8 @@
     "server/__tests__/moto-rates-authed.test.ts",
     "server/__tests__/moto-rates-routes.test.ts",
     "server/__tests__/moto-rates-storage.test.ts",
-    "server/__tests__/testTypes.d.ts"
+    "server/__tests__/testTypes.d.ts",
+    "scripts/test-payroll-posting-postgres.ts"
   ],
   "exclude": ["node_modules", "dist", ".cache", "_trash"],
   "references": [{ "path": "./tsconfig.server.json" }, { "path": "./tsconfig.shared.json" }]
