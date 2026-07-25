@@ -1,22 +1,17 @@
 name: Program 2 TypeScript Diagnostics
 
 on:
-  push:
-    branches:
-      - agent/program-2-financial-integrity-final
+  pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   diagnose:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: agent/program-2-financial-integrity-final
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -30,11 +25,10 @@ jobs:
           echo $? > program2-ts-baseline.exit
           set -e
           cat program2-ts-baseline.log
-      - name: Commit diagnostic output
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add program2-ts-baseline.log program2-ts-baseline.exit
-          git commit -m "chore: capture Program 2 TypeScript diagnostics"
-          git push origin HEAD:agent/program-2-financial-integrity-final
+      - uses: actions/upload-artifact@v4
+        with:
+          name: program2-ts-baseline
+          path: |
+            program2-ts-baseline.log
+            program2-ts-baseline.exit
+          retention-days: 1
