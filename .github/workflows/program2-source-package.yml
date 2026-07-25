@@ -14,9 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Package exact source
-        run: tar --exclude=.git --exclude=program2-source.tar.gz -czf program2-source.tar.gz .
+        run: tar --exclude=.git -czf /tmp/program2-source.tar.gz .
       - uses: actions/upload-artifact@v4
         with:
           name: program2-source
-          path: program2-source.tar.gz
+          path: /tmp/program2-source.tar.gz
           retention-days: 1
