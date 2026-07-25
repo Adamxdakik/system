@@ -174,8 +174,29 @@ jobs:
       - name: Verify migration rerun is idempotent
         run: npm run db:migrate
 
-      - name: Run PostgreSQL accounting integration tests
-        run: npm run test:accounting:integration -- --confirm-disposable
+      - name: Run PostgreSQL accounting integration tests with diagnostics
+        id: postgres_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npm run test:accounting:integration -- --confirm-disposable > postgres-tests.log 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          tail -n 240 postgres-tests.log
+          exit 0
+
+      - name: Upload PostgreSQL integration diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: program2-postgres-test-diagnostics
+          path: postgres-tests.log
+          retention-days: 1
+
+      - name: Stop when PostgreSQL integration tests failed
+        if: steps.postgres_tests.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Run accounting report reconciliation tests
         run: npm run test:accounting:reports
