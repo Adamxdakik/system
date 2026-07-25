@@ -48,26 +48,6 @@ jobs:
       - name: Check TypeScript packages
         run: npm run check
 
-      - name: Capture whole-application TypeScript output
-        id: full_typescript
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          npm run check:all > typescript-full.log 2>&1
-          status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
-          tail -n 200 typescript-full.log
-          exit 0
-
-      - name: Upload whole-application TypeScript output
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: program2-typescript-full-output
-          path: typescript-full.log
-          retention-days: 1
-
       - name: Enforce whole-application TypeScript baseline
         run: npm run check:all:baseline
 
