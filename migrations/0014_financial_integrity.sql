@@ -12,7 +12,8 @@ ALTER TABLE vouchers
   ADD COLUMN IF NOT EXISTS idempotency_fingerprint VARCHAR(64),
   ADD COLUMN IF NOT EXISTS reversal_of_voucher_id INTEGER,
   ADD COLUMN IF NOT EXISTS reversed_at TIMESTAMP,
-  ADD COLUMN IF NOT EXISTS created_by VARCHAR(100);
+  ADD COLUMN IF NOT EXISTS created_by VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
 
 -- Earlier development revisions may have applied USD/rate-1 defaults to legacy
 -- rows. They are explicitly classified as unresolved rather than trusted.
@@ -177,18 +178,26 @@ CREATE UNIQUE INDEX IF NOT EXISTS vouchers_reversal_of_unique
   ON vouchers(reversal_of_voucher_id)
   WHERE reversal_of_voucher_id IS NOT NULL;
 
+-- Replace earlier development versions of these checks so upgrades receive the
+-- same nullable-legacy semantics as fresh databases.
+ALTER TABLE vouchers
+  DROP CONSTRAINT IF EXISTS vouchers_exchange_rate_positive,
+  DROP CONSTRAINT IF EXISTS vouchers_fx_metadata_status_valid;
+ALTER TABLE voucher_entries
+  DROP CONSTRAINT IF EXISTS voucher_entries_fx_complete;
+
+ALTER TABLE vouchers
+  ADD CONSTRAINT vouchers_exchange_rate_positive
+    CHECK (exchange_rate IS NULL OR exchange_rate > 0),
+  ADD CONSTRAINT vouchers_fx_metadata_status_valid
+    CHECK (fx_metadata_status IN ('BASE_CONFIRMED', 'FX_CONFIRMED', 'UNRESOLVED_LEGACY'));
+
+ALTER TABLE voucher_entries
+  ADD CONSTRAINT voucher_entries_fx_complete
+    CHECK (currency IS NULL OR currency = 'USD' OR (foreign_amount IS NOT NULL AND exchange_rate > 0));
+
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'vouchers_exchange_rate_positive') THEN
-    ALTER TABLE vouchers
-      ADD CONSTRAINT vouchers_exchange_rate_positive
-      CHECK (exchange_rate IS NULL OR exchange_rate > 0);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'vouchers_fx_metadata_status_valid') THEN
-    ALTER TABLE vouchers
-      ADD CONSTRAINT vouchers_fx_metadata_status_valid
-      CHECK (fx_metadata_status IN ('BASE_CONFIRMED', 'FX_CONFIRMED', 'UNRESOLVED_LEGACY'));
-  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'vouchers_reversal_of_fk') THEN
     ALTER TABLE vouchers
       ADD CONSTRAINT vouchers_reversal_of_fk
@@ -211,10 +220,5 @@ BEGIN
     ALTER TABLE voucher_entries
       ADD CONSTRAINT voucher_entries_meaningful
       CHECK (debit_amount > 0 OR credit_amount > 0);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'voucher_entries_fx_complete') THEN
-    ALTER TABLE voucher_entries
-      ADD CONSTRAINT voucher_entries_fx_complete
-      CHECK (currency IS NULL OR currency = 'USD' OR (foreign_amount IS NOT NULL AND exchange_rate > 0));
   END IF;
 END $$;
