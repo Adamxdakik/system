@@ -25,6 +25,7 @@ import {
 import { parseISO } from "date-fns";
 import { useDateFormat } from "@/contexts/DateFormatContext";
 import { getPeriodPresets, type PresetId } from "@/components/PeriodPresets";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -219,7 +220,10 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
   };
 
   const handlePresetChange = (id: string) => {
-    if (id === "all") {
+    if (id === "custom") {
+      setActivePreset("custom");
+      // keep existing dates so user can adjust them
+    } else if (id === "all") {
       setStartDate(""); setEndDate(""); setActivePreset("all");
     } else {
       const p = getPeriodPresets().find((x) => x.id === id);
@@ -276,8 +280,27 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
             {getPeriodPresets().map((p) => (
               <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
             ))}
+            <SelectItem value="custom">Custom…</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Custom date pickers — only shown when Custom is selected */}
+        {activePreset === "custom" && (
+          <>
+            <DatePickerInput
+              value={startDate}
+              onChange={setStartDate}
+              placeholder="Start date"
+              className="h-9 w-[140px]"
+            />
+            <DatePickerInput
+              value={endDate}
+              onChange={setEndDate}
+              placeholder="End date"
+              className="h-9 w-[140px]"
+            />
+          </>
+        )}
 
         {/* Location */}
         <Select value={selectedLocation} onValueChange={setSelectedLocation} data-testid="select-location">
@@ -314,19 +337,6 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
         {/* Reset */}
         <Button variant="ghost" size="sm" className="h-9 px-3 text-muted-foreground" onClick={handleClearFilters} data-testid="button-clear-filters">
           Reset
-        </Button>
-
-        {/* Fix costs */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 ml-auto"
-          onClick={() => recalculateMutation.mutate()}
-          disabled={recalculateMutation.isPending}
-          data-testid="button-recalculate-costs"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${recalculateMutation.isPending ? "animate-spin" : ""}`} />
-          {recalculateMutation.isPending ? "Updating…" : "Fix Costs"}
         </Button>
       </div>
 
@@ -406,7 +416,6 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                         <thead>
                           <tr className="bg-muted/40 border-b border-border/40 text-[10px] text-muted-foreground uppercase tracking-wide">
                             <th className="py-1.5 px-3 text-left font-semibold">Product</th>
-                            <th className="py-1.5 px-3 text-left font-semibold hidden sm:table-cell">Code</th>
                             <th className="py-1.5 px-3 text-right font-semibold">Qty</th>
                             <th className="py-1.5 px-3 text-right font-semibold">Unit Price</th>
                             <th className="py-1.5 px-3 text-right font-semibold hidden md:table-cell">Cost</th>
@@ -421,9 +430,6 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                             return (
                               <tr key={item.id} className="bg-background hover:bg-muted/20 transition-colors">
                                 <td className="py-2 px-3 font-medium">{item.stockItemName}</td>
-                                <td className="py-2 px-3 font-mono text-xs text-muted-foreground hidden sm:table-cell">
-                                  {item.stockItemCode}
-                                </td>
                                 <td className="py-2 px-3 text-right font-mono text-xs">
                                   {fmtNum(item.quantity)}
                                 </td>
