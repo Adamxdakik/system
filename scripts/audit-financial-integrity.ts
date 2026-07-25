@@ -290,17 +290,48 @@ const CHECKS: AuditCheck[] = [
   {
     name: "missing_historical_fx",
     description:
-      "Non-USD source records cannot retain a historical rate because no exchange-rate column exists.",
+      "Non-USD postings or source records are missing consistent historical FX metadata.",
     sql: `
-      SELECT 'purchase_order' AS source_type, po.id AS source_id, po.company_id, po.currency,
-             po.voucher_id, 'schema has no historical exchange_rate/base_amount fields' AS diagnostic
+      SELECT 'voucher' AS source_type, v.id AS source_id, v.company_id, v.currency,
+             v.id AS voucher_id, 'voucher or entries have incomplete/mismatched historical FX' AS diagnostic
+      FROM vouchers v
+      WHERE upper(v.currency) <> 'USD'
+        AND (
+          v.exchange_rate IS NULL OR v.exchange_rate <= 0
+          OR EXISTS (
+            SELECT 1 FROM voucher_entries ve
+            WHERE ve.voucher_id = v.id
+              AND (
+                upper(ve.currency) <> upper(v.currency)
+                OR ve.foreign_amount IS NULL
+                OR ve.exchange_rate IS NULL
+                OR ve.base_amount IS NULL
+              )
+          )
+        )
+        AND ($1::int IS NULL OR v.company_id = $1)
+      UNION ALL
+      SELECT 'purchase_order', po.id, po.company_id, po.currency,
+             po.voucher_id, 'source is non-USD but has no linked voucher FX metadata'
       FROM purchase_orders po
-      WHERE upper(po.currency) <> 'USD' AND ($1::int IS NULL OR po.company_id = $1)
+      LEFT JOIN vouchers v ON v.id = po.voucher_id
+      WHERE upper(po.currency) <> 'USD'
+        AND (
+          v.id IS NULL OR upper(v.currency) <> upper(po.currency)
+          OR v.exchange_rate IS NULL OR v.exchange_rate <= 0
+        )
+        AND ($1::int IS NULL OR po.company_id = $1)
       UNION ALL
       SELECT 'container_sale', cs.id, cs.company_id, cs.currency, cs.voucher_id,
-             'schema has no historical exchange_rate/base_amount fields'
+             'source is non-USD but has no linked voucher FX metadata'
       FROM container_sales cs
-      WHERE upper(cs.currency) <> 'USD' AND ($1::int IS NULL OR cs.company_id = $1)`,
+      LEFT JOIN vouchers v ON v.id = cs.voucher_id
+      WHERE upper(cs.currency) <> 'USD'
+        AND (
+          v.id IS NULL OR upper(v.currency) <> upper(cs.currency)
+          OR v.exchange_rate IS NULL OR v.exchange_rate <= 0
+        )
+        AND ($1::int IS NULL OR cs.company_id = $1)`,
   },
   {
     name: "duplicate_voucher_signature",
@@ -315,14 +346,12 @@ const CHECKS: AuditCheck[] = [
   },
   {
     name: "deleted_source_active_accounting",
-    description: "Deleted containers retain active purchase accounting vouchers.",
+    description:
+      "No accounting source table currently exposes a soft-delete marker; this check remains empty until one exists.",
     sql: `
-      SELECT c.company_id, c.id AS container_id, po.id AS purchase_order_id, po.voucher_id
-      FROM containers c
-      JOIN purchase_orders po ON po.container_id = c.id
-      JOIN vouchers v ON v.id = po.voucher_id AND v.deleted_at IS NULL
-      WHERE c.deleted_at IS NOT NULL
-        AND ($1::int IS NULL OR c.company_id = $1)`,
+      SELECT cs.company_id, cs.id AS source_id, 'container_sale' AS source_type, cs.voucher_id
+      FROM container_sales cs
+      WHERE false AND ($1::int IS NULL OR cs.company_id = $1)`,
   },
   {
     name: "active_source_missing_accounting",
@@ -330,7 +359,7 @@ const CHECKS: AuditCheck[] = [
     sql: `
       SELECT 'purchase_order' AS source_type, po.id AS source_id, po.company_id
       FROM purchase_orders po JOIN containers c ON c.id = po.container_id
-      WHERE po.voucher_id IS NULL AND c.deleted_at IS NULL
+      WHERE po.voucher_id IS NULL
         AND ($1::int IS NULL OR po.company_id = $1)
       UNION ALL
       SELECT 'container_sale', cs.id, cs.company_id
