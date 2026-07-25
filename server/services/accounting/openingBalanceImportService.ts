@@ -136,7 +136,10 @@ async function loadExisting(
   hash: string,
 ): Promise<StockOpeningBalanceImportResult | null> {
   const [existing] = await db
-    .select({ payloadHash: openingBalanceImportRuns.payloadHash, result: openingBalanceImportRuns.resultJson })
+    .select({
+      payloadHash: openingBalanceImportRuns.payloadHash,
+      result: openingBalanceImportRuns.resultJson,
+    })
     .from(openingBalanceImportRuns)
     .where(
       and(
@@ -220,10 +223,7 @@ export class OpeningBalanceImportService {
             .select({ id: stockItems.id })
             .from(stockItems)
             .where(
-              and(
-                eq(stockItems.companyId, input.companyId),
-                inArray(stockItems.id, resolvedIds),
-              ),
+              and(eq(stockItems.companyId, input.companyId), inArray(stockItems.id, resolvedIds)),
             )
             .for("update");
         }

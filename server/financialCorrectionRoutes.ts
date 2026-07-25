@@ -11,10 +11,12 @@ import { AccountingIntegrityError } from "./services/accounting/voucherPostingSe
 import { VoucherReversalService } from "./services/accounting/voucherReversalService";
 import { FinalizedVoucherCorrectionService } from "./services/accounting/finalizedVoucherCorrectionService";
 import { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";
+import { OpeningBalanceImportService } from "./services/accounting/openingBalanceImportService";
 
 const correctionService = new FinalizedVoucherCorrectionService(accountingStore);
 const reversalService = new VoucherReversalService(accountingStore);
 const posSaleCorrectionService = new PosSaleCorrectionService();
+const openingBalanceImportService = new OpeningBalanceImportService();
 
 function bodyHash(body: unknown): string {
   return createHash("sha256")
@@ -141,6 +143,41 @@ async function correctVoucher(
 }
 
 export function registerFinancialCorrectionRoutes(app: Express): void {
+  app.post(
+    "/api/stock-items/import-opening-balances",
+    requireAuth,
+    requireNonPOS,
+    async (req: Request, res: Response) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) {
+          return res.status(400).json({ message: "No company selected" });
+        }
+        const openingBalances = req.body?.openingBalances;
+        if (!Array.isArray(openingBalances) || openingBalances.length === 0) {
+          return res.status(400).json({ message: "Invalid or empty opening balances array" });
+        }
+        const identity =
+          req.get("idempotency-key") ??
+          String(req.body?.idempotencyKey ?? `STOCK_OPENING_BALANCE:${bodyHash(openingBalances)}`);
+        const result = await openingBalanceImportService.importStockOpeningBalances({
+          companyId,
+          openingBalances,
+          idempotencyKey: identity,
+          createdBy: req.user?.id ?? req.session.userId ?? null,
+        });
+        return res.status(result.duplicate ? 200 : 201).json({
+          message: result.duplicate
+            ? "Opening balances were already imported"
+            : `Updated opening balances for ${result.updated} item(s).`,
+          ...result,
+        });
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
   app.patch(
     "/api/vouchers/:id/payment-receipt",
     requireAuth,
