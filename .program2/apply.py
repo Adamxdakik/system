@@ -15,13 +15,13 @@ def replace_once(path: str, old: str, new: str) -> None:
 
 
 replace_once(
-    "server/routes.ts",
-    'import { VoucherReversalService } from "./services/accounting/voucherReversalService";\nimport {\n',
-    'import { VoucherReversalService } from "./services/accounting/voucherReversalService";\nimport { registerFinancialCorrectionRoutes } from "./financialCorrectionRoutes";\nimport {\n',
+    "server/services/accounting/drizzleAccountingStore.ts",
+    "type DrizzleTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];",
+    "export type DrizzleTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];",
 )
 
 replace_once(
-    "server/routes.ts",
-    "export async function registerRoutes(app: Express): Promise<Server> {\n  // Database health check endpoint\n",
-    "export async function registerRoutes(app: Express): Promise<Server> {\n  registerFinancialCorrectionRoutes(app);\n\n  // Database health check endpoint\n",
+    "server/services/accounting/drizzleAccountingStore.ts",
+    "export class DrizzleAccountingStore implements AccountingStore {\n  transaction<T>(work: (tx: AccountingTransaction) => Promise<T>): Promise<T> {\n    return db.transaction((tx) => work(new DrizzleAccountingTransaction(tx)));\n  }\n}\n",
+    "export function accountingTransactionFor(tx: DrizzleTransaction): AccountingTransaction {\n  return new DrizzleAccountingTransaction(tx);\n}\n\nexport class DrizzleAccountingStore implements AccountingStore {\n  transaction<T>(work: (tx: AccountingTransaction) => Promise<T>): Promise<T> {\n    return db.transaction((tx) => work(accountingTransactionFor(tx)));\n  }\n}\n",
 )
