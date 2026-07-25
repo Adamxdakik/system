@@ -17,18 +17,18 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --include=dev
-      - name: Capture TypeScript baseline output
+      - name: Capture detailed TypeScript output
         shell: bash
         run: |
           set +e
-          npm run check:all:baseline > program2-ts-baseline.log 2>&1
-          echo $? > program2-ts-baseline.exit
+          npm run check:all > program2-typescript.log 2>&1
+          echo $? > program2-typescript.exit
           set -e
-          cat program2-ts-baseline.log
+          cat program2-typescript.log
       - uses: actions/upload-artifact@v4
         with:
-          name: program2-ts-baseline
+          name: program2-typescript-detailed
           path: |
-            program2-ts-baseline.log
-            program2-ts-baseline.exit
+            program2-typescript.log
+            program2-typescript.exit
           retention-days: 1
