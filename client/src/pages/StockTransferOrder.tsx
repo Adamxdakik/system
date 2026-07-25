@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment, useRef, useCallback } from "react";
+import { useState, useEffect, Fragment, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
@@ -391,12 +391,15 @@ export default function StockTransferOrder() {
     return [...items].sort((a, b) => a.sourceLocationName.localeCompare(b.sourceLocationName));
   };
 
-  const flatItems =
-    summaryData?.stockGroups.flatMap((group) =>
-      expandedGroups.has(group.id)
-        ? [...group.items].sort((a, b) => a.name.localeCompare(b.name))
-        : [],
-    ) || [];
+  const flatItems = useMemo(
+    () =>
+      summaryData?.stockGroups.flatMap((group) =>
+        expandedGroups.has(group.id)
+          ? [...group.items].sort((a, b) => a.name.localeCompare(b.name))
+          : [],
+      ) || [],
+    [summaryData, expandedGroups],
+  );
 
   const openQuantityPicker = useCallback(
     (item: StockItemData, locationId: number, locationName: string, availableQty: number) => {
