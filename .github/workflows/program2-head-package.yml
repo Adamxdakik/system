@@ -1,0 +1,23 @@
+name: Program 2 Head Package
+
+on:
+  push:
+    branches:
+      - agent/program-2-financial-integrity-final
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package current head
+        run: tar --exclude=.git -czf /tmp/program2-head.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: program2-head
+          path: /tmp/program2-head.tar.gz
+          retention-days: 1
