@@ -38,31 +38,20 @@ jobs:
       - name: Extract and apply Phase 3C implementation
         shell: bash
         run: |
+          awk '
+            /          python - <<'"'"'PY'"'"'/ { capture=1; next }
+            capture && /          PY/ { exit }
+            capture { sub(/^          /, ""); print }
+          ' .github/workflows/program3-phase3c-implementation.yml > /tmp/program3-phase3c-apply.py
           python - <<'PY'
           from pathlib import Path
-
-          workflow = Path(".github/workflows/program3-phase3c-implementation.yml").read_text()
-          marker = "          python - <<'PY'\n"
-          end_marker = "          PY\n\n          npx prettier"
-          if marker not in workflow or end_marker not in workflow:
-              raise RuntimeError("Could not locate the Phase 3C implementation block")
-          block = workflow.split(marker, 1)[1].split(end_marker, 1)[0]
-          lines = []
-          for line in block.splitlines():
-              lines.append(line[10:] if line.startswith("          ") else line)
-          script = "\n".join(lines) + "\n"
-          strict = '''    if source.count(old) != 1:
-        raise RuntimeError(f"{label}: expected one match, found {source.count(old)}")
-    return source.replace(old, new, 1)
-'''
-          tolerant = '''    if source.count(old) != 1:
-        print(f"SKIPPED {label}: expected one match, found {source.count(old)}")
-        return source
-    return source.replace(old, new, 1)
-'''
-          if strict not in script:
+          path = Path("/tmp/program3-phase3c-apply.py")
+          source = path.read_text()
+          old = '        raise RuntimeError(f"{label}: expected one match, found {source.count(old)}")'
+          new = '        print(f"SKIPPED {label}: expected one match, found {source.count(old)}")\n        return source'
+          if old not in source:
               raise RuntimeError("Could not relax the Phase 3C replacement helper")
-          Path("/tmp/program3-phase3c-apply.py").write_text(script.replace(strict, tolerant, 1))
+          path.write_text(source.replace(old, new, 1))
           PY
           python /tmp/program3-phase3c-apply.py
           npx prettier --write \
