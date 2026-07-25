@@ -3,13 +3,7 @@ import fs from "node:fs";
 const path = "server/services/accounting/posSaleCorrectionService.ts";
 let source = fs.readFileSync(path, "utf8");
 
-const restoreStart = source.indexOf("async function restoreOriginalInventory(");
-const restoreEnd = source.indexOf("\nasync function createReplacementItems(", restoreStart);
-if (restoreStart < 0 || restoreEnd < 0) {
-  throw new Error("POS inventory restoration function anchors were not found");
-}
-
-const restoredBlock = `export function calculateInventoryMovementState(
+const canonicalInventoryBlock = `export function calculateInventoryMovementState(
   currentQuantity: string,
   currentValue: string,
   quantityDelta: string,
@@ -95,30 +89,37 @@ async function restoreOriginalInventory(
 
     await tx
       .update(inventory)
-      .set({
-        ...state,
-        lastUpdated: new Date(),
-      })
+      .set({ ...state, lastUpdated: new Date() })
       .where(eq(inventory.id, row.id));
     lockedRows.set(stockItemId, { ...row, ...state });
   }
 }
 `;
-source = `${source.slice(0, restoreStart)}${restoredBlock}${source.slice(restoreEnd)}`;
 
-const rowsAnchor = "  const rows: SaleItemRow[] = [];\n  let totalCents = 0n;";
-if (!source.includes(rowsAnchor)) throw new Error("POS replacement totals anchor was not found");
+const helperStartCandidates = [
+  source.indexOf("export function calculateInventoryMovementState("),
+  source.indexOf("async function restoreOriginalInventory("),
+].filter((position) => position >= 0);
+const helperStart = Math.min(...helperStartCandidates);
+const helperEnd = source.indexOf("\nasync function createReplacementItems(", helperStart);
+if (!Number.isFinite(helperStart) || helperEnd < 0) {
+  throw new Error("POS inventory helper anchors were not found");
+}
+source = `${source.slice(0, helperStart)}${canonicalInventoryBlock}${source.slice(helperEnd)}`;
+
 source = source.replace(
-  rowsAnchor,
-  `${rowsAnchor}\n  const requestedCosts = new Map<number, bigint>();`,
+  /  const rows: SaleItemRow\[\] = \[\];\n  let totalCents = 0n;(?:\n  const requestedCosts = new Map<number, bigint>\(\);)*/,
+  "  const rows: SaleItemRow[] = [];\n  let totalCents = 0n;\n  const requestedCosts = new Map<number, bigint>();",
 );
 
-const costAnchor = "    const totalCost = lineAmount(quantity, costCents);";
-if (!source.includes(costAnchor)) throw new Error("POS line cost anchor was not found");
-source = source.replace(
-  costAnchor,
-  `${costAnchor}\n    requestedCosts.set(\n      requested.stockItemId,\n      (requestedCosts.get(requested.stockItemId) ?? 0n) + totalCost,\n    );`,
-);
+const totalCostAnchor = "    const totalCost = lineAmount(quantity, costCents);";
+const createdAnchor = "    const [created] = await tx";
+const totalCostPosition = source.indexOf(totalCostAnchor);
+const createdPosition = source.indexOf(createdAnchor, totalCostPosition);
+if (totalCostPosition < 0 || createdPosition < 0) {
+  throw new Error("POS requested-cost anchors were not found");
+}
+source = `${source.slice(0, totalCostPosition + totalCostAnchor.length)}\n    requestedCosts.set(\n      requested.stockItemId,\n      (requestedCosts.get(requested.stockItemId) ?? 0n) + totalCost,\n    );\n${source.slice(createdPosition)}`;
 
 const finalLoopStart = source.indexOf(
   "  for (const [stockItemId, requestedQuantity] of requestedTotals) {",
@@ -128,7 +129,7 @@ const returnAnchor = source.indexOf("\n\n  return { rows, totalCents };", finalL
 if (finalLoopStart < 0 || returnAnchor < 0) {
   throw new Error("POS inventory deduction loop anchors were not found");
 }
-const finalLoop = `  for (const [stockItemId, requestedQuantity] of requestedTotals) {
+const canonicalFinalLoop = `  for (const [stockItemId, requestedQuantity] of requestedTotals) {
     const row = lockedRows.get(stockItemId)!;
     const requestedCost = requestedCosts.get(stockItemId) ?? 0n;
     const state = calculateInventoryMovementState(
@@ -139,35 +140,54 @@ const finalLoop = `  for (const [stockItemId, requestedQuantity] of requestedTot
     );
     await tx
       .update(inventory)
-      .set({
-        ...state,
-        lastUpdated: new Date(),
-      })
+      .set({ ...state, lastUpdated: new Date() })
       .where(eq(inventory.id, row.id));
     lockedRows.set(stockItemId, { ...row, ...state });
   }`;
-source = `${source.slice(0, finalLoopStart)}${finalLoop}${source.slice(returnAnchor)}`;
+source = `${source.slice(0, finalLoopStart)}${canonicalFinalLoop}${source.slice(returnAnchor)}`;
 
-const cancelTypeAnchor = `      if (original.voucher.voucherType !== "Sales") {
+const optionalBlock = `      if (original.voucher.optional) {
         throw new AccountingIntegrityError(
-          "Only sales vouchers can use POS cancellation",
-          "VOUCHER_TYPE_MISMATCH",
+          "Draft POS sales must use the draft workflow",
+          "DRAFT_REQUIRES_EDIT",
           409,
         );
       }`;
-if (!source.includes(cancelTypeAnchor)) throw new Error("POS cancellation type anchor was not found");
-source = source.replace(
-  cancelTypeAnchor,
-  `${cancelTypeAnchor}\n      if (original.voucher.optional) {\n        throw new AccountingIntegrityError(\n          "Draft POS sales must use the draft workflow",\n          "DRAFT_REQUIRES_EDIT",\n          409,\n        );\n      }`,
+const cancelTypeMessage = '"Only sales vouchers can use POS cancellation"';
+const cancelTypePosition = source.indexOf(cancelTypeMessage);
+const reversedPosition = source.indexOf("      if (original.voucher.reversedAt) {", cancelTypePosition);
+if (cancelTypePosition < 0 || reversedPosition < 0) {
+  throw new Error("POS cancellation draft-check anchors were not found");
+}
+const cancellationPrefix = source.slice(0, cancelTypePosition);
+let cancellationRegion = source.slice(cancelTypePosition, reversedPosition);
+cancellationRegion = cancellationRegion.replace(
+  /(?:\n      if \(original\.voucher\.optional\) \{[\s\S]*?\n      \})+/g,
+  "",
 );
+cancellationRegion = `${cancellationRegion.trimEnd()}\n${optionalBlock}\n`;
+source = `${cancellationPrefix}${cancellationRegion}${source.slice(reversedPosition)}`;
 
-const cancelItemsAnchor = `      const originalItems = await tx
+const cancellationItemsQuery = `      const originalItems = await tx
         .select()
         .from(salesItems)
         .where(eq(salesItems.voucherId, input.voucherId));`;
-const cancelItemsPosition = source.lastIndexOf(cancelItemsAnchor);
-if (cancelItemsPosition < 0) throw new Error("POS cancellation items anchor was not found");
-const insertionPosition = cancelItemsPosition + cancelItemsAnchor.length;
-source = `${source.slice(0, insertionPosition)}\n      if (originalItems.length === 0) {\n        throw new AccountingIntegrityError(\n          "POS voucher has no sale items",\n          "POS_ITEMS_NOT_FOUND",\n          409,\n        );\n      }${source.slice(insertionPosition)}`;
+const cancellationItemsPosition = source.lastIndexOf(cancellationItemsQuery);
+const stockIdsPosition = source.indexOf(
+  "      const stockIds = [...new Set(originalItems.map((item) => item.stockItemId))];",
+  cancellationItemsPosition,
+);
+if (cancellationItemsPosition < 0 || stockIdsPosition < 0) {
+  throw new Error("POS cancellation item-check anchors were not found");
+}
+const emptyItemsBlock = `      if (originalItems.length === 0) {
+        throw new AccountingIntegrityError(
+          "POS voucher has no sale items",
+          "POS_ITEMS_NOT_FOUND",
+          409,
+        );
+      }
+`;
+source = `${source.slice(0, cancellationItemsPosition + cancellationItemsQuery.length)}\n${emptyItemsBlock}${source.slice(stockIdsPosition)}`;
 
 fs.writeFileSync(path, source);
