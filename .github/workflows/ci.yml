@@ -10,51 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  apply-accounting-race-fixture-fix:
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-
-    steps:
-      - name: Check out writable PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
-      - name: Make concurrency fixture index-agnostic
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          path = Path('scripts/test-financial-integrity-postgres.ts')
-          source = path.read_text()
-          pattern = r'ON CONFLICT \(company_id, idempotency_key\) WHERE idempotency_key IS NOT NULL\s+DO NOTHING'
-          updated, count = re.subn(pattern, 'ON CONFLICT DO NOTHING', source, count=1)
-          if count != 1:
-              raise SystemExit('Concurrency conflict target anchor not found')
-          path.write_text(updated)
-          PY
-
-      - name: Commit fixture fix
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "Accounting race fixture fix is already applied."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts/test-financial-integrity-postgres.ts
-          git commit -m "test(accounting): make concurrency conflict index-agnostic"
-          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
-
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
