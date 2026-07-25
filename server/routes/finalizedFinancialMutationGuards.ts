@@ -160,11 +160,7 @@ export function registerFinalizedFinancialMutationGuards(
   requireAuth: RequestHandler,
 ): void {
   app.use("/api/vouchers/:id", requireAuth, guardFinalizedMutation(voucherById));
-  app.use(
-    "/api/voucher-entries/:id",
-    requireAuth,
-    guardFinalizedMutation(voucherByEntryId),
-  );
+  app.use("/api/voucher-entries/:id", requireAuth, guardFinalizedMutation(voucherByEntryId));
   app.use(
     "/api/stock-transfer-items/:id",
     requireAuth,
@@ -175,14 +171,6 @@ export function registerFinalizedFinancialMutationGuards(
     requireAuth,
     guardFinalizedMutation(voucherByAdjustmentItemId),
   );
-  app.use(
-    "/api/stock-transfers/:id",
-    requireAuth,
-    guardFinalizedMutation(voucherByTransferId),
-  );
-  app.use(
-    "/api/stock-adjustments/:id",
-    requireAuth,
-    guardFinalizedMutation(voucherByAdjustmentId),
-  );
+  app.use("/api/stock-transfers/:id", requireAuth, guardFinalizedMutation(voucherByTransferId));
+  app.use("/api/stock-adjustments/:id", requireAuth, guardFinalizedMutation(voucherByAdjustmentId));
 }

@@ -198,6 +198,58 @@ async function lockInventoryRows(
   return new Map(rows.map((row) => [row.stockItemId, row]));
 }
 
+export function calculateInventoryMovementState(
+  currentQuantity: string,
+  currentValue: string,
+  quantityDelta: string,
+  valueDelta: string,
+): { quantity: string; totalValue: string; averageRate: string } {
+  const currentQuantityMinor = decimalToScaledInteger(currentQuantity, 3);
+  const currentValueMinor = decimalToScaledInteger(currentValue, 2);
+  const quantityDeltaMinor = decimalToScaledInteger(quantityDelta, 3);
+  const valueDeltaMinor = decimalToScaledInteger(valueDelta, 2);
+  const nextQuantity = currentQuantityMinor + quantityDeltaMinor;
+  let nextValue = currentValueMinor + valueDeltaMinor;
+
+  if (nextQuantity === 0n) nextValue = 0n;
+
+  let averageRate = 0n;
+  if (nextQuantity !== 0n) {
+    const numerator = nextValue * 1000n;
+    const numeratorAbs = numerator < 0n ? -numerator : numerator;
+    const denominatorAbs = nextQuantity < 0n ? -nextQuantity : nextQuantity;
+    const rounded = (numeratorAbs + denominatorAbs / 2n) / denominatorAbs;
+    averageRate = numerator < 0n !== nextQuantity < 0n ? -rounded : rounded;
+    if (averageRate < 0n) {
+      throw new AccountingIntegrityError(
+        "Inventory quantity and value have inconsistent signs",
+        "INVALID_INVENTORY_VALUE_STATE",
+        409,
+      );
+    }
+  }
+
+  return {
+    quantity: scaledIntegerToDecimal(nextQuantity, 3),
+    totalValue: scaledIntegerToDecimal(nextValue, 2),
+    averageRate: scaledIntegerToDecimal(averageRate, 2),
+  };
+}
+
+function aggregateRestorationTotals(
+  items: SaleItemRow[],
+): Map<number, { quantity: bigint; value: bigint }> {
+  const totals = new Map<number, { quantity: bigint; value: bigint }>();
+  for (const item of items) {
+    const current = totals.get(item.stockItemId) ?? { quantity: 0n, value: 0n };
+    totals.set(item.stockItemId, {
+      quantity: current.quantity + decimalToScaledInteger(item.quantity, 3),
+      value: current.value + decimalToScaledInteger(item.totalCost, 2),
+    });
+  }
+  return totals;
+}
+
 async function restoreOriginalInventory(
   tx: DrizzleTransaction,
   companyId: number,
@@ -205,55 +257,39 @@ async function restoreOriginalInventory(
   originalItems: SaleItemRow[],
   lockedRows: Map<number, InventoryRow>,
 ): Promise<void> {
-  const restoreTotals = aggregateQuantities(originalItems);
-  for (const [stockItemId, restoreQuantity] of restoreTotals) {
-    let row = lockedRows.get(stockItemId);
+  const restoreTotals = aggregateRestorationTotals(originalItems);
+  for (const [stockItemId, restore] of restoreTotals) {
+    const row = lockedRows.get(stockItemId);
+    const state = calculateInventoryMovementState(
+      row?.quantity ?? "0",
+      row?.totalValue ?? "0",
+      scaledIntegerToDecimal(restore.quantity, 3),
+      scaledIntegerToDecimal(restore.value, 2),
+    );
+
     if (!row) {
-      const related = originalItems.filter((item) => item.stockItemId === stockItemId);
-      const totalQuantity = related.reduce(
-        (sum, item) => sum + decimalToScaledInteger(item.quantity, 3),
-        0n,
-      );
-      const totalCost = related.reduce(
-        (sum, item) => sum + decimalToScaledInteger(item.totalCost, 2),
-        0n,
-      );
-      const averageRate =
-        totalQuantity > 0n
-          ? scaledIntegerToDecimal(roundDivide(totalCost * 1000n, totalQuantity), 2)
-          : "0.00";
       const [created] = await tx
         .insert(inventory)
         .values({
           companyId,
           locationId,
           stockItemId,
-          quantity: "0.000",
-          averageRate,
-          totalValue: "0.00",
+          ...state,
           lastUpdated: new Date(),
         })
         .returning();
-      row = created;
       lockedRows.set(stockItemId, created);
+      continue;
     }
 
-    const currentQuantity = decimalToScaledInteger(row.quantity, 3);
-    const restoredQuantity = currentQuantity + restoreQuantity;
-    const rate = decimalToScaledInteger(row.averageRate, 2);
     await tx
       .update(inventory)
       .set({
-        quantity: scaledIntegerToDecimal(restoredQuantity, 3),
-        totalValue: scaledIntegerToDecimal(lineAmount(restoredQuantity, rate), 2),
+        ...state,
         lastUpdated: new Date(),
       })
       .where(eq(inventory.id, row.id));
-    lockedRows.set(row.stockItemId, {
-      ...row,
-      quantity: scaledIntegerToDecimal(restoredQuantity, 3),
-      totalValue: scaledIntegerToDecimal(lineAmount(restoredQuantity, rate), 2),
-    });
+    lockedRows.set(stockItemId, { ...row, ...state });
   }
 }
 
@@ -294,6 +330,7 @@ async function createReplacementItems(
 
   const rows: SaleItemRow[] = [];
   let totalCents = 0n;
+  const requestedCosts = new Map<number, bigint>();
   for (const requested of requestedItems) {
     const quantity = decimalToScaledInteger(requested.quantity, 3);
     if (quantity <= 0n) {
@@ -326,6 +363,10 @@ async function createReplacementItems(
 
     const totalSales = lineAmount(quantity, sellingPrice);
     const totalCost = lineAmount(quantity, costCents);
+    requestedCosts.set(
+      requested.stockItemId,
+      (requestedCosts.get(requested.stockItemId) ?? 0n) + totalCost,
+    );
     const [created] = await tx
       .insert(salesItems)
       .values({
@@ -345,17 +386,21 @@ async function createReplacementItems(
 
   for (const [stockItemId, requestedQuantity] of requestedTotals) {
     const row = lockedRows.get(stockItemId)!;
-    const currentQuantity = decimalToScaledInteger(row.quantity, 3);
-    const finalQuantity = currentQuantity - requestedQuantity;
-    const rate = decimalToScaledInteger(row.averageRate, 2);
+    const requestedCost = requestedCosts.get(stockItemId) ?? 0n;
+    const state = calculateInventoryMovementState(
+      row.quantity,
+      row.totalValue,
+      scaledIntegerToDecimal(-requestedQuantity, 3),
+      scaledIntegerToDecimal(-requestedCost, 2),
+    );
     await tx
       .update(inventory)
       .set({
-        quantity: scaledIntegerToDecimal(finalQuantity, 3),
-        totalValue: scaledIntegerToDecimal(lineAmount(finalQuantity, rate), 2),
+        ...state,
         lastUpdated: new Date(),
       })
       .where(eq(inventory.id, row.id));
+    lockedRows.set(stockItemId, { ...row, ...state });
   }
 
   return { rows, totalCents };
@@ -583,6 +628,13 @@ export class PosSaleCorrectionService {
           409,
         );
       }
+      if (original.voucher.optional) {
+        throw new AccountingIntegrityError(
+          "Draft POS sales must use the draft workflow",
+          "DRAFT_REQUIRES_EDIT",
+          409,
+        );
+      }
       if (original.voucher.reversedAt) {
         throw new AccountingIntegrityError(
           "POS voucher has already been reversed",
@@ -616,6 +668,13 @@ export class PosSaleCorrectionService {
         .select()
         .from(salesItems)
         .where(eq(salesItems.voucherId, input.voucherId));
+      if (originalItems.length === 0) {
+        throw new AccountingIntegrityError(
+          "POS voucher has no sale items",
+          "POS_ITEMS_NOT_FOUND",
+          409,
+        );
+      }
       const stockIds = [...new Set(originalItems.map((item) => item.stockItemId))];
       const lockedRows = await lockInventoryRows(tx, input.companyId, saleLocationId, stockIds);
       await restoreOriginalInventory(
