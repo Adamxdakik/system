@@ -29,6 +29,27 @@ jobs:
       - name: Install exact dependencies
         run: npm ci --include=dev
 
+      - name: Format payroll completion files in workspace
+        run: >-
+          npx prettier --write
+          server/services/accounting/payrollPostingService.ts
+          server/routes/transactionalPayrollRoutes.ts
+          server/routes/finalizedFinancialMutationGuards.ts
+          docs/accounting-test-matrix.md
+          docs/program-2-final-audit.md
+
+      - name: Upload formatted payroll files
+        uses: actions/upload-artifact@v4
+        with:
+          name: program2-formatted-payroll-files
+          path: |
+            server/services/accounting/payrollPostingService.ts
+            server/routes/transactionalPayrollRoutes.ts
+            server/routes/finalizedFinancialMutationGuards.ts
+            docs/accounting-test-matrix.md
+            docs/program-2-final-audit.md
+          retention-days: 1
+
       - name: Select changed-file comparison
         shell: bash
         run: |
