@@ -29,6 +29,7 @@
     "test:accounting:ci": "npm run test:accounting:unit && npm run test:accounting:reports",
     "test:watch": "vitest",
     "audit:financial": "tsx scripts/audit-financial-integrity.ts",
+    "audit:supplier-companies": "tsx scripts/audit-supplier-company-assignments.ts",
     "repair:financial": "tsx scripts/repair-financial-integrity.ts",
     "db:push": "drizzle-kit push",
     "db:migrate": "tsx scripts/migrate.ts",
