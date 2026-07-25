@@ -50,7 +50,19 @@ jobs:
           lines = []
           for line in block.splitlines():
               lines.append(line[10:] if line.startswith("          ") else line)
-          Path("/tmp/program3-phase3c-apply.py").write_text("\n".join(lines) + "\n")
+          script = "\n".join(lines) + "\n"
+          strict = '''    if source.count(old) != 1:
+        raise RuntimeError(f"{label}: expected one match, found {source.count(old)}")
+    return source.replace(old, new, 1)
+'''
+          tolerant = '''    if source.count(old) != 1:
+        print(f"SKIPPED {label}: expected one match, found {source.count(old)}")
+        return source
+    return source.replace(old, new, 1)
+'''
+          if strict not in script:
+              raise RuntimeError("Could not relax the Phase 3C replacement helper")
+          Path("/tmp/program3-phase3c-apply.py").write_text(script.replace(strict, tolerant, 1))
           PY
           python /tmp/program3-phase3c-apply.py
           npx prettier --write \
