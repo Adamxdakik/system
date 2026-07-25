@@ -382,7 +382,7 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-6 shrink-0 text-sm">
+                      <div className="flex items-center gap-5 shrink-0 text-sm">
                         <div className="text-right hidden sm:block">
                           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Cost</div>
                           <div className="font-mono text-sm">{fmtCurrency(invCost)}</div>
@@ -397,6 +397,7 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                           <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</div>
                           <div className="font-mono font-bold text-sm">{fmtCurrency(inv.totalSales)}</div>
                         </div>
+                        <div className="w-px self-stretch bg-border/50 hidden sm:block" />
                         <Button
                           variant="ghost"
                           size="sm"
