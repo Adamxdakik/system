@@ -1,0 +1,21 @@
+name: Program 2 Final Source Audit
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package exact PR source
+        run: tar --exclude=.git -czf /tmp/program2-final-source.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: program2-final-source
+          path: /tmp/program2-final-source.tar.gz
+          retention-days: 1
