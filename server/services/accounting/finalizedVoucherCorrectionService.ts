@@ -32,10 +32,20 @@ export class FinalizedVoucherCorrectionService {
   correct(input: FinalizedVoucherCorrectionInput): Promise<FinalizedVoucherCorrectionResult> {
     const reversalKey = `${input.idempotencyKey}:reversal`;
     const replacementKey = `${input.idempotencyKey}:replacement`;
+    const replacementInput: VoucherPostingInput = {
+      ...input.replacement,
+      companyId: input.companyId,
+      sourceType: "VOUCHER_REPLACEMENT",
+      sourceId: `${input.voucherId}:${input.idempotencyKey}`,
+      idempotencyKey: replacementKey,
+      createdBy: input.createdBy,
+      optional: false,
+    };
 
     return this.store.transaction(async (tx) => {
       const existingReplacement = await tx.findByIdempotencyKey(input.companyId, replacementKey);
       if (existingReplacement) {
+        const validatedReplacement = await postVoucherInTransaction(tx, replacementInput);
         const existingReversal = await tx.findBySource(
           input.companyId,
           "VOUCHER_REVERSAL",
@@ -51,7 +61,7 @@ export class FinalizedVoucherCorrectionService {
         return {
           originalVoucherId: input.voucherId,
           reversal: { ...existingReversal, duplicate: true },
-          replacement: { ...existingReplacement, duplicate: true },
+          replacement: { ...validatedReplacement, duplicate: true },
           duplicate: true,
         };
       }
@@ -121,15 +131,7 @@ export class FinalizedVoucherCorrectionService {
         await tx.markReversed(original.voucher.id, new Date());
       }
 
-      const replacement = await postVoucherInTransaction(tx, {
-        ...input.replacement,
-        companyId: input.companyId,
-        sourceType: "VOUCHER_REPLACEMENT",
-        sourceId: `${input.voucherId}:${input.idempotencyKey}`,
-        idempotencyKey: replacementKey,
-        createdBy: input.createdBy,
-        optional: false,
-      });
+      const replacement = await postVoucherInTransaction(tx, replacementInput);
 
       return {
         originalVoucherId: original.voucher.id,
