@@ -493,7 +493,17 @@ export default function StockTransferOrder() {
         return { row, col };
       });
     },
-    [flatItems, selectedLocations, quantityPicker.open, openQuantityPicker, focusedCell, navigate],
+    [
+      flatItems,
+      selectedLocations,
+      quantityPicker.open,
+      openQuantityPicker,
+      focusedCell,
+      navigate,
+      orderItems,
+      destinationLocationId,
+      expandedGroups,
+    ],
   );
 
   const handleCellClick = (
