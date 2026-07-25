@@ -1,0 +1,175 @@
+--- a/server/storage.ts
++++ b/server/storage.ts
+@@ -1,6 +1,10 @@
+ import { eq, and, or, sql, inArray, desc, ne, isNull } from "drizzle-orm";
+ import { db } from "./db";
+ import * as schema from "@shared/schema";
++import {
++  containerOffloadInventoryEvidence,
++  containerOffloadVoucherLinks,
++} from "./services/accounting/containerOffloadEvidenceSchema";
+ import type {
+   User,
+   InsertUser,
+@@ -2474,6 +2478,22 @@
+     const voucherDate = offloadDate || new Date().toISOString().split("T")[0];
+ 
+     return await db.transaction(async (tx) => {
++      const inventoryEvidence: Array<{
++        inventoryId: number;
++        stockItemId: number;
++        beforeExists: boolean;
++        beforeQuantity: string;
++        beforeAverageRate: string;
++        beforeTotalValue: string;
++        afterQuantity: string;
++        afterAverageRate: string;
++        afterTotalValue: string;
++      }> = [];
++      const offloadVoucherLinks: Array<{
++        voucherId: number;
++        role: "DUTIES" | "TRANSPORT" | "ADDITIONAL_CHARGE";
++      }> = [];
++
+       // Add inventory to destination location with weighted average cost
+       for (const [stockItemId, data] of Array.from(itemsMap.entries())) {
+         // Safety check for division by zero
+@@ -2527,6 +2547,17 @@
+                 lastUpdated: new Date(),
+               })
+               .where(eq(schema.inventory.id, existing.id));
++            inventoryEvidence.push({
++              inventoryId: existing.id,
++              stockItemId,
++              beforeExists: true,
++              beforeQuantity: existing.quantity,
++              beforeAverageRate: existing.averageRate,
++              beforeTotalValue: existing.totalValue,
++              afterQuantity: data.totalQuantity.toFixed(3),
++              afterAverageRate: newRate.toFixed(2),
++              afterTotalValue: newTotalValue.toFixed(2),
++            });
+             continue;
+           }
+ 
+@@ -2560,17 +2591,42 @@
+               lastUpdated: new Date(),
+             })
+             .where(eq(schema.inventory.id, existing.id));
++          inventoryEvidence.push({
++            inventoryId: existing.id,
++            stockItemId,
++            beforeExists: true,
++            beforeQuantity: existing.quantity,
++            beforeAverageRate: existing.averageRate,
++            beforeTotalValue: existing.totalValue,
++            afterQuantity: newQty.toFixed(3),
++            afterAverageRate: weightedAvgRate.toFixed(2),
++            afterTotalValue: newTotalValue.toFixed(2),
++          });
+         } else {
+           // Create new inventory record
+           const totalValue = data.totalQuantity * newRate;
+-          await tx.insert(schema.inventory).values({
+-            companyId: location.companyId,
+-            locationId,
++          const [createdInventory] = await tx
++            .insert(schema.inventory)
++            .values({
++              companyId: location.companyId,
++              locationId,
++              stockItemId,
++              quantity: data.totalQuantity.toString(),
++              averageRate: newRate.toFixed(2),
++              totalValue: totalValue.toFixed(2),
++              lastUpdated: new Date(),
++            })
++            .returning();
++          inventoryEvidence.push({
++            inventoryId: createdInventory.id,
+             stockItemId,
+-            quantity: data.totalQuantity.toString(),
+-            averageRate: newRate.toFixed(2),
+-            totalValue: totalValue.toFixed(2),
+-            lastUpdated: new Date(),
++            beforeExists: false,
++            beforeQuantity: "0.000",
++            beforeAverageRate: "0.00",
++            beforeTotalValue: "0.00",
++            afterQuantity: data.totalQuantity.toFixed(3),
++            afterAverageRate: newRate.toFixed(2),
++            afterTotalValue: totalValue.toFixed(2),
+           });
+         }
+       }
+@@ -2679,6 +2735,7 @@
+             totalAmount: duties,
+           })
+           .returning();
++        offloadVoucherLinks.push({ voucherId: voucher.id, role: "DUTIES" });
+ 
+         // Debit: Duties Expense (Expense increases)
+         await tx.insert(schema.voucherEntries).values({
+@@ -2718,6 +2775,7 @@
+             totalAmount: transportFees,
+           })
+           .returning();
++        offloadVoucherLinks.push({ voucherId: voucher.id, role: "TRANSPORT" });
+ 
+         // Debit: Transport Expense (Expense increases)
+         await tx.insert(schema.voucherEntries).values({
+@@ -2753,6 +2811,7 @@
+               totalAmount: charge.amount.toFixed(2),
+             })
+             .returning();
++          offloadVoucherLinks.push({ voucherId: voucher.id, role: "ADDITIONAL_CHARGE" });
+ 
+           // Debit: Additional Charge Expense (Expense increases)
+           const additionalExpenseAccountId = await findOrCreateExpenseAccount(
+@@ -2796,6 +2855,28 @@
+         })
+         .returning();
+ 
++      if (inventoryEvidence.length > 0) {
++        await tx.insert(containerOffloadInventoryEvidence).values(
++          inventoryEvidence.map((row) => ({
++            ...row,
++            offloadId: offload.id,
++            containerId,
++            companyId: container.companyId,
++            locationId,
++          })),
++        );
++      }
++      if (offloadVoucherLinks.length > 0) {
++        await tx.insert(containerOffloadVoucherLinks).values(
++          offloadVoucherLinks.map((row) => ({
++            ...row,
++            offloadId: offload.id,
++            containerId,
++            companyId: container.companyId,
++          })),
++        );
++      }
++
+       return offload;
+     });
+   }
+--- a/server/financialCorrectionRoutes.ts
++++ b/server/financialCorrectionRoutes.ts
+@@ -13,6 +13,7 @@
+ import { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";
+ import { OpeningBalanceImportService } from "./services/accounting/openingBalanceImportService";
+ import { SalaryAdvanceService } from "./services/accounting/salaryAdvanceService";
++import { registerContainerOffloadReversalRoutes } from "./routes/containerOffloadReversalRoutes";
+ 
+ const correctionService = new FinalizedVoucherCorrectionService(accountingStore);
+ const reversalService = new VoucherReversalService(accountingStore);
+@@ -145,6 +146,7 @@
+ }
+ 
+ export function registerFinancialCorrectionRoutes(app: Express): void {
++  registerContainerOffloadReversalRoutes(app);
+   app.patch(
+     "/api/vouchers/:id",
+     requireAuth,
