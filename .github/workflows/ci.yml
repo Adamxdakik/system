@@ -116,7 +116,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          npx tsx scripts/test-payroll-posting-postgres.ts --confirm-disposable > payroll-postgres.log 2>&1
+          npx tsx --tsconfig tsconfig.tests.json scripts/test-payroll-posting-postgres.ts --confirm-disposable > payroll-postgres.log 2>&1
           status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           cat payroll-postgres.log
