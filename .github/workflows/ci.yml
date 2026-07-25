@@ -10,6 +10,51 @@ permissions:
   contents: read
 
 jobs:
+  phase3c-lint-diagnostic:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Capture Phase 3C lint output
+        shell: bash
+        run: |
+          npx eslint \
+            client/src/pages/POS.tsx \
+            client/src/pages/PurchaseOrderEdit.tsx \
+            client/src/pages/AddContainer.tsx \
+            > docs/program3-phase3c-lint.txt 2>&1 || true
+
+      - name: Restore permanent workflow and commit diagnostic
+        shell: bash
+        run: |
+          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/ci.yml docs/program3-phase3c-lint.txt
+          git commit -m "chore(program-3): capture phase 3C lint warning"
+          git pull --rebase origin "${{ github.event.pull_request.head.ref }}"
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
