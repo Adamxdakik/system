@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "./db";
 import { requireAuth, requireNonPOS, requireRole } from "./auth";
-import { vouchers } from "@shared/schema";
+import { stockAdjustmentVouchers, stockTransferVouchers, vouchers } from "@shared/schema";
 import { accountingStore } from "./services/accounting/drizzleAccountingStore";
 import type { PostingEntryInput, VoucherPostingInput } from "./services/accounting/types";
 import { AccountingIntegrityError } from "./services/accounting/voucherPostingService";
@@ -145,6 +145,103 @@ async function correctVoucher(
 }
 
 export function registerFinancialCorrectionRoutes(app: Express): void {
+  app.patch(
+    "/api/vouchers/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const voucherId = Number(req.params.id);
+        const companyId = req.session.currentCompanyId;
+        if (!companyId || !Number.isInteger(voucherId) || voucherId <= 0) return next();
+        const [voucher] = await db
+          .select()
+          .from(vouchers)
+          .where(and(eq(vouchers.id, voucherId), eq(vouchers.companyId, companyId)))
+          .limit(1);
+        if (!voucher || voucher.optional) return next();
+        const [transfer] = await db
+          .select({ id: stockTransferVouchers.id })
+          .from(stockTransferVouchers)
+          .where(eq(stockTransferVouchers.voucherId, voucherId))
+          .limit(1);
+        const [adjustment] = await db
+          .select({ id: stockAdjustmentVouchers.id })
+          .from(stockAdjustmentVouchers)
+          .where(eq(stockAdjustmentVouchers.voucherId, voucherId))
+          .limit(1);
+        if (transfer || adjustment) {
+          return res.status(409).json({
+            message:
+              "Finalized stock movements are immutable. Cancel/reverse this movement and create a replacement instead.",
+            code: "FINALIZED_INVENTORY_MOVEMENT_IMMUTABLE",
+          });
+        }
+        return next();
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
+  app.put(
+    "/api/stock-transfers/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const transferId = Number(req.params.id);
+        const companyId = req.session.currentCompanyId;
+        if (!companyId || !Number.isInteger(transferId) || transferId <= 0) return next();
+        const [movement] = await db
+          .select({ optional: vouchers.optional })
+          .from(stockTransferVouchers)
+          .innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id))
+          .where(and(eq(stockTransferVouchers.id, transferId), eq(vouchers.companyId, companyId)))
+          .limit(1);
+        if (!movement) return next();
+        if (movement.optional) return next();
+        return res.status(409).json({
+          message:
+            "Finalized stock transfers cannot be edited in place. Reverse and replace the transfer.",
+          code: "FINALIZED_STOCK_TRANSFER_IMMUTABLE",
+        });
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
+  app.put(
+    "/api/stock-adjustments/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const adjustmentId = Number(req.params.id);
+        const companyId = req.session.currentCompanyId;
+        if (!companyId || !Number.isInteger(adjustmentId) || adjustmentId <= 0) return next();
+        const [movement] = await db
+          .select({ optional: vouchers.optional })
+          .from(stockAdjustmentVouchers)
+          .innerJoin(vouchers, eq(stockAdjustmentVouchers.voucherId, vouchers.id))
+          .where(
+            and(eq(stockAdjustmentVouchers.id, adjustmentId), eq(vouchers.companyId, companyId)),
+          )
+          .limit(1);
+        if (!movement) return next();
+        if (movement.optional) return next();
+        return res.status(409).json({
+          message:
+            "Finalized stock adjustments cannot be edited in place. Reverse and replace the adjustment.",
+          code: "FINALIZED_STOCK_ADJUSTMENT_IMMUTABLE",
+        });
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
   app.get(
     "/api/salary-advances",
     requireAuth,
