@@ -38,11 +38,13 @@ jobs:
       - name: Format scoped Program 2 source
         run: >-
           npx prettier --write
+          shared/schema.ts
           server/financialCorrectionRoutes.ts
           server/services/accounting/drizzleAccountingStore.ts
           server/services/accounting/finalizedVoucherCorrectionService.ts
           server/services/accounting/openingBalanceImportService.ts
           server/services/accounting/posSaleCorrectionService.ts
+          server/services/accounting/salaryAdvanceService.ts
           server/services/accounting/voucherPostingService.ts
           server/__tests__/accountingIdempotencyRegression.test.ts
           server/__tests__/finalizedVoucherCorrection.test.ts
