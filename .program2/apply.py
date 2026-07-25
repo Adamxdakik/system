@@ -1,84 +1,28 @@
 from pathlib import Path
 
 
-def replace_once(path: str, old: str, new: str) -> None:
+def collapse_duplicate(path: str, block: str) -> None:
     file_path = Path(path)
     text = file_path.read_text()
-    count = text.count(old)
-    if count == 0:
-        if new in text:
-            return
-        raise RuntimeError(f"Expected patch target was not found in {path}")
-    if count != 1:
-        raise RuntimeError(f"Expected one patch target in {path}, found {count}")
-    file_path.write_text(text.replace(old, new, 1))
+    doubled = f"{block}\n{block}"
+    if doubled in text:
+        file_path.write_text(text.replace(doubled, block, 1))
+        return
+    if block not in text:
+        raise RuntimeError(f"Expected block was not found in {path}")
 
 
-replace_once(
+collapse_duplicate(
     "server/financialCorrectionRoutes.ts",
-    'import { FinalizedVoucherCorrectionService } from "./services/accounting/finalizedVoucherCorrectionService";\n',
-    'import { FinalizedVoucherCorrectionService } from "./services/accounting/finalizedVoucherCorrectionService";\nimport { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";\n',
+    'import { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";',
 )
 
-replace_once(
+collapse_duplicate(
     "server/financialCorrectionRoutes.ts",
-    "const reversalService = new VoucherReversalService(accountingStore);\n",
-    "const reversalService = new VoucherReversalService(accountingStore);\nconst posSaleCorrectionService = new PosSaleCorrectionService();\n",
+    "const posSaleCorrectionService = new PosSaleCorrectionService();",
 )
 
-replace_once(
-    "server/financialCorrectionRoutes.ts",
-    """  const role = req.session.currentRole;
-  if (role !== "Admin" && role !== "Owner") {
-    if (role !== "Manager") {
-      throw new AccountingIntegrityError(
-        "Insufficient permissions to edit vouchers",
-        "VOUCHER_EDIT_FORBIDDEN",
-        403,
-      );
-    }
-    const voucherDate = new Date(`${voucher.voucherDate}T00:00:00`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (voucherDate.getTime() !== today.getTime()) {
-      throw new AccountingIntegrityError(
-        "Managers can only edit today's vouchers",
-        "VOUCHER_EDIT_FORBIDDEN",
-        403,
-      );
-    }
-  }
-""",
-    """  const role = req.session.currentRole;
-  if (role !== "Admin" && role !== "Owner") {
-    const isSameDayEditor = role === "Manager" || /^POS\\d+$/.test(role ?? "");
-    if (!isSameDayEditor) {
-      throw new AccountingIntegrityError(
-        "Insufficient permissions to edit vouchers",
-        "VOUCHER_EDIT_FORBIDDEN",
-        403,
-      );
-    }
-    const voucherDate = new Date(`${voucher.voucherDate}T00:00:00`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (voucherDate.getTime() !== today.getTime()) {
-      throw new AccountingIntegrityError(
-        "Managers and POS users can only edit today's vouchers",
-        "VOUCHER_EDIT_FORBIDDEN",
-        403,
-      );
-    }
-  }
-""",
-)
-
-replace_once(
-    "server/financialCorrectionRoutes.ts",
-    """  app.delete(
-    "/api/vouchers/:id",
-""",
-    """  app.put(
+route = '''  app.put(
     "/api/vouchers/:id/sales",
     requireAuth,
     async (req: Request, res: Response, next: NextFunction) => {
@@ -122,50 +66,5 @@ replace_once(
         return sendError(res, error);
       }
     },
-  );
-
-  app.delete(
-    "/api/vouchers/:id",
-""",
-)
-
-replace_once(
-    "server/financialCorrectionRoutes.ts",
-    """        const domainSourceTypes = new Set([
-          "POS_SALE",
-          "POS_SALE_REPLACEMENT",
-          "PURCHASE",
-""",
-    """        const identity =
-          req.get("idempotency-key") ??
-          String(req.body?.idempotencyKey ?? `DELETE_VOUCHER:${voucherId}`);
-        if (
-          existing.voucherType === "Sales" ||
-          existing.sourceType === "POS_SALE" ||
-          existing.sourceType === "POS_SALE_REPLACEMENT"
-        ) {
-          const result = await posSaleCorrectionService.cancel({
-            companyId: req.session.currentCompanyId!,
-            voucherId,
-            idempotencyKey: identity,
-            createdBy: req.user?.id ?? req.session.userId ?? null,
-            reason: String(req.body?.reason ?? `Cancellation of ${existing.voucherNumber}`),
-          });
-          return res.status(result.duplicate ? 200 : 201).json(result);
-        }
-
-        const domainSourceTypes = new Set([
-          "PURCHASE",
-""",
-)
-
-replace_once(
-    "server/financialCorrectionRoutes.ts",
-    """        const identity =
-          req.get("idempotency-key") ??
-          String(req.body?.idempotencyKey ?? `DELETE_VOUCHER:${voucherId}`);
-        const result = await reversalService.reverse({
-""",
-    """        const result = await reversalService.reverse({
-""",
-)
+  );'''
+collapse_duplicate("server/financialCorrectionRoutes.ts", route)
