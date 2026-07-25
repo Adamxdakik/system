@@ -1,0 +1,43 @@
+name: Program 2 PR Apply Patch
+
+on:
+  pull_request:
+    branches:
+      - agent/program-2-ci-base
+    paths:
+      - .program2/apply.ready
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/program-2-financial-integrity-final'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out Program 2 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-2-financial-integrity-final
+          fetch-depth: 0
+
+      - name: Apply deterministic Program 2 patches
+        run: python .program2/apply.py
+
+      - name: Remove one-time marker
+        run: rm -f .program2/apply.ready
+
+      - name: Commit patched files
+        shell: bash
+        run: |
+          git config user.name "program2-integrity-bot"
+          git config user.email "program2-integrity-bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No patch changes were required"
+            exit 0
+          fi
+          git commit -m "Apply Program 2 route and test corrections"
+          git push origin HEAD:agent/program-2-financial-integrity-final
