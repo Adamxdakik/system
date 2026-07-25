@@ -172,7 +172,7 @@ function Router({ user }: { user: any }) {
         <Route path="/payroll" component={Payroll} />
         <Route path="/create" component={AccountingCreate} />
         <Route path="/import-stock-items" component={ImportStockItems} />
-        <Route path="/sales-report" component={SalesReport} />
+        <Route path="/sales-report">{() => <SalesReport />}</Route>
         <Route path="/voucher-detail/:voucherId" component={VoucherDetail} />
         <Route path="/sold-containers" component={SoldContainers} />
         <Route path="/moto-assembly">{() => <Assembly initialTab="assembly" />}</Route>

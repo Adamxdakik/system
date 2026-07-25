@@ -27,7 +27,10 @@ const excluded = [
 const lintExtensions = new Set([".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"]);
 
 function git(args) {
-  return execFileSync("git", args, { encoding: "utf8" });
+  return execFileSync("git", args, {
+    encoding: "utf8",
+    maxBuffer: 50 * 1024 * 1024,
+  });
 }
 
 function isExcluded(file) {
