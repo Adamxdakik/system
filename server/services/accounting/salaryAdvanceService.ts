@@ -1,13 +1,8 @@
 import { createHash } from "node:crypto";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 
 import { db } from "../../db";
-import {
-  employees,
-  ledgerAccounts,
-  salaryAdvanceDeductions,
-  salaryAdvances,
-} from "@shared/schema";
+import { employees, ledgerAccounts, salaryAdvanceDeductions, salaryAdvances } from "@shared/schema";
 import { accountingTransactionFor } from "./drizzleAccountingStore";
 import { decimalToScaledInteger, normalizeMoney } from "./money";
 import type { PostingResult } from "./types";
@@ -67,6 +62,28 @@ function reversalEntries(entries: PostingResult["entries"]) {
 }
 
 export class SalaryAdvanceService {
+  listActive(companyId: number) {
+    return db
+      .select()
+      .from(salaryAdvances)
+      .where(and(eq(salaryAdvances.companyId, companyId), isNull(salaryAdvances.cancelledAt)))
+      .orderBy(desc(salaryAdvances.createdAt));
+  }
+
+  listActiveForEmployee(companyId: number, employeeId: number) {
+    return db
+      .select()
+      .from(salaryAdvances)
+      .where(
+        and(
+          eq(salaryAdvances.companyId, companyId),
+          eq(salaryAdvances.employeeId, employeeId),
+          isNull(salaryAdvances.cancelledAt),
+        ),
+      )
+      .orderBy(desc(salaryAdvances.createdAt));
+  }
+
   create(input: CreateSalaryAdvanceInput): Promise<SalaryAdvanceCreationResult> {
     const amount = normalizeMoney(input.amount);
     if (decimalToScaledInteger(amount, 2) <= 0n) {
@@ -133,8 +150,7 @@ export class SalaryAdvanceService {
         voucherType: "Payment",
         voucherNumber: `SA-${suffix(input.idempotencyKey)}`,
         transactionDate: input.advanceDate,
-        description:
-          input.notes ?? `Salary advance for ${employee.firstName} ${employee.lastName}`,
+        description: input.notes ?? `Salary advance for ${employee.firstName} ${employee.lastName}`,
         currency: "USD",
         exchangeRate: "1",
         sourceType: "SALARY_ADVANCE",
@@ -245,7 +261,10 @@ export class SalaryAdvanceService {
         );
       }
 
-      const original = await accountingTx.loadVoucherForReversal(input.companyId, advance.voucherId);
+      const original = await accountingTx.loadVoucherForReversal(
+        input.companyId,
+        advance.voucherId,
+      );
       if (!original) {
         throw new AccountingIntegrityError(
           "Salary-advance voucher not found",

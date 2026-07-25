@@ -12,11 +12,13 @@ import { VoucherReversalService } from "./services/accounting/voucherReversalSer
 import { FinalizedVoucherCorrectionService } from "./services/accounting/finalizedVoucherCorrectionService";
 import { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";
 import { OpeningBalanceImportService } from "./services/accounting/openingBalanceImportService";
+import { SalaryAdvanceService } from "./services/accounting/salaryAdvanceService";
 
 const correctionService = new FinalizedVoucherCorrectionService(accountingStore);
 const reversalService = new VoucherReversalService(accountingStore);
 const posSaleCorrectionService = new PosSaleCorrectionService();
 const openingBalanceImportService = new OpeningBalanceImportService();
+const salaryAdvanceService = new SalaryAdvanceService();
 
 function bodyHash(body: unknown): string {
   return createHash("sha256")
@@ -143,6 +145,118 @@ async function correctVoucher(
 }
 
 export function registerFinancialCorrectionRoutes(app: Express): void {
+  app.get(
+    "/api/salary-advances",
+    requireAuth,
+    requireNonPOS,
+    async (req: Request, res: Response) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) return res.status(400).json({ message: "No company selected" });
+        return res.json(await salaryAdvanceService.listActive(companyId));
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
+  app.get(
+    "/api/salary-advances/employee/:employeeId",
+    requireAuth,
+    requireNonPOS,
+    async (req: Request, res: Response) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        const employeeId = Number(req.params.employeeId);
+        if (!companyId) return res.status(400).json({ message: "No company selected" });
+        if (!Number.isInteger(employeeId) || employeeId <= 0) {
+          return res.status(400).json({ message: "Invalid employee ID" });
+        }
+        return res.json(await salaryAdvanceService.listActiveForEmployee(companyId, employeeId));
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
+  app.post(
+    "/api/salary-advances",
+    requireAuth,
+    requireNonPOS,
+    async (req: Request, res: Response) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        if (!companyId) return res.status(400).json({ message: "No company selected" });
+        const employeeId = Number(req.body?.employeeId);
+        const cashAccountId = Number(req.body?.cashAccountId ?? req.session.cashAccountId);
+        const advanceDate = String(req.body?.advanceDate ?? "");
+        const amount = String(req.body?.amount ?? "");
+        if (!Number.isInteger(employeeId) || employeeId <= 0 || !advanceDate || !amount) {
+          return res
+            .status(400)
+            .json({ message: "Employee, advance date and amount are required" });
+        }
+        if (!Number.isInteger(cashAccountId) || cashAccountId <= 0) {
+          return res.status(400).json({ message: "Cash account is required" });
+        }
+        const identity =
+          req.get("idempotency-key") ??
+          String(req.body?.idempotencyKey ?? `SALARY_ADVANCE:${bodyHash(req.body)}`);
+        const result = await salaryAdvanceService.create({
+          companyId,
+          employeeId,
+          advanceDate,
+          amount,
+          cashAccountId,
+          notes: req.body?.notes == null ? null : String(req.body.notes),
+          idempotencyKey: identity,
+          createdBy: req.user?.id ?? req.session.userId ?? null,
+        });
+        return res.status(result.duplicate ? 200 : 201).json(result.advance);
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
+  app.delete(
+    "/api/salary-advances/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req: Request, res: Response) => {
+      try {
+        const companyId = req.session.currentCompanyId;
+        const salaryAdvanceId = Number(req.params.id);
+        if (!companyId) return res.status(400).json({ message: "No company selected" });
+        if (!Number.isInteger(salaryAdvanceId) || salaryAdvanceId <= 0) {
+          return res.status(400).json({ message: "Invalid salary advance ID" });
+        }
+        if (req.session.currentRole !== "Admin" && req.session.currentRole !== "Owner") {
+          return res.status(403).json({
+            message: "Only Admin and Owner can cancel a salary advance",
+            code: "SALARY_ADVANCE_CANCEL_FORBIDDEN",
+          });
+        }
+        const identity =
+          req.get("idempotency-key") ??
+          String(req.body?.idempotencyKey ?? `CANCEL_SALARY_ADVANCE:${salaryAdvanceId}`);
+        const result = await salaryAdvanceService.cancel({
+          companyId,
+          salaryAdvanceId,
+          idempotencyKey: identity,
+          createdBy: req.user?.id ?? req.session.userId ?? null,
+          reason: req.body?.reason == null ? null : String(req.body.reason),
+        });
+        return res.status(result.duplicate ? 200 : 201).json({
+          message: "Salary advance cancelled successfully",
+          ...result,
+        });
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
   app.post(
     "/api/stock-items/import-opening-balances",
     requireAuth,
