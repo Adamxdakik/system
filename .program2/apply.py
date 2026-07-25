@@ -23,144 +23,103 @@ def insert_once(path: str, anchor: str, insertion: str) -> None:
 
 
 replace_once(
-    "server/services/accounting/salaryAdvanceService.ts",
-    'import { and, count, eq } from "drizzle-orm";',
-    'import { and, count, desc, eq, isNull } from "drizzle-orm";',
-)
-
-insert_once(
-    "server/services/accounting/salaryAdvanceService.ts",
-    "export class SalaryAdvanceService {\n",
-    '''  listActive(companyId: number) {
-    return db
-      .select()
-      .from(salaryAdvances)
-      .where(and(eq(salaryAdvances.companyId, companyId), isNull(salaryAdvances.cancelledAt)))
-      .orderBy(desc(salaryAdvances.createdAt));
-  }
-
-  listActiveForEmployee(companyId: number, employeeId: number) {
-    return db
-      .select()
-      .from(salaryAdvances)
-      .where(
-        and(
-          eq(salaryAdvances.companyId, companyId),
-          eq(salaryAdvances.employeeId, employeeId),
-          isNull(salaryAdvances.cancelledAt),
-        ),
-      )
-      .orderBy(desc(salaryAdvances.createdAt));
-  }
-
-''',
-)
-
-insert_once(
     "server/financialCorrectionRoutes.ts",
-    'import { OpeningBalanceImportService } from "./services/accounting/openingBalanceImportService";\n',
-    'import { SalaryAdvanceService } from "./services/accounting/salaryAdvanceService";\n',
+    'import { vouchers } from "@shared/schema";',
+    'import { stockAdjustmentVouchers, stockTransferVouchers, vouchers } from "@shared/schema";',
 )
 
-insert_once(
-    "server/financialCorrectionRoutes.ts",
-    "const openingBalanceImportService = new OpeningBalanceImportService();\n",
-    "const salaryAdvanceService = new SalaryAdvanceService();\n",
-)
-
-routes = '''  app.get("/api/salary-advances", requireAuth, requireNonPOS, async (req: Request, res: Response) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) return res.status(400).json({ message: "No company selected" });
-      return res.json(await salaryAdvanceService.listActive(companyId));
-    } catch (error) {
-      return sendError(res, error);
-    }
-  });
-
-  app.get(
-    "/api/salary-advances/employee/:employeeId",
+routes = '''  app.patch(
+    "/api/vouchers/:id",
     requireAuth,
     requireNonPOS,
-    async (req: Request, res: Response) => {
+    async (req: Request, res: Response, next: NextFunction) => {
       try {
+        const voucherId = Number(req.params.id);
         const companyId = req.session.currentCompanyId;
-        const employeeId = Number(req.params.employeeId);
-        if (!companyId) return res.status(400).json({ message: "No company selected" });
-        if (!Number.isInteger(employeeId) || employeeId <= 0) {
-          return res.status(400).json({ message: "Invalid employee ID" });
+        if (!companyId || !Number.isInteger(voucherId) || voucherId <= 0) return next();
+        const [voucher] = await db
+          .select()
+          .from(vouchers)
+          .where(and(eq(vouchers.id, voucherId), eq(vouchers.companyId, companyId)))
+          .limit(1);
+        if (!voucher || voucher.optional) return next();
+        const [transfer] = await db
+          .select({ id: stockTransferVouchers.id })
+          .from(stockTransferVouchers)
+          .where(eq(stockTransferVouchers.voucherId, voucherId))
+          .limit(1);
+        const [adjustment] = await db
+          .select({ id: stockAdjustmentVouchers.id })
+          .from(stockAdjustmentVouchers)
+          .where(eq(stockAdjustmentVouchers.voucherId, voucherId))
+          .limit(1);
+        if (transfer || adjustment) {
+          return res.status(409).json({
+            message:
+              "Finalized stock movements are immutable. Cancel/reverse this movement and create a replacement instead.",
+            code: "FINALIZED_INVENTORY_MOVEMENT_IMMUTABLE",
+          });
         }
-        return res.json(await salaryAdvanceService.listActiveForEmployee(companyId, employeeId));
+        return next();
       } catch (error) {
         return sendError(res, error);
       }
     },
   );
 
-  app.post("/api/salary-advances", requireAuth, requireNonPOS, async (req: Request, res: Response) => {
-    try {
-      const companyId = req.session.currentCompanyId;
-      if (!companyId) return res.status(400).json({ message: "No company selected" });
-      const employeeId = Number(req.body?.employeeId);
-      const cashAccountId = Number(req.body?.cashAccountId ?? req.session.cashAccountId);
-      const advanceDate = String(req.body?.advanceDate ?? "");
-      const amount = String(req.body?.amount ?? "");
-      if (!Number.isInteger(employeeId) || employeeId <= 0 || !advanceDate || !amount) {
-        return res.status(400).json({ message: "Employee, advance date and amount are required" });
-      }
-      if (!Number.isInteger(cashAccountId) || cashAccountId <= 0) {
-        return res.status(400).json({ message: "Cash account is required" });
-      }
-      const identity =
-        req.get("idempotency-key") ??
-        String(req.body?.idempotencyKey ?? `SALARY_ADVANCE:${bodyHash(req.body)}`);
-      const result = await salaryAdvanceService.create({
-        companyId,
-        employeeId,
-        advanceDate,
-        amount,
-        cashAccountId,
-        notes: req.body?.notes == null ? null : String(req.body.notes),
-        idempotencyKey: identity,
-        createdBy: req.user?.id ?? req.session.userId ?? null,
-      });
-      return res.status(result.duplicate ? 200 : 201).json(result.advance);
-    } catch (error) {
-      return sendError(res, error);
-    }
-  });
-
-  app.delete(
-    "/api/salary-advances/:id",
+  app.put(
+    "/api/stock-transfers/:id",
     requireAuth,
     requireNonPOS,
-    async (req: Request, res: Response) => {
+    async (req: Request, res: Response, next: NextFunction) => {
       try {
+        const transferId = Number(req.params.id);
         const companyId = req.session.currentCompanyId;
-        const salaryAdvanceId = Number(req.params.id);
-        if (!companyId) return res.status(400).json({ message: "No company selected" });
-        if (!Number.isInteger(salaryAdvanceId) || salaryAdvanceId <= 0) {
-          return res.status(400).json({ message: "Invalid salary advance ID" });
-        }
-        if (req.session.currentRole !== "Admin" && req.session.currentRole !== "Owner") {
-          return res.status(403).json({
-            message: "Only Admin and Owner can cancel a salary advance",
-            code: "SALARY_ADVANCE_CANCEL_FORBIDDEN",
-          });
-        }
-        const identity =
-          req.get("idempotency-key") ??
-          String(req.body?.idempotencyKey ?? `CANCEL_SALARY_ADVANCE:${salaryAdvanceId}`);
-        const result = await salaryAdvanceService.cancel({
-          companyId,
-          salaryAdvanceId,
-          idempotencyKey: identity,
-          createdBy: req.user?.id ?? req.session.userId ?? null,
-          reason: req.body?.reason == null ? null : String(req.body.reason),
+        if (!companyId || !Number.isInteger(transferId) || transferId <= 0) return next();
+        const [movement] = await db
+          .select({ optional: vouchers.optional })
+          .from(stockTransferVouchers)
+          .innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id))
+          .where(
+            and(eq(stockTransferVouchers.id, transferId), eq(vouchers.companyId, companyId)),
+          )
+          .limit(1);
+        if (!movement) return next();
+        if (movement.optional) return next();
+        return res.status(409).json({
+          message:
+            "Finalized stock transfers cannot be edited in place. Reverse and replace the transfer.",
+          code: "FINALIZED_STOCK_TRANSFER_IMMUTABLE",
         });
-        return res.status(result.duplicate ? 200 : 201).json({
-          message: "Salary advance cancelled successfully",
-          ...result,
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
+  app.put(
+    "/api/stock-adjustments/:id",
+    requireAuth,
+    requireNonPOS,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const adjustmentId = Number(req.params.id);
+        const companyId = req.session.currentCompanyId;
+        if (!companyId || !Number.isInteger(adjustmentId) || adjustmentId <= 0) return next();
+        const [movement] = await db
+          .select({ optional: vouchers.optional })
+          .from(stockAdjustmentVouchers)
+          .innerJoin(vouchers, eq(stockAdjustmentVouchers.voucherId, vouchers.id))
+          .where(
+            and(eq(stockAdjustmentVouchers.id, adjustmentId), eq(vouchers.companyId, companyId)),
+          )
+          .limit(1);
+        if (!movement) return next();
+        if (movement.optional) return next();
+        return res.status(409).json({
+          message:
+            "Finalized stock adjustments cannot be edited in place. Reverse and replace the adjustment.",
+          code: "FINALIZED_STOCK_ADJUSTMENT_IMMUTABLE",
         });
       } catch (error) {
         return sendError(res, error);
