@@ -437,7 +437,7 @@ export default function Dashboard() {
                     Inventory Value
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-6">
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-0.5">Moto</p>
                     <p

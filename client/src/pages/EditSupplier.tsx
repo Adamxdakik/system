@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -13,12 +12,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { insertSupplierSchema } from "@shared/schema";
+import { ArrowLeft, Loader2, Building2 } from "lucide-react";
+import { z } from "zod";
+
+const editSupplierSchema = z.object({
+  legalName: z.string().min(1, "Legal name is required"),
+  openingBalance: z.string().optional(),
+  active: z.boolean().optional(),
+});
+
+type EditSupplierForm = z.infer<typeof editSupplierSchema>;
 
 export default function EditSupplier() {
   const params = useParams();
@@ -31,16 +37,10 @@ export default function EditSupplier() {
     enabled: !!supplierId,
   });
 
-  const form = useForm({
-    resolver: zodResolver(insertSupplierSchema.partial()),
+  const form = useForm<EditSupplierForm>({
+    resolver: zodResolver(editSupplierSchema),
     defaultValues: {
-      code: "",
       legalName: "",
-      email: "",
-      phone: "",
-      address: "",
-      taxId: "",
-      paymentTerms: "",
       openingBalance: "0.00",
       active: true,
     },
@@ -49,13 +49,7 @@ export default function EditSupplier() {
   useEffect(() => {
     if (supplier) {
       form.reset({
-        code: String((supplier as any).code || ""),
         legalName: String((supplier as any).legalName || ""),
-        email: String((supplier as any).email || ""),
-        phone: String((supplier as any).phone || ""),
-        address: String((supplier as any).address || ""),
-        taxId: String((supplier as any).taxId || ""),
-        paymentTerms: String((supplier as any).paymentTerms || ""),
         openingBalance: String((supplier as any).openingBalance || "0.00"),
         active: Boolean((supplier as any).active),
       });
@@ -63,14 +57,14 @@ export default function EditSupplier() {
   }, [supplier]);
 
   const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: EditSupplierForm) => {
       const res = await apiRequest("PATCH", `/api/suppliers/${supplierId}`, data);
       return await res.json();
     },
     onSuccess: (data: any) => {
       toast({
-        title: "Success",
-        description: `Supplier "${data.legalName}" updated successfully`,
+        title: "Saved",
+        description: `${data.legalName} updated.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       queryClient.invalidateQueries({ queryKey: [`/api/suppliers/${supplierId}`] });
@@ -85,256 +79,185 @@ export default function EditSupplier() {
     },
   });
 
-  const onSubmit = (data: any) => {
-    updateMutation.mutate(data);
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (!supplier) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/suppliers")}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-3xl font-bold">Supplier Not Found</h1>
-        </div>
+      <div className="p-6 space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/suppliers")}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back
+        </Button>
+        <p className="text-muted-foreground">Supplier not found.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="p-6 max-w-lg mx-auto space-y-6">
+      {/* Back + header */}
+      <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
+          className="h-9 w-9"
           onClick={() => navigate("/suppliers")}
           data-testid="button-back"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
+          <h1 className="text-xl font-semibold leading-tight" data-testid="text-page-title">
             Edit Supplier
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Update supplier information and opening balance
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Update supplier name, balance and status
           </p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Supplier Details</CardTitle>
-          <CardDescription>
-            Update the supplier information below
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Code *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="SUP-001" 
-                          {...field} 
-                          data-testid="input-code"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      {/* Form card */}
+      <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
+        {/* Supplier avatar/name banner */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-border/60 bg-muted/20">
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <Building2 className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="font-medium text-sm leading-tight">
+              {(supplier as any).legalName}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {(supplier as any).active ? "Active" : "Inactive"} supplier
+            </p>
+          </div>
+        </div>
 
-                <FormField
-                  control={form.control}
-                  name="legalName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Legal Name *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Acme Corporation" 
-                          {...field} 
-                          data-testid="input-legalName"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit((d) => updateMutation.mutate(d))}
+            className="px-5 py-5 space-y-5"
+          >
+            {/* Legal name */}
+            <FormField
+              control={form.control}
+              name="legalName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Legal Name
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Supplier name"
+                      className="h-10"
+                      {...field}
+                      data-testid="input-legalName"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="email" 
-                          placeholder="contact@supplier.com" 
-                          {...field} 
-                          data-testid="input-email"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            {/* Opening balance */}
+            <FormField
+              control={form.control}
+              name="openingBalance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Opening Balance
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        className="h-10 pl-7 font-mono"
+                        {...field}
+                        data-testid="input-openingBalance"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="+1 234 567 8900" 
-                          {...field} 
-                          data-testid="input-phone"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            {/* Active toggle */}
+            <FormField
+              control={form.control}
+              name="active"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Status
+                  </FormLabel>
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => field.onChange(true)}
+                      className={`flex-1 h-9 rounded-lg border text-sm font-medium transition-colors ${
+                        field.value
+                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-600"
+                          : "border-border/60 text-muted-foreground hover:bg-muted/40"
+                      }`}
+                      data-testid="button-active"
+                    >
+                      Active
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => field.onChange(false)}
+                      className={`flex-1 h-9 rounded-lg border text-sm font-medium transition-colors ${
+                        !field.value
+                          ? "bg-red-500/10 border-red-500/30 text-red-500"
+                          : "border-border/60 text-muted-foreground hover:bg-muted/40"
+                      }`}
+                      data-testid="button-inactive"
+                    >
+                      Inactive
+                    </button>
+                  </div>
+                </FormItem>
+              )}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem className="col-span-2">
-                      <FormLabel>Address</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="123 Business St, City, State" 
-                          {...field} 
-                          data-testid="input-address"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="taxId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tax ID (GST/VAT)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="GST123456" 
-                          {...field} 
-                          data-testid="input-taxId"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="paymentTerms"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Terms</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Net 30" 
-                          {...field} 
-                          data-testid="input-paymentTerms"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="openingBalance"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Opening Balance</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00" 
-                          {...field} 
-                          data-testid="input-openingBalance"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="active"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-8">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="checkbox-active"
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Active</FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="flex gap-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => navigate("/suppliers")}
-                  data-testid="button-cancel"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={updateMutation.isPending}
-                  data-testid="button-save"
-                >
-                  {updateMutation.isPending ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+            {/* Actions */}
+            <div className="flex gap-3 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 h-10"
+                onClick={() => navigate("/suppliers")}
+                data-testid="button-cancel"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 h-10"
+                disabled={updateMutation.isPending}
+                data-testid="button-save"
+              >
+                {updateMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </div>
     </div>
   );
 }

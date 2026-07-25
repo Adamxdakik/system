@@ -311,57 +311,43 @@ export default function MotoAssemblyPage({ embedded = false }: MotoAssemblyPageP
     }
   }, [transferFromStage]);
 
-  // ── Location picker (no location selected yet) ─────────────────────────────
+  // ── Location picker ────────────────────────────────────────────────────────
   if (!selectedLocationId) {
-    const locationPickerContent = (
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Location</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {locationsLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : locationsError ? (
-            <div className="flex flex-col items-center gap-3 py-4 text-center">
-              <AlertCircle className="h-6 w-6 text-destructive" />
-              <p className="text-sm text-muted-foreground">Could not load locations.</p>
-              <Button variant="outline" size="sm" onClick={() => refetchLocations()}>
-                Retry
-              </Button>
-            </div>
-          ) : locations.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No locations are available for this company.
-            </p>
-          ) : (
-            <Select onValueChange={(v) => setSelectedLocationId(parseInt(v))}>
-              <SelectTrigger data-testid="select-location">
-                <SelectValue placeholder="Choose a location..." />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map((loc) => (
-                  <SelectItem key={loc.id} value={String(loc.id)}>
-                    {loc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </CardContent>
-      </Card>
+    const picker = (
+      <div className="rounded-xl border border-border/60 bg-card p-5 space-y-3">
+        <p className="text-sm font-medium">Select a location to view assembly inventory</p>
+        {locationsLoading ? (
+          <Skeleton className="h-10 w-full" />
+        ) : locationsError ? (
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <AlertCircle className="h-5 w-5 text-destructive" />
+            <p className="text-sm text-muted-foreground">Could not load locations.</p>
+            <Button variant="outline" size="sm" onClick={() => refetchLocations()}>Retry</Button>
+          </div>
+        ) : locations.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No locations available.</p>
+        ) : (
+          <Select onValueChange={(v) => setSelectedLocationId(parseInt(v))}>
+            <SelectTrigger data-testid="select-location">
+              <SelectValue placeholder="Choose a location…" />
+            </SelectTrigger>
+            <SelectContent>
+              {locations.map((loc) => (
+                <SelectItem key={loc.id} value={String(loc.id)}>{loc.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
     );
-
-    if (embedded) {
-      return <div className="space-y-4">{locationPickerContent}</div>;
-    }
-
+    if (embedded) return <div className="space-y-4">{picker}</div>;
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-5">
         <div className="flex items-center gap-3">
-          <Bike className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold">Moto Assembly</h1>
+          <Bike className="h-7 w-7 text-primary" />
+          <h1 className="text-xl font-semibold">Moto Assembly</h1>
         </div>
-        {locationPickerContent}
+        {picker}
       </div>
     );
   }
@@ -370,443 +356,333 @@ export default function MotoAssemblyPage({ embedded = false }: MotoAssemblyPageP
   const availableItemsForNewModel = getAvailableItemsForStage(newModelStage);
   const inventoryForTransfer = getInventoryForStage(transferFromStage);
 
+  // Per-stage colours
+  const stageAccent: Record<string, string> = {
+    "Full CKD":     "text-blue-500 bg-blue-500/10 border-blue-500/30",
+    "Welded":       "text-amber-500 bg-amber-500/10 border-amber-500/30",
+    "Painted":      "text-violet-500 bg-violet-500/10 border-violet-500/30",
+    "Final Product":"text-emerald-500 bg-emerald-500/10 border-emerald-500/30",
+  };
+
   const mainContent = (
     <div className="space-y-4">
-      {/* Header row: location name + location switcher */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         {!embedded && (
-          <div className="flex items-center gap-3">
-            <Bike className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-2xl font-bold">Moto Assembly</h1>
-              <p className="text-muted-foreground">{selectedLocation?.name}</p>
-            </div>
+          <div>
+            <h1 className="text-xl font-semibold leading-tight">Moto Assembly</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{selectedLocation?.name}</p>
           </div>
         )}
         {embedded && (
-          <p className="text-sm text-muted-foreground font-medium">{selectedLocation?.name}</p>
+          <p className="text-sm font-medium text-muted-foreground">{selectedLocation?.name}</p>
         )}
-        <div className="flex gap-2 flex-wrap">
-          <Select
-            value={String(selectedLocationId)}
-            onValueChange={(v) => setSelectedLocationId(parseInt(v))}
-          >
-            <SelectTrigger className="w-[180px]" data-testid="select-change-location">
+        <div className="flex items-center gap-2 ml-auto">
+          {/* Location switcher */}
+          <Select value={String(selectedLocationId)} onValueChange={(v) => setSelectedLocationId(parseInt(v))}>
+            <SelectTrigger className="h-9 w-[180px] text-sm" data-testid="select-change-location">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {locations.map((loc) => (
-                <SelectItem key={loc.id} value={String(loc.id)}>
-                  {loc.name}
-                </SelectItem>
+                <SelectItem key={loc.id} value={String(loc.id)}>{loc.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {/* Add */}
+          <Button size="sm" className="h-9" onClick={() => openModal("add")} data-testid="button-open-modal">
+            <Plus className="h-3.5 w-3.5 mr-1.5" />Add
+          </Button>
+          {/* Edit / Save */}
+          {isEditing ? (
+            <Button size="sm" className="h-9" onClick={handleSaveAll} disabled={saveQtyMutation.isPending} data-testid="button-save-all">
+              <Save className="h-3.5 w-3.5 mr-1.5" />
+              {saveQtyMutation.isPending ? "Saving…" : "Save"}
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" className="h-9" onClick={() => setIsEditing(true)} data-testid="button-edit">
+              Edit
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Stage Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Stage)}>
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="overflow-x-auto">
-            <TabsList className="grid grid-cols-4 w-full max-w-xl min-w-max">
-              {STAGES.map((stage) => (
-                <TabsTrigger
-                  key={stage}
-                  value={stage}
-                  data-testid={`tab-${stage.toLowerCase().replace(" ", "-")}`}
-                >
-                  {stage}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+      {/* Stage pill tabs */}
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+        {STAGES.map((stage) => {
+          const stageTotal = inventory.filter((i) => i.stage === stage).reduce((s, i) => s + (i.qty || 0), 0);
+          const active = activeTab === stage;
+          return (
+            <button
+              key={stage}
+              onClick={() => setActiveTab(stage)}
+              data-testid={`tab-${stage.toLowerCase().replace(" ", "-")}`}
+              className={`flex items-center gap-2 px-3 h-8 rounded-full text-xs font-medium border whitespace-nowrap transition-colors ${
+                active ? stageAccent[stage] : "border-border/50 text-muted-foreground hover:bg-muted/50"
+              }`}
+            >
+              {stage}
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                active ? "bg-current/10" : "bg-muted"
+              }`}>
+                {stageTotal}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Stage content */}
+      {STAGES.map((stage) => {
+        if (stage !== activeTab) return null;
+        const stageInv = inventory.filter((item) => item.stage === stage);
+        const stageTotal = stageInv.reduce((s, i) => s + (i.qty || 0), 0);
+
+        return (
+          <div key={stage} className="rounded-xl border border-border/60 bg-card overflow-hidden">
+            {/* Stage header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-semibold">{stage}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Total</span>
+                <span className={`text-sm font-bold px-2 py-0.5 rounded-full border ${stageAccent[stage]}`}>
+                  {stageTotal}
+                </span>
+              </div>
+            </div>
+
+            {/* Content */}
+            {inventoryLoading ? (
+              <div className="p-5 space-y-3">
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+              </div>
+            ) : inventoryError ? (
+              <div className="flex flex-col items-center gap-3 py-10 text-center">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                <p className="text-sm text-muted-foreground">Could not load inventory.</p>
+                <Button variant="outline" size="sm" onClick={() => refetchInventory()}>Retry</Button>
+              </div>
+            ) : stageInv.length === 0 ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                No models in this stage.
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/40">
+                    <th className="pl-5 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Model</th>
+                    <th className="pr-5 py-2.5 text-right text-xs font-medium text-muted-foreground uppercase tracking-wide">Qty</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/30">
+                  {stageInv.map((item) => (
+                    <tr key={item.id} data-testid={`row-inventory-${item.id}`}>
+                      <td className="pl-5 py-3 font-medium">
+                        {item.stockItemName || `Item #${item.stockItemId}`}
+                      </td>
+                      <td className="pr-5 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={getDisplayQty(item)}
+                            onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                            className={`w-20 h-8 text-right font-mono text-sm transition-all ${
+                              isEditing ? "border-border" : "border-0 bg-transparent shadow-none"
+                            }`}
+                            readOnly={!isEditing}
+                            data-testid={`input-qty-${item.id}`}
+                          />
+                          {isEditing && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => deleteItemMutation.mutate(item.id)}
+                              disabled={deleteItemMutation.isPending}
+                              data-testid={`button-delete-item-${item.id}`}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button onClick={() => openModal("add")} data-testid="button-open-modal">
-              <Plus className="h-4 w-4 mr-2" />
-              Add
-            </Button>
-            {isEditing ? (
+        );
+      })}
+
+      {/* Add / Transfer Modal */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="max-w-md w-[95vw] gap-0 p-0">
+          <DialogHeader className="px-5 pt-5 pb-4 border-b border-border/60">
+            <DialogTitle className="text-base">Assembly Action</DialogTitle>
+            <DialogDescription className="text-xs mt-0.5">
+              Add a new model or transfer between stages
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="px-5 py-4 space-y-4">
+            {/* Modal tab switcher */}
+            <div className="flex gap-1 p-1 rounded-lg bg-muted/50 w-fit">
+              {(["add", "transfer"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setModalTab(t)}
+                  data-testid={`modal-tab-${t}`}
+                  className={`px-4 h-7 rounded-md text-xs font-medium transition-colors ${
+                    modalTab === t ? "bg-background shadow-sm" : "text-muted-foreground"
+                  }`}
+                >
+                  {t === "add" ? "Add Model" : "Transfer"}
+                </button>
+              ))}
+            </div>
+
+            {/* Add Model */}
+            {modalTab === "add" && (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stage</label>
+                  <Select value={newModelStage} onValueChange={(v) => setNewModelStage(v as Stage)}>
+                    <SelectTrigger className="h-9" data-testid="select-add-stage"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STAGES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Model</label>
+                  {stockItemsLoading ? <Skeleton className="h-9 w-full" /> : stockItemsError ? (
+                    <p className="text-sm text-muted-foreground">Could not load models.</p>
+                  ) : (
+                    <Popover open={itemComboboxOpen} onOpenChange={setItemComboboxOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" role="combobox" className="w-full justify-between h-9 text-sm font-normal" data-testid="select-new-model">
+                          {selectedItemName || "Search and select…"}
+                          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search items…" data-testid="input-search-item" />
+                          <CommandList>
+                            <CommandEmpty>{stockItems.length === 0 ? "No items" : "No match"}</CommandEmpty>
+                            <CommandGroup>
+                              {availableItemsForNewModel.map((si) => (
+                                <CommandItem key={si.id} value={si.name} onSelect={() => { setNewItemId(String(si.id)); setItemComboboxOpen(false); }} data-testid={`item-option-${si.id}`}>
+                                  <Check className={`mr-2 h-4 w-4 ${newItemId === String(si.id) ? "opacity-100" : "opacity-0"}`} />
+                                  {si.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Initial Quantity</label>
+                  <Input type="number" min="0" className="h-9" value={newModelQty} onChange={(e) => setNewModelQty(e.target.value)} data-testid="input-new-model-qty" />
+                </div>
+              </div>
+            )}
+
+            {/* Transfer */}
+            {modalTab === "transfer" && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">From</label>
+                    <Select value={transferFromStage} onValueChange={(v) => { setTransferFromStage(v as Stage); setTransferModelId(""); }}>
+                      <SelectTrigger className="h-9" data-testid="select-transfer-from-stage"><SelectValue /></SelectTrigger>
+                      <SelectContent>{STAGES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">To</label>
+                    <Select value={transferToStage} onValueChange={(v) => setTransferToStage(v as Stage)}>
+                      <SelectTrigger className="h-9" data-testid="select-transfer-to-stage"><SelectValue /></SelectTrigger>
+                      <SelectContent>{STAGES.filter((s) => s !== transferFromStage).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Model</label>
+                  <Select value={transferModelId} onValueChange={setTransferModelId}>
+                    <SelectTrigger className="h-9" data-testid="select-transfer-model"><SelectValue placeholder="Choose a model…" /></SelectTrigger>
+                    <SelectContent>
+                      {inventoryForTransfer.length === 0 ? (
+                        <div className="p-2 text-xs text-muted-foreground text-center">No models with qty in this stage</div>
+                      ) : inventoryForTransfer.map((item) => (
+                        <SelectItem key={item.id} value={String(item.id)}>
+                          {item.stockItemName || `Item #${item.stockItemId}`} · {item.qty} units
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedTransferItem && (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 text-xs">
+                    <span className="text-muted-foreground">Available</span>
+                    <span className="font-semibold">{selectedTransferItem.qty} units</span>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
+                  <Input type="number" min="1" max={selectedTransferItem?.qty || 0} className="h-9" value={transferQty} onChange={(e) => setTransferQty(e.target.value)} placeholder="Enter quantity" data-testid="input-transfer-qty" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Modal footer */}
+          <div className="flex gap-2 px-5 py-4 border-t border-border/60">
+            <Button variant="outline" className="flex-1 h-9" onClick={() => setShowModal(false)}>Cancel</Button>
+            {modalTab === "add" ? (
               <Button
-                onClick={handleSaveAll}
-                disabled={saveQtyMutation.isPending}
-                data-testid="button-save-all"
+                className="flex-1 h-9"
+                onClick={() => {
+                  if (!newItemId || !selectedLocationId) return;
+                  addModelMutation.mutate({ locationId: selectedLocationId, stockItemId: parseInt(newItemId), stage: newModelStage, qty: parseInt(newModelQty) || 0 });
+                }}
+                disabled={!newItemId || addModelMutation.isPending || !!stockItemsError}
+                data-testid="button-confirm-add-model"
               >
-                <Save className="h-4 w-4 mr-2" />
-                {saveQtyMutation.isPending ? "Saving..." : "Save"}
+                {addModelMutation.isPending ? "Adding…" : "Add Model"}
               </Button>
             ) : (
               <Button
-                variant="outline"
-                onClick={() => setIsEditing(true)}
-                data-testid="button-edit"
+                className="flex-1 h-9"
+                onClick={() => {
+                  if (!selectedTransferItem || !selectedLocationId || !transferQty) return;
+                  const parsedQty = parseInt(transferQty);
+                  if (isNaN(parsedQty) || parsedQty <= 0) { toast({ title: "Invalid quantity", variant: "destructive" }); return; }
+                  if (parsedQty > (selectedTransferItem.qty || 0)) { toast({ title: "Quantity exceeds available", variant: "destructive" }); return; }
+                  transferMutation.mutate({ locationId: selectedLocationId, stockItemId: selectedTransferItem.stockItemId, fromStage: transferFromStage, toStage: transferToStage, transferQty: parsedQty });
+                }}
+                disabled={!selectedTransferItem || !transferQty || isNaN(parseInt(transferQty)) || parseInt(transferQty) <= 0 || parseInt(transferQty) > (selectedTransferItem?.qty || 0) || transferMutation.isPending}
+                data-testid="button-confirm-transfer"
               >
-                Edit
+                {transferMutation.isPending ? "Transferring…" : "Transfer"}
               </Button>
             )}
           </div>
-        </div>
-
-        {STAGES.map((stage) => {
-          const currentStageInventory = inventory.filter((item) => item.stage === stage);
-          const currentStageTotal = currentStageInventory.reduce(
-            (sum, item) => sum + (item.qty || 0),
-            0,
-          );
-
-          return (
-            <TabsContent key={stage} value={stage}>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    {stage}
-                  </CardTitle>
-                  <div className="text-lg font-semibold text-primary">
-                    Total: {currentStageTotal}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {inventoryLoading ? (
-                    <div className="space-y-2">
-                      {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-12 w-full" />
-                      ))}
-                    </div>
-                  ) : inventoryError ? (
-                    <div className="flex flex-col items-center gap-3 py-8 text-center">
-                      <AlertCircle className="h-6 w-6 text-destructive" />
-                      <p className="text-sm text-muted-foreground">
-                        Could not load assembly inventory.
-                      </p>
-                      <Button variant="outline" size="sm" onClick={() => refetchInventory()}>
-                        Retry
-                      </Button>
-                    </div>
-                  ) : currentStageInventory.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No models in this stage. Click &ldquo;Add&rdquo; to get started.
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[70%]">Model Name</TableHead>
-                          <TableHead className="w-[30%] text-right">Qty</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentStageInventory.map((item) => (
-                          <TableRow key={item.id} data-testid={`row-inventory-${item.id}`}>
-                            <TableCell className="font-medium">
-                              {item.stockItemName || `Item #${item.stockItemId}`}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2 justify-end">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={getDisplayQty(item)}
-                                  onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                                  className="w-24 border-0 bg-transparent text-right"
-                                  readOnly={!isEditing}
-                                  data-testid={`input-qty-${item.id}`}
-                                />
-                                {isEditing && (
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-5 w-5"
-                                    onClick={() => deleteItemMutation.mutate(item.id)}
-                                    disabled={deleteItemMutation.isPending}
-                                    data-testid={`button-delete-item-${item.id}`}
-                                  >
-                                    <X className="h-4 w-4 text-muted-foreground" />
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          );
-        })}
-      </Tabs>
-
-      {/* Combined Add/Transfer Modal */}
-      <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-lg w-[95vw]">
-          <DialogHeader>
-            <DialogTitle>Moto Assembly Actions</DialogTitle>
-            <DialogDescription>Add a new model or transfer between stages</DialogDescription>
-          </DialogHeader>
-
-          <Tabs value={modalTab} onValueChange={(v) => setModalTab(v as "add" | "transfer")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="add" data-testid="modal-tab-add">
-                Add Model
-              </TabsTrigger>
-              <TabsTrigger value="transfer" data-testid="modal-tab-transfer">
-                Transfer
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Add Model Tab */}
-            <TabsContent value="add" className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Stage</label>
-                <Select value={newModelStage} onValueChange={(v) => setNewModelStage(v as Stage)}>
-                  <SelectTrigger data-testid="select-add-stage">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STAGES.map((stage) => (
-                      <SelectItem key={stage} value={stage}>
-                        {stage}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Select Item</label>
-                {stockItemsLoading ? (
-                  <Skeleton className="h-10 w-full" />
-                ) : stockItemsError ? (
-                  <div className="flex flex-col items-center gap-2 py-3 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      Could not load motorcycle models.
-                    </p>
-                    <Button variant="outline" size="sm" onClick={() => refetchStockItems()}>
-                      Retry
-                    </Button>
-                  </div>
-                ) : (
-                  <Popover open={itemComboboxOpen} onOpenChange={setItemComboboxOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={itemComboboxOpen}
-                        className="w-full justify-between"
-                        data-testid="select-new-model"
-                      >
-                        {selectedItemName || "Search and select item..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0" align="start">
-                      <Command>
-                        <CommandInput
-                          placeholder="Search items..."
-                          data-testid="input-search-item"
-                        />
-                        <CommandList>
-                          <CommandEmpty>
-                            {stockItems.length === 0
-                              ? "No stock items available"
-                              : "No items found"}
-                          </CommandEmpty>
-                          <CommandGroup>
-                            {availableItemsForNewModel.map((si) => (
-                              <CommandItem
-                                key={si.id}
-                                value={si.name}
-                                onSelect={() => {
-                                  setNewItemId(String(si.id));
-                                  setItemComboboxOpen(false);
-                                }}
-                                data-testid={`item-option-${si.id}`}
-                              >
-                                <Check
-                                  className={`mr-2 h-4 w-4 ${
-                                    newItemId === String(si.id) ? "opacity-100" : "opacity-0"
-                                  }`}
-                                />
-                                {si.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Initial Quantity</label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={newModelQty}
-                  onChange={(e) => setNewModelQty(e.target.value)}
-                  data-testid="input-new-model-qty"
-                />
-              </div>
-              <DialogFooter className="pt-4">
-                <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (!newItemId || !selectedLocationId) return;
-                    addModelMutation.mutate({
-                      locationId: selectedLocationId,
-                      stockItemId: parseInt(newItemId),
-                      stage: newModelStage,
-                      qty: parseInt(newModelQty) || 0,
-                    });
-                  }}
-                  disabled={!newItemId || addModelMutation.isPending || stockItemsError}
-                  data-testid="button-confirm-add-model"
-                >
-                  {addModelMutation.isPending ? "Adding..." : "Add Model"}
-                </Button>
-              </DialogFooter>
-            </TabsContent>
-
-            {/* Transfer Tab */}
-            <TabsContent value="transfer" className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">From Stage</label>
-                <Select
-                  value={transferFromStage}
-                  onValueChange={(v) => {
-                    setTransferFromStage(v as Stage);
-                    setTransferModelId("");
-                  }}
-                >
-                  <SelectTrigger data-testid="select-transfer-from-stage">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STAGES.map((stage) => (
-                      <SelectItem key={stage} value={stage}>
-                        {stage}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">To Stage</label>
-                <Select
-                  value={transferToStage}
-                  onValueChange={(v) => setTransferToStage(v as Stage)}
-                >
-                  <SelectTrigger data-testid="select-transfer-to-stage">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STAGES.filter((stage) => stage !== transferFromStage).map((stage) => (
-                      <SelectItem key={stage} value={stage}>
-                        {stage}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Select Model</label>
-                <Select value={transferModelId} onValueChange={setTransferModelId}>
-                  <SelectTrigger data-testid="select-transfer-model">
-                    <SelectValue placeholder="Choose a model..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {inventoryForTransfer.length === 0 ? (
-                      <div className="p-2 text-sm text-muted-foreground text-center">
-                        No models with qty in this stage
-                      </div>
-                    ) : (
-                      inventoryForTransfer.map((item) => (
-                        <SelectItem key={item.id} value={String(item.id)}>
-                          {item.stockItemName || `Item #${item.stockItemId}`} (Qty: {item.qty})
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              {selectedTransferItem && (
-                <div className="p-3 bg-muted rounded-md text-sm">
-                  <div className="flex justify-between">
-                    <span>Available Qty:</span>
-                    <span className="font-medium">{selectedTransferItem.qty}</span>
-                  </div>
-                </div>
-              )}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Transfer Quantity</label>
-                <Input
-                  type="number"
-                  min="1"
-                  max={selectedTransferItem?.qty || 0}
-                  value={transferQty}
-                  onChange={(e) => setTransferQty(e.target.value)}
-                  placeholder="Enter quantity to transfer"
-                  data-testid="input-transfer-qty"
-                />
-              </div>
-              <DialogFooter className="pt-4">
-                <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (!selectedTransferItem || !selectedLocationId || !transferQty) return;
-                    const parsedQty = parseInt(transferQty);
-                    if (isNaN(parsedQty) || parsedQty <= 0) {
-                      toast({ title: "Invalid quantity", variant: "destructive" });
-                      return;
-                    }
-                    if (parsedQty > (selectedTransferItem.qty || 0)) {
-                      toast({ title: "Quantity exceeds available", variant: "destructive" });
-                      return;
-                    }
-                    transferMutation.mutate({
-                      locationId: selectedLocationId,
-                      stockItemId: selectedTransferItem.stockItemId,
-                      fromStage: transferFromStage,
-                      toStage: transferToStage,
-                      transferQty: parsedQty,
-                    });
-                  }}
-                  disabled={
-                    !selectedTransferItem ||
-                    !transferQty ||
-                    isNaN(parseInt(transferQty)) ||
-                    parseInt(transferQty) <= 0 ||
-                    parseInt(transferQty) > (selectedTransferItem?.qty || 0) ||
-                    transferMutation.isPending
-                  }
-                  data-testid="button-confirm-transfer"
-                >
-                  {transferMutation.isPending ? "Transferring..." : "Transfer"}
-                </Button>
-              </DialogFooter>
-            </TabsContent>
-          </Tabs>
         </DialogContent>
       </Dialog>
 
-      {/* Suppress unused variable warning — reverseTransferMutation is available for callers */}
-      <span
-        data-reverse-transfer={reverseTransferMutation.isPending ? "pending" : undefined}
-        className="hidden"
-      />
+      <span data-reverse-transfer={reverseTransferMutation.isPending ? "pending" : undefined} className="hidden" />
     </div>
   );
 
-  if (embedded) {
-    return mainContent;
-  }
-
+  if (embedded) return mainContent;
   return <div className="p-6">{mainContent}</div>;
 }

@@ -19118,12 +19118,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return results;
       };
 
-      // 1. Stock by group — moto groups (allocateImportCosts=true) vs parts
+      // 1. Stock by group — moto groups (name contains moto/bike/motorcycle) vs parts
       const inventoryData = await db
         .select({
           quantity: inventory.quantity,
           totalValue: inventory.totalValue,
-          allocateImportCosts: stockGroups.allocateImportCosts,
+          averageRate: inventory.averageRate,
+          groupName: stockGroups.name,
         })
         .from(inventory)
         .leftJoin(stockItems, eq(inventory.stockItemId, stockItems.id))
@@ -19135,14 +19136,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let partsValue = 0;
       let partsQty = 0;
       for (const row of inventoryData) {
-        const val = parseFloat(row.totalValue || "0");
         const qty = parseFloat(row.quantity || "0");
-        if (row.allocateImportCosts) {
+
+        if (qty <= 0) continue;
+
+        const val =
+
+          parseFloat(row.totalValue || "0") || qty * parseFloat(row.averageRate || "0");
+
+        const gName = (row.groupName || "").toLowerCase();
+
+        const isMoto =
+
+          gName.includes("moto") ||
+
+          gName.includes("bike") ||
+
+          gName.includes("motorcycle");
+
+        if (isMoto) {
+
           motoValue += val;
+
           motoQty += qty;
+
         } else {
+
           partsValue += val;
+
           partsQty += qty;
+
         }
       }
 

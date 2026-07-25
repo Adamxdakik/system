@@ -43,6 +43,7 @@ const Payroll = lazy(() => import("@/pages/Payroll"));
 const ImportStockItems = lazy(() => import("@/pages/ImportStockItems"));
 const StockItemDetail = lazy(() => import("@/pages/StockItemDetail"));
 const Sales = lazy(() => import("@/pages/Sales"));
+const SalesReport = lazy(() => import("@/pages/SalesReport"));
 const StockItems = lazy(() => import("@/pages/StockItems"));
 const Containers = lazy(() => import("@/pages/Containers"));
 const LocationInsights = lazy(() => import("@/pages/LocationInsights"));
@@ -171,7 +172,7 @@ function Router({ user }: { user: any }) {
         <Route path="/payroll" component={Payroll} />
         <Route path="/create" component={AccountingCreate} />
         <Route path="/import-stock-items" component={ImportStockItems} />
-        <Route path="/sales-report">{() => <Sales initialTab="history" />}</Route>
+        <Route path="/sales-report" component={SalesReport} />
         <Route path="/voucher-detail/:voucherId" component={VoucherDetail} />
         <Route path="/sold-containers" component={SoldContainers} />
         <Route path="/moto-assembly">{() => <Assembly initialTab="assembly" />}</Route>
