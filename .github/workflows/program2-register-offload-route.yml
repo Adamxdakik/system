@@ -1,0 +1,59 @@
+name: Program 2 Register Offload Route
+
+on:
+  push:
+    branches:
+      - agent/program-2-financial-integrity-final
+
+permissions:
+  contents: write
+
+jobs:
+  register:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/program-2-financial-integrity-final
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Register offload reversal routes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('server/routes.ts')
+          source = path.read_text()
+          import_anchor = 'import { registerAtomicStockMovementRoutes } from "./routes/atomicStockMovementRoutes";\n'
+          import_line = 'import { registerContainerOffloadReversalRoutes } from "./routes/containerOffloadReversalRoutes";\n'
+          if import_line not in source:
+              if import_anchor not in source:
+                  raise SystemExit('Atomic stock route import anchor not found')
+              source = source.replace(import_anchor, import_anchor + import_line, 1)
+          call_anchor = '  registerAtomicStockMovementRoutes(app);\n'
+          call_line = '  registerContainerOffloadReversalRoutes(app);\n'
+          if call_line not in source:
+              if call_anchor not in source:
+                  raise SystemExit('Atomic stock route registration anchor not found')
+              source = source.replace(call_anchor, call_anchor + call_line, 1)
+          path.write_text(source)
+          PY
+          npx prettier --write server/routes.ts
+      - name: Commit route registration
+        shell: bash
+        run: |
+          if git diff --quiet -- server/routes.ts; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/routes.ts
+          git commit -m "feat(accounting): register container offload reversal routes"
+          git pull --rebase origin agent/program-2-financial-integrity-final
+          git push origin HEAD:agent/program-2-financial-integrity-final
