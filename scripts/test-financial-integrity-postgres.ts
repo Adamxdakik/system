@@ -354,8 +354,7 @@ async function concurrencyChecks(
           company_id, voucher_number, voucher_type, voucher_date, total_amount,
           source_type, source_id, idempotency_key
         ) VALUES ($1, $2, 'Journal', '2024-05-01', 1, 'CONCURRENCY', $3, $3)
-        ON CONFLICT (company_id, idempotency_key) WHERE idempotency_key IS NOT NULL
-        DO NOTHING
+        ON CONFLICT DO NOTHING
         RETURNING id
       `,
       [companyId, `CONCURRENT-${suffix}-${key}`, duplicateKey],
