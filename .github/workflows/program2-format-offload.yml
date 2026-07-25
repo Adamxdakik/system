@@ -1,0 +1,57 @@
+name: Program 2 Format Offload
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Format focused offload files
+        run: |
+          npx prettier --write \
+            migrations/0025_container_offload_reversal_evidence.sql \
+            server/storage.ts \
+            server/financialCorrectionRoutes.ts \
+            server/routes/containerOffloadReversalRoutes.ts \
+            server/services/accounting/containerOffloadEvidenceSchema.ts \
+            server/services/accounting/containerOffloadReversalService.ts \
+            server/__tests__/containerOffloadReversal.postgres.ts
+      - name: Commit focused formatting
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            migrations/0025_container_offload_reversal_evidence.sql \
+            server/storage.ts \
+            server/financialCorrectionRoutes.ts \
+            server/routes/containerOffloadReversalRoutes.ts \
+            server/services/accounting/containerOffloadEvidenceSchema.ts \
+            server/services/accounting/containerOffloadReversalService.ts \
+            server/__tests__/containerOffloadReversal.postgres.ts
+          git commit -m "style(accounting): format exact offload reversal files"
+          git pull --rebase origin "${{ github.event.pull_request.head.ref }}"
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
