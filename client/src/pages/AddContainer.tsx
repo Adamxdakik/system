@@ -395,7 +395,7 @@ export default function AddContainer() {
                               });
                             }
                           }}
-                          onFocus={(e) => {
+                          onFocus={() => {
                             // Show search when focused with an existing value
                             const current = form.getValues(`items.${index}.itemName`);
                             if (current) {

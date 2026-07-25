@@ -10,59 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  phase3c-final-lint-fix:
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-
-    steps:
-      - name: Check out PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install exact dependencies
-        run: npm ci --include=dev
-
-      - name: Apply and verify final lint fixes
-        run: |
-          python scripts/program3-phase3c-final-lint-fix.py
-          npx prettier --write client/src/pages/POS.tsx client/src/pages/AddContainer.tsx
-          npx eslint \
-            client/src/pages/POS.tsx \
-            client/src/pages/PurchaseOrderEdit.tsx \
-            client/src/pages/AddContainer.tsx \
-            --max-warnings=0
-
-      - name: Restore permanent workflow and commit fixes
-        shell: bash
-        run: |
-          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
-          rm scripts/program3-phase3c-final-lint-fix.py
-          rm docs/program3-phase3c-lint.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            client/src/pages/POS.tsx \
-            client/src/pages/AddContainer.tsx \
-            .github/workflows/ci.yml \
-            scripts/program3-phase3c-final-lint-fix.py \
-            docs/program3-phase3c-lint.txt
-          git commit -m "fix(program-3): clear phase 3C lint warnings"
-          git pull --rebase origin "${{ github.event.pull_request.head.ref }}"
-          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
-
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
