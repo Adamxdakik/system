@@ -1,0 +1,1 @@
+client/src/pages/POS.tsx(1164,28): error TS2304: Cannot find name 'inventoryLoading'.
