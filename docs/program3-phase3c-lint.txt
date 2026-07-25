@@ -1,0 +1,12 @@
+
+/home/runner/work/system/system/client/src/pages/AddContainer.tsx
+  398:37  warning  'e' is defined but never used. Allowed unused args must match /^_/u  unused-imports/no-unused-vars
+
+/home/runner/work/system/system/client/src/pages/POS.tsx
+  115:16  warning  'inventoryLoading' is assigned a value but never used. Allowed unused vars must match /^_/u  unused-imports/no-unused-vars
+  163:10  warning  'selectedCell' is assigned a value but never used. Allowed unused vars must match /^_/u      unused-imports/no-unused-vars
+  814:9   warning  'saleReady' is assigned a value but never used. Allowed unused vars must match /^_/u         unused-imports/no-unused-vars
+  815:9   warning  'saleGuidance' is assigned a value but never used. Allowed unused vars must match /^_/u      unused-imports/no-unused-vars
+
+✖ 5 problems (0 errors, 5 warnings)
+
