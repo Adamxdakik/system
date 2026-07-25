@@ -110,7 +110,11 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
   const activeLocation = posUser ? posLocation : selectedLocation;
 
   // Fetch inventory for the active location
-  const { data: apiInventory = [], error: inventoryError } = useQuery<APIInventoryItem[]>({
+  const {
+    data: apiInventory = [],
+    isLoading: inventoryLoading,
+    error: inventoryError,
+  } = useQuery<APIInventoryItem[]>({
     queryKey: activeLocation ? [`/api/locations/${activeLocation.id}/inventory`] : [],
     enabled: !!activeLocation,
     retry: false,
