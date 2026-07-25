@@ -134,6 +134,7 @@ import { VoucherReversalService } from "./services/accounting/voucherReversalSer
 import { registerFinalizedFinancialMutationGuards } from "./routes/finalizedFinancialMutationGuards";
 import { registerFinancialCorrectionRoutes } from "./financialCorrectionRoutes";
 import { registerAtomicStockMovementRoutes } from "./routes/atomicStockMovementRoutes";
+import { registerContainerOffloadReversalRoutes } from "./routes/containerOffloadReversalRoutes";
 import {
   decimalToScaledInteger,
   normalizeMoney,
@@ -279,6 +280,7 @@ async function syncEmployeeBalancesFromEntries(
 
 export async function registerRoutes(app: Express): Promise<Server> {
   registerAtomicStockMovementRoutes(app);
+  registerContainerOffloadReversalRoutes(app);
   registerFinancialCorrectionRoutes(app);
 
   // Database health check endpoint
