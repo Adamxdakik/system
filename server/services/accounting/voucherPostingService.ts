@@ -27,9 +27,16 @@ export class AccountingIntegrityError extends Error {
 
 function stableFingerprint(input: VoucherPostingInput): string {
   const normalized = {
-    ...input,
+    companyId: input.companyId,
+    locationId: input.locationId ?? null,
+    voucherType: input.voucherType,
+    transactionDate: input.transactionDate,
+    description: input.description ?? null,
     currency: input.currency ?? "USD",
     exchangeRate: normalizeExchangeRate(input.exchangeRate ?? "1"),
+    sourceType: input.sourceType ?? null,
+    sourceId: input.sourceId ?? null,
+    optional: input.optional ?? false,
     entries: input.entries.map(normalizePostingEntry),
   };
   return createHash("sha256").update(JSON.stringify(normalized)).digest("hex");
