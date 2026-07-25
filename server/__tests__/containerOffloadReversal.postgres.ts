@@ -301,7 +301,50 @@ async function legacyScenario() {
   assert(stillActive, "legacy refusal must not mutate the offload");
 }
 
+async function concurrentOffloadScenario() {
+  const data = await fixture("CONCURRENT");
+  const args = [
+    data.container.id,
+    data.location.id,
+    "10.00",
+    data.dutyAgent.id,
+    "0",
+    null,
+    [],
+    "2026-07-16",
+    [],
+  ] as const;
+
+  const results = await Promise.allSettled([
+    storage.offloadContainer(...args),
+    storage.offloadContainer(...args),
+  ]);
+  const fulfilled = results.filter((result) => result.status === "fulfilled");
+  const rejected = results.filter((result) => result.status === "rejected");
+  assert(fulfilled.length === 1, "exactly one concurrent offload must commit");
+  assert(rejected.length === 1, "the duplicate concurrent offload must fail closed");
+
+  const rows = await db
+    .select()
+    .from(containerOffloads)
+    .where(eq(containerOffloads.containerId, data.container.id));
+  assert(rows.length === 1, "concurrent requests must create one offload row");
+
+  const [stock] = await db
+    .select()
+    .from(inventory)
+    .where(
+      and(
+        eq(inventory.companyId, data.company.id),
+        eq(inventory.locationId, data.location.id),
+        eq(inventory.stockItemId, data.item.id),
+      ),
+    );
+  assert(stock.quantity === "10.000", "concurrent requests must not double inventory");
+}
+
 await exactReversalScenario();
 await changedInventoryScenario();
 await legacyScenario();
+await concurrentOffloadScenario();
 console.log("Container offload reversal PostgreSQL regressions passed");

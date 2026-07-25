@@ -2478,6 +2478,23 @@ export class DbStorage implements IStorage {
     const voucherDate = offloadDate || new Date().toISOString().split("T")[0];
 
     return await db.transaction(async (tx) => {
+      const [lockedContainer] = await tx
+        .select({
+          id: schema.containers.id,
+          companyId: schema.containers.companyId,
+          status: schema.containers.status,
+        })
+        .from(schema.containers)
+        .where(eq(schema.containers.id, containerId))
+        .for("update")
+        .limit(1);
+      if (!lockedContainer || lockedContainer.companyId !== container.companyId) {
+        throw new Error(`Container ${containerId} not found`);
+      }
+      if (lockedContainer.status === "OFFLOADED") {
+        throw new Error("Container is already offloaded");
+      }
+
       const inventoryEvidence: Array<{
         inventoryId: number;
         stockItemId: number;
