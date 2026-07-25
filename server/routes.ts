@@ -19140,32 +19140,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (qty <= 0) continue;
 
-        const val =
-
-          parseFloat(row.totalValue || "0") || qty * parseFloat(row.averageRate || "0");
+        const val = parseFloat(row.totalValue || "0") || qty * parseFloat(row.averageRate || "0");
 
         const gName = (row.groupName || "").toLowerCase();
 
         const isMoto =
-
-          gName.includes("moto") ||
-
-          gName.includes("bike") ||
-
-          gName.includes("motorcycle");
+          gName.includes("moto") || gName.includes("bike") || gName.includes("motorcycle");
 
         if (isMoto) {
-
           motoValue += val;
 
           motoQty += qty;
-
         } else {
-
           partsValue += val;
 
           partsQty += qty;
-
         }
       }
 
