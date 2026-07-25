@@ -1709,6 +1709,9 @@ export const salaryAdvances = pgTable("salary_advances", {
   voucherId: integer("voucher_id"),
   notes: text("notes"),
   fullyPaid: boolean("fully_paid").notNull().default(false),
+  cancelledAt: timestamp("cancelled_at"),
+  cancelledBy: varchar("cancelled_by", { length: 100 }),
+  cancellationVoucherId: integer("cancellation_voucher_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -1716,6 +1719,9 @@ export const insertSalaryAdvanceSchema = createInsertSchema(salaryAdvances)
   .omit({
     id: true,
     createdAt: true,
+    cancelledAt: true,
+    cancelledBy: true,
+    cancellationVoucherId: true,
   })
   .extend({
     companyId: z.number().min(1, "Company is required"),
