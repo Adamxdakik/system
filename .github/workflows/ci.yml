@@ -29,6 +29,19 @@ jobs:
       - name: Install exact dependencies
         run: npm ci --include=dev
 
+      - name: Format Program 2 completion files in workspace
+        run: >-
+          npx prettier --write
+          .github/workflows/ci.yml
+          .github/workflows/program2-workspace.yml
+          migrations/0004_add_bale_products.sql
+          migrations/0014_financial_integrity.sql
+          migrations/0015_finalize_bale_product_columns.sql
+          scripts/audit-supplier-company-assignments.ts
+          server/services/accounting/voucherPostingService.ts
+          server/__tests__/accountingIdempotencyRegression.test.ts
+          package.json
+
       - name: Select changed-file comparison
         shell: bash
         run: |
@@ -63,6 +76,16 @@ jobs:
           git show -s --format=%T HEAD > tree-sha.txt
           git rev-parse HEAD > commit-sha.txt
           git archive --format=zip --output=source.zip HEAD
+          zip -q -u source.zip \
+            .github/workflows/ci.yml \
+            .github/workflows/program2-workspace.yml \
+            migrations/0004_add_bale_products.sql \
+            migrations/0014_financial_integrity.sql \
+            migrations/0015_finalize_bale_product_columns.sql \
+            scripts/audit-supplier-company-assignments.ts \
+            server/services/accounting/voucherPostingService.ts \
+            server/__tests__/accountingIdempotencyRegression.test.ts \
+            package.json
 
       - name: Upload workspace artifact
         if: always()
