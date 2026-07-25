@@ -36,11 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SaleRow {
   id: string;
@@ -90,11 +86,7 @@ interface POSProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-export default function POS({
-  posUser,
-  editVoucherId,
-  onDirtyChange,
-}: POSProps = {}) {
+export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps = {}) {
   const { selectedLocation, setSelectedLocation } = useLocationContext();
   const [_location, navigate] = useLocation();
 
@@ -462,8 +454,7 @@ export default function POS({
     const s = searchTerm.toLowerCase();
     return inventory.filter(
       (item) =>
-        (item.name || "").toLowerCase().includes(s) ||
-        (item.code || "").toLowerCase().includes(s),
+        (item.name || "").toLowerCase().includes(s) || (item.code || "").toLowerCase().includes(s),
     );
   };
 
@@ -693,14 +684,13 @@ export default function POS({
   };
 
   const total = rows.reduce((sum, row) => sum + (row.amount || 0), 0);
-  const totalQty = rows.reduce(
-    (sum, row) => sum + (parseFloat(String(row.quantity)) || 0),
-    0,
-  );
+  const totalQty = rows.reduce((sum, row) => sum + (parseFloat(String(row.quantity)) || 0), 0);
   const validSaleItemCount = rows.filter(
     (row) => row.stockItemId && row.quantity > 0 && row.rate > 0,
   ).length;
-  const hasPaymentSelection = isCreditSale ? Boolean(selectedCustomerId) : Boolean(paymentAccountId);
+  const hasPaymentSelection = isCreditSale
+    ? Boolean(selectedCustomerId)
+    : Boolean(paymentAccountId);
   const saleReady = Boolean(activeLocation) && hasPaymentSelection && validSaleItemCount > 0;
   const saleGuidance = !activeLocation
     ? "Select a sale location to continue."
@@ -952,10 +942,7 @@ export default function POS({
               {/* Rows */}
               <div className="max-h-[calc(100vh-28rem)] overflow-y-auto">
                 {rows.map((row, rowIndex) => (
-                  <div
-                    key={row.id}
-                    className="flex border-b transition-colors hover:bg-muted/20"
-                  >
+                  <div key={row.id} className="flex border-b transition-colors hover:bg-muted/20">
                     <div className="flex h-12 w-10 items-center justify-center border-r text-xs text-muted-foreground">
                       {rowIndex + 1}
                     </div>
@@ -983,9 +970,7 @@ export default function POS({
                             ref={(el) => {
                               if (el) inputRefs.current[`${rowIndex}-${colIndex}`] = el;
                             }}
-                            type={
-                              col.key === "quantity" || col.key === "rate" ? "number" : "text"
-                            }
+                            type={col.key === "quantity" || col.key === "rate" ? "number" : "text"}
                             value={
                               col.key === "amount"
                                 ? row.amount.toFixed(2)
@@ -1016,15 +1001,11 @@ export default function POS({
                             }}
                             readOnly={col.key === "amount"}
                             className={`h-full w-full bg-transparent px-3 text-sm outline-none focus:bg-primary/5 ${
-                              col.key === "quantity" ||
-                              col.key === "rate" ||
-                              col.key === "amount"
+                              col.key === "quantity" || col.key === "rate" || col.key === "amount"
                                 ? "text-right font-mono"
                                 : ""
                             } ${
-                              col.key === "amount"
-                                ? "cursor-not-allowed text-muted-foreground"
-                                : ""
+                              col.key === "amount" ? "cursor-not-allowed text-muted-foreground" : ""
                             }`}
                             placeholder={col.key === "itemName" ? "Search product..." : ""}
                             data-testid={`input-${col.key}-${rowIndex}`}
@@ -1062,9 +1043,7 @@ export default function POS({
                 </div>
                 <p
                   className={`text-sm ${
-                    saleReady
-                      ? "text-emerald-700 dark:text-emerald-400"
-                      : "text-muted-foreground"
+                    saleReady ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"
                   }`}
                 >
                   {saleGuidance}
@@ -1319,7 +1298,8 @@ export default function POS({
               <p>Payment: {isCreditSale ? "Credit" : "Cash"}</p>
               {isCreditSale && (
                 <p>
-                  Customer: {customerAccounts.find((a: any) => String(a.id) === selectedCustomerId)?.name}
+                  Customer:{" "}
+                  {customerAccounts.find((a: any) => String(a.id) === selectedCustomerId)?.name}
                 </p>
               )}
             </div>
