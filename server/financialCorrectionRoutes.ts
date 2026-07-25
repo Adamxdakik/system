@@ -11,9 +11,11 @@ import { AccountingIntegrityError } from "./services/accounting/voucherPostingSe
 import { VoucherReversalService } from "./services/accounting/voucherReversalService";
 import { FinalizedVoucherCorrectionService } from "./services/accounting/finalizedVoucherCorrectionService";
 import { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";
+import { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";
 
 const correctionService = new FinalizedVoucherCorrectionService(accountingStore);
 const reversalService = new VoucherReversalService(accountingStore);
+const posSaleCorrectionService = new PosSaleCorrectionService();
 const posSaleCorrectionService = new PosSaleCorrectionService();
 
 function bodyHash(body: unknown): string {
@@ -187,11 +189,39 @@ export function registerFinancialCorrectionRoutes(app: Express): void {
           const description = `${voucherType} - ${String(entry.accountName ?? "")}`;
           postingEntries.push(
             voucherType === "Payment"
-              ? { ...detail, debitAmount: amount, creditAmount: "0", description, currency, exchangeRate }
-              : { ...payment, debitAmount: amount, creditAmount: "0", description, currency, exchangeRate },
+              ? {
+                  ...detail,
+                  debitAmount: amount,
+                  creditAmount: "0",
+                  description,
+                  currency,
+                  exchangeRate,
+                }
+              : {
+                  ...payment,
+                  debitAmount: amount,
+                  creditAmount: "0",
+                  description,
+                  currency,
+                  exchangeRate,
+                },
             voucherType === "Payment"
-              ? { ...payment, debitAmount: "0", creditAmount: amount, description, currency, exchangeRate }
-              : { ...detail, debitAmount: "0", creditAmount: amount, description, currency, exchangeRate },
+              ? {
+                  ...payment,
+                  debitAmount: "0",
+                  creditAmount: amount,
+                  description,
+                  currency,
+                  exchangeRate,
+                }
+              : {
+                  ...detail,
+                  debitAmount: "0",
+                  creditAmount: amount,
+                  description,
+                  currency,
+                  exchangeRate,
+                },
           );
         }
 
@@ -301,6 +331,52 @@ export function registerFinancialCorrectionRoutes(app: Express): void {
           entries: (entries as Array<Record<string, unknown>>).map(directEntry),
         });
         return res.status(result.duplicate ? 200 : 201).json(result);
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
+  app.put(
+    "/api/vouchers/:id/sales",
+    requireAuth,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const voucherId = Number(req.params.id);
+        if (!Number.isInteger(voucherId) || voucherId <= 0) {
+          return res.status(400).json({ message: "Invalid voucher ID" });
+        }
+        const existing = await loadEditableVoucher(req, voucherId);
+        if (existing.optional) return next();
+        if (existing.voucherType !== "Sales") {
+          return res.status(409).json({
+            message: "Only finalized sales vouchers can use POS correction",
+            code: "VOUCHER_TYPE_MISMATCH",
+          });
+        }
+        const { description, voucherDate, items } = req.body ?? {};
+        if (!Array.isArray(items) || items.length === 0) {
+          return res.status(400).json({ message: "At least one item is required" });
+        }
+        const result = await posSaleCorrectionService.correct({
+          companyId: req.session.currentCompanyId!,
+          voucherId,
+          description: description ?? null,
+          transactionDate: typeof voucherDate === "string" ? voucherDate : null,
+          idempotencyKey: correctionIdentity(req, voucherId),
+          createdBy: req.user?.id ?? req.session.userId ?? null,
+          canSellNegativeStock: req.user?.canSellNegativeStock ?? false,
+          items: (items as Array<Record<string, unknown>>).map((item) => ({
+            id: Number(item.id) || null,
+            stockItemId: Number(item.stockItemId),
+            quantity: String(item.quantity ?? "0"),
+            sellingPrice: String(item.sellingPrice ?? item.rate ?? "0"),
+          })),
+        });
+        return res.status(result.duplicate ? 200 : 201).json({
+          message: "Sales voucher corrected successfully",
+          ...result,
+        });
       } catch (error) {
         return sendError(res, error);
       }

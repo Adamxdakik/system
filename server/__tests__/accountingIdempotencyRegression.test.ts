@@ -48,7 +48,8 @@ class MemoryTransaction implements AccountingTransaction {
 
   async findByIdempotencyKey(companyId: number, idempotencyKey: string) {
     const result = this.result();
-    return result?.voucher.companyId === companyId && result.voucher.idempotencyKey === idempotencyKey
+    return result?.voucher.companyId === companyId &&
+      result.voucher.idempotencyKey === idempotencyKey
       ? result
       : null;
   }
@@ -169,7 +170,9 @@ describe("accounting source idempotency", () => {
     const seededStore = new MemoryStore();
     await new VoucherPostingService(seededStore).post(input());
 
-    const result = await new VoucherPostingService(new UniqueRaceStore(seededStore.state)).post(input());
+    const result = await new VoucherPostingService(new UniqueRaceStore(seededStore.state)).post(
+      input(),
+    );
     expect(result.duplicate).toBe(true);
     expect(result.voucher.id).toBe(1);
   });

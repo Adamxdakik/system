@@ -3,15 +3,8 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db";
 import { inventory, salesItems, stockItems, vouchers } from "@shared/schema";
-import {
-  accountingTransactionFor,
-  type DrizzleTransaction,
-} from "./drizzleAccountingStore";
-import {
-  decimalToScaledInteger,
-  normalizeMoney,
-  scaledIntegerToDecimal,
-} from "./money";
+import { accountingTransactionFor, type DrizzleTransaction } from "./drizzleAccountingStore";
+import { decimalToScaledInteger, normalizeMoney, scaledIntegerToDecimal } from "./money";
 import type { PostedEntry, PostingEntryInput, PostingResult } from "./types";
 import { AccountingIntegrityError, postVoucherInTransaction } from "./voucherPostingService";
 
@@ -99,8 +92,7 @@ function allocateSide(
   }
   const originalTotal = selected.reduce(
     (sum, entry) =>
-      sum +
-      decimalToScaledInteger(side === "debit" ? entry.debitAmount : entry.creditAmount, 2),
+      sum + decimalToScaledInteger(side === "debit" ? entry.debitAmount : entry.creditAmount, 2),
     0n,
   );
   if (originalTotal <= 0n) {
@@ -118,10 +110,7 @@ function allocateSide(
       index === selected.length - 1
         ? totalCents - allocated
         : (totalCents *
-            decimalToScaledInteger(
-              side === "debit" ? entry.debitAmount : entry.creditAmount,
-              2,
-            )) /
+            decimalToScaledInteger(side === "debit" ? entry.debitAmount : entry.creditAmount, 2)) /
           originalTotal;
     allocations.set(entry.id, amount);
     allocated += amount;
@@ -129,7 +118,10 @@ function allocateSide(
   return allocations;
 }
 
-function replacementEntries(originalEntries: PostedEntry[], totalCents: bigint): PostingEntryInput[] {
+function replacementEntries(
+  originalEntries: PostedEntry[],
+  totalCents: bigint,
+): PostingEntryInput[] {
   const debitAllocations = allocateSide(originalEntries, "debit", totalCents);
   const creditAllocations = allocateSide(originalEntries, "credit", totalCents);
 
@@ -174,7 +166,9 @@ function reversalEntries(originalEntries: PostedEntry[]): PostingEntryInput[] {
   }));
 }
 
-function aggregateQuantities(items: Array<{ stockItemId: number; quantity: string }>): Map<number, bigint> {
+function aggregateQuantities(
+  items: Array<{ stockItemId: number; quantity: string }>,
+): Map<number, bigint> {
   const totals = new Map<number, bigint>();
   for (const item of items) {
     const quantity = decimalToScaledInteger(item.quantity, 3);
@@ -510,7 +504,9 @@ export class PosSaleCorrectionService {
         .select({ id: stockItems.id, sellingPrice: stockItems.sellingPrice })
         .from(stockItems)
         .where(inArray(stockItems.id, [...new Set(input.items.map((item) => item.stockItemId))]));
-      const configuredPrices = new Map(products.map((product) => [product.id, product.sellingPrice]));
+      const configuredPrices = new Map(
+        products.map((product) => [product.id, product.sellingPrice]),
+      );
       const placeholderTotal = input.items.reduce((sum, item) => {
         const quantity = decimalToScaledInteger(item.quantity, 3);
         const configured = configuredPrices.get(item.stockItemId);
