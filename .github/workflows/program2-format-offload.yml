@@ -26,10 +26,9 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --include=dev
-      - name: Format focused offload files
+      - name: Format focused offload source files
         run: |
           npx prettier --write \
-            migrations/0025_container_offload_reversal_evidence.sql \
             server/storage.ts \
             server/financialCorrectionRoutes.ts \
             server/routes/containerOffloadReversalRoutes.ts \
@@ -45,7 +44,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
-            migrations/0025_container_offload_reversal_evidence.sql \
             server/storage.ts \
             server/financialCorrectionRoutes.ts \
             server/routes/containerOffloadReversalRoutes.ts \
