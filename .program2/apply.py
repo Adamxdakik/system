@@ -16,18 +16,18 @@ def replace_once(path: str, old: str, new: str) -> None:
 
 replace_once(
     "scripts/test-financial-integrity-postgres.ts",
-    """        INSERT INTO vouchers (
-          company_id, voucher_number, voucher_type, voucher_date, total_amount,
-          source_type, source_id, idempotency_key
-        ) VALUES ($1, $2, 'Journal', '2024-05-02', 1, 'REVERSAL_CONCURRENCY', $3, $3)
-        RETURNING id
+    """      INSERT INTO vouchers (
+        company_id, voucher_number, voucher_type, voucher_date, total_amount,
+        source_type, source_id, idempotency_key
+      ) VALUES ($1, $2, 'Journal', '2024-05-02', 1, 'REVERSAL_CONCURRENCY', $3, $3)
+      RETURNING id
 """,
-    """        INSERT INTO vouchers (
-          company_id, voucher_number, voucher_type, voucher_date, total_amount,
-          currency, exchange_rate, source_type, source_id, idempotency_key
-        ) VALUES ($1, $2, 'Journal', '2024-05-02', 1, 'USD', 1,
-          'REVERSAL_CONCURRENCY', $3, $3)
-        RETURNING id
+    """      INSERT INTO vouchers (
+        company_id, voucher_number, voucher_type, voucher_date, total_amount,
+        currency, exchange_rate, source_type, source_id, idempotency_key
+      ) VALUES ($1, $2, 'Journal', '2024-05-02', 1, 'USD', 1,
+        'REVERSAL_CONCURRENCY', $3, $3)
+      RETURNING id
 """,
 )
 
