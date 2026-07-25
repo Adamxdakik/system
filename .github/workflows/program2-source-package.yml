@@ -1,0 +1,22 @@
+name: Program 2 Source Package
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package exact source
+        run: tar --exclude=.git -czf program2-source.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: program2-source
+          path: program2-source.tar.gz
+          retention-days: 1
