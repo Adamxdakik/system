@@ -10,6 +10,48 @@ permissions:
   contents: read
 
 jobs:
+  apply-payroll-test-format:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out writable PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Format payroll PostgreSQL fixture
+        run: npx prettier --write scripts/test-payroll-posting-postgres.ts
+
+      - name: Commit formatted fixture
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Payroll PostgreSQL fixture is already formatted."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/test-payroll-posting-postgres.ts
+          git commit -m "style(accounting): format payroll PostgreSQL fixture"
+          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -101,7 +143,28 @@ jobs:
         run: npm run test:accounting:integration -- --confirm-disposable
 
       - name: Run transactional payroll PostgreSQL regressions
-        run: npx tsx scripts/test-payroll-posting-postgres.ts --confirm-disposable
+        id: payroll_test
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          npx tsx scripts/test-payroll-posting-postgres.ts --confirm-disposable > payroll-postgres.log 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          cat payroll-postgres.log
+          exit 0
+
+      - name: Upload payroll PostgreSQL diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: program2-payroll-postgres-diagnostics
+          path: payroll-postgres.log
+          retention-days: 1
+
+      - name: Stop when payroll PostgreSQL regressions failed
+        if: steps.payroll_test.outputs.exit_code != '0'
+        run: exit 1
 
       - name: Run POS inventory value regressions
         run: npx vitest run server/__tests__/posInventoryValue.test.ts
