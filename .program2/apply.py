@@ -15,84 +15,157 @@ def replace_once(path: str, old: str, new: str) -> None:
 
 
 replace_once(
-    "server/services/accounting/posSaleCorrectionService.ts",
-    'import { inventory, salesItems, stockItems } from "@shared/schema";',
-    'import { inventory, salesItems, stockItems, vouchers } from "@shared/schema";',
+    "server/financialCorrectionRoutes.ts",
+    'import { FinalizedVoucherCorrectionService } from "./services/accounting/finalizedVoucherCorrectionService";\n',
+    'import { FinalizedVoucherCorrectionService } from "./services/accounting/finalizedVoucherCorrectionService";\nimport { PosSaleCorrectionService } from "./services/accounting/posSaleCorrectionService";\n',
 )
 
 replace_once(
-    "server/services/accounting/posSaleCorrectionService.ts",
-    """      const locationId = await tx
-        .select({ locationId: inventory.locationId })
-        .from(inventory)
-        .where(eq(inventory.id, -1))
-        .then(() => undefined as number | undefined);
-      void locationId;
+    "server/financialCorrectionRoutes.ts",
+    "const reversalService = new VoucherReversalService(accountingStore);\n",
+    "const reversalService = new VoucherReversalService(accountingStore);\nconst posSaleCorrectionService = new PosSaleCorrectionService();\n",
+)
 
-      const [voucherRow] = await tx.execute<{
-        location_id: number | null;
-        description: string | null;
-      }>(
-        `SELECT location_id, description FROM vouchers WHERE id = $1 AND company_id = $2 FOR UPDATE`,
-        [input.voucherId, input.companyId],
+replace_once(
+    "server/financialCorrectionRoutes.ts",
+    """  const role = req.session.currentRole;
+  if (role !== "Admin" && role !== "Owner") {
+    if (role !== "Manager") {
+      throw new AccountingIntegrityError(
+        "Insufficient permissions to edit vouchers",
+        "VOUCHER_EDIT_FORBIDDEN",
+        403,
       );
-      const saleLocationId = Number(voucherRow?.location_id);
-""",
-    """      const [voucherRow] = await tx
-        .select({ locationId: vouchers.locationId, description: vouchers.description })
-        .from(vouchers)
-        .where(and(eq(vouchers.id, input.voucherId), eq(vouchers.companyId, input.companyId)))
-        .for("update")
-        .limit(1);
-      const saleLocationId = Number(voucherRow?.locationId);
-""",
-)
-
-replace_once(
-    "server/services/accounting/posSaleCorrectionService.ts",
-    """      const placeholderTotal = input.items.reduce((sum, item) => {
-        const quantity = decimalToScaledInteger(item.quantity, 3);
-        const price = decimalToScaledInteger(item.sellingPrice ?? item.rate ?? "0", 2);
-        return sum + lineAmount(quantity, price);
-      }, 0n);
-""",
-    """      const products = await tx
-        .select({ id: stockItems.id, sellingPrice: stockItems.sellingPrice })
-        .from(stockItems)
-        .where(inArray(stockItems.id, [...new Set(input.items.map((item) => item.stockItemId))]));
-      const configuredPrices = new Map(products.map((product) => [product.id, product.sellingPrice]));
-      const placeholderTotal = input.items.reduce((sum, item) => {
-        const quantity = decimalToScaledInteger(item.quantity, 3);
-        const configured = configuredPrices.get(item.stockItemId);
-        const configuredPrice = configured ? decimalToScaledInteger(configured, 2) : 0n;
-        const submittedPrice = decimalToScaledInteger(item.sellingPrice ?? item.rate ?? "0", 2);
-        return sum + lineAmount(quantity, configuredPrice > 0n ? configuredPrice : submittedPrice);
-      }, 0n);
-""",
-)
-
-replace_once(
-    "server/services/accounting/posSaleCorrectionService.ts",
-    """        description: input.description ?? voucherRow?.description ?? null,
-""",
-    """        description: input.description ?? voucherRow?.description ?? null,
-""",
-)
-
-replace_once(
-    "server/services/accounting/posSaleCorrectionService.ts",
-    """      const result = await tx.execute<{ location_id: number | null }>(
-        `SELECT location_id FROM vouchers WHERE id = $1 AND company_id = $2 FOR UPDATE`,
-        [input.voucherId, input.companyId],
+    }
+    const voucherDate = new Date(`${voucher.voucherDate}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (voucherDate.getTime() !== today.getTime()) {
+      throw new AccountingIntegrityError(
+        "Managers can only edit today's vouchers",
+        "VOUCHER_EDIT_FORBIDDEN",
+        403,
       );
-      const saleLocationId = Number(result[0]?.location_id);
+    }
+  }
 """,
-    """      const [voucherRow] = await tx
-        .select({ locationId: vouchers.locationId })
-        .from(vouchers)
-        .where(and(eq(vouchers.id, input.voucherId), eq(vouchers.companyId, input.companyId)))
-        .for("update")
-        .limit(1);
-      const saleLocationId = Number(voucherRow?.locationId);
+    """  const role = req.session.currentRole;
+  if (role !== "Admin" && role !== "Owner") {
+    const isSameDayEditor = role === "Manager" || /^POS\\d+$/.test(role ?? "");
+    if (!isSameDayEditor) {
+      throw new AccountingIntegrityError(
+        "Insufficient permissions to edit vouchers",
+        "VOUCHER_EDIT_FORBIDDEN",
+        403,
+      );
+    }
+    const voucherDate = new Date(`${voucher.voucherDate}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (voucherDate.getTime() !== today.getTime()) {
+      throw new AccountingIntegrityError(
+        "Managers and POS users can only edit today's vouchers",
+        "VOUCHER_EDIT_FORBIDDEN",
+        403,
+      );
+    }
+  }
+""",
+)
+
+replace_once(
+    "server/financialCorrectionRoutes.ts",
+    """  app.delete(
+    "/api/vouchers/:id",
+""",
+    """  app.put(
+    "/api/vouchers/:id/sales",
+    requireAuth,
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const voucherId = Number(req.params.id);
+        if (!Number.isInteger(voucherId) || voucherId <= 0) {
+          return res.status(400).json({ message: "Invalid voucher ID" });
+        }
+        const existing = await loadEditableVoucher(req, voucherId);
+        if (existing.optional) return next();
+        if (existing.voucherType !== "Sales") {
+          return res.status(409).json({
+            message: "Only finalized sales vouchers can use POS correction",
+            code: "VOUCHER_TYPE_MISMATCH",
+          });
+        }
+        const { description, voucherDate, items } = req.body ?? {};
+        if (!Array.isArray(items) || items.length === 0) {
+          return res.status(400).json({ message: "At least one item is required" });
+        }
+        const result = await posSaleCorrectionService.correct({
+          companyId: req.session.currentCompanyId!,
+          voucherId,
+          description: description ?? null,
+          transactionDate: typeof voucherDate === "string" ? voucherDate : null,
+          idempotencyKey: correctionIdentity(req, voucherId),
+          createdBy: req.user?.id ?? req.session.userId ?? null,
+          canSellNegativeStock: req.user?.canSellNegativeStock ?? false,
+          items: (items as Array<Record<string, unknown>>).map((item) => ({
+            id: Number(item.id) || null,
+            stockItemId: Number(item.stockItemId),
+            quantity: String(item.quantity ?? "0"),
+            sellingPrice: String(item.sellingPrice ?? item.rate ?? "0"),
+          })),
+        });
+        return res.status(result.duplicate ? 200 : 201).json({
+          message: "Sales voucher corrected successfully",
+          ...result,
+        });
+      } catch (error) {
+        return sendError(res, error);
+      }
+    },
+  );
+
+  app.delete(
+    "/api/vouchers/:id",
+""",
+)
+
+replace_once(
+    "server/financialCorrectionRoutes.ts",
+    """        const domainSourceTypes = new Set([
+          "POS_SALE",
+          "POS_SALE_REPLACEMENT",
+          "PURCHASE",
+""",
+    """        const identity =
+          req.get("idempotency-key") ??
+          String(req.body?.idempotencyKey ?? `DELETE_VOUCHER:${voucherId}`);
+        if (
+          existing.voucherType === "Sales" ||
+          existing.sourceType === "POS_SALE" ||
+          existing.sourceType === "POS_SALE_REPLACEMENT"
+        ) {
+          const result = await posSaleCorrectionService.cancel({
+            companyId: req.session.currentCompanyId!,
+            voucherId,
+            idempotencyKey: identity,
+            createdBy: req.user?.id ?? req.session.userId ?? null,
+            reason: String(req.body?.reason ?? `Cancellation of ${existing.voucherNumber}`),
+          });
+          return res.status(result.duplicate ? 200 : 201).json(result);
+        }
+
+        const domainSourceTypes = new Set([
+          "PURCHASE",
+""",
+)
+
+replace_once(
+    "server/financialCorrectionRoutes.ts",
+    """        const identity =
+          req.get("idempotency-key") ??
+          String(req.body?.idempotencyKey ?? `DELETE_VOUCHER:${voucherId}`);
+        const result = await reversalService.reverse({
+""",
+    """        const result = await reversalService.reverse({
 """,
 )
