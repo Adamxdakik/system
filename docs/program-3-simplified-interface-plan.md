@@ -40,7 +40,7 @@ Make the ERP faster and easier for daily users by simplifying navigation, dashbo
 
 ## Phase 3B — Inventory and product workflow
 
-Implementation is complete on draft PR #4. Permanent CI validation is tracked on the PR head.
+Implementation is complete on draft PR #4.
 
 ### Scope
 
@@ -65,7 +65,7 @@ Implementation is complete on draft PR #4. Permanent CI validation is tracked on
 
 ## Phase 3C — Sale and purchase forms
 
-Implementation and cleanup are complete on draft PR #4. Definitive permanent CI validation is running on the final source-only branch head.
+Implementation, cleanup, and permanent CI validation are complete on draft PR #4.
 
 ### Scope
 
@@ -89,4 +89,4 @@ Implementation and cleanup are complete on draft PR #4. Definitive permanent CI 
 
 ## Definition of done
 
-A phase is complete only after its scope and exclusions are respected, changed files are reviewed, formatting/lint/type checks pass, relevant tests and production build pass, and the user-facing workflow is verified. A page merely rendering is not sufficient.
+Program 3 is complete on draft PR #4. The final source-only head passed formatting, zero-warning lint, package and whole-application TypeScript checks, CI-safe tests, production build, the full migration chain with idempotent rerun, and all permanent PostgreSQL accounting, payroll, stock, container, POS-value, report, and audit regressions.
