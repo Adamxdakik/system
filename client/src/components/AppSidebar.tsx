@@ -3,7 +3,7 @@ import {
   ShoppingCart,
   Package,
   Landmark,
-  UsersRound,
+  BookUser,
   Cog,
   BadgeCheck,
   ChevronDown,
@@ -256,11 +256,11 @@ export function AppSidebar({ user }: { user?: any }) {
                 currentPath={location}
               />
 
-              {/* Customers */}
+              {/* Contacts */}
               <NavGroup
                 id="customers"
-                label="Customers"
-                icon={UsersRound}
+                label="Contacts"
+                icon={BookUser}
                 iconClass={sectionColors.customers}
                 items={customerSectionItems}
                 isActive={isGroupActive(customerSectionItems)}
