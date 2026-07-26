@@ -90,9 +90,12 @@ export function StockItemEditDialog({
         )
         variants_start = next(i for i, line in enumerate(lines) if "Variants section" in line)
         merged = lines[:active_start] + lines[variants_start:]
-        return ("\n".join(merged) + "\n" + theirs).replace(
-            "parseInt(value)", "Number.parseInt(value, 10)"
-        )
+        if merged and merged[-1].strip() == "</div>":
+            merged = merged[:-1]
+        return (
+            "\n".join(merged)
+            + "\n            </>\n          )}"
+        ).replace("parseInt(value)", "Number.parseInt(value, 10)")
     raise RuntimeError(f"Unexpected edit-dialog conflict {index}")
 
 
@@ -203,6 +206,10 @@ edit_text = edit_path.read_text(encoding="utf-8")
 edit_text = edit_text.replace(
     'import { AlertCircle, ChevronDown, Trash2 } from "lucide-react";',
     'import { AlertCircle, ChevronDown, ChevronRight, Plus, Trash2, X } from "lucide-react";',
+)
+edit_text = edit_text.replace(
+    '          ) : (\n            <div className="space-y-5 py-2">',
+    '          ) : (\n            <>\n              <div className="space-y-5 py-2">',
 )
 edit_path.write_text(edit_text, encoding="utf-8")
 
