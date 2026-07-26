@@ -12,6 +12,8 @@ import { registerMotorcycleSaleCustomerRoutes } from "./routes/motorcycleSaleCus
 import { registerMotorcycleSaleRoutes } from "./routes/motorcycleSaleRoutes";
 import { registerMotorcycleTimelineRoutes } from "./routes/motorcycleTimelineRoutes";
 import { registerMotorcycleWorkshopRoutes } from "./routes/motorcycleWorkshopRoutes";
+import { registerOptimizedAccountsRoutes } from "./routes/optimizedAccountsRoutes";
+import { registerOptimizedStockHistoryRoutes } from "./routes/optimizedStockHistoryRoutes";
 import { recordBandwidthSample } from "./services/observability/bandwidthTelemetry";
 import { setupVite, log } from "./vite";
 import type { User } from "@shared/schema";
@@ -138,6 +140,10 @@ app.use(apiRequestLogger(log, recordBandwidthSample));
   });
 
   registerAdminBandwidthRoutes(app);
+
+  // High-frequency read routes are registered before the legacy monolithic route file.
+  registerOptimizedAccountsRoutes(app);
+  registerOptimizedStockHistoryRoutes(app);
 
   // Lifecycle guards must run before generic assembly, service, and registry routes.
   registerMotorcycleWorkshopRoutes(app);
