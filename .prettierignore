@@ -7,3 +7,4 @@ attached_assets
 _trash
 *.md
 *.log
+migrations/*.sql

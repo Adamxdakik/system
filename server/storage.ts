@@ -1,6 +1,10 @@
 import { eq, and, or, sql, inArray, desc, ne, isNull } from "drizzle-orm";
 import { db } from "./db";
 import * as schema from "@shared/schema";
+import {
+  containerOffloadInventoryEvidence,
+  containerOffloadVoucherLinks,
+} from "./services/accounting/containerOffloadEvidenceSchema";
 import type {
   User,
   InsertUser,
@@ -51,7 +55,10 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
   deleteUser(id: string): Promise<void>;
-  getUserCompanyRole(userId: string, companyId: number): Promise<schema.UserCompanyRole | undefined>;
+  getUserCompanyRole(
+    userId: string,
+    companyId: number,
+  ): Promise<schema.UserCompanyRole | undefined>;
 
   // Companies
   getAllCompanies(): Promise<Company[]>;
@@ -63,7 +70,10 @@ export interface IStorage {
   // User-Company Roles
   getUserCompaniesWithRoles(userId: string): Promise<UserCompanyRole[]>;
   createUserCompanyRole(role: InsertUserCompanyRole): Promise<UserCompanyRole>;
-  updateUserCompanyRole(id: number, updates: Partial<InsertUserCompanyRole>): Promise<UserCompanyRole>;
+  updateUserCompanyRole(
+    id: number,
+    updates: Partial<InsertUserCompanyRole>,
+  ): Promise<UserCompanyRole>;
   deleteUserCompanyRole(id: number): Promise<void>;
 
   // Locations
@@ -84,17 +94,30 @@ export interface IStorage {
 
   // Employees
   getAllEmployees(companyId: number): Promise<Employee[]>;
-  getEmployeesWithBalances(companyId: number): Promise<Array<Employee & { calculatedBalance: string }>>;
+  getEmployeesWithBalances(
+    companyId: number,
+  ): Promise<Array<Employee & { calculatedBalance: string }>>;
   getEmployeeByCode(code: string): Promise<Employee | undefined>;
   getEmployeeById(id: number): Promise<Employee | undefined>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
-  deleteEmployee(id: number, forceDelete?: boolean): Promise<{success: boolean, message?: string, employeeBalance?: number, ledgerBalance?: number}>;
+  deleteEmployee(
+    id: number,
+    forceDelete?: boolean,
+  ): Promise<{
+    success: boolean;
+    message?: string;
+    employeeBalance?: number;
+    ledgerBalance?: number;
+  }>;
 
   // Employee Groups
   getAllEmployeeGroups(companyId: number): Promise<schema.EmployeeGroup[]>;
   getEmployeeGroupById(id: number): Promise<schema.EmployeeGroup | undefined>;
   createEmployeeGroup(group: schema.InsertEmployeeGroup): Promise<schema.EmployeeGroup>;
-  updateEmployeeGroup(id: number, updates: Partial<schema.InsertEmployeeGroup>): Promise<schema.EmployeeGroup>;
+  updateEmployeeGroup(
+    id: number,
+    updates: Partial<schema.InsertEmployeeGroup>,
+  ): Promise<schema.EmployeeGroup>;
   deleteEmployeeGroup(id: number): Promise<void>;
   getEmployeeGroupMembers(groupId: number): Promise<any[]>;
   addEmployeeToGroup(groupId: number, employeeId: number): Promise<void>;
@@ -123,12 +146,14 @@ export interface IStorage {
   deleteStockItem(id: number): Promise<void>;
   bulkGetStockItemsByIds(ids: number[], companyId: number): Promise<StockItem[]>;
   bulkDeleteStockItems(ids: number[]): Promise<void>;
-  
+
   // Stock Item Code Aliases
   getStockItemCodeAliases(stockItemId: number): Promise<schema.StockItemCodeAlias[]>;
   getAllCompanyCodeAliases(companyId: number): Promise<schema.StockItemCodeAlias[]>;
   getStockItemCodeAliasById(id: number): Promise<schema.StockItemCodeAlias | undefined>;
-  createStockItemCodeAlias(alias: schema.InsertStockItemCodeAlias): Promise<schema.StockItemCodeAlias>;
+  createStockItemCodeAlias(
+    alias: schema.InsertStockItemCodeAlias,
+  ): Promise<schema.StockItemCodeAlias>;
   deleteStockItemCodeAlias(id: number): Promise<void>;
 
   // Bank Accounts
@@ -136,7 +161,11 @@ export interface IStorage {
   getBankAccountByCode(code: string): Promise<BankAccount | undefined>;
   getBankAccountById(id: number, companyId: number): Promise<BankAccount | undefined>;
   createBankAccount(account: InsertBankAccount): Promise<BankAccount>;
-  updateBankAccount(id: number, updates: Partial<InsertBankAccount>, companyId: number): Promise<BankAccount>;
+  updateBankAccount(
+    id: number,
+    updates: Partial<InsertBankAccount>,
+    companyId: number,
+  ): Promise<BankAccount>;
   deleteBankAccount(id: number, companyId: number): Promise<void>;
 
   // Fixed Assets
@@ -175,7 +204,10 @@ export interface IStorage {
   // Container Items (manual entry)
   getContainerItems(containerId: number): Promise<schema.ContainerItem[]>;
   createContainerItem(item: schema.InsertContainerItem): Promise<schema.ContainerItem>;
-  updateContainerItem(id: number, updates: Partial<schema.InsertContainerItem>): Promise<schema.ContainerItem>;
+  updateContainerItem(
+    id: number,
+    updates: Partial<schema.InsertContainerItem>,
+  ): Promise<schema.ContainerItem>;
   deleteContainerItem(id: number): Promise<void>;
   deleteContainerItems(containerId: number): Promise<void>;
 
@@ -187,47 +219,92 @@ export interface IStorage {
   getStockItemByBarcode(barcode: string): Promise<StockItem | undefined>;
 
   // Stock Item Location Prices
-  getStockItemLocationPrices(stockItemId: number): Promise<(schema.StockItemLocationPrice & { locationName: string })[]>;
+  getStockItemLocationPrices(
+    stockItemId: number,
+  ): Promise<(schema.StockItemLocationPrice & { locationName: string })[]>;
   upsertLocationPrice(stockItemId: number, locationId: number, sellingPrice: string): Promise<void>;
   deleteLocationPrice(id: number): Promise<void>;
 
   // Inventory - Location-based stock tracking
   getLocationInventory(locationId: number): Promise<any[]>;
   getCompanyInventory(companyId: number): Promise<any[]>;
-  updateInventory(locationId: number, stockItemId: number, quantity: string, averageRate: string, totalValue: string): Promise<void>;
-  updateCostPricesByBarcode(locationId: number, companyId: number, updates: Array<{ barcode: string; costPrice: number }>): Promise<{ updated: number; errors: string[] }>;
+  updateInventory(
+    locationId: number,
+    stockItemId: number,
+    quantity: string,
+    averageRate: string,
+    totalValue: string,
+  ): Promise<void>;
+  updateCostPricesByBarcode(
+    locationId: number,
+    companyId: number,
+    updates: Array<{ barcode: string; costPrice: number }>,
+  ): Promise<{ updated: number; errors: string[] }>;
 
   // Container Offload
   offloadContainer(
-    containerId: number, 
-    locationId: number, 
-    duties: string, 
+    containerId: number,
+    locationId: number,
+    duties: string,
     dutiesAccountId: number | null | undefined,
     transportFees: string,
     transportAccountId: number | null | undefined,
     additionalCharges?: Array<{ description: string; amount: number; ledgerAccountId: number }>,
     offloadDate?: string,
-    costAllocationGroupIds?: number[]
+    costAllocationGroupIds?: number[],
   ): Promise<ContainerOffload>;
 
   // Vouchers and Journal Entries
   getAllVouchers(companyId: number): Promise<Voucher[]>;
   getVoucherById(id: number): Promise<Voucher | undefined>;
   getVouchersByDateRange(startDate: string, endDate: string, companyId?: number): Promise<any[]>;
-  getVoucherEntriesByLedger(ledgerAccountId: number, startDate?: string, endDate?: string): Promise<any[]>;
-  getVoucherEntriesByBankAccount(bankAccountId: number, startDate?: string, endDate?: string): Promise<any[]>;
-  getVoucherEntriesByFixedAsset(fixedAssetId: number, startDate?: string, endDate?: string): Promise<any[]>;
-  getVoucherEntriesBySupplier(supplierId: number, companyId?: number, startDate?: string, endDate?: string): Promise<any[]>;
-  getVoucherEntriesByEmployee(employeeId: number, companyId?: number, startDate?: string, endDate?: string): Promise<any[]>;
+  getVoucherEntriesByLedger(
+    ledgerAccountId: number,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<any[]>;
+  getVoucherEntriesByBankAccount(
+    bankAccountId: number,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<any[]>;
+  getVoucherEntriesByFixedAsset(
+    fixedAssetId: number,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<any[]>;
+  getVoucherEntriesBySupplier(
+    supplierId: number,
+    companyId?: number,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<any[]>;
+  getVoucherEntriesByEmployee(
+    employeeId: number,
+    companyId?: number,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<any[]>;
   getVoucherEntriesByVoucher(voucherId: number): Promise<VoucherEntry[]>;
-  getStockItemTransactions(stockItemId: number, companyId: number, startDate?: string, endDate?: string): Promise<any[]>;
+  getStockItemTransactions(
+    stockItemId: number,
+    companyId: number,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<any[]>;
   getContainerCountBySupplier(supplierId: number, companyId?: number): Promise<number>;
   createVoucher(voucher: InsertVoucher): Promise<Voucher>;
   updateVoucher(id: number, updates: Partial<InsertVoucher>): Promise<Voucher>;
   createVoucherEntry(entry: InsertVoucherEntry): Promise<VoucherEntry>;
   updateVoucherEntry(id: number, updates: Partial<InsertVoucherEntry>): Promise<VoucherEntry>;
-  updateStockTransferItem(id: number, updates: Partial<{ stockItemId: number; quantity: string; rate: string }>): Promise<StockTransferItem>;
-  updateStockAdjustmentItem(id: number, updates: Partial<{ stockItemId: number; quantity: string; rate: string }>): Promise<StockAdjustmentItem>;
+  updateStockTransferItem(
+    id: number,
+    updates: Partial<{ stockItemId: number; quantity: string; rate: string }>,
+  ): Promise<StockTransferItem>;
+  updateStockAdjustmentItem(
+    id: number,
+    updates: Partial<{ stockItemId: number; quantity: string; rate: string }>,
+  ): Promise<StockAdjustmentItem>;
   deleteVoucherEntry(id: number): Promise<void>;
   deleteVoucher(id: number): Promise<void>;
 
@@ -238,19 +315,41 @@ export interface IStorage {
     periodEndDate: string,
     retainedEarningsAccountId: number,
     closedByUserId: string,
-    notes?: string
+    notes?: string,
   ): Promise<schema.FiscalPeriodClosure>;
   getFiscalPeriodClosures(companyId: number): Promise<schema.FiscalPeriodClosure[]>;
 
   // Stock Transfers
-  createStockTransfer(voucherId: number, destinationLocationId: number, notes: string, items: Array<{sourceLocationId: number, stockItemId: number, quantity: string, rate: string}>): Promise<any>;
+  createStockTransfer(
+    voucherId: number,
+    destinationLocationId: number,
+    notes: string,
+    items: Array<{ sourceLocationId: number; stockItemId: number; quantity: string; rate: string }>,
+  ): Promise<any>;
   getStockTransferByVoucherId(voucherId: number): Promise<any | null>;
-  updateStockTransfer(id: number, destinationLocationId: number, notes: string, items: Array<{sourceLocationId: number, stockItemId: number, quantity: string, rate: string}>): Promise<any>;
+  updateStockTransfer(
+    id: number,
+    destinationLocationId: number,
+    notes: string,
+    items: Array<{ sourceLocationId: number; stockItemId: number; quantity: string; rate: string }>,
+  ): Promise<any>;
 
   // Stock Adjustments
-  createStockAdjustment(voucherId: number, locationId: number, adjustmentType: "Production" | "Consumption" | "Mixed", notes: string, items: Array<{stockItemId: number, quantity: string, rate: string}>): Promise<any>;
+  createStockAdjustment(
+    voucherId: number,
+    locationId: number,
+    adjustmentType: "Production" | "Consumption" | "Mixed",
+    notes: string,
+    items: Array<{ stockItemId: number; quantity: string; rate: string }>,
+  ): Promise<any>;
   getStockAdjustmentByVoucherId(voucherId: number): Promise<any | null>;
-  updateStockAdjustment(id: number, locationId: number, adjustmentType: "Production" | "Consumption" | "Mixed", notes: string, items: Array<{stockItemId: number, quantity: string, rate: string}>): Promise<any>;
+  updateStockAdjustment(
+    id: number,
+    locationId: number,
+    adjustmentType: "Production" | "Consumption" | "Mixed",
+    notes: string,
+    items: Array<{ stockItemId: number; quantity: string; rate: string }>,
+  ): Promise<any>;
 
   // Stock Query
   getLastPurchaseOrderForItem(stockItemId: number, companyId: number): Promise<any | null>;
@@ -272,21 +371,33 @@ export interface IStorage {
   getBikePurchaseById(id: number): Promise<schema.BikePurchase | undefined>;
   getBikePurchasesByCustomer(customerId: number, companyId: number): Promise<schema.BikePurchase[]>;
   createBikePurchase(purchase: schema.InsertBikePurchase): Promise<schema.BikePurchase>;
-  updateBikePurchase(id: number, updates: Partial<schema.InsertBikePurchase>): Promise<schema.BikePurchase>;
+  updateBikePurchase(
+    id: number,
+    updates: Partial<schema.InsertBikePurchase>,
+  ): Promise<schema.BikePurchase>;
 
   // Part Purchases
   getAllPartPurchases(companyId: number): Promise<schema.PartPurchase[]>;
   getPartPurchaseById(id: number): Promise<schema.PartPurchase | undefined>;
   getPartPurchasesByCustomer(customerId: number, companyId: number): Promise<schema.PartPurchase[]>;
   createPartPurchase(purchase: schema.InsertPartPurchase): Promise<schema.PartPurchase>;
-  updatePartPurchase(id: number, updates: Partial<schema.InsertPartPurchase>): Promise<schema.PartPurchase>;
+  updatePartPurchase(
+    id: number,
+    updates: Partial<schema.InsertPartPurchase>,
+  ): Promise<schema.PartPurchase>;
 
   // Service History
   getAllServiceHistory(companyId: number): Promise<schema.ServiceHistory[]>;
   getServiceHistoryById(id: number): Promise<schema.ServiceHistory | undefined>;
-  getServiceHistoryByCustomer(customerId: number, companyId: number): Promise<schema.ServiceHistory[]>;
+  getServiceHistoryByCustomer(
+    customerId: number,
+    companyId: number,
+  ): Promise<schema.ServiceHistory[]>;
   createServiceHistory(record: schema.InsertServiceHistory): Promise<schema.ServiceHistory>;
-  updateServiceHistory(id: number, updates: Partial<schema.InsertServiceHistory>): Promise<schema.ServiceHistory>;
+  updateServiceHistory(
+    id: number,
+    updates: Partial<schema.InsertServiceHistory>,
+  ): Promise<schema.ServiceHistory>;
 
   // Warranties
   getAllWarranties(companyId: number): Promise<schema.Warranty[]>;
@@ -298,27 +409,51 @@ export interface IStorage {
   // Communication Logs
   getAllCommunicationLogs(companyId: number): Promise<schema.CommunicationLog[]>;
   getCommunicationLogById(id: number): Promise<schema.CommunicationLog | undefined>;
-  getCommunicationLogsByCustomer(customerId: number, companyId: number): Promise<schema.CommunicationLog[]>;
+  getCommunicationLogsByCustomer(
+    customerId: number,
+    companyId: number,
+  ): Promise<schema.CommunicationLog[]>;
   createCommunicationLog(log: schema.InsertCommunicationLog): Promise<schema.CommunicationLog>;
-  updateCommunicationLog(id: number, updates: Partial<schema.InsertCommunicationLog>): Promise<schema.CommunicationLog>;
+  updateCommunicationLog(
+    id: number,
+    updates: Partial<schema.InsertCommunicationLog>,
+  ): Promise<schema.CommunicationLog>;
 
   // Container Sales
   createContainerSale(sale: schema.InsertContainerSale): Promise<schema.ContainerSale>;
   getContainerSales(companyId: number): Promise<schema.ContainerSale[]>;
   getContainerSaleById(id: number, companyId: number): Promise<schema.ContainerSale | undefined>;
-  getContainerSaleByContainerId(containerId: number, companyId: number): Promise<schema.ContainerSale | undefined>;
-  getContainerSalesByCustomer(customerId: number, companyId: number): Promise<schema.ContainerSale[]>;
-  updateContainerSalePayment(id: number, companyId: number, paidAmount: string, paymentStatus: "PENDING" | "PARTIAL" | "PAID"): Promise<schema.ContainerSale>;
-  
+  getContainerSaleByContainerId(
+    containerId: number,
+    companyId: number,
+  ): Promise<schema.ContainerSale | undefined>;
+  getContainerSalesByCustomer(
+    customerId: number,
+    companyId: number,
+  ): Promise<schema.ContainerSale[]>;
+  updateContainerSalePayment(
+    id: number,
+    companyId: number,
+    paidAmount: string,
+    paymentStatus: "PENDING" | "PARTIAL" | "PAID",
+  ): Promise<schema.ContainerSale>;
+
   // Customer Balances
   addCustomerBalanceEntry(entry: schema.InsertCustomerBalance): Promise<schema.CustomerBalance>;
   getCustomerBalance(customerId: number, companyId: number): Promise<number>;
-  getCustomerStatement(customerId: number, companyId: number, startDate?: string, endDate?: string): Promise<schema.CustomerBalance[]>;
+  getCustomerStatement(
+    customerId: number,
+    companyId: number,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<schema.CustomerBalance[]>;
 
   // Inter-Company Transfers
   getAllInterCompanyTransfers(companyId?: number): Promise<schema.InterCompanyTransfer[]>;
   getInterCompanyTransferById(id: number): Promise<schema.InterCompanyTransfer | undefined>;
-  createInterCompanyTransfer(transfer: schema.InsertInterCompanyTransfer): Promise<schema.InterCompanyTransfer>;
+  createInterCompanyTransfer(
+    transfer: schema.InsertInterCompanyTransfer,
+  ): Promise<schema.InterCompanyTransfer>;
 
   // Salary Advances
   getAllSalaryAdvances(companyId: number): Promise<schema.SalaryAdvance[]>;
@@ -326,17 +461,29 @@ export interface IStorage {
   getSalaryAdvancesByEmployee(employeeId: number): Promise<schema.SalaryAdvance[]>;
   getUnpaidSalaryAdvancesByEmployee(employeeId: number): Promise<schema.SalaryAdvance[]>;
   createSalaryAdvance(advance: schema.InsertSalaryAdvance): Promise<schema.SalaryAdvance>;
-  updateSalaryAdvance(id: number, updates: Partial<schema.InsertSalaryAdvance>): Promise<schema.SalaryAdvance>;
+  updateSalaryAdvance(
+    id: number,
+    updates: Partial<schema.InsertSalaryAdvance>,
+  ): Promise<schema.SalaryAdvance>;
 
   // Salary Advance Deductions
   getSalaryAdvanceDeductions(salaryAdvanceId: number): Promise<schema.SalaryAdvanceDeduction[]>;
-  createSalaryAdvanceDeduction(deduction: schema.InsertSalaryAdvanceDeduction): Promise<schema.SalaryAdvanceDeduction>;
+  createSalaryAdvanceDeduction(
+    deduction: schema.InsertSalaryAdvanceDeduction,
+  ): Promise<schema.SalaryAdvanceDeduction>;
 
   // Draft POS Sales
   getAllDraftPosSales(userId: string, locationId?: number): Promise<schema.DraftPosSale[]>;
   getDraftPosSaleById(id: number): Promise<any | undefined>;
-  createDraftPosSale(draft: schema.InsertDraftPosSale, items: Array<{stockItemId: number, quantity: string, rate: string, amount: string}>): Promise<schema.DraftPosSale>;
-  updateDraftPosSale(id: number, draft: Partial<schema.InsertDraftPosSale>, items?: Array<{stockItemId: number, quantity: string, rate: string, amount: string}>): Promise<schema.DraftPosSale>;
+  createDraftPosSale(
+    draft: schema.InsertDraftPosSale,
+    items: Array<{ stockItemId: number; quantity: string; rate: string; amount: string }>,
+  ): Promise<schema.DraftPosSale>;
+  updateDraftPosSale(
+    id: number,
+    draft: Partial<schema.InsertDraftPosSale>,
+    items?: Array<{ stockItemId: number; quantity: string; rate: string; amount: string }>,
+  ): Promise<schema.DraftPosSale>;
   deleteDraftPosSale(id: number): Promise<void>;
 
   // Company Settings
@@ -345,40 +492,116 @@ export interface IStorage {
 
   // Role Feature Permissions
   getRoleFeaturePermissions(companyId: number): Promise<schema.RoleFeaturePermission[]>;
-  getRoleFeaturePermission(companyId: number, role: string, featureKey: string): Promise<schema.RoleFeaturePermission | undefined>;
-  upsertRoleFeaturePermission(permission: schema.InsertRoleFeaturePermission): Promise<schema.RoleFeaturePermission>;
-  bulkUpsertRoleFeaturePermissions(permissions: schema.InsertRoleFeaturePermission[]): Promise<schema.RoleFeaturePermission[]>;
+  getRoleFeaturePermission(
+    companyId: number,
+    role: string,
+    featureKey: string,
+  ): Promise<schema.RoleFeaturePermission | undefined>;
+  upsertRoleFeaturePermission(
+    permission: schema.InsertRoleFeaturePermission,
+  ): Promise<schema.RoleFeaturePermission>;
+  bulkUpsertRoleFeaturePermissions(
+    permissions: schema.InsertRoleFeaturePermission[],
+  ): Promise<schema.RoleFeaturePermission[]>;
 
   // Per-employee per-location moto bonus rates
   getEmployeeMotoRates(employeeId: number): Promise<schema.EmployeeMotoRate[]>;
   replaceEmployeeMotoRates(
     employeeId: number,
     rates: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }>,
-    auditCtx?: { userId?: string | null; action?: string; sourceEmployeeId?: number | null; context?: any },
+    auditCtx?: {
+      userId?: string | null;
+      action?: string;
+      sourceEmployeeId?: number | null;
+      context?: any;
+    },
   ): Promise<schema.EmployeeMotoRate[]>;
   getEmployeeMotoPctRates(employeeId: number): Promise<schema.EmployeeMotoPctRate[]>;
   replaceEmployeeMotoPctRates(
     employeeId: number,
     rates: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }>,
-    auditCtx?: { userId?: string | null; action?: string; sourceEmployeeId?: number | null; context?: any },
+    auditCtx?: {
+      userId?: string | null;
+      action?: string;
+      sourceEmployeeId?: number | null;
+      context?: any;
+    },
   ): Promise<schema.EmployeeMotoPctRate[]>;
-  copyEmployeeMotoRates(targetEmployeeId: number, sourceEmployeeId: number, userId?: string | null): Promise<schema.EmployeeMotoRate[]>;
-  copyEmployeeMotoPctRates(targetEmployeeId: number, sourceEmployeeId: number, userId?: string | null): Promise<schema.EmployeeMotoPctRate[]>;
-  bulkSetMotoRateAtLocation(locationId: number, employeeIds: number[], rate: string, sourceCompanyId: number | null, userId?: string | null): Promise<{ updated: number }>;
-  bulkSetMotoPctRateAtLocation(locationId: number, employeeIds: number[], pct: string, sourceCompanyId: number | null, userId?: string | null): Promise<{ updated: number }>;
+  copyEmployeeMotoRates(
+    targetEmployeeId: number,
+    sourceEmployeeId: number,
+    userId?: string | null,
+  ): Promise<schema.EmployeeMotoRate[]>;
+  copyEmployeeMotoPctRates(
+    targetEmployeeId: number,
+    sourceEmployeeId: number,
+    userId?: string | null,
+  ): Promise<schema.EmployeeMotoPctRate[]>;
+  bulkSetMotoRateAtLocation(
+    locationId: number,
+    employeeIds: number[],
+    rate: string,
+    sourceCompanyId: number | null,
+    userId?: string | null,
+  ): Promise<{ updated: number }>;
+  bulkSetMotoPctRateAtLocation(
+    locationId: number,
+    employeeIds: number[],
+    pct: string,
+    sourceCompanyId: number | null,
+    userId?: string | null,
+  ): Promise<{ updated: number }>;
   getMotoRateAudit(employeeId: number, limit?: number): Promise<schema.MotoRateAudit[]>;
-  getMotoRateAuditFiltered(employeeId: number, opts?: { from?: Date; to?: Date; action?: string; limit?: number; offset?: number }): Promise<{ rows: schema.MotoRateAudit[]; total: number }>;
-  getLocationMotoRateStats(locationId: number): Promise<{ count: number; median: string | null; max: string | null; min: string | null }>;
+  getMotoRateAuditFiltered(
+    employeeId: number,
+    opts?: { from?: Date; to?: Date; action?: string; limit?: number; offset?: number },
+  ): Promise<{ rows: schema.MotoRateAudit[]; total: number }>;
+  getLocationMotoRateStats(
+    locationId: number,
+  ): Promise<{ count: number; median: string | null; max: string | null; min: string | null }>;
   getEmployeeMotoRatesAsOf(employeeId: number, asOf: Date): Promise<schema.EmployeeMotoRate[]>;
-  getEmployeeMotoPctRatesAsOf(employeeId: number, asOf: Date): Promise<schema.EmployeeMotoPctRate[]>;
-  getRateTemplates(companyId: number): Promise<Array<schema.RateTemplate & { items: schema.RateTemplateItem[] }>>;
-  createRateTemplate(companyId: number, name: string, description: string | null, items: Array<{ locationId: number; rate?: string | null; pct?: string | null; sourceCompanyId?: number | null }>, createdBy?: string | null): Promise<schema.RateTemplate & { items: schema.RateTemplateItem[] }>;
+  getEmployeeMotoPctRatesAsOf(
+    employeeId: number,
+    asOf: Date,
+  ): Promise<schema.EmployeeMotoPctRate[]>;
+  getRateTemplates(
+    companyId: number,
+  ): Promise<Array<schema.RateTemplate & { items: schema.RateTemplateItem[] }>>;
+  createRateTemplate(
+    companyId: number,
+    name: string,
+    description: string | null,
+    items: Array<{
+      locationId: number;
+      rate?: string | null;
+      pct?: string | null;
+      sourceCompanyId?: number | null;
+    }>,
+    createdBy?: string | null,
+  ): Promise<schema.RateTemplate & { items: schema.RateTemplateItem[] }>;
   deleteRateTemplate(templateId: number): Promise<void>;
-  getRateTemplate(templateId: number): Promise<(schema.RateTemplate & { items: schema.RateTemplateItem[] }) | null>;
-  createNotification(n: { userId: string; companyId?: number | null; type: string; title: string; body?: string | null; payload?: any }): Promise<schema.Notification>;
-  getNotifications(userId: string, opts?: { unreadOnly?: boolean; limit?: number }): Promise<schema.Notification[]>;
+  getRateTemplate(
+    templateId: number,
+  ): Promise<(schema.RateTemplate & { items: schema.RateTemplateItem[] }) | null>;
+  createNotification(n: {
+    userId: string;
+    companyId?: number | null;
+    type: string;
+    title: string;
+    body?: string | null;
+    payload?: any;
+  }): Promise<schema.Notification>;
+  getNotifications(
+    userId: string,
+    opts?: { unreadOnly?: boolean; limit?: number },
+  ): Promise<schema.Notification[]>;
   markNotificationsRead(userId: string, ids?: number[]): Promise<{ updated: number }>;
-  notifyCompanyManagersOfRateChange(companyId: number, employeeId: number, action: string, actorUserId?: string | null): Promise<void>;
+  notifyCompanyManagersOfRateChange(
+    companyId: number,
+    employeeId: number,
+    action: string,
+    actorUserId?: string | null,
+  ): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -403,7 +626,11 @@ export class DbStorage implements IStorage {
   }
 
   async updateUser(id: string, updates: Partial<InsertUser>): Promise<User> {
-    const [user] = await db.update(schema.users).set(updates).where(eq(schema.users.id, id)).returning();
+    const [user] = await db
+      .update(schema.users)
+      .set(updates)
+      .where(eq(schema.users.id, id))
+      .returning();
     return user;
   }
 
@@ -414,15 +641,18 @@ export class DbStorage implements IStorage {
     await db.delete(schema.users).where(eq(schema.users.id, id));
   }
 
-  async getUserCompanyRole(userId: string, companyId: number): Promise<schema.UserCompanyRole | undefined> {
+  async getUserCompanyRole(
+    userId: string,
+    companyId: number,
+  ): Promise<schema.UserCompanyRole | undefined> {
     const [role] = await db
       .select()
       .from(schema.userCompanyRoles)
       .where(
         and(
           eq(schema.userCompanyRoles.userId, userId),
-          eq(schema.userCompanyRoles.companyId, companyId)
-        )
+          eq(schema.userCompanyRoles.companyId, companyId),
+        ),
       );
     return role;
   }
@@ -454,121 +684,164 @@ export class DbStorage implements IStorage {
   async deleteCompany(id: number): Promise<void> {
     // Delete all company-related data in the correct order to avoid foreign key issues
     // Use raw SQL execute for subqueries since Drizzle's where() doesn't work well with sql template subqueries
-    
+
     // Delete voucher entries first (references vouchers)
-    await db.execute(sql`DELETE FROM voucher_entries WHERE voucher_id IN (SELECT id FROM vouchers WHERE company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM voucher_entries WHERE voucher_id IN (SELECT id FROM vouchers WHERE company_id = ${id})`,
+    );
+
     // Delete sales items (must be before vouchers)
-    await db.execute(sql`DELETE FROM sales_items WHERE voucher_id IN (SELECT id FROM vouchers WHERE company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM sales_items WHERE voucher_id IN (SELECT id FROM vouchers WHERE company_id = ${id})`,
+    );
+
     // Delete stock transfer items (through vouchers -> stock_transfer_vouchers)
-    await db.execute(sql`DELETE FROM stock_transfer_items WHERE transfer_id IN (SELECT stv.id FROM stock_transfer_vouchers stv JOIN vouchers v ON stv.voucher_id = v.id WHERE v.company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM stock_transfer_items WHERE transfer_id IN (SELECT stv.id FROM stock_transfer_vouchers stv JOIN vouchers v ON stv.voucher_id = v.id WHERE v.company_id = ${id})`,
+    );
+
     // Delete stock transfer vouchers (through vouchers)
-    await db.execute(sql`DELETE FROM stock_transfer_vouchers WHERE voucher_id IN (SELECT id FROM vouchers WHERE company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM stock_transfer_vouchers WHERE voucher_id IN (SELECT id FROM vouchers WHERE company_id = ${id})`,
+    );
+
     // Delete stock adjustment items (through vouchers -> stock_adjustment_vouchers)
-    await db.execute(sql`DELETE FROM stock_adjustment_items WHERE adjustment_id IN (SELECT sav.id FROM stock_adjustment_vouchers sav JOIN vouchers v ON sav.voucher_id = v.id WHERE v.company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM stock_adjustment_items WHERE adjustment_id IN (SELECT sav.id FROM stock_adjustment_vouchers sav JOIN vouchers v ON sav.voucher_id = v.id WHERE v.company_id = ${id})`,
+    );
+
     // Delete stock adjustment vouchers (through vouchers)
-    await db.execute(sql`DELETE FROM stock_adjustment_vouchers WHERE voucher_id IN (SELECT id FROM vouchers WHERE company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM stock_adjustment_vouchers WHERE voucher_id IN (SELECT id FROM vouchers WHERE company_id = ${id})`,
+    );
+
     // Delete vouchers
     await db.delete(schema.vouchers).where(eq(schema.vouchers.companyId, id));
-    
+
     // Delete draft POS sale items (through locations -> draft_pos_sales)
-    await db.execute(sql`DELETE FROM draft_pos_sale_items WHERE draft_id IN (SELECT dps.id FROM draft_pos_sales dps JOIN locations l ON dps.location_id = l.id WHERE l.company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM draft_pos_sale_items WHERE draft_id IN (SELECT dps.id FROM draft_pos_sales dps JOIN locations l ON dps.location_id = l.id WHERE l.company_id = ${id})`,
+    );
+
     // Delete draft POS sales (through locations)
-    await db.execute(sql`DELETE FROM draft_pos_sales WHERE location_id IN (SELECT id FROM locations WHERE company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM draft_pos_sales WHERE location_id IN (SELECT id FROM locations WHERE company_id = ${id})`,
+    );
+
     // Delete PO line items
-    await db.execute(sql`DELETE FROM po_line_items WHERE po_id IN (SELECT id FROM purchase_orders WHERE company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM po_line_items WHERE po_id IN (SELECT id FROM purchase_orders WHERE company_id = ${id})`,
+    );
+
     // Delete purchase orders
     await db.delete(schema.purchaseOrders).where(eq(schema.purchaseOrders.companyId, id));
-    
+
     // Delete container charges
-    await db.execute(sql`DELETE FROM container_charges WHERE container_id IN (SELECT id FROM containers WHERE company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM container_charges WHERE container_id IN (SELECT id FROM containers WHERE company_id = ${id})`,
+    );
+
     // Delete container offloads
-    await db.execute(sql`DELETE FROM container_offloads WHERE container_id IN (SELECT id FROM containers WHERE company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM container_offloads WHERE container_id IN (SELECT id FROM containers WHERE company_id = ${id})`,
+    );
+
     // Delete containers
     await db.delete(schema.containers).where(eq(schema.containers.companyId, id));
-    
+
     // Delete inventory
     await db.delete(schema.inventory).where(eq(schema.inventory.companyId, id));
-    
+
     // Delete stock item code aliases
-    await db.delete(schema.stockItemCodeAliases).where(eq(schema.stockItemCodeAliases.companyId, id));
-    
+    await db
+      .delete(schema.stockItemCodeAliases)
+      .where(eq(schema.stockItemCodeAliases.companyId, id));
+
     // Delete stock item location prices
-    await db.execute(sql`DELETE FROM stock_item_location_prices WHERE stock_item_id IN (SELECT id FROM stock_items WHERE company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM stock_item_location_prices WHERE stock_item_id IN (SELECT id FROM stock_items WHERE company_id = ${id})`,
+    );
+
     // Delete stock items
     await db.delete(schema.stockItems).where(eq(schema.stockItems.companyId, id));
-    
+
     // Delete stock groups
     await db.delete(schema.stockGroups).where(eq(schema.stockGroups.companyId, id));
-    
+
     // Delete mix batch sources (ignore if table doesn't exist)
     try {
-      await db.execute(sql`DELETE FROM mix_batch_sources WHERE mix_batch_id IN (SELECT id FROM mix_batches WHERE company_id = ${id})`);
+      await db.execute(
+        sql`DELETE FROM mix_batch_sources WHERE mix_batch_id IN (SELECT id FROM mix_batches WHERE company_id = ${id})`,
+      );
     } catch (e: any) {
-      if (!e.message?.includes('does not exist')) throw e;
+      if (!e.message?.includes("does not exist")) throw e;
     }
     // Delete salary advances
     await db.delete(schema.salaryAdvances).where(eq(schema.salaryAdvances.companyId, id));
-    
+
     // Delete employee group members
-    await db.execute(sql`DELETE FROM employee_group_members WHERE employee_group_id IN (SELECT id FROM employee_groups WHERE company_id = ${id})`);
-    
+    await db.execute(
+      sql`DELETE FROM employee_group_members WHERE employee_group_id IN (SELECT id FROM employee_groups WHERE company_id = ${id})`,
+    );
+
     // Delete employee groups
     await db.delete(schema.employeeGroups).where(eq(schema.employeeGroups.companyId, id));
-    
+
     // Delete employees
     await db.delete(schema.employees).where(eq(schema.employees.companyId, id));
-    
+
     // Delete customer balances
     await db.delete(schema.customerBalances).where(eq(schema.customerBalances.companyId, id));
-    
+
     // Delete customers
     await db.delete(schema.customers).where(eq(schema.customers.companyId, id));
-    
+
     // Delete container sales
     await db.delete(schema.containerSales).where(eq(schema.containerSales.companyId, id));
-    
+
     // Delete inter-company transfers
-    await db.delete(schema.interCompanyTransfers).where(or(eq(schema.interCompanyTransfers.fromCompanyId, id), eq(schema.interCompanyTransfers.toCompanyId, id)));
-    
+    await db
+      .delete(schema.interCompanyTransfers)
+      .where(
+        or(
+          eq(schema.interCompanyTransfers.fromCompanyId, id),
+          eq(schema.interCompanyTransfers.toCompanyId, id),
+        ),
+      );
+
     // Delete bank accounts
     await db.delete(schema.bankAccounts).where(eq(schema.bankAccounts.companyId, id));
-    
+
     // Delete fixed assets
     await db.delete(schema.fixedAssets).where(eq(schema.fixedAssets.companyId, id));
-    
+
     // Delete ledger accounts
     await db.delete(schema.ledgerAccounts).where(eq(schema.ledgerAccounts.companyId, id));
-    
+
     // Delete locations
     await db.delete(schema.locations).where(eq(schema.locations.companyId, id));
-    
+
     // Delete fiscal period closures
-    await db.delete(schema.fiscalPeriodClosures).where(eq(schema.fiscalPeriodClosures.companyId, id));
-    
+    await db
+      .delete(schema.fiscalPeriodClosures)
+      .where(eq(schema.fiscalPeriodClosures.companyId, id));
+
     // Delete dashboard cash accounts
-    await db.delete(schema.dashboardCashAccounts).where(eq(schema.dashboardCashAccounts.companyId, id));
-    
+    await db
+      .delete(schema.dashboardCashAccounts)
+      .where(eq(schema.dashboardCashAccounts.companyId, id));
+
     // Delete dashboard payable accounts
-    await db.delete(schema.dashboardPayableAccounts).where(eq(schema.dashboardPayableAccounts.companyId, id));
-    
+    await db
+      .delete(schema.dashboardPayableAccounts)
+      .where(eq(schema.dashboardPayableAccounts.companyId, id));
+
     // Delete company settings
     await db.delete(schema.companySettings).where(eq(schema.companySettings.companyId, id));
-    
+
     // Delete user company roles
     await db.delete(schema.userCompanyRoles).where(eq(schema.userCompanyRoles.companyId, id));
-    
+
     // Finally delete the company
     await db.delete(schema.companies).where(eq(schema.companies.id, id));
   }
@@ -586,7 +859,10 @@ export class DbStorage implements IStorage {
     return created;
   }
 
-  async updateUserCompanyRole(id: number, updates: Partial<InsertUserCompanyRole>): Promise<UserCompanyRole> {
+  async updateUserCompanyRole(
+    id: number,
+    updates: Partial<InsertUserCompanyRole>,
+  ): Promise<UserCompanyRole> {
     const [updated] = await db
       .update(schema.userCompanyRoles)
       .set(updates)
@@ -601,14 +877,12 @@ export class DbStorage implements IStorage {
 
   // Locations
   async getAllLocations(companyId: number): Promise<Location[]> {
-    console.log('[storage.getAllLocations] Querying locations for companyId:', companyId);
-    const locations = await db.select().from(schema.locations).where(
-      and(
-        eq(schema.locations.companyId, companyId),
-        isNull(schema.locations.deletedAt)
-      )
-    );
-    console.log('[storage.getAllLocations] Query returned:', locations.length, 'locations');
+    console.log("[storage.getAllLocations] Querying locations for companyId:", companyId);
+    const locations = await db
+      .select()
+      .from(schema.locations)
+      .where(and(eq(schema.locations.companyId, companyId), isNull(schema.locations.deletedAt)));
+    console.log("[storage.getAllLocations] Query returned:", locations.length, "locations");
     return locations;
   }
 
@@ -618,62 +892,89 @@ export class DbStorage implements IStorage {
   }
 
   async getLocationByCode(code: string, companyId: number): Promise<Location | undefined> {
-    const [location] = await db.select().from(schema.locations).where(
-      and(eq(schema.locations.code, code), eq(schema.locations.companyId, companyId))
-    );
+    const [location] = await db
+      .select()
+      .from(schema.locations)
+      .where(and(eq(schema.locations.code, code), eq(schema.locations.companyId, companyId)));
     return location;
   }
 
   async createLocation(location: InsertLocation): Promise<Location> {
-    const [created] = await db.insert(schema.locations).values(location as any).returning();
+    const [created] = await db
+      .insert(schema.locations)
+      .values(location as any)
+      .returning();
     return created;
   }
 
   async deleteLocation(id: number): Promise<void> {
     // Soft delete - set deletedAt and active=false instead of hard delete
-    await db.update(schema.locations)
+    await db
+      .update(schema.locations)
       .set({ deletedAt: new Date(), active: false })
       .where(eq(schema.locations.id, id));
   }
 
   // Ledger Accounts
   async getAllLedgerAccounts(companyId: number): Promise<LedgerAccount[]> {
-    return await db.select().from(schema.ledgerAccounts).where(
-      and(
-        eq(schema.ledgerAccounts.companyId, companyId),
-        isNull(schema.ledgerAccounts.deletedAt)
-      )
-    );
+    return await db
+      .select()
+      .from(schema.ledgerAccounts)
+      .where(
+        and(
+          eq(schema.ledgerAccounts.companyId, companyId),
+          isNull(schema.ledgerAccounts.deletedAt),
+        ),
+      );
   }
 
-  async getLedgerAccountByCode(code: string, companyId: number): Promise<LedgerAccount | undefined> {
-    const [account] = await db.select().from(schema.ledgerAccounts).where(
-      and(eq(schema.ledgerAccounts.code, code), eq(schema.ledgerAccounts.companyId, companyId))
-    );
+  async getLedgerAccountByCode(
+    code: string,
+    companyId: number,
+  ): Promise<LedgerAccount | undefined> {
+    const [account] = await db
+      .select()
+      .from(schema.ledgerAccounts)
+      .where(
+        and(eq(schema.ledgerAccounts.code, code), eq(schema.ledgerAccounts.companyId, companyId)),
+      );
     return account;
   }
 
-  async getLedgerAccountByName(name: string, companyId: number): Promise<LedgerAccount | undefined> {
-    const [account] = await db.select().from(schema.ledgerAccounts).where(
-      and(eq(schema.ledgerAccounts.name, name), eq(schema.ledgerAccounts.companyId, companyId))
-    );
+  async getLedgerAccountByName(
+    name: string,
+    companyId: number,
+  ): Promise<LedgerAccount | undefined> {
+    const [account] = await db
+      .select()
+      .from(schema.ledgerAccounts)
+      .where(
+        and(eq(schema.ledgerAccounts.name, name), eq(schema.ledgerAccounts.companyId, companyId)),
+      );
     return account;
   }
 
   async createLedgerAccount(account: InsertLedgerAccount): Promise<LedgerAccount> {
-    const [created] = await db.insert(schema.ledgerAccounts).values([account as any]).returning();
+    const [created] = await db
+      .insert(schema.ledgerAccounts)
+      .values([account as any])
+      .returning();
     return created;
   }
 
   async deleteLedgerAccount(id: number): Promise<void> {
     // Soft delete - set deletedAt and active=false instead of hard delete
-    await db.update(schema.ledgerAccounts)
+    await db
+      .update(schema.ledgerAccounts)
       .set({ deletedAt: new Date(), active: false })
       .where(eq(schema.ledgerAccounts.id, id));
   }
 
   async getLedgerAccountById(id: number): Promise<LedgerAccount | undefined> {
-    const [account] = await db.select().from(schema.ledgerAccounts).where(eq(schema.ledgerAccounts.id, id));
+    const [account] = await db
+      .select()
+      .from(schema.ledgerAccounts)
+      .where(eq(schema.ledgerAccounts.id, id));
     return account;
   }
 
@@ -689,24 +990,24 @@ export class DbStorage implements IStorage {
 
   // Employees
   async getAllEmployees(companyId: number): Promise<Employee[]> {
-    const employees = await db.select().from(schema.employees).where(
-      and(
-        eq(schema.employees.companyId, companyId),
-        isNull(schema.employees.deletedAt)
-      )
-    );
+    const employees = await db
+      .select()
+      .from(schema.employees)
+      .where(and(eq(schema.employees.companyId, companyId), isNull(schema.employees.deletedAt)));
     // Ensure camelCase mapping works correctly
-    return employees.map(emp => ({
+    return employees.map((emp) => ({
       ...emp,
       firstName: (emp as any).firstName || (emp as any).first_name,
       lastName: (emp as any).lastName || (emp as any).last_name,
     })) as Employee[];
   }
 
-  async getEmployeesWithBalances(companyId: number): Promise<Array<Employee & { calculatedBalance: string }>> {
+  async getEmployeesWithBalances(
+    companyId: number,
+  ): Promise<Array<Employee & { calculatedBalance: string }>> {
     // Get all employees for the company
     const employees = await this.getAllEmployees(companyId);
-    
+
     // Calculate balance for each employee - use stored currentBalance which includes deposits
     const employeesWithBalances = employees.map((employee) => {
       // Use employee.currentBalance which is updated by deposits/bonuses/withdrawals
@@ -725,25 +1026,38 @@ export class DbStorage implements IStorage {
   async getEmployeeByCode(code: string): Promise<Employee | undefined> {
     // Filter soft-deleted: tombstoned employees should not surface to live callers
     // (sales, payroll, balance sync, etc.). Restore flow uses raw db.update directly.
-    const [employee] = await db.select().from(schema.employees).where(
-      and(eq(schema.employees.code, code), isNull(schema.employees.deletedAt))
-    );
+    const [employee] = await db
+      .select()
+      .from(schema.employees)
+      .where(and(eq(schema.employees.code, code), isNull(schema.employees.deletedAt)));
     return employee;
   }
 
   async getEmployeeById(id: number): Promise<Employee | undefined> {
-    const [employee] = await db.select().from(schema.employees).where(
-      and(eq(schema.employees.id, id), isNull(schema.employees.deletedAt))
-    );
+    const [employee] = await db
+      .select()
+      .from(schema.employees)
+      .where(and(eq(schema.employees.id, id), isNull(schema.employees.deletedAt)));
     return employee;
   }
 
   async createEmployee(employee: InsertEmployee): Promise<Employee> {
-    const [created] = await db.insert(schema.employees).values([employee as any]).returning();
+    const [created] = await db
+      .insert(schema.employees)
+      .values([employee as any])
+      .returning();
     return created;
   }
 
-  async deleteEmployee(id: number, forceDelete: boolean = false): Promise<{success: boolean, message?: string, employeeBalance?: number, ledgerBalance?: number}> {
+  async deleteEmployee(
+    id: number,
+    forceDelete: boolean = false,
+  ): Promise<{
+    success: boolean;
+    message?: string;
+    employeeBalance?: number;
+    ledgerBalance?: number;
+  }> {
     return await db.transaction(async (tx) => {
       // Get the employee
       const [employee] = await tx
@@ -763,15 +1077,16 @@ export class DbStorage implements IStorage {
         .limit(1);
 
       if (salaryAdvances.length > 0) {
-        return { 
-          success: false, 
-          message: "Cannot delete employee with salary advances. Please remove all salary advances first." 
+        return {
+          success: false,
+          message:
+            "Cannot delete employee with salary advances. Please remove all salary advances first.",
         };
       }
 
       // Check employee's current balance
       const employeeBalance = parseFloat(employee.currentBalance || "0");
-      
+
       // Find linked ledger account by matching employee code
       const [linkedAccount] = await tx
         .select()
@@ -779,8 +1094,8 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(schema.ledgerAccounts.code, employee.code),
-            eq(schema.ledgerAccounts.companyId, employee.companyId)
-          )
+            eq(schema.ledgerAccounts.companyId, employee.companyId),
+          ),
         );
 
       let ledgerBalance = 0;
@@ -794,9 +1109,9 @@ export class DbStorage implements IStorage {
           .limit(1);
 
         if (voucherEntries.length > 0) {
-          return { 
-            success: false, 
-            message: "Cannot delete employee. The linked ledger account has transaction history." 
+          return {
+            success: false,
+            message: "Cannot delete employee. The linked ledger account has transaction history.",
           };
         }
 
@@ -810,15 +1125,16 @@ export class DbStorage implements IStorage {
       if (!forceDelete && (Math.abs(employeeBalance) > 0.01 || Math.abs(ledgerBalance) > 0.01)) {
         return {
           success: false,
-          message: "Employee or linked account has a non-zero balance. Admin confirmation required.",
+          message:
+            "Employee or linked account has a non-zero balance. Admin confirmation required.",
           employeeBalance: employeeBalance,
-          ledgerBalance: ledgerBalance
+          ledgerBalance: ledgerBalance,
         };
       }
 
       // Proceed with soft deletion
       const now = new Date();
-      
+
       if (linkedAccount) {
         // Soft delete linked ledger account
         await tx
@@ -849,14 +1165,17 @@ export class DbStorage implements IStorage {
       .from(schema.employeeGroups)
       .where(eq(schema.employeeGroups.companyId, companyId));
     // Explicitly map groupType for API compatibility
-    return results.map(g => ({
+    return results.map((g) => ({
       ...g,
-      groupType: (g as any).groupType || "Employee"
+      groupType: (g as any).groupType || "Employee",
     }));
   }
 
   async getEmployeeGroupById(id: number): Promise<schema.EmployeeGroup | undefined> {
-    const [group] = await db.select().from(schema.employeeGroups).where(eq(schema.employeeGroups.id, id));
+    const [group] = await db
+      .select()
+      .from(schema.employeeGroups)
+      .where(eq(schema.employeeGroups.id, id));
     return group;
   }
 
@@ -865,7 +1184,10 @@ export class DbStorage implements IStorage {
     return created;
   }
 
-  async updateEmployeeGroup(id: number, updates: Partial<schema.InsertEmployeeGroup>): Promise<schema.EmployeeGroup> {
+  async updateEmployeeGroup(
+    id: number,
+    updates: Partial<schema.InsertEmployeeGroup>,
+  ): Promise<schema.EmployeeGroup> {
     const [updated] = await db
       .update(schema.employeeGroups)
       .set(updates)
@@ -876,7 +1198,9 @@ export class DbStorage implements IStorage {
 
   async deleteEmployeeGroup(id: number): Promise<void> {
     // First, delete all members
-    await db.delete(schema.employeeGroupMembers).where(eq(schema.employeeGroupMembers.employeeGroupId, id));
+    await db
+      .delete(schema.employeeGroupMembers)
+      .where(eq(schema.employeeGroupMembers.employeeGroupId, id));
     // Then delete the group
     await db.delete(schema.employeeGroups).where(eq(schema.employeeGroups.id, id));
   }
@@ -906,10 +1230,10 @@ export class DbStorage implements IStorage {
       .where(
         and(
           eq(schema.employeeGroupMembers.employeeGroupId, groupId),
-          eq(schema.employeeGroupMembers.employeeId, employeeId)
-        )
+          eq(schema.employeeGroupMembers.employeeId, employeeId),
+        ),
       );
-    
+
     if (!existing) {
       await db.insert(schema.employeeGroupMembers).values({
         employeeGroupId: groupId,
@@ -924,8 +1248,8 @@ export class DbStorage implements IStorage {
       .where(
         and(
           eq(schema.employeeGroupMembers.employeeGroupId, groupId),
-          eq(schema.employeeGroupMembers.employeeId, employeeId)
-        )
+          eq(schema.employeeGroupMembers.employeeId, employeeId),
+        ),
       );
   }
 
@@ -935,21 +1259,26 @@ export class DbStorage implements IStorage {
   }
 
   async getSupplierByCode(code: string): Promise<Supplier | undefined> {
-    const [supplier] = await db.select().from(schema.suppliers).where(
-      and(eq(schema.suppliers.code, code), isNull(schema.suppliers.deletedAt))
-    );
+    const [supplier] = await db
+      .select()
+      .from(schema.suppliers)
+      .where(and(eq(schema.suppliers.code, code), isNull(schema.suppliers.deletedAt)));
     return supplier;
   }
 
   async getSupplierById(id: number): Promise<Supplier | undefined> {
-    const [supplier] = await db.select().from(schema.suppliers).where(
-      and(eq(schema.suppliers.id, id), isNull(schema.suppliers.deletedAt))
-    );
+    const [supplier] = await db
+      .select()
+      .from(schema.suppliers)
+      .where(and(eq(schema.suppliers.id, id), isNull(schema.suppliers.deletedAt)));
     return supplier;
   }
 
   async createSupplier(supplier: InsertSupplier): Promise<Supplier> {
-    const [created] = await db.insert(schema.suppliers).values(supplier as any).returning();
+    const [created] = await db
+      .insert(schema.suppliers)
+      .values(supplier as any)
+      .returning();
     return created;
   }
 
@@ -964,26 +1293,25 @@ export class DbStorage implements IStorage {
 
   // Stock Groups
   async getAllStockGroups(companyId: number): Promise<StockGroup[]> {
-    return await db.select().from(schema.stockGroups).where(eq(schema.stockGroups.companyId, companyId));
+    return await db
+      .select()
+      .from(schema.stockGroups)
+      .where(eq(schema.stockGroups.companyId, companyId));
   }
 
   async getStockGroupByCode(code: string, companyId: number): Promise<StockGroup | undefined> {
-    const [group] = await db.select().from(schema.stockGroups).where(
-      and(
-        eq(schema.stockGroups.code, code),
-        eq(schema.stockGroups.companyId, companyId)
-      )
-    );
+    const [group] = await db
+      .select()
+      .from(schema.stockGroups)
+      .where(and(eq(schema.stockGroups.code, code), eq(schema.stockGroups.companyId, companyId)));
     return group;
   }
 
   async getStockGroupById(id: number, companyId: number): Promise<StockGroup | undefined> {
-    const [group] = await db.select().from(schema.stockGroups).where(
-      and(
-        eq(schema.stockGroups.id, id),
-        eq(schema.stockGroups.companyId, companyId)
-      )
-    );
+    const [group] = await db
+      .select()
+      .from(schema.stockGroups)
+      .where(and(eq(schema.stockGroups.id, id), eq(schema.stockGroups.companyId, companyId)));
     return group;
   }
 
@@ -994,28 +1322,25 @@ export class DbStorage implements IStorage {
 
   // Stock Items
   async getAllStockItems(companyId: number): Promise<StockItem[]> {
-    return await db.select().from(schema.stockItems).where(
-      and(
-        eq(schema.stockItems.companyId, companyId),
-        isNull(schema.stockItems.deletedAt)
-      )
-    );
+    return await db
+      .select()
+      .from(schema.stockItems)
+      .where(and(eq(schema.stockItems.companyId, companyId), isNull(schema.stockItems.deletedAt)));
   }
 
   async getStockItemByCode(code: string, companyId: number): Promise<StockItem | undefined> {
-    const [item] = await db.select().from(schema.stockItems).where(
-      and(
-        eq(schema.stockItems.code, code),
-        eq(schema.stockItems.companyId, companyId)
-      )
-    );
+    const [item] = await db
+      .select()
+      .from(schema.stockItems)
+      .where(and(eq(schema.stockItems.code, code), eq(schema.stockItems.companyId, companyId)));
     return item;
   }
 
   async getStockItemById(id: number): Promise<StockItem | undefined> {
-    const [item] = await db.select().from(schema.stockItems).where(
-      and(eq(schema.stockItems.id, id), isNull(schema.stockItems.deletedAt))
-    );
+    const [item] = await db
+      .select()
+      .from(schema.stockItems)
+      .where(and(eq(schema.stockItems.id, id), isNull(schema.stockItems.deletedAt)));
     return item;
   }
 
@@ -1046,12 +1371,7 @@ export class DbStorage implements IStorage {
     return await db
       .select()
       .from(schema.stockItems)
-      .where(
-        and(
-          inArray(schema.stockItems.id, ids),
-          eq(schema.stockItems.companyId, companyId)
-        )
-      );
+      .where(and(inArray(schema.stockItems.id, ids), eq(schema.stockItems.companyId, companyId)));
   }
 
   async bulkDeleteStockItems(ids: number[]): Promise<void> {
@@ -1071,11 +1391,11 @@ export class DbStorage implements IStorage {
       .where(
         and(
           sql`LOWER(${schema.stockItems.code}) = LOWER(${code})`,
-          eq(schema.stockItems.companyId, companyId)
-        )
+          eq(schema.stockItems.companyId, companyId),
+        ),
       )
       .limit(1);
-    
+
     if (directMatch) {
       return directMatch;
     }
@@ -1088,14 +1408,14 @@ export class DbStorage implements IStorage {
       .from(schema.stockItemCodeAliases)
       .innerJoin(
         schema.stockItems,
-        eq(schema.stockItemCodeAliases.stockItemId, schema.stockItems.id)
+        eq(schema.stockItemCodeAliases.stockItemId, schema.stockItems.id),
       )
       .where(
         and(
           sql`LOWER(${schema.stockItemCodeAliases.aliasCode}) = LOWER(${code})`,
           eq(schema.stockItemCodeAliases.companyId, companyId),
-          eq(schema.stockItems.companyId, companyId)
-        )
+          eq(schema.stockItems.companyId, companyId),
+        ),
       )
       .limit(1);
 
@@ -1126,44 +1446,40 @@ export class DbStorage implements IStorage {
     return alias;
   }
 
-  async createStockItemCodeAlias(alias: schema.InsertStockItemCodeAlias): Promise<schema.StockItemCodeAlias> {
-    const [created] = await db
-      .insert(schema.stockItemCodeAliases)
-      .values(alias)
-      .returning();
+  async createStockItemCodeAlias(
+    alias: schema.InsertStockItemCodeAlias,
+  ): Promise<schema.StockItemCodeAlias> {
+    const [created] = await db.insert(schema.stockItemCodeAliases).values(alias).returning();
     return created;
   }
 
   async deleteStockItemCodeAlias(id: number): Promise<void> {
-    await db
-      .delete(schema.stockItemCodeAliases)
-      .where(eq(schema.stockItemCodeAliases.id, id));
+    await db.delete(schema.stockItemCodeAliases).where(eq(schema.stockItemCodeAliases.id, id));
   }
 
   // Bank Accounts
   async getAllBankAccounts(companyId: number): Promise<BankAccount[]> {
-    return await db.select().from(schema.bankAccounts).where(
-      and(
-        eq(schema.bankAccounts.companyId, companyId),
-        isNull(schema.bankAccounts.deletedAt)
-      )
-    );
+    return await db
+      .select()
+      .from(schema.bankAccounts)
+      .where(
+        and(eq(schema.bankAccounts.companyId, companyId), isNull(schema.bankAccounts.deletedAt)),
+      );
   }
 
   async getBankAccountByCode(code: string): Promise<BankAccount | undefined> {
-    const [account] = await db.select().from(schema.bankAccounts).where(eq(schema.bankAccounts.code, code));
+    const [account] = await db
+      .select()
+      .from(schema.bankAccounts)
+      .where(eq(schema.bankAccounts.code, code));
     return account;
   }
 
   async getBankAccountById(id: number, companyId: number): Promise<BankAccount | undefined> {
-    const [account] = await db.select()
+    const [account] = await db
+      .select()
       .from(schema.bankAccounts)
-      .where(
-        and(
-          eq(schema.bankAccounts.id, id),
-          eq(schema.bankAccounts.companyId, companyId)
-        )
-      );
+      .where(and(eq(schema.bankAccounts.id, id), eq(schema.bankAccounts.companyId, companyId)));
     return account;
   }
 
@@ -1172,7 +1488,11 @@ export class DbStorage implements IStorage {
     return created;
   }
 
-  async updateBankAccount(id: number, updates: Partial<InsertBankAccount>, companyId: number): Promise<BankAccount> {
+  async updateBankAccount(
+    id: number,
+    updates: Partial<InsertBankAccount>,
+    companyId: number,
+  ): Promise<BankAccount> {
     // Get the existing account scoped to company
     const existing = await this.getBankAccountById(id, companyId);
     if (!existing) {
@@ -1181,36 +1501,33 @@ export class DbStorage implements IStorage {
 
     // If updating code, check uniqueness within company
     if (updates.code && updates.code !== existing.code) {
-      const [duplicate] = await db.select()
+      const [duplicate] = await db
+        .select()
         .from(schema.bankAccounts)
         .where(
           and(
             eq(schema.bankAccounts.code, updates.code),
             eq(schema.bankAccounts.companyId, companyId),
-            ne(schema.bankAccounts.id, id)
-          )
+            ne(schema.bankAccounts.id, id),
+          ),
         );
-      
+
       if (duplicate) {
         throw new Error("Bank account code already exists in this company");
       }
     }
 
     // Update the account - scoped to both id AND companyId
-    const [updated] = await db.update(schema.bankAccounts)
+    const [updated] = await db
+      .update(schema.bankAccounts)
       .set(updates)
-      .where(
-        and(
-          eq(schema.bankAccounts.id, id),
-          eq(schema.bankAccounts.companyId, companyId)
-        )
-      )
+      .where(and(eq(schema.bankAccounts.id, id), eq(schema.bankAccounts.companyId, companyId)))
       .returning();
-    
+
     if (!updated) {
       throw new Error("Bank account not found");
     }
-    
+
     return updated;
   }
 
@@ -1222,7 +1539,8 @@ export class DbStorage implements IStorage {
     }
 
     // Check if bank account has any voucher entries
-    const entries = await db.select({ count: sql<number>`count(*)` })
+    const entries = await db
+      .select({ count: sql<number>`count(*)` })
       .from(schema.voucherEntries)
       .where(eq(schema.voucherEntries.bankAccountId, id));
 
@@ -1232,23 +1550,25 @@ export class DbStorage implements IStorage {
     }
 
     // Soft delete - scoped to both id AND companyId
-    await db.update(schema.bankAccounts)
+    await db
+      .update(schema.bankAccounts)
       .set({ deletedAt: new Date(), active: false })
-      .where(
-        and(
-          eq(schema.bankAccounts.id, id),
-          eq(schema.bankAccounts.companyId, companyId)
-        )
-      );
+      .where(and(eq(schema.bankAccounts.id, id), eq(schema.bankAccounts.companyId, companyId)));
   }
 
   // Fixed Assets
   async getAllFixedAssets(companyId: number): Promise<FixedAsset[]> {
-    return await db.select().from(schema.fixedAssets).where(eq(schema.fixedAssets.companyId, companyId));
+    return await db
+      .select()
+      .from(schema.fixedAssets)
+      .where(eq(schema.fixedAssets.companyId, companyId));
   }
 
   async getFixedAssetByCode(code: string): Promise<FixedAsset | undefined> {
-    const [asset] = await db.select().from(schema.fixedAssets).where(eq(schema.fixedAssets.code, code));
+    const [asset] = await db
+      .select()
+      .from(schema.fixedAssets)
+      .where(eq(schema.fixedAssets.code, code));
     return asset;
   }
 
@@ -1259,17 +1579,17 @@ export class DbStorage implements IStorage {
 
   // Containers
   async getAllContainers(companyId: number): Promise<Container[]> {
-    return await db.select().from(schema.containers).where(eq(schema.containers.companyId, companyId));
+    return await db
+      .select()
+      .from(schema.containers)
+      .where(eq(schema.containers.companyId, companyId));
   }
 
   async getActiveContainers(companyId: number): Promise<Container[]> {
-    return await db.select().from(schema.containers)
-      .where(
-        and(
-          eq(schema.containers.companyId, companyId),
-          ne(schema.containers.status, 'SOLD')
-        )
-      );
+    return await db
+      .select()
+      .from(schema.containers)
+      .where(and(eq(schema.containers.companyId, companyId), ne(schema.containers.status, "SOLD")));
   }
 
   async getSoldContainers(companyId: number): Promise<any[]> {
@@ -1296,24 +1616,25 @@ export class DbStorage implements IStorage {
       .from(schema.containers)
       .innerJoin(schema.containerSales, eq(schema.containers.id, schema.containerSales.containerId))
       .innerJoin(schema.customers, eq(schema.containerSales.customerId, schema.customers.id))
-      .where(
-        and(
-          eq(schema.containers.companyId, companyId),
-          eq(schema.containers.status, 'SOLD')
-        )
-      )
+      .where(and(eq(schema.containers.companyId, companyId), eq(schema.containers.status, "SOLD")))
       .orderBy(sql`${schema.containerSales.saleDate} DESC`);
-    
+
     return results;
   }
 
   async getContainerById(id: number): Promise<Container | undefined> {
-    const [container] = await db.select().from(schema.containers).where(eq(schema.containers.id, id));
+    const [container] = await db
+      .select()
+      .from(schema.containers)
+      .where(eq(schema.containers.id, id));
     return container;
   }
 
   async getContainerByNumber(containerNumber: string): Promise<Container | undefined> {
-    const [container] = await db.select().from(schema.containers).where(eq(schema.containers.containerNumber, containerNumber));
+    const [container] = await db
+      .select()
+      .from(schema.containers)
+      .where(eq(schema.containers.containerNumber, containerNumber));
     return container;
   }
 
@@ -1323,7 +1644,8 @@ export class DbStorage implements IStorage {
   }
 
   async updateContainer(id: number, updates: Partial<InsertContainer>): Promise<Container> {
-    const [updated] = await db.update(schema.containers)
+    const [updated] = await db
+      .update(schema.containers)
       .set(updates)
       .where(eq(schema.containers.id, id))
       .returning();
@@ -1332,16 +1654,25 @@ export class DbStorage implements IStorage {
 
   // Purchase Orders
   async getAllPurchaseOrders(companyId: number): Promise<PurchaseOrder[]> {
-    return await db.select().from(schema.purchaseOrders).where(eq(schema.purchaseOrders.companyId, companyId));
+    return await db
+      .select()
+      .from(schema.purchaseOrders)
+      .where(eq(schema.purchaseOrders.companyId, companyId));
   }
 
   async getPurchaseOrderById(id: number): Promise<PurchaseOrder | undefined> {
-    const [po] = await db.select().from(schema.purchaseOrders).where(eq(schema.purchaseOrders.id, id));
+    const [po] = await db
+      .select()
+      .from(schema.purchaseOrders)
+      .where(eq(schema.purchaseOrders.id, id));
     return po;
   }
 
   async getPurchaseOrdersByContainer(containerId: number): Promise<PurchaseOrder[]> {
-    return await db.select().from(schema.purchaseOrders).where(eq(schema.purchaseOrders.containerId, containerId));
+    return await db
+      .select()
+      .from(schema.purchaseOrders)
+      .where(eq(schema.purchaseOrders.containerId, containerId));
   }
 
   async getPurchaseOrdersBySupplier(supplierId: number, companyId: number): Promise<any[]> {
@@ -1361,8 +1692,8 @@ export class DbStorage implements IStorage {
       .where(
         and(
           eq(schema.purchaseOrders.supplierId, supplierId),
-          eq(schema.purchaseOrders.companyId, companyId)
-        )
+          eq(schema.purchaseOrders.companyId, companyId),
+        ),
       )
       .orderBy(sql`${schema.purchaseOrders.createdAt} DESC`);
 
@@ -1374,8 +1705,12 @@ export class DbStorage implements IStorage {
     return created;
   }
 
-  async updatePurchaseOrder(id: number, updates: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder> {
-    const [updated] = await db.update(schema.purchaseOrders)
+  async updatePurchaseOrder(
+    id: number,
+    updates: Partial<InsertPurchaseOrder>,
+  ): Promise<PurchaseOrder> {
+    const [updated] = await db
+      .update(schema.purchaseOrders)
       .set(updates)
       .where(eq(schema.purchaseOrders.id, id))
       .returning();
@@ -1415,7 +1750,9 @@ export class DbStorage implements IStorage {
 
     // Delete the voucher if it exists (this removes the supplier payable entry)
     if (po.voucherId) {
-      await db.delete(schema.voucherEntries).where(eq(schema.voucherEntries.voucherId, po.voucherId));
+      await db
+        .delete(schema.voucherEntries)
+        .where(eq(schema.voucherEntries.voucherId, po.voucherId));
       await db.delete(schema.vouchers).where(eq(schema.vouchers.id, po.voucherId));
     }
 
@@ -1435,17 +1772,21 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(schema.vouchers.companyId, po.companyId),
-            sql`${schema.vouchers.description} LIKE ${'% - Container ' + container.containerNumber}`
-          )
+            sql`${schema.vouchers.description} LIKE ${"% - Container " + container.containerNumber}`,
+          ),
         );
 
       for (const chargeVoucher of chargeVouchers) {
-        await db.delete(schema.voucherEntries).where(eq(schema.voucherEntries.voucherId, chargeVoucher.id));
+        await db
+          .delete(schema.voucherEntries)
+          .where(eq(schema.voucherEntries.voucherId, chargeVoucher.id));
         await db.delete(schema.vouchers).where(eq(schema.vouchers.id, chargeVoucher.id));
       }
 
       // Delete the container and all its charges if no POs remain
-      await db.delete(schema.containerCharges).where(eq(schema.containerCharges.containerId, containerId));
+      await db
+        .delete(schema.containerCharges)
+        .where(eq(schema.containerCharges.containerId, containerId));
       await db.delete(schema.importLogs).where(eq(schema.importLogs.containerId, containerId));
       await db.delete(schema.containers).where(eq(schema.containers.id, containerId));
     } else if (container) {
@@ -1490,7 +1831,9 @@ export class DbStorage implements IStorage {
 
       // Delete the voucher if it exists
       if (po.voucherId) {
-        await db.delete(schema.voucherEntries).where(eq(schema.voucherEntries.voucherId, po.voucherId));
+        await db
+          .delete(schema.voucherEntries)
+          .where(eq(schema.voucherEntries.voucherId, po.voucherId));
         await db.delete(schema.vouchers).where(eq(schema.vouchers.id, po.voucherId));
       }
 
@@ -1506,12 +1849,14 @@ export class DbStorage implements IStorage {
       .where(
         and(
           eq(schema.vouchers.companyId, container.companyId),
-          sql`${schema.vouchers.description} LIKE ${'% - Container ' + container.containerNumber}`
-        )
+          sql`${schema.vouchers.description} LIKE ${"% - Container " + container.containerNumber}`,
+        ),
       );
 
     for (const chargeVoucher of chargeVouchers) {
-      await db.delete(schema.voucherEntries).where(eq(schema.voucherEntries.voucherId, chargeVoucher.id));
+      await db
+        .delete(schema.voucherEntries)
+        .where(eq(schema.voucherEntries.voucherId, chargeVoucher.id));
       await db.delete(schema.vouchers).where(eq(schema.vouchers.id, chargeVoucher.id));
     }
 
@@ -1524,12 +1869,14 @@ export class DbStorage implements IStorage {
       .where(
         and(
           eq(schema.vouchers.companyId, container.companyId),
-          eq(schema.vouchers.voucherNumber, manualVoucherNumber)
-        )
+          eq(schema.vouchers.voucherNumber, manualVoucherNumber),
+        ),
       );
 
     for (const manualVoucher of manualVouchers) {
-      await db.delete(schema.voucherEntries).where(eq(schema.voucherEntries.voucherId, manualVoucher.id));
+      await db
+        .delete(schema.voucherEntries)
+        .where(eq(schema.voucherEntries.voucherId, manualVoucher.id));
       await db.delete(schema.vouchers).where(eq(schema.vouchers.id, manualVoucher.id));
     }
 
@@ -1565,7 +1912,7 @@ export class DbStorage implements IStorage {
       .from(schema.poLineItems)
       .leftJoin(schema.stockItems, eq(schema.poLineItems.stockItemId, schema.stockItems.id))
       .where(eq(schema.poLineItems.poId, poId));
-    
+
     return items as any;
   }
 
@@ -1576,7 +1923,10 @@ export class DbStorage implements IStorage {
 
   // Container Charges
   async getChargesByContainer(containerId: number): Promise<ContainerCharge[]> {
-    return await db.select().from(schema.containerCharges).where(eq(schema.containerCharges.containerId, containerId));
+    return await db
+      .select()
+      .from(schema.containerCharges)
+      .where(eq(schema.containerCharges.containerId, containerId));
   }
 
   async createContainerCharge(charge: InsertContainerCharge): Promise<ContainerCharge> {
@@ -1585,12 +1935,17 @@ export class DbStorage implements IStorage {
   }
 
   async deleteContainerCharges(containerId: number): Promise<void> {
-    await db.delete(schema.containerCharges).where(eq(schema.containerCharges.containerId, containerId));
+    await db
+      .delete(schema.containerCharges)
+      .where(eq(schema.containerCharges.containerId, containerId));
   }
 
   // Container Items (manual entry)
   async getContainerItems(containerId: number): Promise<schema.ContainerItem[]> {
-    return await db.select().from(schema.containerItems).where(eq(schema.containerItems.containerId, containerId));
+    return await db
+      .select()
+      .from(schema.containerItems)
+      .where(eq(schema.containerItems.containerId, containerId));
   }
 
   async createContainerItem(item: schema.InsertContainerItem): Promise<schema.ContainerItem> {
@@ -1598,8 +1953,15 @@ export class DbStorage implements IStorage {
     return created;
   }
 
-  async updateContainerItem(id: number, updates: Partial<schema.InsertContainerItem>): Promise<schema.ContainerItem> {
-    const [updated] = await db.update(schema.containerItems).set(updates).where(eq(schema.containerItems.id, id)).returning();
+  async updateContainerItem(
+    id: number,
+    updates: Partial<schema.InsertContainerItem>,
+  ): Promise<schema.ContainerItem> {
+    const [updated] = await db
+      .update(schema.containerItems)
+      .set(updates)
+      .where(eq(schema.containerItems.id, id))
+      .returning();
     return updated;
   }
 
@@ -1608,12 +1970,17 @@ export class DbStorage implements IStorage {
   }
 
   async deleteContainerItems(containerId: number): Promise<void> {
-    await db.delete(schema.containerItems).where(eq(schema.containerItems.containerId, containerId));
+    await db
+      .delete(schema.containerItems)
+      .where(eq(schema.containerItems.containerId, containerId));
   }
 
   // Import Logs
   async getImportLogByHash(hash: string): Promise<ImportLog | undefined> {
-    const [log] = await db.select().from(schema.importLogs).where(eq(schema.importLogs.fileHash, hash));
+    const [log] = await db
+      .select()
+      .from(schema.importLogs)
+      .where(eq(schema.importLogs.fileHash, hash));
     return log;
   }
 
@@ -1624,7 +1991,10 @@ export class DbStorage implements IStorage {
 
   // Stock Items - Code/Barcode lookup
   async getStockItemByBarcode(barcode: string): Promise<StockItem | undefined> {
-    const [item] = await db.select().from(schema.stockItems).where(eq(schema.stockItems.code, barcode));
+    const [item] = await db
+      .select()
+      .from(schema.stockItems)
+      .where(eq(schema.stockItems.code, barcode));
     return item;
   }
 
@@ -1645,11 +2015,18 @@ export class DbStorage implements IStorage {
         locationName: schema.locations.name,
       })
       .from(schema.stockItemLocationPrices)
-      .leftJoin(schema.locations, eq(schema.stockItemLocationPrices.locationId, schema.locations.id))
+      .leftJoin(
+        schema.locations,
+        eq(schema.stockItemLocationPrices.locationId, schema.locations.id),
+      )
       .where(and(...conditions));
   }
 
-  async upsertLocationPrice(stockItemId: number, locationId: number, sellingPrice: string): Promise<void> {
+  async upsertLocationPrice(
+    stockItemId: number,
+    locationId: number,
+    sellingPrice: string,
+  ): Promise<void> {
     await db
       .insert(schema.stockItemLocationPrices)
       .values({
@@ -1658,7 +2035,10 @@ export class DbStorage implements IStorage {
         sellingPrice: sellingPrice,
       })
       .onConflictDoUpdate({
-        target: [schema.stockItemLocationPrices.stockItemId, schema.stockItemLocationPrices.locationId],
+        target: [
+          schema.stockItemLocationPrices.stockItemId,
+          schema.stockItemLocationPrices.locationId,
+        ],
         set: {
           sellingPrice: sellingPrice,
           updatedAt: new Date(),
@@ -1667,7 +2047,9 @@ export class DbStorage implements IStorage {
   }
 
   async deleteLocationPrice(id: number): Promise<void> {
-    await db.delete(schema.stockItemLocationPrices).where(eq(schema.stockItemLocationPrices.id, id));
+    await db
+      .delete(schema.stockItemLocationPrices)
+      .where(eq(schema.stockItemLocationPrices.id, id));
   }
 
   // Inventory - Location-based stock tracking
@@ -1688,7 +2070,10 @@ export class DbStorage implements IStorage {
         stockGroupId: schema.stockItems.stockGroupId,
         stockGroupName: sql<string>`COALESCE(${schema.stockGroups.name}, '')`,
         stockGroupCode: sql<string>`COALESCE(${schema.stockGroups.code}, '')`,
-        lastSellingPrice: sql<string>`COALESCE(${schema.stockItemLocationPrices.sellingPrice}, ${schema.stockItems.sellingPrice})`.as('configured_price'),
+        lastSellingPrice:
+          sql<string>`COALESCE(${schema.stockItemLocationPrices.sellingPrice}, ${schema.stockItems.sellingPrice})`.as(
+            "configured_price",
+          ),
       })
       .from(schema.inventory)
       .leftJoin(schema.stockItems, eq(schema.inventory.stockItemId, schema.stockItems.id))
@@ -1697,11 +2082,11 @@ export class DbStorage implements IStorage {
         schema.stockItemLocationPrices,
         and(
           eq(schema.stockItemLocationPrices.stockItemId, schema.inventory.stockItemId),
-          eq(schema.stockItemLocationPrices.locationId, locationId)
-        )
+          eq(schema.stockItemLocationPrices.locationId, locationId),
+        ),
       )
       .where(eq(schema.inventory.locationId, locationId));
-    
+
     return results;
   }
 
@@ -1729,17 +2114,23 @@ export class DbStorage implements IStorage {
       .leftJoin(schema.stockGroups, eq(schema.stockItems.stockGroupId, schema.stockGroups.id))
       .leftJoin(schema.locations, eq(schema.inventory.locationId, schema.locations.id))
       .where(eq(schema.inventory.companyId, companyId));
-    
+
     return results;
   }
 
-  async updateInventory(locationId: number, stockItemId: number, quantity: string, averageRate: string, totalValue: string): Promise<void> {
+  async updateInventory(
+    locationId: number,
+    stockItemId: number,
+    quantity: string,
+    averageRate: string,
+    totalValue: string,
+  ): Promise<void> {
     // Get the location's companyId
     const [location] = await db
       .select()
       .from(schema.locations)
       .where(eq(schema.locations.id, locationId));
-    
+
     if (!location) {
       throw new Error("Location not found");
     }
@@ -1748,10 +2139,12 @@ export class DbStorage implements IStorage {
     const [existing] = await db
       .select()
       .from(schema.inventory)
-      .where(and(
-        eq(schema.inventory.locationId, locationId),
-        eq(schema.inventory.stockItemId, stockItemId)
-      ));
+      .where(
+        and(
+          eq(schema.inventory.locationId, locationId),
+          eq(schema.inventory.stockItemId, stockItemId),
+        ),
+      );
 
     if (existing) {
       // Update existing record
@@ -1778,7 +2171,11 @@ export class DbStorage implements IStorage {
     }
   }
 
-  async updateCostPricesByBarcode(locationId: number, companyId: number, updates: Array<{ barcode: string; costPrice: number }>): Promise<{ updated: number; errors: string[] }> {
+  async updateCostPricesByBarcode(
+    locationId: number,
+    companyId: number,
+    updates: Array<{ barcode: string; costPrice: number }>,
+  ): Promise<{ updated: number; errors: string[] }> {
     const errors: string[] = [];
     let updated = 0;
 
@@ -1795,10 +2192,12 @@ export class DbStorage implements IStorage {
         const [inventory] = await db
           .select()
           .from(schema.inventory)
-          .where(and(
-            eq(schema.inventory.locationId, locationId),
-            eq(schema.inventory.stockItemId, stockItem.id)
-          ));
+          .where(
+            and(
+              eq(schema.inventory.locationId, locationId),
+              eq(schema.inventory.stockItemId, stockItem.id),
+            ),
+          );
 
         if (inventory) {
           // Update existing inventory record (including those with 0 quantity from POS sales)
@@ -1825,25 +2224,25 @@ export class DbStorage implements IStorage {
 
   // Container Offload
   async offloadContainer(
-    containerId: number, 
-    locationId: number, 
-    duties: string, 
+    containerId: number,
+    locationId: number,
+    duties: string,
     dutiesAccountId: number | null | undefined,
     transportFees: string,
     transportAccountId: number | null | undefined,
     additionalCharges: Array<{ description: string; amount: number; ledgerAccountId: number }> = [],
     offloadDate?: string,
-    costAllocationGroupIds: number[] = []
+    costAllocationGroupIds: number[] = [],
   ): Promise<ContainerOffload> {
     // Get container to access PO charges (freight + otherCharges from purchase orders)
     const container = await this.getContainerById(containerId);
     if (!container) {
       throw new Error(`Container ${containerId} not found`);
     }
-    
+
     // Get all POs for this container
     const pos = await this.getPurchaseOrdersByContainer(containerId);
-    
+
     // Get all line items for all POs
     const allLineItems: POLineItem[] = [];
     for (const po of pos) {
@@ -1864,36 +2263,37 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(schema.stockGroups.companyId, container.companyId),
-            eq(schema.stockGroups.allocateImportCosts, true)
-          )
+            eq(schema.stockGroups.allocateImportCosts, true),
+          ),
         );
-      effectiveCostAllocationGroupIds = stockGroupsWithCostAllocation.map(g => g.id);
+      effectiveCostAllocationGroupIds = stockGroupsWithCostAllocation.map((g) => g.id);
     }
     const costAllocationGroupIdSet = new Set(effectiveCostAllocationGroupIds);
 
     // Get stock items with their group IDs for lookup (deduplicate to avoid PostgreSQL parameter limits)
     // Include both PO line items and manual container items
     const stockItemIdSet = new Set<number>();
-    
+
     // Add PO line item stock IDs
     allLineItems
-      .filter(item => item.stockItemId && item.stockItemId !== 0)
-      .forEach(item => stockItemIdSet.add(item.stockItemId!));
-    
+      .filter((item) => item.stockItemId && item.stockItemId !== 0)
+      .forEach((item) => stockItemIdSet.add(item.stockItemId!));
+
     // Add manual container item stock IDs
     manualContainerItems
-      .filter(item => item.stockItemId && item.stockItemId !== 0)
-      .forEach(item => stockItemIdSet.add(item.stockItemId!));
-    
+      .filter((item) => item.stockItemId && item.stockItemId !== 0)
+      .forEach((item) => stockItemIdSet.add(item.stockItemId!));
+
     const uniqueStockItemIds = Array.from(stockItemIdSet);
-    
-    const stockItemsWithGroups = uniqueStockItemIds.length > 0 
-      ? await db
-          .select({ id: schema.stockItems.id, stockGroupId: schema.stockItems.stockGroupId })
-          .from(schema.stockItems)
-          .where(inArray(schema.stockItems.id, uniqueStockItemIds))
-      : [];
-    
+
+    const stockItemsWithGroups =
+      uniqueStockItemIds.length > 0
+        ? await db
+            .select({ id: schema.stockItems.id, stockGroupId: schema.stockItems.stockGroupId })
+            .from(schema.stockItems)
+            .where(inArray(schema.stockItems.id, uniqueStockItemIds))
+        : [];
+
     const stockItemGroupMap = new Map<number, number | null>();
     for (const item of stockItemsWithGroups) {
       stockItemGroupMap.set(item.id, item.stockGroupId);
@@ -1915,7 +2315,7 @@ export class DbStorage implements IStorage {
     // Calculate total motos - if groups are marked, only count those; otherwise count all
     // Include both PO line items and manual container items
     let totalMotos = 0;
-    
+
     // Count from PO line items
     for (const item of allLineItems) {
       if (!item.stockItemId || item.stockItemId === 0) continue;
@@ -1925,7 +2325,7 @@ export class DbStorage implements IStorage {
       if (!isFinite(qty) || qty <= 0) qty = 1;
       totalMotos += qty;
     }
-    
+
     // Count from manual container items
     for (const item of manualContainerItems) {
       if (!item.stockItemId || item.stockItemId === 0) continue;
@@ -1937,10 +2337,13 @@ export class DbStorage implements IStorage {
     }
 
     // Calculate total charges including additional charges AND PO charges (freight + otherCharges)
-    const additionalChargesTotal = additionalCharges.reduce((sum, charge) => sum + charge.amount, 0);
+    const additionalChargesTotal = additionalCharges.reduce(
+      (sum, charge) => sum + charge.amount,
+      0,
+    );
     const poCharges = parseFloat(container.chargesTotal || "0"); // Freight + otherCharges from POs
-    const totalCharges = 
-      parseFloat(duties || "0") + 
+    const totalCharges =
+      parseFloat(duties || "0") +
       parseFloat(transportFees || "0") +
       additionalChargesTotal +
       poCharges; // Include PO freight/charges in inventory cost
@@ -1949,43 +2352,48 @@ export class DbStorage implements IStorage {
     const additionalCostPerMoto = totalMotos > 0 ? totalCharges / totalMotos : 0;
 
     // Group line items by stock item and calculate new rates
-    const itemsMap = new Map<number, { 
-      stockItemId: number; 
-      totalQuantity: number; 
-      weightedRateSum: number;
-    }>();
+    const itemsMap = new Map<
+      number,
+      {
+        stockItemId: number;
+        totalQuantity: number;
+        weightedRateSum: number;
+      }
+    >();
 
     // Process PO line items
     for (const item of allLineItems) {
       const stockItemId = item.stockItemId;
-      
+
       // Skip invalid line items with stockItemId = 0 or null
       if (!stockItemId || stockItemId === 0) {
         console.warn(`Skipping line item ${item.id} - invalid stock item ID: ${stockItemId}`);
         continue;
       }
-      
+
       // Validate quantity - default to 1 if NaN/zero
       let quantity = parseFloat(item.quantity);
       if (!isFinite(quantity) || quantity <= 0) {
-        console.warn(`PO line item ${item.id} has invalid quantity (${item.quantity}), defaulting to 1`);
+        console.warn(
+          `PO line item ${item.id} has invalid quantity (${item.quantity}), defaulting to 1`,
+        );
         quantity = 1;
       }
-      
+
       // Validate rate - default to 0 if NaN
       let rate = parseFloat(item.rate);
       if (!isFinite(rate)) {
         console.warn(`PO line item ${item.id} has invalid rate (${item.rate}), defaulting to 0`);
         rate = 0;
       }
-      
+
       // Calculate weighted contribution with NaN guard
       const weightedContribution = rate * quantity;
       if (!isFinite(weightedContribution)) {
         console.warn(`PO line item ${item.id} has invalid weighted contribution, skipping`);
         continue;
       }
-      
+
       if (itemsMap.has(stockItemId)) {
         const existing = itemsMap.get(stockItemId)!;
         existing.totalQuantity += quantity;
@@ -2002,20 +2410,22 @@ export class DbStorage implements IStorage {
     // Process manual container items (for containers without POs)
     for (const item of manualContainerItems) {
       const stockItemId = item.stockItemId;
-      
+
       // Skip invalid container items with stockItemId = 0 or null
       if (!stockItemId || stockItemId === 0) {
         console.warn(`Skipping container item ${item.id} - invalid stock item ID: ${stockItemId}`);
         continue;
       }
-      
+
       // Parse and validate quantity - default to 1 if missing/zero to prevent division issues
       let quantity = parseFloat(item.quantity);
       if (!isFinite(quantity) || quantity <= 0) {
-        console.warn(`Container item ${item.id} has invalid quantity (${item.quantity}), defaulting to 1`);
+        console.warn(
+          `Container item ${item.id} has invalid quantity (${item.quantity}), defaulting to 1`,
+        );
         quantity = 1;
       }
-      
+
       // For container items, calculate rate from lineTotal / quantity
       // Guard against null/undefined lineTotal - default to ratePerKg * weightKg, or 0
       let rate = 0;
@@ -2038,14 +2448,16 @@ export class DbStorage implements IStorage {
         console.warn(`Container item ${item.id} has invalid rate, defaulting to 0`);
         rate = 0;
       }
-      
+
       // Calculate weighted contribution (with NaN guard)
       const weightedContribution = rate * quantity;
       if (!isFinite(weightedContribution)) {
-        console.warn(`Container item ${item.id} has invalid weighted contribution (rate=${rate}, qty=${quantity}), skipping`);
+        console.warn(
+          `Container item ${item.id} has invalid weighted contribution (rate=${rate}, qty=${quantity}), skipping`,
+        );
         continue;
       }
-      
+
       if (itemsMap.has(stockItemId)) {
         const existing = itemsMap.get(stockItemId)!;
         existing.totalQuantity += quantity;
@@ -2059,299 +2471,431 @@ export class DbStorage implements IStorage {
       }
     }
 
-    // Add inventory to destination location with weighted average cost
-    for (const [stockItemId, data] of Array.from(itemsMap.entries())) {
-      // Safety check for division by zero
-      if (data.totalQuantity === 0) {
-        console.error("Skipping item with zero quantity:", stockItemId);
-        continue;
-      }
-      
-      const averageOriginalRate = data.weightedRateSum / data.totalQuantity;
-      // Only add import costs to items in groups marked for cost allocation (motos)
-      const itemCostAddition = shouldAllocateCosts(stockItemId) ? additionalCostPerMoto : 0;
-      const newRate = averageOriginalRate + itemCostAddition;
-      
-      // Safety check for infinity
-      if (!isFinite(newRate)) {
-        throw new Error(`Calculated rate is infinite for stock item ${stockItemId}. averageRate=${averageOriginalRate}, additionalCost=${additionalCostPerMoto}`);
-      }
-      
-      // Check if inventory exists
-      const [existing] = await db
-        .select()
-        .from(schema.inventory)
-        .where(and(
-          eq(schema.inventory.locationId, locationId),
-          eq(schema.inventory.stockItemId, stockItemId)
-        ));
+    const location = await this.getLocationById(locationId);
+    if (!location || location.companyId !== container.companyId) {
+      throw new Error("Location not found for the container company");
+    }
+    const voucherDate = offloadDate || new Date().toISOString().split("T")[0];
 
-      if (existing) {
-        // Add to existing inventory with weighted average rate
-        const existingQty = parseFloat(existing.quantity);
-        const existingRate = parseFloat(existing.averageRate);
-        
-        // Handle corrupt negative inventory - replace instead of add
-        if (existingQty < 0) {
-          console.warn(`Detected corrupt negative inventory for stock item ${stockItemId} at location ${locationId}. Existing qty: ${existingQty}. Replacing with new qty: ${data.totalQuantity}`);
-          
-          const newTotalValue = data.totalQuantity * newRate;
-          
-          await db
+    return await db.transaction(async (tx) => {
+      const [lockedContainer] = await tx
+        .select({
+          id: schema.containers.id,
+          companyId: schema.containers.companyId,
+          status: schema.containers.status,
+        })
+        .from(schema.containers)
+        .where(eq(schema.containers.id, containerId))
+        .for("update")
+        .limit(1);
+      if (!lockedContainer || lockedContainer.companyId !== container.companyId) {
+        throw new Error(`Container ${containerId} not found`);
+      }
+      if (lockedContainer.status === "OFFLOADED") {
+        throw new Error("Container is already offloaded");
+      }
+
+      const inventoryEvidence: Array<{
+        inventoryId: number;
+        stockItemId: number;
+        beforeExists: boolean;
+        beforeQuantity: string;
+        beforeAverageRate: string;
+        beforeTotalValue: string;
+        afterQuantity: string;
+        afterAverageRate: string;
+        afterTotalValue: string;
+      }> = [];
+      const offloadVoucherLinks: Array<{
+        voucherId: number;
+        role: "DUTIES" | "TRANSPORT" | "ADDITIONAL_CHARGE";
+      }> = [];
+
+      // Add inventory to destination location with weighted average cost
+      for (const [stockItemId, data] of Array.from(itemsMap.entries())) {
+        // Safety check for division by zero
+        if (data.totalQuantity === 0) {
+          console.error("Skipping item with zero quantity:", stockItemId);
+          continue;
+        }
+
+        const averageOriginalRate = data.weightedRateSum / data.totalQuantity;
+        // Only add import costs to items in groups marked for cost allocation (motos)
+        const itemCostAddition = shouldAllocateCosts(stockItemId) ? additionalCostPerMoto : 0;
+        const newRate = averageOriginalRate + itemCostAddition;
+
+        // Safety check for infinity
+        if (!isFinite(newRate)) {
+          throw new Error(
+            `Calculated rate is infinite for stock item ${stockItemId}. averageRate=${averageOriginalRate}, additionalCost=${additionalCostPerMoto}`,
+          );
+        }
+
+        // Check if inventory exists
+        const [existing] = await tx
+          .select()
+          .from(schema.inventory)
+          .where(
+            and(
+              eq(schema.inventory.locationId, locationId),
+              eq(schema.inventory.stockItemId, stockItemId),
+            ),
+          );
+
+        if (existing) {
+          // Add to existing inventory with weighted average rate
+          const existingQty = parseFloat(existing.quantity);
+          const existingRate = parseFloat(existing.averageRate);
+
+          // Handle corrupt negative inventory - replace instead of add
+          if (existingQty < 0) {
+            console.warn(
+              `Detected corrupt negative inventory for stock item ${stockItemId} at location ${locationId}. Existing qty: ${existingQty}. Replacing with new qty: ${data.totalQuantity}`,
+            );
+
+            const newTotalValue = data.totalQuantity * newRate;
+
+            await tx
+              .update(schema.inventory)
+              .set({
+                quantity: data.totalQuantity.toString(),
+                averageRate: newRate.toFixed(2),
+                totalValue: newTotalValue.toFixed(2),
+                lastUpdated: new Date(),
+              })
+              .where(eq(schema.inventory.id, existing.id));
+            inventoryEvidence.push({
+              inventoryId: existing.id,
+              stockItemId,
+              beforeExists: true,
+              beforeQuantity: existing.quantity,
+              beforeAverageRate: existing.averageRate,
+              beforeTotalValue: existing.totalValue,
+              afterQuantity: data.totalQuantity.toFixed(3),
+              afterAverageRate: newRate.toFixed(2),
+              afterTotalValue: newTotalValue.toFixed(2),
+            });
+            continue;
+          }
+
+          const newQty = existingQty + data.totalQuantity;
+
+          // Safety check for division by zero
+          if (newQty <= 0) {
+            throw new Error(
+              `New quantity is ${newQty} for stock item ${stockItemId}. Existing: ${existingQty}, Adding: ${data.totalQuantity}. This indicates corrupt inventory data.`,
+            );
+          }
+
+          const weightedAvgRate =
+            (existingQty * existingRate + data.totalQuantity * newRate) / newQty;
+
+          // Safety check for infinity
+          if (!isFinite(weightedAvgRate)) {
+            throw new Error(
+              `Calculated weighted average rate is infinite for stock item ${stockItemId}. existingQty=${existingQty}, existingRate=${existingRate}, newQty=${newQty}, newRate=${newRate}`,
+            );
+          }
+
+          const newTotalValue = newQty * weightedAvgRate;
+
+          await tx
             .update(schema.inventory)
             .set({
-              quantity: data.totalQuantity.toString(),
-              averageRate: newRate.toFixed(2),
+              quantity: newQty.toString(),
+              averageRate: weightedAvgRate.toFixed(2),
               totalValue: newTotalValue.toFixed(2),
               lastUpdated: new Date(),
             })
             .where(eq(schema.inventory.id, existing.id));
-          continue;
+          inventoryEvidence.push({
+            inventoryId: existing.id,
+            stockItemId,
+            beforeExists: true,
+            beforeQuantity: existing.quantity,
+            beforeAverageRate: existing.averageRate,
+            beforeTotalValue: existing.totalValue,
+            afterQuantity: newQty.toFixed(3),
+            afterAverageRate: weightedAvgRate.toFixed(2),
+            afterTotalValue: newTotalValue.toFixed(2),
+          });
+        } else {
+          // Create new inventory record
+          const totalValue = data.totalQuantity * newRate;
+          const [createdInventory] = await tx
+            .insert(schema.inventory)
+            .values({
+              companyId: location.companyId,
+              locationId,
+              stockItemId,
+              quantity: data.totalQuantity.toString(),
+              averageRate: newRate.toFixed(2),
+              totalValue: totalValue.toFixed(2),
+              lastUpdated: new Date(),
+            })
+            .returning();
+          inventoryEvidence.push({
+            inventoryId: createdInventory.id,
+            stockItemId,
+            beforeExists: false,
+            beforeQuantity: "0.000",
+            beforeAverageRate: "0.00",
+            beforeTotalValue: "0.00",
+            afterQuantity: data.totalQuantity.toFixed(3),
+            afterAverageRate: newRate.toFixed(2),
+            afterTotalValue: totalValue.toFixed(2),
+          });
         }
-        
-        const newQty = existingQty + data.totalQuantity;
-        
-        // Safety check for division by zero
-        if (newQty <= 0) {
-          throw new Error(`New quantity is ${newQty} for stock item ${stockItemId}. Existing: ${existingQty}, Adding: ${data.totalQuantity}. This indicates corrupt inventory data.`);
-        }
-        
-        const weightedAvgRate = ((existingQty * existingRate) + (data.totalQuantity * newRate)) / newQty;
-        
-        // Safety check for infinity
-        if (!isFinite(weightedAvgRate)) {
-          throw new Error(`Calculated weighted average rate is infinite for stock item ${stockItemId}. existingQty=${existingQty}, existingRate=${existingRate}, newQty=${newQty}, newRate=${newRate}`);
-        }
-        
-        const newTotalValue = newQty * weightedAvgRate;
-
-        await db
-          .update(schema.inventory)
-          .set({
-            quantity: newQty.toString(),
-            averageRate: weightedAvgRate.toFixed(2),
-            totalValue: newTotalValue.toFixed(2),
-            lastUpdated: new Date(),
-          })
-          .where(eq(schema.inventory.id, existing.id));
-      } else {
-        // Create new inventory record
-        const [location] = await db
-          .select()
-          .from(schema.locations)
-          .where(eq(schema.locations.id, locationId));
-
-        const totalValue = data.totalQuantity * newRate;
-        await db.insert(schema.inventory).values({
-          companyId: location.companyId,
-          locationId,
-          stockItemId,
-          quantity: data.totalQuantity.toString(),
-          averageRate: newRate.toFixed(2),
-          totalValue: totalValue.toFixed(2),
-          lastUpdated: new Date(),
-        });
       }
-    }
 
-    // Update container status to OFFLOADED
-    await this.updateContainer(containerId, { status: "OFFLOADED" });
-
-    // Get location details for voucher entries (container already fetched at top)
-    const location = await this.getLocationById(locationId);
-    
-    if (!location) {
-      throw new Error("Location not found");
-    }
-
-    // Create voucher entries for charges with associated supplier accounts
-    const voucherDate = offloadDate || new Date().toISOString().split('T')[0];
-    
-    // Helper function to find or create parent EXPENSES account
-    const findOrCreateExpensesParent = async () => {
-      let [parentAccount] = await db
-        .select()
-        .from(schema.ledgerAccounts)
+      // Update container status to OFFLOADED
+      await tx
+        .update(schema.containers)
+        .set({ status: "OFFLOADED" })
         .where(
           and(
-            eq(schema.ledgerAccounts.companyId, location.companyId),
-            eq(schema.ledgerAccounts.code, "EXPENSES")
-          )
-        )
-        .limit(1);
-
-      if (!parentAccount) {
-        [parentAccount] = await db.insert(schema.ledgerAccounts).values({
-          companyId: location.companyId,
-          code: "EXPENSES",
-          name: "Expenses",
-          accountType: "Expense",
-          subType: "Expense",
-          openingBalance: "0",
-          openingBalanceSide: "Dr",
-        }).returning();
-      }
-
-      return parentAccount.id;
-    };
-    
-    // Helper function to find or create expense accounts
-    const findOrCreateExpenseAccount = async (code: string, name: string, parentId: number) => {
-      let account = await db
-        .select()
-        .from(schema.ledgerAccounts)
-        .where(
-          and(
-            eq(schema.ledgerAccounts.companyId, location.companyId),
-            eq(schema.ledgerAccounts.code, code)
-          )
-        )
-        .limit(1);
-
-      if (!account.length) {
-        const [newAccount] = await db.insert(schema.ledgerAccounts).values({
-          companyId: location.companyId,
-          code,
-          name,
-          accountType: "Expense",
-          subType: "Direct Expense",
-          parentId,
-          openingBalance: "0",
-          openingBalanceSide: "Dr",
-        }).returning();
-        account = [newAccount];
-      } else if (account[0].parentId !== parentId) {
-        // Update existing account to have the parent if it doesn't already
-        await db
-          .update(schema.ledgerAccounts)
-          .set({ parentId })
-          .where(eq(schema.ledgerAccounts.id, account[0].id));
-        account[0].parentId = parentId;
-      }
-
-      return account[0].id;
-    };
-    
-    // Get or create parent EXPENSES account
-    const expensesParentId = await findOrCreateExpensesParent();
-    
-    // Duties voucher entry
-    if (dutiesAccountId && parseFloat(duties) > 0) {
-      const dutiesExpenseAccountId = await findOrCreateExpenseAccount("DUTIES", "Duties", expensesParentId);
-      const voucherNumber = `DUTY-${container.containerNumber}-${Date.now()}`;
-      const [voucher] = await db.insert(schema.vouchers).values({
-        companyId: location.companyId,
-        voucherNumber,
-        voucherType: "Payment",
-        voucherDate,
-        description: `Duties for container ${container.containerNumber}`,
-        totalAmount: duties,
-      }).returning();
-
-      // Debit: Duties Expense (Expense increases)
-      await db.insert(schema.voucherEntries).values({
-        voucherId: voucher.id,
-        ledgerAccountId: dutiesExpenseAccountId,
-        debitAmount: duties,
-        creditAmount: "0",
-        narration: `Duties for container ${container.containerNumber}`,
-      });
-
-      // Credit: Duty Agent account (Liability increases)
-      await db.insert(schema.voucherEntries).values({
-        voucherId: voucher.id,
-        ledgerAccountId: dutiesAccountId,
-        debitAmount: "0",
-        creditAmount: duties,
-        narration: `Duties for container ${container.containerNumber}`,
-      });
-    }
-
-    // Transport fees voucher entry
-    if (transportAccountId && parseFloat(transportFees) > 0) {
-      const transportExpenseAccountId = await findOrCreateExpenseAccount("TRANSPORT", "Transport Charges", expensesParentId);
-      const voucherNumber = `TRANS-${container.containerNumber}-${Date.now()}`;
-      const [voucher] = await db.insert(schema.vouchers).values({
-        companyId: location.companyId,
-        voucherNumber,
-        voucherType: "Payment",
-        voucherDate,
-        description: `Transport fees for container ${container.containerNumber}`,
-        totalAmount: transportFees,
-      }).returning();
-
-      // Debit: Transport Expense (Expense increases)
-      await db.insert(schema.voucherEntries).values({
-        voucherId: voucher.id,
-        ledgerAccountId: transportExpenseAccountId,
-        debitAmount: transportFees,
-        creditAmount: "0",
-        narration: `Transport fees for container ${container.containerNumber}`,
-      });
-
-      // Credit: Transporter account (Liability increases)
-      await db.insert(schema.voucherEntries).values({
-        voucherId: voucher.id,
-        ledgerAccountId: transportAccountId,
-        debitAmount: "0",
-        creditAmount: transportFees,
-        narration: `Transport fees for container ${container.containerNumber}`,
-      });
-    }
-
-    // Additional charges voucher entries
-    for (const charge of additionalCharges) {
-      if (charge.amount > 0) {
-        const voucherNumber = `CHG-${container.containerNumber}-${Date.now()}`;
-        const [voucher] = await db.insert(schema.vouchers).values({
-          companyId: location.companyId,
-          voucherNumber,
-          voucherType: "Payment",
-          voucherDate,
-          description: `${charge.description} for container ${container.containerNumber}`,
-          totalAmount: charge.amount.toFixed(2),
-        }).returning();
-
-        // Debit: Additional Charge Expense (Expense increases)
-        const additionalExpenseAccountId = await findOrCreateExpenseAccount(
-          "ADDITIONAL_CHARGES", 
-          "Additional Container Charges",
-          expensesParentId
+            eq(schema.containers.id, containerId),
+            eq(schema.containers.companyId, container.companyId),
+          ),
         );
-        await db.insert(schema.voucherEntries).values({
+
+      // Helper function to find or create parent EXPENSES account
+      const findOrCreateExpensesParent = async () => {
+        let [parentAccount] = await tx
+          .select()
+          .from(schema.ledgerAccounts)
+          .where(
+            and(
+              eq(schema.ledgerAccounts.companyId, location.companyId),
+              eq(schema.ledgerAccounts.code, "EXPENSES"),
+            ),
+          )
+          .limit(1);
+
+        if (!parentAccount) {
+          [parentAccount] = await tx
+            .insert(schema.ledgerAccounts)
+            .values({
+              companyId: location.companyId,
+              code: "EXPENSES",
+              name: "Expenses",
+              accountType: "Expense",
+              subType: "Expense",
+              openingBalance: "0",
+              openingBalanceSide: "Dr",
+            })
+            .returning();
+        }
+
+        return parentAccount.id;
+      };
+
+      // Helper function to find or create expense accounts
+      const findOrCreateExpenseAccount = async (code: string, name: string, parentId: number) => {
+        let account = await tx
+          .select()
+          .from(schema.ledgerAccounts)
+          .where(
+            and(
+              eq(schema.ledgerAccounts.companyId, location.companyId),
+              eq(schema.ledgerAccounts.code, code),
+            ),
+          )
+          .limit(1);
+
+        if (!account.length) {
+          const [newAccount] = await tx
+            .insert(schema.ledgerAccounts)
+            .values({
+              companyId: location.companyId,
+              code,
+              name,
+              accountType: "Expense",
+              subType: "Direct Expense",
+              parentId,
+              openingBalance: "0",
+              openingBalanceSide: "Dr",
+            })
+            .returning();
+          account = [newAccount];
+        } else if (account[0].parentId !== parentId) {
+          // Update existing account to have the parent if it doesn't already
+          await tx
+            .update(schema.ledgerAccounts)
+            .set({ parentId })
+            .where(eq(schema.ledgerAccounts.id, account[0].id));
+          account[0].parentId = parentId;
+        }
+
+        return account[0].id;
+      };
+
+      // Get or create parent EXPENSES account
+      const expensesParentId = await findOrCreateExpensesParent();
+
+      // Duties voucher entry
+      if (dutiesAccountId && parseFloat(duties) > 0) {
+        const dutiesExpenseAccountId = await findOrCreateExpenseAccount(
+          "DUTIES",
+          "Duties",
+          expensesParentId,
+        );
+        const voucherNumber = `DUTY-${container.containerNumber}-${Date.now()}`;
+        const [voucher] = await tx
+          .insert(schema.vouchers)
+          .values({
+            companyId: location.companyId,
+            voucherNumber,
+            voucherType: "Payment",
+            voucherDate,
+            description: `Duties for container ${container.containerNumber}`,
+            totalAmount: duties,
+          })
+          .returning();
+        offloadVoucherLinks.push({ voucherId: voucher.id, role: "DUTIES" });
+
+        // Debit: Duties Expense (Expense increases)
+        await tx.insert(schema.voucherEntries).values({
           voucherId: voucher.id,
-          ledgerAccountId: additionalExpenseAccountId,
-          debitAmount: charge.amount.toFixed(2),
+          ledgerAccountId: dutiesExpenseAccountId,
+          debitAmount: duties,
           creditAmount: "0",
-          narration: `${charge.description} for container ${container.containerNumber}`,
+          narration: `Duties for container ${container.containerNumber}`,
         });
 
-        // Credit: Specified ledger account (Liability increases)
-        await db.insert(schema.voucherEntries).values({
+        // Credit: Duty Agent account (Liability increases)
+        await tx.insert(schema.voucherEntries).values({
           voucherId: voucher.id,
-          ledgerAccountId: charge.ledgerAccountId,
+          ledgerAccountId: dutiesAccountId,
           debitAmount: "0",
-          creditAmount: charge.amount.toFixed(2),
-          narration: `${charge.description} for container ${container.containerNumber}`,
+          creditAmount: duties,
+          narration: `Duties for container ${container.containerNumber}`,
         });
       }
-    }
 
-    // Create offload record with all calculated values
-    const [offload] = await db.insert(schema.containerOffloads).values({
-      containerId,
-      locationId,
-      duties: duties || "0",
-      officeCharges: "0",
-      transferCharges: "0",
-      transportFees: transportFees || "0",
-      totalCharges: totalCharges.toFixed(2),
-      totalMotos: totalMotos.toFixed(3),
-      additionalCostPerMoto: additionalCostPerMoto.toFixed(2),
-      offloadedAt: offloadDate ? new Date(offloadDate) : new Date(),
-    }).returning();
+      // Transport fees voucher entry
+      if (transportAccountId && parseFloat(transportFees) > 0) {
+        const transportExpenseAccountId = await findOrCreateExpenseAccount(
+          "TRANSPORT",
+          "Transport Charges",
+          expensesParentId,
+        );
+        const voucherNumber = `TRANS-${container.containerNumber}-${Date.now()}`;
+        const [voucher] = await tx
+          .insert(schema.vouchers)
+          .values({
+            companyId: location.companyId,
+            voucherNumber,
+            voucherType: "Payment",
+            voucherDate,
+            description: `Transport fees for container ${container.containerNumber}`,
+            totalAmount: transportFees,
+          })
+          .returning();
+        offloadVoucherLinks.push({ voucherId: voucher.id, role: "TRANSPORT" });
 
-    return offload;
+        // Debit: Transport Expense (Expense increases)
+        await tx.insert(schema.voucherEntries).values({
+          voucherId: voucher.id,
+          ledgerAccountId: transportExpenseAccountId,
+          debitAmount: transportFees,
+          creditAmount: "0",
+          narration: `Transport fees for container ${container.containerNumber}`,
+        });
+
+        // Credit: Transporter account (Liability increases)
+        await tx.insert(schema.voucherEntries).values({
+          voucherId: voucher.id,
+          ledgerAccountId: transportAccountId,
+          debitAmount: "0",
+          creditAmount: transportFees,
+          narration: `Transport fees for container ${container.containerNumber}`,
+        });
+      }
+
+      // Additional charges voucher entries
+      for (const charge of additionalCharges) {
+        if (charge.amount > 0) {
+          const voucherNumber = `CHG-${container.containerNumber}-${Date.now()}`;
+          const [voucher] = await tx
+            .insert(schema.vouchers)
+            .values({
+              companyId: location.companyId,
+              voucherNumber,
+              voucherType: "Payment",
+              voucherDate,
+              description: `${charge.description} for container ${container.containerNumber}`,
+              totalAmount: charge.amount.toFixed(2),
+            })
+            .returning();
+          offloadVoucherLinks.push({ voucherId: voucher.id, role: "ADDITIONAL_CHARGE" });
+
+          // Debit: Additional Charge Expense (Expense increases)
+          const additionalExpenseAccountId = await findOrCreateExpenseAccount(
+            "ADDITIONAL_CHARGES",
+            "Additional Container Charges",
+            expensesParentId,
+          );
+          await tx.insert(schema.voucherEntries).values({
+            voucherId: voucher.id,
+            ledgerAccountId: additionalExpenseAccountId,
+            debitAmount: charge.amount.toFixed(2),
+            creditAmount: "0",
+            narration: `${charge.description} for container ${container.containerNumber}`,
+          });
+
+          // Credit: Specified ledger account (Liability increases)
+          await tx.insert(schema.voucherEntries).values({
+            voucherId: voucher.id,
+            ledgerAccountId: charge.ledgerAccountId,
+            debitAmount: "0",
+            creditAmount: charge.amount.toFixed(2),
+            narration: `${charge.description} for container ${container.containerNumber}`,
+          });
+        }
+      }
+
+      // Create offload record with all calculated values
+      const [offload] = await tx
+        .insert(schema.containerOffloads)
+        .values({
+          containerId,
+          locationId,
+          duties: duties || "0",
+          officeCharges: "0",
+          transferCharges: "0",
+          transportFees: transportFees || "0",
+          totalCharges: totalCharges.toFixed(2),
+          totalMotos: totalMotos.toFixed(3),
+          additionalCostPerMoto: additionalCostPerMoto.toFixed(2),
+          offloadedAt: offloadDate ? new Date(offloadDate) : new Date(),
+        })
+        .returning();
+
+      if (inventoryEvidence.length > 0) {
+        await tx.insert(containerOffloadInventoryEvidence).values(
+          inventoryEvidence.map((row) => ({
+            ...row,
+            offloadId: offload.id,
+            containerId,
+            companyId: container.companyId,
+            locationId,
+          })),
+        );
+      }
+      if (offloadVoucherLinks.length > 0) {
+        await tx.insert(containerOffloadVoucherLinks).values(
+          offloadVoucherLinks.map((row) => ({
+            ...row,
+            offloadId: offload.id,
+            containerId,
+            companyId: container.companyId,
+          })),
+        );
+      }
+
+      return offload;
+    });
   }
 
   // Vouchers and Journal Entries
@@ -2364,7 +2908,11 @@ export class DbStorage implements IStorage {
     return voucher;
   }
 
-  async getVouchersByDateRange(startDate: string, endDate: string, companyId?: number): Promise<any[]> {
+  async getVouchersByDateRange(
+    startDate: string,
+    endDate: string,
+    companyId?: number,
+  ): Promise<any[]> {
     const conditions = [
       sql`${schema.vouchers.voucherDate} >= ${startDate}`,
       sql`${schema.vouchers.voucherDate} <= ${endDate}`,
@@ -2382,17 +2930,17 @@ export class DbStorage implements IStorage {
   async getVoucherEntriesByLedger(
     ledgerAccountId: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<any[]> {
     const conditions = [
       eq(schema.voucherEntries.ledgerAccountId, ledgerAccountId),
-      eq(schema.vouchers.optional, false)
+      eq(schema.vouchers.optional, false),
     ];
-    
+
     if (startDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} >= ${startDate}`);
     }
-    
+
     if (endDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} <= ${endDate}`);
     }
@@ -2419,17 +2967,17 @@ export class DbStorage implements IStorage {
   async getVoucherEntriesByBankAccount(
     bankAccountId: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<any[]> {
     const conditions = [
       eq(schema.voucherEntries.bankAccountId, bankAccountId),
-      eq(schema.vouchers.optional, false)
+      eq(schema.vouchers.optional, false),
     ];
-    
+
     if (startDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} >= ${startDate}`);
     }
-    
+
     if (endDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} <= ${endDate}`);
     }
@@ -2456,17 +3004,17 @@ export class DbStorage implements IStorage {
   async getVoucherEntriesByFixedAsset(
     fixedAssetId: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<any[]> {
     const conditions = [
       eq(schema.voucherEntries.fixedAssetId, fixedAssetId),
-      eq(schema.vouchers.optional, false)
+      eq(schema.vouchers.optional, false),
     ];
-    
+
     if (startDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} >= ${startDate}`);
     }
-    
+
     if (endDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} <= ${endDate}`);
     }
@@ -2494,22 +3042,22 @@ export class DbStorage implements IStorage {
     supplierId: number,
     companyId?: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<any[]> {
     const conditions = [
       eq(schema.voucherEntries.supplierId, supplierId),
       eq(schema.vouchers.optional, false),
-      isNull(schema.vouchers.deletedAt)
+      isNull(schema.vouchers.deletedAt),
     ];
-    
+
     if (companyId) {
       conditions.push(eq(schema.vouchers.companyId, companyId));
     }
-    
+
     if (startDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} >= ${startDate}`);
     }
-    
+
     if (endDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} <= ${endDate}`);
     }
@@ -2539,21 +3087,21 @@ export class DbStorage implements IStorage {
     employeeId: number,
     companyId?: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<any[]> {
     const conditions = [
       eq(schema.voucherEntries.employeeId, employeeId),
-      eq(schema.vouchers.optional, false)
+      eq(schema.vouchers.optional, false),
     ];
-    
+
     if (companyId) {
       conditions.push(eq(schema.vouchers.companyId, companyId));
     }
-    
+
     if (startDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} >= ${startDate}`);
     }
-    
+
     if (endDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} <= ${endDate}`);
     }
@@ -2583,18 +3131,18 @@ export class DbStorage implements IStorage {
     const conditions = [
       eq(schema.containers.supplierId, supplierId),
       // Only count containers that are not yet offloaded or sold
-      sql`${schema.containers.status} NOT IN ('OFFLOADED', 'SOLD')`
+      sql`${schema.containers.status} NOT IN ('OFFLOADED', 'SOLD')`,
     ];
-    
+
     if (companyId !== undefined) {
       conditions.push(eq(schema.containers.companyId, companyId));
     }
-    
+
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(schema.containers)
       .where(and(...conditions));
-    
+
     return result[0]?.count || 0;
   }
 
@@ -2639,33 +3187,60 @@ export class DbStorage implements IStorage {
         employeeCode: schema.employees.code,
       })
       .from(schema.voucherEntries)
-      .leftJoin(schema.ledgerAccounts, eq(schema.voucherEntries.ledgerAccountId, schema.ledgerAccounts.id))
-      .leftJoin(schema.bankAccounts, eq(schema.voucherEntries.bankAccountId, schema.bankAccounts.id))
+      .leftJoin(
+        schema.ledgerAccounts,
+        eq(schema.voucherEntries.ledgerAccountId, schema.ledgerAccounts.id),
+      )
+      .leftJoin(
+        schema.bankAccounts,
+        eq(schema.voucherEntries.bankAccountId, schema.bankAccounts.id),
+      )
       .leftJoin(schema.fixedAssets, eq(schema.voucherEntries.fixedAssetId, schema.fixedAssets.id))
       .leftJoin(schema.suppliers, eq(schema.voucherEntries.supplierId, schema.suppliers.id))
       .leftJoin(schema.employees, eq(schema.voucherEntries.employeeId, schema.employees.id))
       .where(eq(schema.voucherEntries.voucherId, voucherId));
 
-    return entries.map(entry => {
-      const employeeName = entry.employeeFirstName && entry.employeeLastName 
-        ? `${entry.employeeFirstName} ${entry.employeeLastName}` 
-        : null;
-      
+    return entries.map((entry) => {
+      const employeeName =
+        entry.employeeFirstName && entry.employeeLastName
+          ? `${entry.employeeFirstName} ${entry.employeeLastName}`
+          : null;
+
       return {
         ...entry,
-        accountName: entry.accountName || entry.bankAccountName || entry.fixedAssetName || entry.supplierName || employeeName || 'Unknown Account',
-        accountCode: entry.accountCode || entry.bankAccountCode || entry.fixedAssetCode || entry.supplierCode || entry.employeeCode || '-',
+        accountName:
+          entry.accountName ||
+          entry.bankAccountName ||
+          entry.fixedAssetName ||
+          entry.supplierName ||
+          employeeName ||
+          "Unknown Account",
+        accountCode:
+          entry.accountCode ||
+          entry.bankAccountCode ||
+          entry.fixedAssetCode ||
+          entry.supplierCode ||
+          entry.employeeCode ||
+          "-",
       };
     });
   }
 
-  async getStockItemTransactions(stockItemId: number, companyId: number, startDate?: string, endDate?: string): Promise<any[]> {
-    const conditions: any[] = [eq(schema.vouchers.companyId, companyId), eq(schema.vouchers.optional, false)];
-    
+  async getStockItemTransactions(
+    stockItemId: number,
+    companyId: number,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<any[]> {
+    const conditions: any[] = [
+      eq(schema.vouchers.companyId, companyId),
+      eq(schema.vouchers.optional, false),
+    ];
+
     if (startDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} >= ${startDate}`);
     }
-    
+
     if (endDate) {
       conditions.push(sql`${schema.vouchers.voucherDate} <= ${endDate}`);
     }
@@ -2674,7 +3249,7 @@ export class DbStorage implements IStorage {
     const salesItems = await db
       .select({
         id: schema.salesItems.id,
-        type: sql<string>`'sales'`.as('type'),
+        type: sql<string>`'sales'`.as("type"),
         voucherId: schema.salesItems.voucherId,
         voucherNumber: schema.vouchers.voucherNumber,
         voucherDate: schema.vouchers.voucherDate,
@@ -2692,7 +3267,7 @@ export class DbStorage implements IStorage {
     const transferItems = await db
       .select({
         id: schema.stockTransferItems.id,
-        type: sql<string>`'transfer'`.as('type'),
+        type: sql<string>`'transfer'`.as("type"),
         voucherId: schema.stockTransferVouchers.voucherId,
         voucherNumber: schema.vouchers.voucherNumber,
         voucherDate: schema.vouchers.voucherDate,
@@ -2703,7 +3278,10 @@ export class DbStorage implements IStorage {
         notes: schema.stockTransferVouchers.notes,
       })
       .from(schema.stockTransferItems)
-      .leftJoin(schema.stockTransferVouchers, eq(schema.stockTransferItems.transferId, schema.stockTransferVouchers.id))
+      .leftJoin(
+        schema.stockTransferVouchers,
+        eq(schema.stockTransferItems.transferId, schema.stockTransferVouchers.id),
+      )
       .leftJoin(schema.vouchers, eq(schema.stockTransferVouchers.voucherId, schema.vouchers.id))
       .where(and(eq(schema.stockTransferItems.stockItemId, stockItemId), ...conditions));
 
@@ -2711,7 +3289,7 @@ export class DbStorage implements IStorage {
     const adjustmentItems = await db
       .select({
         id: schema.stockAdjustmentItems.id,
-        type: sql<string>`'adjustment'`.as('type'),
+        type: sql<string>`'adjustment'`.as("type"),
         voucherId: schema.stockAdjustmentVouchers.voucherId,
         voucherNumber: schema.vouchers.voucherNumber,
         voucherDate: schema.vouchers.voucherDate,
@@ -2722,7 +3300,10 @@ export class DbStorage implements IStorage {
         notes: schema.stockAdjustmentVouchers.notes,
       })
       .from(schema.stockAdjustmentItems)
-      .leftJoin(schema.stockAdjustmentVouchers, eq(schema.stockAdjustmentItems.adjustmentId, schema.stockAdjustmentVouchers.id))
+      .leftJoin(
+        schema.stockAdjustmentVouchers,
+        eq(schema.stockAdjustmentItems.adjustmentId, schema.stockAdjustmentVouchers.id),
+      )
       .leftJoin(schema.vouchers, eq(schema.stockAdjustmentVouchers.voucherId, schema.vouchers.id))
       .where(and(eq(schema.stockAdjustmentItems.stockItemId, stockItemId), ...conditions));
 
@@ -2740,7 +3321,10 @@ export class DbStorage implements IStorage {
     return created;
   }
 
-  async updateVoucherEntry(id: number, updates: Partial<InsertVoucherEntry>): Promise<VoucherEntry> {
+  async updateVoucherEntry(
+    id: number,
+    updates: Partial<InsertVoucherEntry>,
+  ): Promise<VoucherEntry> {
     const [updated] = await db
       .update(schema.voucherEntries)
       .set(updates)
@@ -2749,9 +3333,15 @@ export class DbStorage implements IStorage {
     return updated;
   }
 
-  async updateStockTransferItem(id: number, updates: Partial<{ stockItemId: number; quantity: string; rate: string }>): Promise<StockTransferItem> {
+  async updateStockTransferItem(
+    id: number,
+    updates: Partial<{ stockItemId: number; quantity: string; rate: string }>,
+  ): Promise<StockTransferItem> {
     // Fetch current item to get existing values for recalculation
-    const [currentItem] = await db.select().from(schema.stockTransferItems).where(eq(schema.stockTransferItems.id, id));
+    const [currentItem] = await db
+      .select()
+      .from(schema.stockTransferItems)
+      .where(eq(schema.stockTransferItems.id, id));
     if (!currentItem) {
       throw new Error("Stock transfer item not found");
     }
@@ -2760,14 +3350,14 @@ export class DbStorage implements IStorage {
     if (updates.stockItemId !== undefined) updateData.stockItemId = updates.stockItemId;
     if (updates.quantity !== undefined) updateData.quantity = updates.quantity;
     if (updates.rate !== undefined) updateData.rate = updates.rate;
-    
+
     // Recalculate total amount using new or existing values
     const finalQuantity = updates.quantity !== undefined ? updates.quantity : currentItem.quantity;
     const finalRate = updates.rate !== undefined ? updates.rate : currentItem.rate;
     const qty = parseFloat(finalQuantity);
     const rate = parseFloat(finalRate);
     updateData.totalAmount = (qty * rate).toFixed(2);
-    
+
     const [updated] = await db
       .update(schema.stockTransferItems)
       .set(updateData)
@@ -2776,9 +3366,15 @@ export class DbStorage implements IStorage {
     return updated;
   }
 
-  async updateStockAdjustmentItem(id: number, updates: Partial<{ stockItemId: number; quantity: string; rate: string }>): Promise<StockAdjustmentItem> {
+  async updateStockAdjustmentItem(
+    id: number,
+    updates: Partial<{ stockItemId: number; quantity: string; rate: string }>,
+  ): Promise<StockAdjustmentItem> {
     // Fetch current item to get existing values for recalculation
-    const [currentItem] = await db.select().from(schema.stockAdjustmentItems).where(eq(schema.stockAdjustmentItems.id, id));
+    const [currentItem] = await db
+      .select()
+      .from(schema.stockAdjustmentItems)
+      .where(eq(schema.stockAdjustmentItems.id, id));
     if (!currentItem) {
       throw new Error("Stock adjustment item not found");
     }
@@ -2787,14 +3383,14 @@ export class DbStorage implements IStorage {
     if (updates.stockItemId !== undefined) updateData.stockItemId = updates.stockItemId;
     if (updates.quantity !== undefined) updateData.quantity = updates.quantity;
     if (updates.rate !== undefined) updateData.rate = updates.rate;
-    
+
     // Recalculate total amount using new or existing values
     const finalQuantity = updates.quantity !== undefined ? updates.quantity : currentItem.quantity;
     const finalRate = updates.rate !== undefined ? updates.rate : currentItem.rate;
     const qty = parseFloat(finalQuantity);
     const rate = parseFloat(finalRate);
     updateData.totalAmount = (qty * rate).toFixed(2);
-    
+
     const [updated] = await db
       .update(schema.stockAdjustmentItems)
       .set(updateData)
@@ -2809,10 +3405,7 @@ export class DbStorage implements IStorage {
 
   async deleteVoucher(id: number): Promise<void> {
     // First, get the voucher to check its type and location
-    const [voucher] = await db
-      .select()
-      .from(schema.vouchers)
-      .where(eq(schema.vouchers.id, id));
+    const [voucher] = await db.select().from(schema.vouchers).where(eq(schema.vouchers.id, id));
 
     if (!voucher) {
       throw new Error("Voucher not found");
@@ -2834,16 +3427,18 @@ export class DbStorage implements IStorage {
         const [currentInventory] = await db
           .select()
           .from(schema.inventory)
-          .where(and(
-            eq(schema.inventory.locationId, voucher.locationId),
-            eq(schema.inventory.stockItemId, saleItem.stockItemId)
-          ));
+          .where(
+            and(
+              eq(schema.inventory.locationId, voucher.locationId),
+              eq(schema.inventory.stockItemId, saleItem.stockItemId),
+            ),
+          );
 
         if (currentInventory) {
           // Add back the quantity
           const newQuantity = parseFloat(currentInventory.quantity) + quantity;
           const currentTotalValue = parseFloat(currentInventory.totalValue);
-          const newTotalValue = currentTotalValue + (quantity * costPrice);
+          const newTotalValue = currentTotalValue + quantity * costPrice;
           const newAverageRate = newQuantity > 0 ? newTotalValue / newQuantity : 0;
 
           await db
@@ -2897,14 +3492,16 @@ export class DbStorage implements IStorage {
           const [sourceInventory] = await db
             .select()
             .from(schema.inventory)
-            .where(and(
-              eq(schema.inventory.locationId, sourceLocationId),
-              eq(schema.inventory.stockItemId, item.stockItemId)
-            ));
+            .where(
+              and(
+                eq(schema.inventory.locationId, sourceLocationId),
+                eq(schema.inventory.stockItemId, item.stockItemId),
+              ),
+            );
 
           if (sourceInventory) {
             const newQuantity = parseFloat(sourceInventory.quantity) + quantity;
-            const newTotalValue = parseFloat(sourceInventory.totalValue) + (quantity * rate);
+            const newTotalValue = parseFloat(sourceInventory.totalValue) + quantity * rate;
             const newAverageRate = newQuantity > 0 ? newTotalValue / newQuantity : 0;
 
             await db
@@ -2930,14 +3527,19 @@ export class DbStorage implements IStorage {
           const [destInventory] = await db
             .select()
             .from(schema.inventory)
-            .where(and(
-              eq(schema.inventory.locationId, destinationLocationId),
-              eq(schema.inventory.stockItemId, item.stockItemId)
-            ));
+            .where(
+              and(
+                eq(schema.inventory.locationId, destinationLocationId),
+                eq(schema.inventory.stockItemId, item.stockItemId),
+              ),
+            );
 
           if (destInventory) {
             const newQuantity = Math.max(0, parseFloat(destInventory.quantity) - quantity);
-            const newTotalValue = Math.max(0, parseFloat(destInventory.totalValue) - (quantity * rate));
+            const newTotalValue = Math.max(
+              0,
+              parseFloat(destInventory.totalValue) - quantity * rate,
+            );
             const newAverageRate = newQuantity > 0 ? newTotalValue / newQuantity : 0;
 
             await db
@@ -2952,8 +3554,12 @@ export class DbStorage implements IStorage {
         }
 
         // Delete transfer items and transfer voucher
-        await db.delete(schema.stockTransferItems).where(eq(schema.stockTransferItems.transferId, transferVoucher.id));
-        await db.delete(schema.stockTransferVouchers).where(eq(schema.stockTransferVouchers.id, transferVoucher.id));
+        await db
+          .delete(schema.stockTransferItems)
+          .where(eq(schema.stockTransferItems.transferId, transferVoucher.id));
+        await db
+          .delete(schema.stockTransferVouchers)
+          .where(eq(schema.stockTransferVouchers.id, transferVoucher.id));
       }
     }
 
@@ -2979,15 +3585,20 @@ export class DbStorage implements IStorage {
           const [currentInventory] = await db
             .select()
             .from(schema.inventory)
-            .where(and(
-              eq(schema.inventory.locationId, adjustmentVoucher.locationId),
-              eq(schema.inventory.stockItemId, item.stockItemId)
-            ));
+            .where(
+              and(
+                eq(schema.inventory.locationId, adjustmentVoucher.locationId),
+                eq(schema.inventory.stockItemId, item.stockItemId),
+              ),
+            );
 
           if (currentInventory) {
-            const newQuantity = Math.max(0, parseFloat(currentInventory.quantity) + reversedQuantity);
+            const newQuantity = Math.max(
+              0,
+              parseFloat(currentInventory.quantity) + reversedQuantity,
+            );
             const currentTotalValue = parseFloat(currentInventory.totalValue);
-            const newTotalValue = Math.max(0, currentTotalValue + (reversedQuantity * rate));
+            const newTotalValue = Math.max(0, currentTotalValue + reversedQuantity * rate);
             const newAverageRate = newQuantity > 0 ? newTotalValue / newQuantity : 0;
 
             await db
@@ -3002,8 +3613,12 @@ export class DbStorage implements IStorage {
         }
 
         // Delete adjustment items and adjustment voucher
-        await db.delete(schema.stockAdjustmentItems).where(eq(schema.stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
-        await db.delete(schema.stockAdjustmentVouchers).where(eq(schema.stockAdjustmentVouchers.id, adjustmentVoucher.id));
+        await db
+          .delete(schema.stockAdjustmentItems)
+          .where(eq(schema.stockAdjustmentItems.adjustmentId, adjustmentVoucher.id));
+        await db
+          .delete(schema.stockAdjustmentVouchers)
+          .where(eq(schema.stockAdjustmentVouchers.id, adjustmentVoucher.id));
       }
     }
 
@@ -3015,10 +3630,14 @@ export class DbStorage implements IStorage {
 
     if (linkedPOs.length > 0) {
       const containerUpdates = new Map<number, { itemsTotal: number; containerNumber: string }>();
-      
+
       for (const po of linkedPOs) {
         const itemsTotal = parseFloat(po.itemsTotal || "0");
-        const container = await db.select().from(schema.containers).where(eq(schema.containers.id, po.containerId)).limit(1);
+        const container = await db
+          .select()
+          .from(schema.containers)
+          .where(eq(schema.containers.id, po.containerId))
+          .limit(1);
         const containerNumber = container.length > 0 ? container[0].containerNumber : "";
         const existing = containerUpdates.get(po.containerId) || { itemsTotal: 0, containerNumber };
         containerUpdates.set(po.containerId, {
@@ -3043,14 +3662,21 @@ export class DbStorage implements IStorage {
           const chargeVouchers = await db
             .select({ id: schema.vouchers.id })
             .from(schema.vouchers)
-            .where(sql`${schema.vouchers.voucherNumber} LIKE ${'CHARGE-' + container.containerNumber + '-%'}`);
-          
+            .where(
+              sql`${schema.vouchers.voucherNumber} LIKE ${"CHARGE-" + container.containerNumber + "-%"}`,
+            );
+
           for (const chargeVoucher of chargeVouchers) {
-            await db.delete(schema.voucherEntries).where(eq(schema.voucherEntries.voucherId, chargeVoucher.id));
+            await db
+              .delete(schema.voucherEntries)
+              .where(eq(schema.voucherEntries.voucherId, chargeVoucher.id));
             await db.delete(schema.vouchers).where(eq(schema.vouchers.id, chargeVoucher.id));
           }
 
-          const newItemsTotal = Math.max(0, parseFloat(container.itemsTotal || "0") - totals.itemsTotal);
+          const newItemsTotal = Math.max(
+            0,
+            parseFloat(container.itemsTotal || "0") - totals.itemsTotal,
+          );
           const newChargesTotal = 0; // Reset to 0 since we deleted charge vouchers
           const newGrandTotal = newItemsTotal + newChargesTotal;
 
@@ -3061,7 +3687,9 @@ export class DbStorage implements IStorage {
             .limit(1);
 
           if (remainingPOs.length === 0) {
-            await db.delete(schema.containerCharges).where(eq(schema.containerCharges.containerId, containerId));
+            await db
+              .delete(schema.containerCharges)
+              .where(eq(schema.containerCharges.containerId, containerId));
             await db.delete(schema.containers).where(eq(schema.containers.id, containerId));
           } else {
             await db
@@ -3079,7 +3707,7 @@ export class DbStorage implements IStorage {
 
     // STEP 3: Delete voucher entries (this automatically restores account balances)
     await db.delete(schema.voucherEntries).where(eq(schema.voucherEntries.voucherId, id));
-    
+
     // STEP 4: Delete the voucher itself
     await db.delete(schema.vouchers).where(eq(schema.vouchers.id, id));
   }
@@ -3091,7 +3719,7 @@ export class DbStorage implements IStorage {
     periodEndDate: string,
     retainedEarningsAccountId: number,
     closedByUserId: string,
-    notes?: string
+    notes?: string,
   ): Promise<schema.FiscalPeriodClosure> {
     return await db.transaction(async (tx) => {
       // Check if closure already exists for this period
@@ -3101,8 +3729,8 @@ export class DbStorage implements IStorage {
         .where(
           and(
             eq(schema.fiscalPeriodClosures.companyId, companyId),
-            eq(schema.fiscalPeriodClosures.periodEndDate, periodEndDate)
-          )
+            eq(schema.fiscalPeriodClosures.periodEndDate, periodEndDate),
+          ),
         );
 
       if (existingClosure.length > 0) {
@@ -3118,9 +3746,9 @@ export class DbStorage implements IStorage {
             eq(schema.ledgerAccounts.companyId, companyId),
             or(
               eq(schema.ledgerAccounts.accountType, "Income"),
-              eq(schema.ledgerAccounts.accountType, "Expense")
-            )
-          )
+              eq(schema.ledgerAccounts.accountType, "Expense"),
+            ),
+          ),
         );
 
       if (accounts.length === 0) {
@@ -3157,8 +3785,8 @@ export class DbStorage implements IStorage {
               sql`${schema.vouchers.voucherDate} >= ${periodStartDate}`,
               sql`${schema.vouchers.voucherDate} <= ${periodEndDate}`,
               eq(schema.vouchers.companyId, companyId),
-              eq(schema.vouchers.optional, false)
-            )
+              eq(schema.vouchers.optional, false),
+            ),
           );
 
         // Sum up debits and credits
@@ -3195,15 +3823,18 @@ export class DbStorage implements IStorage {
 
       // Create the closing voucher
       const voucherNumber = `FISCAL-CLOSE-${periodEndDate}-${Date.now()}`;
-      const [closingVoucher] = await tx.insert(schema.vouchers).values({
-        companyId,
-        voucherNumber,
-        voucherType: "Journal",
-        voucherDate: periodEndDate,
-        description: `Fiscal Period Close: ${periodStartDate} to ${periodEndDate}${notes ? ` - ${notes}` : ''}`,
-        totalAmount: Math.abs(netIncome).toFixed(2),
-        optional: false,
-      }).returning();
+      const [closingVoucher] = await tx
+        .insert(schema.vouchers)
+        .values({
+          companyId,
+          voucherNumber,
+          voucherType: "Journal",
+          voucherDate: periodEndDate,
+          description: `Fiscal Period Close: ${periodStartDate} to ${periodEndDate}${notes ? ` - ${notes}` : ""}`,
+          totalAmount: Math.abs(netIncome).toFixed(2),
+          optional: false,
+        })
+        .returning();
 
       // Create voucher entries to zero out each Income and Expense account
       for (const account of accountBalances) {
@@ -3254,19 +3885,22 @@ export class DbStorage implements IStorage {
       }
 
       // Record the closure
-      const [closure] = await tx.insert(schema.fiscalPeriodClosures).values({
-        companyId,
-        periodStartDate,
-        periodEndDate,
-        closedByUserId,
-        closingVoucherId: closingVoucher.id,
-        retainedEarningsAccountId,
-        totalIncome: totalIncome.toFixed(2),
-        totalExpense: totalExpense.toFixed(2),
-        netIncome: netIncome.toFixed(2),
-        status: "CLOSED",
-        notes: notes || null,
-      }).returning();
+      const [closure] = await tx
+        .insert(schema.fiscalPeriodClosures)
+        .values({
+          companyId,
+          periodStartDate,
+          periodEndDate,
+          closedByUserId,
+          closingVoucherId: closingVoucher.id,
+          retainedEarningsAccountId,
+          totalIncome: totalIncome.toFixed(2),
+          totalExpense: totalExpense.toFixed(2),
+          netIncome: netIncome.toFixed(2),
+          status: "CLOSED",
+          notes: notes || null,
+        })
+        .returning();
 
       // Reset opening balances for Income/Expense accounts to 0 for next period
       for (const account of accountBalances) {
@@ -3296,7 +3930,7 @@ export class DbStorage implements IStorage {
     voucherId: number,
     destinationLocationId: number,
     notes: string,
-    items: Array<{sourceLocationId: number, stockItemId: number, quantity: string, rate: string}>
+    items: Array<{ sourceLocationId: number; stockItemId: number; quantity: string; rate: string }>,
   ): Promise<any> {
     return await db.transaction(async (tx) => {
       // Check if voucher is optional - if so, skip inventory updates
@@ -3304,20 +3938,23 @@ export class DbStorage implements IStorage {
         .select()
         .from(schema.vouchers)
         .where(eq(schema.vouchers.id, voucherId));
-      
+
       if (!voucher) {
         throw new Error(`Voucher ${voucherId} not found`);
       }
-      
+
       const isOptional = voucher.optional;
 
       // Create the stock transfer voucher record (note: no global sourceLocationId)
-      const [transfer] = await tx.insert(schema.stockTransferVouchers).values({
-        voucherId,
-        sourceLocationId: items[0].sourceLocationId, // Store first item's source for legacy compatibility
-        destinationLocationId,
-        notes,
-      }).returning();
+      const [transfer] = await tx
+        .insert(schema.stockTransferVouchers)
+        .values({
+          voucherId,
+          sourceLocationId: items[0].sourceLocationId, // Store first item's source for legacy compatibility
+          destinationLocationId,
+          notes,
+        })
+        .returning();
 
       // Process each item
       const transferItems: StockTransferItem[] = [];
@@ -3327,14 +3964,17 @@ export class DbStorage implements IStorage {
         const totalAmount = quantity * rate;
 
         // Insert transfer item with source location
-        const [transferItem] = await tx.insert(schema.stockTransferItems).values({
-          transferId: transfer.id,
-          stockItemId: item.stockItemId,
-          sourceLocationId: item.sourceLocationId,
-          quantity: item.quantity,
-          rate: item.rate,
-          totalAmount: totalAmount.toFixed(2),
-        }).returning();
+        const [transferItem] = await tx
+          .insert(schema.stockTransferItems)
+          .values({
+            transferId: transfer.id,
+            stockItemId: item.stockItemId,
+            sourceLocationId: item.sourceLocationId,
+            quantity: item.quantity,
+            rate: item.rate,
+            totalAmount: totalAmount.toFixed(2),
+          })
+          .returning();
 
         transferItems.push(transferItem);
 
@@ -3347,33 +3987,37 @@ export class DbStorage implements IStorage {
           const [sourceInventory] = await tx
             .select()
             .from(schema.inventory)
-            .where(and(
-              eq(schema.inventory.locationId, item.sourceLocationId),
-              eq(schema.inventory.stockItemId, item.stockItemId)
-            ))
-            .for('update');
+            .where(
+              and(
+                eq(schema.inventory.locationId, item.sourceLocationId),
+                eq(schema.inventory.stockItemId, item.stockItemId),
+              ),
+            )
+            .for("update");
 
           if (sourceInventory) {
             // Decrease quantity at this item's source location
             const currentQty = parseFloat(sourceInventory.quantity);
             const currentValue = parseFloat(sourceInventory.totalValue);
             const currentRate = parseFloat(sourceInventory.averageRate);
-            
+
             const newQty = currentQty - quantity;
             // Guard against negative inventory — without this, applying a
             // larger transfer than the source holds would silently corrupt
             // stock to a negative balance instead of failing the transaction.
             if (newQty < 0) {
-              throw new Error(`Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`);
+              throw new Error(
+                `Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`,
+              );
             }
             const newValue = newQty > 0 ? newQty * currentRate : 0;
-            
+
             // Get location's companyId
             const [location] = await tx
               .select()
               .from(schema.locations)
               .where(eq(schema.locations.id, item.sourceLocationId));
-            
+
             if (!location) {
               throw new Error(`Source location ${item.sourceLocationId} not found`);
             }
@@ -3395,7 +4039,9 @@ export class DbStorage implements IStorage {
             // destination inventory below — effectively minting stock from
             // thin air (a data-integrity break, since totals across the
             // company would no longer reconcile).
-            throw new Error(`Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`);
+            throw new Error(
+              `Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`,
+            );
           }
 
           // CONCURRENCY: lock destination row too so concurrent transfers
@@ -3404,25 +4050,25 @@ export class DbStorage implements IStorage {
           const [destInventory] = await tx
             .select()
             .from(schema.inventory)
-            .where(and(
-              eq(schema.inventory.locationId, destinationLocationId),
-              eq(schema.inventory.stockItemId, item.stockItemId)
-            ))
-            .for('update');
+            .where(
+              and(
+                eq(schema.inventory.locationId, destinationLocationId),
+                eq(schema.inventory.stockItemId, item.stockItemId),
+              ),
+            )
+            .for("update");
 
           if (destInventory) {
             // Increase quantity at destination location using weighted average
             // Use existingQty * existingRate (not totalValue) to avoid data corruption issues
             const currentQty = parseFloat(destInventory.quantity);
             const currentRate = parseFloat(destInventory.averageRate || "0");
-            
+
             const newQty = currentQty + quantity;
             // Weighted average: (existing value + new value) / total quantity
-            const newRate = newQty > 0 
-              ? ((currentQty * currentRate) + (quantity * rate)) / newQty 
-              : 0;
+            const newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
             const newValue = newQty * newRate;
-            
+
             await tx
               .update(schema.inventory)
               .set({
@@ -3438,7 +4084,7 @@ export class DbStorage implements IStorage {
               .select()
               .from(schema.locations)
               .where(eq(schema.locations.id, destinationLocationId));
-            
+
             if (!destLocation) {
               throw new Error(`Destination location ${destinationLocationId} not found`);
             }
@@ -3469,7 +4115,7 @@ export class DbStorage implements IStorage {
     locationId: number,
     adjustmentType: "Production" | "Consumption",
     notes: string,
-    items: Array<{stockItemId: number, quantity: string, rate: string}>
+    items: Array<{ stockItemId: number; quantity: string; rate: string }>,
   ): Promise<any> {
     return await db.transaction(async (tx) => {
       // Check if voucher is optional - if so, skip inventory updates
@@ -3477,27 +4123,30 @@ export class DbStorage implements IStorage {
         .select()
         .from(schema.vouchers)
         .where(eq(schema.vouchers.id, voucherId));
-      
+
       if (!voucher) {
         throw new Error(`Voucher ${voucherId} not found`);
       }
-      
+
       const isOptional = voucher.optional;
 
       // Create the stock adjustment voucher record
-      const [adjustment] = await tx.insert(schema.stockAdjustmentVouchers).values({
-        voucherId,
-        locationId,
-        adjustmentType,
-        notes,
-      }).returning();
+      const [adjustment] = await tx
+        .insert(schema.stockAdjustmentVouchers)
+        .values({
+          voucherId,
+          locationId,
+          adjustmentType,
+          notes,
+        })
+        .returning();
 
       // Get location's companyId
       const [location] = await tx
         .select()
         .from(schema.locations)
         .where(eq(schema.locations.id, locationId));
-      
+
       if (!location) {
         throw new Error(`Location ${locationId} not found`);
       }
@@ -3510,13 +4159,16 @@ export class DbStorage implements IStorage {
         const totalAmount = Math.abs(quantity) * rate;
 
         // Insert adjustment item
-        const [adjustmentItem] = await tx.insert(schema.stockAdjustmentItems).values({
-          adjustmentId: adjustment.id,
-          stockItemId: item.stockItemId,
-          quantity: item.quantity,
-          rate: item.rate,
-          totalAmount: totalAmount.toFixed(2),
-        }).returning();
+        const [adjustmentItem] = await tx
+          .insert(schema.stockAdjustmentItems)
+          .values({
+            adjustmentId: adjustment.id,
+            stockItemId: item.stockItemId,
+            quantity: item.quantity,
+            rate: item.rate,
+            totalAmount: totalAmount.toFixed(2),
+          })
+          .returning();
 
         adjustmentItems.push(adjustmentItem);
 
@@ -3529,18 +4181,20 @@ export class DbStorage implements IStorage {
           const [currentInventory] = await tx
             .select()
             .from(schema.inventory)
-            .where(and(
-              eq(schema.inventory.locationId, locationId),
-              eq(schema.inventory.stockItemId, item.stockItemId)
-            ))
-            .for('update');
+            .where(
+              and(
+                eq(schema.inventory.locationId, locationId),
+                eq(schema.inventory.stockItemId, item.stockItemId),
+              ),
+            )
+            .for("update");
 
           if (currentInventory) {
             // Adjust quantity at location
             const currentQty = parseFloat(currentInventory.quantity);
             const currentValue = parseFloat(currentInventory.totalValue);
             const currentRate = parseFloat(currentInventory.averageRate);
-            
+
             let newQty: number;
             let newValue: number;
             let newRate: number;
@@ -3549,9 +4203,7 @@ export class DbStorage implements IStorage {
               // Positive adjustment - add to inventory
               // Use weighted average: (existing qty * existing rate + new qty * new rate) / total qty
               newQty = currentQty + quantity;
-              newRate = newQty > 0 
-                ? ((currentQty * currentRate) + (quantity * rate)) / newQty 
-                : 0;
+              newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
               newValue = newQty * newRate;
             } else {
               // Consumption - subtract from inventory (use absolute value to ensure reduction)
@@ -3560,12 +4212,14 @@ export class DbStorage implements IStorage {
               // larger than what's on hand would silently drive stock to a
               // negative balance. Fail the transaction instead.
               if (newQty < 0) {
-                throw new Error(`Insufficient inventory at location ${locationId} for stock item ${item.stockItemId}`);
+                throw new Error(
+                  `Insufficient inventory at location ${locationId} for stock item ${item.stockItemId}`,
+                );
               }
               newValue = newQty > 0 ? newQty * currentRate : 0;
               newRate = currentRate;
             }
-            
+
             await tx
               .update(schema.inventory)
               .set({
@@ -3581,7 +4235,9 @@ export class DbStorage implements IStorage {
             // method silently no-ops, which is misleading (the user thinks
             // their consumption posted but stock totals don't move). Mirror
             // the same fail-closed contract createStockTransfer uses.
-            throw new Error(`Insufficient inventory at location ${locationId} for stock item ${item.stockItemId}`);
+            throw new Error(
+              `Insufficient inventory at location ${locationId} for stock item ${item.stockItemId}`,
+            );
           } else if (adjustmentType === "Production") {
             // Create new inventory record for production
             await tx.insert(schema.inventory).values({
@@ -3650,10 +4306,10 @@ export class DbStorage implements IStorage {
     id: number,
     destinationLocationId: number,
     notes: string,
-    items: Array<{sourceLocationId: number, stockItemId: number, quantity: string, rate: string}>
+    items: Array<{ sourceLocationId: number; stockItemId: number; quantity: string; rate: string }>,
   ): Promise<any> {
-    console.log('[storage.updateStockTransfer] Starting update for transfer ID:', id);
-    
+    console.log("[storage.updateStockTransfer] Starting update for transfer ID:", id);
+
     return await db.transaction(async (tx) => {
       // Step 1: Get the existing stock transfer with its items
       const [existingTransfer] = await tx
@@ -3670,11 +4326,11 @@ export class DbStorage implements IStorage {
         .select()
         .from(schema.vouchers)
         .where(eq(schema.vouchers.id, existingTransfer.voucherId));
-      
+
       if (!voucher) {
         throw new Error(`Voucher ${existingTransfer.voucherId} not found`);
       }
-      
+
       const isOptional = voucher.optional;
 
       const existingItems = await tx
@@ -3682,109 +4338,120 @@ export class DbStorage implements IStorage {
         .from(schema.stockTransferItems)
         .where(eq(schema.stockTransferItems.transferId, id));
 
-      console.log('[storage.updateStockTransfer] Found existing transfer with', existingItems.length, 'items');
+      console.log(
+        "[storage.updateStockTransfer] Found existing transfer with",
+        existingItems.length,
+        "items",
+      );
 
       // CRITICAL: Validate that all items have sourceLocationId before allowing edit
       // Legacy transfers (created before the column was added) cannot be safely edited
-      const itemsWithoutSource = existingItems.filter(item => !item.sourceLocationId);
+      const itemsWithoutSource = existingItems.filter((item) => !item.sourceLocationId);
       if (itemsWithoutSource.length > 0) {
         throw new Error(
           `Cannot edit this stock transfer: ${itemsWithoutSource.length} items missing source location data. ` +
-          `This transfer was created before per-item source locations were tracked. ` +
-          `Please create a new transfer instead to avoid inventory corruption.`
+            `This transfer was created before per-item source locations were tracked. ` +
+            `Please create a new transfer instead to avoid inventory corruption.`,
         );
       }
 
       // Step 2: REVERSE inventory changes for each OLD item (only if not optional)
       if (!isOptional) {
         for (const oldItem of existingItems) {
-        const quantity = parseFloat(oldItem.quantity);
-        const rate = parseFloat(oldItem.rate);
-        const totalAmount = quantity * rate;
+          const quantity = parseFloat(oldItem.quantity);
+          const rate = parseFloat(oldItem.rate);
+          const totalAmount = quantity * rate;
 
-        console.log('[storage.updateStockTransfer] Reversing item:', oldItem.stockItemId, 'qty:', quantity);
+          console.log(
+            "[storage.updateStockTransfer] Reversing item:",
+            oldItem.stockItemId,
+            "qty:",
+            quantity,
+          );
 
-        // REVERSE: Add back to source location (we previously subtracted)
-        // Use the item's sourceLocationId if available, otherwise fall back to transfer's sourceLocationId
-        const sourceLocationId = oldItem.sourceLocationId || existingTransfer.sourceLocationId;
+          // REVERSE: Add back to source location (we previously subtracted)
+          // Use the item's sourceLocationId if available, otherwise fall back to transfer's sourceLocationId
+          const sourceLocationId = oldItem.sourceLocationId || existingTransfer.sourceLocationId;
 
-        const [sourceInventory] = await tx
-          .select()
-          .from(schema.inventory)
-          .where(and(
-            eq(schema.inventory.locationId, sourceLocationId),
-            eq(schema.inventory.stockItemId, oldItem.stockItemId)
-          ));
-
-        if (sourceInventory) {
-          // Add back to source (reverse the subtraction)
-          // Use weighted average: (existing qty * existing rate + returning qty * returning rate) / total qty
-          const currentQty = parseFloat(sourceInventory.quantity);
-          const currentRate = parseFloat(sourceInventory.averageRate || "0");
-          
-          const newQty = currentQty + quantity;
-          const newRate = newQty > 0 
-            ? ((currentQty * currentRate) + (quantity * rate)) / newQty 
-            : 0;
-          const newValue = newQty * newRate;
-
-          await tx
-            .update(schema.inventory)
-            .set({
-              quantity: newQty.toFixed(3),
-              averageRate: newRate.toFixed(2),
-              totalValue: newValue.toFixed(2),
-              lastUpdated: new Date(),
-            })
-            .where(eq(schema.inventory.id, sourceInventory.id));
-        } else {
-          // Create new inventory record at source (it may have been deleted if quantity reached 0)
-          const [sourceLocation] = await tx
+          const [sourceInventory] = await tx
             .select()
-            .from(schema.locations)
-            .where(eq(schema.locations.id, sourceLocationId));
-          
-          if (sourceLocation) {
-            await tx.insert(schema.inventory).values({
-              companyId: sourceLocation.companyId,
-              locationId: sourceLocationId,
-              stockItemId: oldItem.stockItemId,
-              quantity: quantity.toFixed(3),
-              averageRate: rate.toFixed(2),
-              totalValue: totalAmount.toFixed(2),
-              lastUpdated: new Date(),
-            });
+            .from(schema.inventory)
+            .where(
+              and(
+                eq(schema.inventory.locationId, sourceLocationId),
+                eq(schema.inventory.stockItemId, oldItem.stockItemId),
+              ),
+            );
+
+          if (sourceInventory) {
+            // Add back to source (reverse the subtraction)
+            // Use weighted average: (existing qty * existing rate + returning qty * returning rate) / total qty
+            const currentQty = parseFloat(sourceInventory.quantity);
+            const currentRate = parseFloat(sourceInventory.averageRate || "0");
+
+            const newQty = currentQty + quantity;
+            const newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+            const newValue = newQty * newRate;
+
+            await tx
+              .update(schema.inventory)
+              .set({
+                quantity: newQty.toFixed(3),
+                averageRate: newRate.toFixed(2),
+                totalValue: newValue.toFixed(2),
+                lastUpdated: new Date(),
+              })
+              .where(eq(schema.inventory.id, sourceInventory.id));
+          } else {
+            // Create new inventory record at source (it may have been deleted if quantity reached 0)
+            const [sourceLocation] = await tx
+              .select()
+              .from(schema.locations)
+              .where(eq(schema.locations.id, sourceLocationId));
+
+            if (sourceLocation) {
+              await tx.insert(schema.inventory).values({
+                companyId: sourceLocation.companyId,
+                locationId: sourceLocationId,
+                stockItemId: oldItem.stockItemId,
+                quantity: quantity.toFixed(3),
+                averageRate: rate.toFixed(2),
+                totalValue: totalAmount.toFixed(2),
+                lastUpdated: new Date(),
+              });
+            }
           }
-        }
 
-        // REVERSE: Subtract from destination location (we previously added)
-        const [destInventory] = await tx
-          .select()
-          .from(schema.inventory)
-          .where(and(
-            eq(schema.inventory.locationId, existingTransfer.destinationLocationId),
-            eq(schema.inventory.stockItemId, oldItem.stockItemId)
-          ));
+          // REVERSE: Subtract from destination location (we previously added)
+          const [destInventory] = await tx
+            .select()
+            .from(schema.inventory)
+            .where(
+              and(
+                eq(schema.inventory.locationId, existingTransfer.destinationLocationId),
+                eq(schema.inventory.stockItemId, oldItem.stockItemId),
+              ),
+            );
 
-        if (destInventory) {
-          // Subtract from destination (reverse the addition)
-          const currentQty = parseFloat(destInventory.quantity);
-          const currentValue = parseFloat(destInventory.totalValue);
-          const currentRate = parseFloat(destInventory.averageRate);
-          
-          const newQty = currentQty - quantity;
-          const newValue = newQty > 0 ? newQty * currentRate : 0;
+          if (destInventory) {
+            // Subtract from destination (reverse the addition)
+            const currentQty = parseFloat(destInventory.quantity);
+            const _currentValue = parseFloat(destInventory.totalValue);
+            const currentRate = parseFloat(destInventory.averageRate);
 
-          await tx
-            .update(schema.inventory)
-            .set({
-              quantity: newQty.toFixed(3),
-              averageRate: currentRate.toFixed(2),
-              totalValue: newValue.toFixed(2),
-              lastUpdated: new Date(),
-            })
-            .where(eq(schema.inventory.id, destInventory.id));
-        }
+            const newQty = currentQty - quantity;
+            const newValue = newQty > 0 ? newQty * currentRate : 0;
+
+            await tx
+              .update(schema.inventory)
+              .set({
+                quantity: newQty.toFixed(3),
+                averageRate: currentRate.toFixed(2),
+                totalValue: newValue.toFixed(2),
+                lastUpdated: new Date(),
+              })
+              .where(eq(schema.inventory.id, destInventory.id));
+          }
         }
       }
 
@@ -3793,7 +4460,7 @@ export class DbStorage implements IStorage {
         .delete(schema.stockTransferItems)
         .where(eq(schema.stockTransferItems.transferId, id));
 
-      console.log('[storage.updateStockTransfer] Deleted old items');
+      console.log("[storage.updateStockTransfer] Deleted old items");
 
       // Step 4: Update the stock transfer record
       const [updatedTransfer] = await tx
@@ -3806,7 +4473,7 @@ export class DbStorage implements IStorage {
         .where(eq(schema.stockTransferVouchers.id, id))
         .returning();
 
-      console.log('[storage.updateStockTransfer] Updated transfer record');
+      console.log("[storage.updateStockTransfer] Updated transfer record");
 
       // Step 5: Create NEW items and apply inventory changes (only if not optional)
       const transferItems: StockTransferItem[] = [];
@@ -3815,17 +4482,25 @@ export class DbStorage implements IStorage {
         const rate = parseFloat(item.rate);
         const totalAmount = quantity * rate;
 
-        console.log('[storage.updateStockTransfer] Creating new item:', item.stockItemId, 'qty:', quantity);
+        console.log(
+          "[storage.updateStockTransfer] Creating new item:",
+          item.stockItemId,
+          "qty:",
+          quantity,
+        );
 
         // Insert transfer item with source location
-        const [transferItem] = await tx.insert(schema.stockTransferItems).values({
-          transferId: updatedTransfer.id,
-          stockItemId: item.stockItemId,
-          sourceLocationId: item.sourceLocationId,
-          quantity: item.quantity,
-          rate: item.rate,
-          totalAmount: totalAmount.toFixed(2),
-        }).returning();
+        const [transferItem] = await tx
+          .insert(schema.stockTransferItems)
+          .values({
+            transferId: updatedTransfer.id,
+            stockItemId: item.stockItemId,
+            sourceLocationId: item.sourceLocationId,
+            quantity: item.quantity,
+            rate: item.rate,
+            totalAmount: totalAmount.toFixed(2),
+          })
+          .returning();
 
         transferItems.push(transferItem);
 
@@ -3835,98 +4510,108 @@ export class DbStorage implements IStorage {
           // this transaction so concurrent updates to the same (location,
           // stock_item) cannot both pass the stock check and overdraw.
           const [sourceInventory] = await tx
-          .select()
-          .from(schema.inventory)
-          .where(and(
-            eq(schema.inventory.locationId, item.sourceLocationId),
-            eq(schema.inventory.stockItemId, item.stockItemId)
-          ))
-          .for('update');
-
-        if (sourceInventory) {
-          // Decrease quantity at this item's source location
-          const currentQty = parseFloat(sourceInventory.quantity);
-          const currentValue = parseFloat(sourceInventory.totalValue);
-          const currentRate = parseFloat(sourceInventory.averageRate);
-
-          const newQty = currentQty - quantity;
-          // Guard against negative inventory — without this, applying a
-          // larger transfer than the source holds would silently corrupt
-          // stock to a negative balance instead of failing the transaction.
-          if (newQty < 0) {
-            throw new Error(`Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`);
-          }
-          const newValue = newQty > 0 ? newQty * currentRate : 0;
-
-          await tx
-            .update(schema.inventory)
-            .set({
-              quantity: newQty.toFixed(3),
-              averageRate: currentRate.toFixed(2),
-              totalValue: newValue.toFixed(2),
-              lastUpdated: new Date(),
-            })
-            .where(eq(schema.inventory.id, sourceInventory.id));
-        } else {
-          throw new Error(`Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`);
-        }
-
-        // Get current inventory at destination location
-        const [destInventory] = await tx
-          .select()
-          .from(schema.inventory)
-          .where(and(
-            eq(schema.inventory.locationId, destinationLocationId),
-            eq(schema.inventory.stockItemId, item.stockItemId)
-          ));
-
-        if (destInventory) {
-          // Increase quantity at destination location using weighted average
-          // Use existingQty * existingRate (not totalValue) to avoid data corruption issues
-          const currentQty = parseFloat(destInventory.quantity);
-          const currentRate = parseFloat(destInventory.averageRate || "0");
-          
-          const newQty = currentQty + quantity;
-          // Weighted average: (existing value + new value) / total quantity
-          const newRate = newQty > 0 
-            ? ((currentQty * currentRate) + (quantity * rate)) / newQty 
-            : 0;
-          const newValue = newQty * newRate;
-          
-          await tx
-            .update(schema.inventory)
-            .set({
-              quantity: newQty.toFixed(3),
-              averageRate: newRate.toFixed(2),
-              totalValue: newValue.toFixed(2),
-              lastUpdated: new Date(),
-            })
-            .where(eq(schema.inventory.id, destInventory.id));
-        } else {
-          // Create new inventory record at destination
-          const [destLocation] = await tx
             .select()
-            .from(schema.locations)
-            .where(eq(schema.locations.id, destinationLocationId));
-          
-          if (!destLocation) {
-            throw new Error(`Destination location ${destinationLocationId} not found`);
+            .from(schema.inventory)
+            .where(
+              and(
+                eq(schema.inventory.locationId, item.sourceLocationId),
+                eq(schema.inventory.stockItemId, item.stockItemId),
+              ),
+            )
+            .for("update");
+
+          if (sourceInventory) {
+            // Decrease quantity at this item's source location
+            const currentQty = parseFloat(sourceInventory.quantity);
+            const _currentValue = parseFloat(sourceInventory.totalValue);
+            const currentRate = parseFloat(sourceInventory.averageRate);
+
+            const newQty = currentQty - quantity;
+            // Guard against negative inventory — without this, applying a
+            // larger transfer than the source holds would silently corrupt
+            // stock to a negative balance instead of failing the transaction.
+            if (newQty < 0) {
+              throw new Error(
+                `Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`,
+              );
+            }
+            const newValue = newQty > 0 ? newQty * currentRate : 0;
+
+            await tx
+              .update(schema.inventory)
+              .set({
+                quantity: newQty.toFixed(3),
+                averageRate: currentRate.toFixed(2),
+                totalValue: newValue.toFixed(2),
+                lastUpdated: new Date(),
+              })
+              .where(eq(schema.inventory.id, sourceInventory.id));
+          } else {
+            throw new Error(
+              `Insufficient inventory at source location ${item.sourceLocationId} for stock item ${item.stockItemId}`,
+            );
           }
 
-          await tx.insert(schema.inventory).values({
-            companyId: destLocation.companyId,
-            locationId: destinationLocationId,
-            stockItemId: item.stockItemId,
-            quantity: item.quantity,
-            averageRate: item.rate,
-            totalValue: totalAmount.toFixed(2),
-            lastUpdated: new Date(),
-          });
-        }
+          // Get current inventory at destination location
+          const [destInventory] = await tx
+            .select()
+            .from(schema.inventory)
+            .where(
+              and(
+                eq(schema.inventory.locationId, destinationLocationId),
+                eq(schema.inventory.stockItemId, item.stockItemId),
+              ),
+            );
+
+          if (destInventory) {
+            // Increase quantity at destination location using weighted average
+            // Use existingQty * existingRate (not totalValue) to avoid data corruption issues
+            const currentQty = parseFloat(destInventory.quantity);
+            const currentRate = parseFloat(destInventory.averageRate || "0");
+
+            const newQty = currentQty + quantity;
+            // Weighted average: (existing value + new value) / total quantity
+            const newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+            const newValue = newQty * newRate;
+
+            await tx
+              .update(schema.inventory)
+              .set({
+                quantity: newQty.toFixed(3),
+                averageRate: newRate.toFixed(2),
+                totalValue: newValue.toFixed(2),
+                lastUpdated: new Date(),
+              })
+              .where(eq(schema.inventory.id, destInventory.id));
+          } else {
+            // Create new inventory record at destination
+            const [destLocation] = await tx
+              .select()
+              .from(schema.locations)
+              .where(eq(schema.locations.id, destinationLocationId));
+
+            if (!destLocation) {
+              throw new Error(`Destination location ${destinationLocationId} not found`);
+            }
+
+            await tx.insert(schema.inventory).values({
+              companyId: destLocation.companyId,
+              locationId: destinationLocationId,
+              stockItemId: item.stockItemId,
+              quantity: item.quantity,
+              averageRate: item.rate,
+              totalValue: totalAmount.toFixed(2),
+              lastUpdated: new Date(),
+            });
+          }
         }
       }
 
-      console.log('[storage.updateStockTransfer] Transfer updated successfully with', transferItems.length, 'new items');
+      console.log(
+        "[storage.updateStockTransfer] Transfer updated successfully with",
+        transferItems.length,
+        "new items",
+      );
 
       return {
         transfer: updatedTransfer,
@@ -3940,10 +4625,10 @@ export class DbStorage implements IStorage {
     locationId: number,
     adjustmentType: "Production" | "Consumption" | "Mixed",
     notes: string,
-    items: Array<{stockItemId: number, quantity: string, rate: string}>
+    items: Array<{ stockItemId: number; quantity: string; rate: string }>,
   ): Promise<any> {
-    console.log('[storage.updateStockAdjustment] Starting update for adjustment ID:', id);
-    
+    console.log("[storage.updateStockAdjustment] Starting update for adjustment ID:", id);
+
     return await db.transaction(async (tx) => {
       // Step 1: Get the existing stock adjustment with its items
       const [existingAdjustment] = await tx
@@ -3960,11 +4645,11 @@ export class DbStorage implements IStorage {
         .select()
         .from(schema.vouchers)
         .where(eq(schema.vouchers.id, existingAdjustment.voucherId));
-      
+
       if (!voucher) {
         throw new Error(`Voucher ${existingAdjustment.voucherId} not found`);
       }
-      
+
       const isOptional = voucher.optional;
 
       const existingItems = await tx
@@ -3972,14 +4657,18 @@ export class DbStorage implements IStorage {
         .from(schema.stockAdjustmentItems)
         .where(eq(schema.stockAdjustmentItems.adjustmentId, id));
 
-      console.log('[storage.updateStockAdjustment] Found existing adjustment with', existingItems.length, 'items');
+      console.log(
+        "[storage.updateStockAdjustment] Found existing adjustment with",
+        existingItems.length,
+        "items",
+      );
 
       // Get location's companyId
       const [location] = await tx
         .select()
         .from(schema.locations)
         .where(eq(schema.locations.id, existingAdjustment.locationId));
-      
+
       if (!location) {
         throw new Error(`Location ${existingAdjustment.locationId} not found`);
       }
@@ -3987,66 +4676,74 @@ export class DbStorage implements IStorage {
       // Step 2: REVERSE inventory changes for each OLD item (only if not optional)
       if (!isOptional) {
         for (const oldItem of existingItems) {
-        const quantity = parseFloat(oldItem.quantity);
-        const rate = parseFloat(oldItem.rate);
-        const totalAmount = Math.abs(quantity) * rate;
-        const oldAdjustmentType = existingAdjustment.adjustmentType;
+          const quantity = parseFloat(oldItem.quantity);
+          const rate = parseFloat(oldItem.rate);
+          const totalAmount = Math.abs(quantity) * rate;
+          const oldAdjustmentType = existingAdjustment.adjustmentType;
 
-        console.log('[storage.updateStockAdjustment] Reversing item:', oldItem.stockItemId, 'qty:', quantity, 'type:', oldAdjustmentType);
+          console.log(
+            "[storage.updateStockAdjustment] Reversing item:",
+            oldItem.stockItemId,
+            "qty:",
+            quantity,
+            "type:",
+            oldAdjustmentType,
+          );
 
-        // Get current inventory at location
-        const [currentInventory] = await tx
-          .select()
-          .from(schema.inventory)
-          .where(and(
-            eq(schema.inventory.locationId, existingAdjustment.locationId),
-            eq(schema.inventory.stockItemId, oldItem.stockItemId)
-          ));
+          // Get current inventory at location
+          const [currentInventory] = await tx
+            .select()
+            .from(schema.inventory)
+            .where(
+              and(
+                eq(schema.inventory.locationId, existingAdjustment.locationId),
+                eq(schema.inventory.stockItemId, oldItem.stockItemId),
+              ),
+            );
 
-        if (currentInventory) {
-          const currentQty = parseFloat(currentInventory.quantity);
-          const currentRate = parseFloat(currentInventory.averageRate || "0");
-          
-          let newQty: number;
-          let newValue: number;
-          let newRate: number;
+          if (currentInventory) {
+            const currentQty = parseFloat(currentInventory.quantity);
+            const currentRate = parseFloat(currentInventory.averageRate || "0");
 
-          if (oldAdjustmentType === "Production") {
-            // REVERSE Production: Subtract the quantity that was added
-            newQty = currentQty - quantity;
-            newValue = newQty > 0 ? newQty * currentRate : 0;
-            newRate = currentRate;
-          } else {
-            // REVERSE Consumption: Add back the quantity that was subtracted
-            // Use weighted average: (existing qty * existing rate + returning qty * returning rate) / total qty
-            newQty = currentQty + Math.abs(quantity);
-            newRate = newQty > 0 
-              ? ((currentQty * currentRate) + (Math.abs(quantity) * rate)) / newQty 
-              : 0;
-            newValue = newQty * newRate;
-          }
-          
-          await tx
-            .update(schema.inventory)
-            .set({
-              quantity: newQty.toFixed(3),
-              averageRate: newRate.toFixed(2),
-              totalValue: newValue.toFixed(2),
+            let newQty: number;
+            let newValue: number;
+            let newRate: number;
+
+            if (oldAdjustmentType === "Production") {
+              // REVERSE Production: Subtract the quantity that was added
+              newQty = currentQty - quantity;
+              newValue = newQty > 0 ? newQty * currentRate : 0;
+              newRate = currentRate;
+            } else {
+              // REVERSE Consumption: Add back the quantity that was subtracted
+              // Use weighted average: (existing qty * existing rate + returning qty * returning rate) / total qty
+              newQty = currentQty + Math.abs(quantity);
+              newRate =
+                newQty > 0 ? (currentQty * currentRate + Math.abs(quantity) * rate) / newQty : 0;
+              newValue = newQty * newRate;
+            }
+
+            await tx
+              .update(schema.inventory)
+              .set({
+                quantity: newQty.toFixed(3),
+                averageRate: newRate.toFixed(2),
+                totalValue: newValue.toFixed(2),
+                lastUpdated: new Date(),
+              })
+              .where(eq(schema.inventory.id, currentInventory.id));
+          } else if (oldAdjustmentType === "Consumption") {
+            // If reversing consumption and no inventory exists, create it
+            await tx.insert(schema.inventory).values({
+              companyId: location.companyId,
+              locationId: existingAdjustment.locationId,
+              stockItemId: oldItem.stockItemId,
+              quantity: Math.abs(quantity).toFixed(3),
+              averageRate: rate.toFixed(2),
+              totalValue: totalAmount.toFixed(2),
               lastUpdated: new Date(),
-            })
-            .where(eq(schema.inventory.id, currentInventory.id));
-        } else if (oldAdjustmentType === "Consumption") {
-          // If reversing consumption and no inventory exists, create it
-          await tx.insert(schema.inventory).values({
-            companyId: location.companyId,
-            locationId: existingAdjustment.locationId,
-            stockItemId: oldItem.stockItemId,
-            quantity: Math.abs(quantity).toFixed(3),
-            averageRate: rate.toFixed(2),
-            totalValue: totalAmount.toFixed(2),
-            lastUpdated: new Date(),
-          });
-        }
+            });
+          }
         }
       }
 
@@ -4055,7 +4752,7 @@ export class DbStorage implements IStorage {
         .delete(schema.stockAdjustmentItems)
         .where(eq(schema.stockAdjustmentItems.adjustmentId, id));
 
-      console.log('[storage.updateStockAdjustment] Deleted old items');
+      console.log("[storage.updateStockAdjustment] Deleted old items");
 
       // Step 4: Update the stock adjustment record
       const [updatedAdjustment] = await tx
@@ -4068,14 +4765,14 @@ export class DbStorage implements IStorage {
         .where(eq(schema.stockAdjustmentVouchers.id, id))
         .returning();
 
-      console.log('[storage.updateStockAdjustment] Updated adjustment record');
+      console.log("[storage.updateStockAdjustment] Updated adjustment record");
 
       // Get new location's companyId if location changed
       const [newLocation] = await tx
         .select()
         .from(schema.locations)
         .where(eq(schema.locations.id, locationId));
-      
+
       if (!newLocation) {
         throw new Error(`Location ${locationId} not found`);
       }
@@ -4087,16 +4784,24 @@ export class DbStorage implements IStorage {
         const rate = parseFloat(item.rate);
         const totalAmount = Math.abs(quantity) * rate;
 
-        console.log('[storage.updateStockAdjustment] Creating new item:', item.stockItemId, 'qty:', quantity);
+        console.log(
+          "[storage.updateStockAdjustment] Creating new item:",
+          item.stockItemId,
+          "qty:",
+          quantity,
+        );
 
         // Insert adjustment item
-        const [adjustmentItem] = await tx.insert(schema.stockAdjustmentItems).values({
-          adjustmentId: updatedAdjustment.id,
-          stockItemId: item.stockItemId,
-          quantity: item.quantity,
-          rate: item.rate,
-          totalAmount: totalAmount.toFixed(2),
-        }).returning();
+        const [adjustmentItem] = await tx
+          .insert(schema.stockAdjustmentItems)
+          .values({
+            adjustmentId: updatedAdjustment.id,
+            stockItemId: item.stockItemId,
+            quantity: item.quantity,
+            rate: item.rate,
+            totalAmount: totalAmount.toFixed(2),
+          })
+          .returning();
 
         adjustmentItems.push(adjustmentItem);
 
@@ -4106,62 +4811,68 @@ export class DbStorage implements IStorage {
           const [currentInventory] = await tx
             .select()
             .from(schema.inventory)
-            .where(and(
-              eq(schema.inventory.locationId, locationId),
-              eq(schema.inventory.stockItemId, item.stockItemId)
-            ));
+            .where(
+              and(
+                eq(schema.inventory.locationId, locationId),
+                eq(schema.inventory.stockItemId, item.stockItemId),
+              ),
+            );
 
           if (currentInventory) {
-          // Adjust quantity at location
-          const currentQty = parseFloat(currentInventory.quantity);
-          const currentRate = parseFloat(currentInventory.averageRate || "0");
-          
-          let newQty: number;
-          let newValue: number;
-          let newRate: number;
+            // Adjust quantity at location
+            const currentQty = parseFloat(currentInventory.quantity);
+            const currentRate = parseFloat(currentInventory.averageRate || "0");
 
-          if (adjustmentType === "Production") {
-            // Positive adjustment - add to inventory
-            // Use weighted average: (existing qty * existing rate + new qty * new rate) / total qty
-            newQty = currentQty + quantity;
-            newRate = newQty > 0 
-              ? ((currentQty * currentRate) + (quantity * rate)) / newQty 
-              : 0;
-            newValue = newQty * newRate;
-          } else {
-            // Consumption - subtract from inventory (use absolute value to ensure reduction)
-            newQty = currentQty - Math.abs(quantity);
-            newValue = newQty > 0 ? newQty * currentRate : 0;
-            newRate = currentRate;
-          }
-          
-          await tx
-            .update(schema.inventory)
-            .set({
-              quantity: newQty.toFixed(3),
-              averageRate: newRate.toFixed(2),
-              totalValue: newValue.toFixed(2),
+            let newQty: number;
+            let newValue: number;
+            let newRate: number;
+
+            if (adjustmentType === "Production") {
+              // Positive adjustment - add to inventory
+              // Use weighted average: (existing qty * existing rate + new qty * new rate) / total qty
+              newQty = currentQty + quantity;
+              newRate = newQty > 0 ? (currentQty * currentRate + quantity * rate) / newQty : 0;
+              newValue = newQty * newRate;
+            } else {
+              // Consumption - subtract from inventory (use absolute value to ensure reduction)
+              newQty = currentQty - Math.abs(quantity);
+              newValue = newQty > 0 ? newQty * currentRate : 0;
+              newRate = currentRate;
+            }
+
+            await tx
+              .update(schema.inventory)
+              .set({
+                quantity: newQty.toFixed(3),
+                averageRate: newRate.toFixed(2),
+                totalValue: newValue.toFixed(2),
+                lastUpdated: new Date(),
+              })
+              .where(eq(schema.inventory.id, currentInventory.id));
+          } else if (adjustmentType === "Production") {
+            // Create new inventory record for production
+            await tx.insert(schema.inventory).values({
+              companyId: newLocation.companyId,
+              locationId,
+              stockItemId: item.stockItemId,
+              quantity: item.quantity,
+              averageRate: item.rate,
+              totalValue: totalAmount.toFixed(2),
               lastUpdated: new Date(),
-            })
-            .where(eq(schema.inventory.id, currentInventory.id));
-        } else if (adjustmentType === "Production") {
-          // Create new inventory record for production
-          await tx.insert(schema.inventory).values({
-            companyId: newLocation.companyId,
-            locationId,
-            stockItemId: item.stockItemId,
-            quantity: item.quantity,
-            averageRate: item.rate,
-            totalValue: totalAmount.toFixed(2),
-            lastUpdated: new Date(),
-          });
-        } else {
-          throw new Error(`Insufficient inventory at location ${locationId} for stock item ${item.stockItemId}`);
-        }
+            });
+          } else {
+            throw new Error(
+              `Insufficient inventory at location ${locationId} for stock item ${item.stockItemId}`,
+            );
+          }
         }
       }
 
-      console.log('[storage.updateStockAdjustment] Adjustment updated successfully with', adjustmentItems.length, 'new items');
+      console.log(
+        "[storage.updateStockAdjustment] Adjustment updated successfully with",
+        adjustmentItems.length,
+        "new items",
+      );
 
       return {
         adjustment: updatedAdjustment,
@@ -4184,10 +4895,12 @@ export class DbStorage implements IStorage {
       .from(schema.poLineItems)
       .innerJoin(schema.purchaseOrders, eq(schema.poLineItems.poId, schema.purchaseOrders.id))
       .innerJoin(schema.suppliers, eq(schema.purchaseOrders.supplierId, schema.suppliers.id))
-      .where(and(
-        eq(schema.poLineItems.stockItemId, stockItemId),
-        eq(schema.purchaseOrders.companyId, companyId)
-      ))
+      .where(
+        and(
+          eq(schema.poLineItems.stockItemId, stockItemId),
+          eq(schema.purchaseOrders.companyId, companyId),
+        ),
+      )
       .orderBy(sql`${schema.purchaseOrders.createdAt} DESC`)
       .limit(1);
 
@@ -4207,10 +4920,12 @@ export class DbStorage implements IStorage {
       .from(schema.salesItems)
       .innerJoin(schema.vouchers, eq(schema.salesItems.voucherId, schema.vouchers.id))
       .leftJoin(schema.locations, eq(schema.vouchers.locationId, schema.locations.id))
-      .where(and(
-        eq(schema.salesItems.stockItemId, stockItemId),
-        eq(schema.vouchers.companyId, companyId)
-      ))
+      .where(
+        and(
+          eq(schema.salesItems.stockItemId, stockItemId),
+          eq(schema.vouchers.companyId, companyId),
+        ),
+      )
       .orderBy(sql`${schema.vouchers.voucherDate} DESC`)
       .limit(1);
 
@@ -4232,10 +4947,12 @@ export class DbStorage implements IStorage {
       .innerJoin(schema.purchaseOrders, eq(schema.poLineItems.poId, schema.purchaseOrders.id))
       .innerJoin(schema.suppliers, eq(schema.purchaseOrders.supplierId, schema.suppliers.id))
       .leftJoin(schema.containers, eq(schema.purchaseOrders.containerId, schema.containers.id))
-      .where(and(
-        eq(schema.poLineItems.stockItemId, stockItemId),
-        eq(schema.purchaseOrders.companyId, companyId)
-      ))
+      .where(
+        and(
+          eq(schema.poLineItems.stockItemId, stockItemId),
+          eq(schema.purchaseOrders.companyId, companyId),
+        ),
+      )
       .orderBy(sql`${schema.purchaseOrders.createdAt} DESC`);
 
     return results;
@@ -4255,11 +4972,13 @@ export class DbStorage implements IStorage {
       .from(schema.salesItems)
       .innerJoin(schema.vouchers, eq(schema.salesItems.voucherId, schema.vouchers.id))
       .leftJoin(schema.locations, eq(schema.vouchers.locationId, schema.locations.id))
-      .where(and(
-        eq(schema.salesItems.stockItemId, stockItemId),
-        eq(schema.vouchers.companyId, companyId),
-        eq(schema.vouchers.optional, false)
-      ))
+      .where(
+        and(
+          eq(schema.salesItems.stockItemId, stockItemId),
+          eq(schema.vouchers.companyId, companyId),
+          eq(schema.vouchers.optional, false),
+        ),
+      )
       .orderBy(sql`${schema.vouchers.voucherDate} DESC`);
 
     return results;
@@ -4277,12 +4996,14 @@ export class DbStorage implements IStorage {
       })
       .from(schema.inventory)
       .innerJoin(schema.locations, eq(schema.inventory.locationId, schema.locations.id))
-      .where(and(
-        eq(schema.inventory.stockItemId, stockItemId),
-        eq(schema.locations.companyId, companyId),
-        sql`${schema.inventory.quantity}::numeric > 0`, // Only show locations with positive inventory
-        isNull(schema.locations.deletedAt),             // Exclude soft-deleted locations
-      ))
+      .where(
+        and(
+          eq(schema.inventory.stockItemId, stockItemId),
+          eq(schema.locations.companyId, companyId),
+          sql`${schema.inventory.quantity}::numeric > 0`, // Only show locations with positive inventory
+          isNull(schema.locations.deletedAt), // Exclude soft-deleted locations
+        ),
+      )
       .orderBy(schema.locations.name);
 
     return results;
@@ -4308,11 +5029,13 @@ export class DbStorage implements IStorage {
       .from(schema.salesItems)
       .innerJoin(schema.vouchers, eq(schema.salesItems.voucherId, schema.vouchers.id))
       .leftJoin(schema.locations, eq(schema.vouchers.locationId, schema.locations.id))
-      .where(and(
-        eq(schema.salesItems.stockItemId, stockItemId),
-        eq(schema.vouchers.companyId, companyId),
-        eq(schema.vouchers.optional, false)
-      ));
+      .where(
+        and(
+          eq(schema.salesItems.stockItemId, stockItemId),
+          eq(schema.vouchers.companyId, companyId),
+          eq(schema.vouchers.optional, false),
+        ),
+      );
 
     // Stock Transfers (as source location - outward, exclude optional/draft vouchers)
     const transfersOut = await db
@@ -4330,14 +5053,22 @@ export class DbStorage implements IStorage {
         amount: sql<string>`(${schema.stockTransferItems.quantity}::numeric * ${schema.stockTransferItems.rate}::numeric)::text`,
       })
       .from(schema.stockTransferItems)
-      .innerJoin(schema.stockTransferVouchers, eq(schema.stockTransferItems.transferId, schema.stockTransferVouchers.id))
+      .innerJoin(
+        schema.stockTransferVouchers,
+        eq(schema.stockTransferItems.transferId, schema.stockTransferVouchers.id),
+      )
       .innerJoin(schema.vouchers, eq(schema.stockTransferVouchers.voucherId, schema.vouchers.id))
-      .leftJoin(schema.locations, eq(schema.stockTransferItems.sourceLocationId, schema.locations.id))
-      .where(and(
-        eq(schema.stockTransferItems.stockItemId, stockItemId),
-        eq(schema.vouchers.companyId, companyId),
-        eq(schema.vouchers.optional, false)
-      ));
+      .leftJoin(
+        schema.locations,
+        eq(schema.stockTransferItems.sourceLocationId, schema.locations.id),
+      )
+      .where(
+        and(
+          eq(schema.stockTransferItems.stockItemId, stockItemId),
+          eq(schema.vouchers.companyId, companyId),
+          eq(schema.vouchers.optional, false),
+        ),
+      );
 
     // Stock Transfers (as destination location - inward, exclude optional/draft vouchers)
     const transfersIn = await db
@@ -4355,14 +5086,22 @@ export class DbStorage implements IStorage {
         amount: sql<string>`(${schema.stockTransferItems.quantity}::numeric * ${schema.stockTransferItems.rate}::numeric)::text`,
       })
       .from(schema.stockTransferItems)
-      .innerJoin(schema.stockTransferVouchers, eq(schema.stockTransferItems.transferId, schema.stockTransferVouchers.id))
+      .innerJoin(
+        schema.stockTransferVouchers,
+        eq(schema.stockTransferItems.transferId, schema.stockTransferVouchers.id),
+      )
       .innerJoin(schema.vouchers, eq(schema.stockTransferVouchers.voucherId, schema.vouchers.id))
-      .leftJoin(schema.locations, eq(schema.stockTransferVouchers.destinationLocationId, schema.locations.id))
-      .where(and(
-        eq(schema.stockTransferItems.stockItemId, stockItemId),
-        eq(schema.vouchers.companyId, companyId),
-        eq(schema.vouchers.optional, false)
-      ));
+      .leftJoin(
+        schema.locations,
+        eq(schema.stockTransferVouchers.destinationLocationId, schema.locations.id),
+      )
+      .where(
+        and(
+          eq(schema.stockTransferItems.stockItemId, stockItemId),
+          eq(schema.vouchers.companyId, companyId),
+          eq(schema.vouchers.optional, false),
+        ),
+      );
 
     // Stock Adjustments (Production/Consumption, exclude optional/draft vouchers)
     const adjustments = await db
@@ -4380,284 +5119,439 @@ export class DbStorage implements IStorage {
         amount: sql<string>`(${schema.stockAdjustmentItems.quantity}::numeric * ${schema.stockAdjustmentItems.rate}::numeric)::text`,
       })
       .from(schema.stockAdjustmentItems)
-      .innerJoin(schema.stockAdjustmentVouchers, eq(schema.stockAdjustmentItems.adjustmentId, schema.stockAdjustmentVouchers.id))
+      .innerJoin(
+        schema.stockAdjustmentVouchers,
+        eq(schema.stockAdjustmentItems.adjustmentId, schema.stockAdjustmentVouchers.id),
+      )
       .innerJoin(schema.vouchers, eq(schema.stockAdjustmentVouchers.voucherId, schema.vouchers.id))
-      .leftJoin(schema.locations, eq(schema.stockAdjustmentVouchers.locationId, schema.locations.id))
-      .where(and(
-        eq(schema.stockAdjustmentItems.stockItemId, stockItemId),
-        eq(schema.vouchers.companyId, companyId),
-        eq(schema.vouchers.optional, false)
-      ));
+      .leftJoin(
+        schema.locations,
+        eq(schema.stockAdjustmentVouchers.locationId, schema.locations.id),
+      )
+      .where(
+        and(
+          eq(schema.stockAdjustmentItems.stockItemId, stockItemId),
+          eq(schema.vouchers.companyId, companyId),
+          eq(schema.vouchers.optional, false),
+        ),
+      );
 
     // Combine all transactions and sort by date
     const allTransactions = [...sales, ...transfersOut, ...transfersIn, ...adjustments];
-    allTransactions.sort((a, b) => new Date(b.voucherDate).getTime() - new Date(a.voucherDate).getTime());
+    allTransactions.sort(
+      (a, b) => new Date(b.voucherDate).getTime() - new Date(a.voucherDate).getTime(),
+    );
 
     return allTransactions;
   }
 
   // Customer Methods
   async getAllCustomers(companyId: number): Promise<schema.Customer[]> {
-    return await db.select().from(schema.customers)
-      .where(and(
-        eq(schema.customers.companyId, companyId),
-        isNull(schema.customers.deletedAt)
-      ))
+    return await db
+      .select()
+      .from(schema.customers)
+      .where(and(eq(schema.customers.companyId, companyId), isNull(schema.customers.deletedAt)))
       .orderBy(schema.customers.legalName);
   }
 
   async getCustomerById(id: number): Promise<schema.Customer | undefined> {
-    const [customer] = await db.select().from(schema.customers).where(
-      and(eq(schema.customers.id, id), isNull(schema.customers.deletedAt))
-    );
+    const [customer] = await db
+      .select()
+      .from(schema.customers)
+      .where(and(eq(schema.customers.id, id), isNull(schema.customers.deletedAt)));
     return customer;
   }
 
   async getCustomerByCode(code: string, companyId: number): Promise<schema.Customer | undefined> {
-    const [customer] = await db.select().from(schema.customers)
-      .where(and(
-        eq(schema.customers.code, code),
-        eq(schema.customers.companyId, companyId),
-        isNull(schema.customers.deletedAt),
-      ));
+    const [customer] = await db
+      .select()
+      .from(schema.customers)
+      .where(
+        and(
+          eq(schema.customers.code, code),
+          eq(schema.customers.companyId, companyId),
+          isNull(schema.customers.deletedAt),
+        ),
+      );
     return customer;
   }
 
   async createCustomer(customer: schema.InsertCustomer): Promise<schema.Customer> {
-    const [newCustomer] = await db.insert(schema.customers).values(customer as any).returning();
+    const [newCustomer] = await db
+      .insert(schema.customers)
+      .values(customer as any)
+      .returning();
     return newCustomer;
   }
 
-  async updateCustomer(id: number, updates: Partial<schema.InsertCustomer>): Promise<schema.Customer> {
-    const [customer] = await db.update(schema.customers).set(updates).where(eq(schema.customers.id, id)).returning();
+  async updateCustomer(
+    id: number,
+    updates: Partial<schema.InsertCustomer>,
+  ): Promise<schema.Customer> {
+    const [customer] = await db
+      .update(schema.customers)
+      .set(updates)
+      .where(eq(schema.customers.id, id))
+      .returning();
     return customer;
   }
 
   // Bike Purchase Methods
   async getAllBikePurchases(companyId: number): Promise<schema.BikePurchase[]> {
-    return await db.select().from(schema.bikePurchases)
-      .where(and(
-        eq(schema.bikePurchases.companyId, companyId),
-        isNull(schema.bikePurchases.deletedAt)
-      ))
+    return await db
+      .select()
+      .from(schema.bikePurchases)
+      .where(
+        and(eq(schema.bikePurchases.companyId, companyId), isNull(schema.bikePurchases.deletedAt)),
+      )
       .orderBy(sql`${schema.bikePurchases.saleDate} DESC`);
   }
 
   async getBikePurchaseById(id: number): Promise<schema.BikePurchase | undefined> {
-    const [purchase] = await db.select().from(schema.bikePurchases).where(eq(schema.bikePurchases.id, id));
+    const [purchase] = await db
+      .select()
+      .from(schema.bikePurchases)
+      .where(eq(schema.bikePurchases.id, id));
     return purchase;
   }
 
-  async getBikePurchasesByCustomer(customerId: number, companyId: number): Promise<schema.BikePurchase[]> {
-    return await db.select().from(schema.bikePurchases)
-      .where(and(
-        eq(schema.bikePurchases.customerId, customerId),
-        eq(schema.bikePurchases.companyId, companyId),
-        isNull(schema.bikePurchases.deletedAt)
-      ))
+  async getBikePurchasesByCustomer(
+    customerId: number,
+    companyId: number,
+  ): Promise<schema.BikePurchase[]> {
+    return await db
+      .select()
+      .from(schema.bikePurchases)
+      .where(
+        and(
+          eq(schema.bikePurchases.customerId, customerId),
+          eq(schema.bikePurchases.companyId, companyId),
+          isNull(schema.bikePurchases.deletedAt),
+        ),
+      )
       .orderBy(sql`${schema.bikePurchases.saleDate} DESC`);
   }
 
   async createBikePurchase(purchase: schema.InsertBikePurchase): Promise<schema.BikePurchase> {
-    const [newPurchase] = await db.insert(schema.bikePurchases).values(purchase as any).returning();
+    const [newPurchase] = await db
+      .insert(schema.bikePurchases)
+      .values(purchase as any)
+      .returning();
     return newPurchase;
   }
 
-  async updateBikePurchase(id: number, updates: Partial<schema.InsertBikePurchase>): Promise<schema.BikePurchase> {
-    const [purchase] = await db.update(schema.bikePurchases).set(updates).where(eq(schema.bikePurchases.id, id)).returning();
+  async updateBikePurchase(
+    id: number,
+    updates: Partial<schema.InsertBikePurchase>,
+  ): Promise<schema.BikePurchase> {
+    const [purchase] = await db
+      .update(schema.bikePurchases)
+      .set(updates)
+      .where(eq(schema.bikePurchases.id, id))
+      .returning();
     return purchase;
   }
 
   // Part Purchase Methods
   async getAllPartPurchases(companyId: number): Promise<schema.PartPurchase[]> {
-    return await db.select().from(schema.partPurchases)
-      .where(and(
-        eq(schema.partPurchases.companyId, companyId),
-        isNull(schema.partPurchases.deletedAt)
-      ))
+    return await db
+      .select()
+      .from(schema.partPurchases)
+      .where(
+        and(eq(schema.partPurchases.companyId, companyId), isNull(schema.partPurchases.deletedAt)),
+      )
       .orderBy(sql`${schema.partPurchases.purchaseDate} DESC`);
   }
 
   async getPartPurchaseById(id: number): Promise<schema.PartPurchase | undefined> {
-    const [purchase] = await db.select().from(schema.partPurchases).where(eq(schema.partPurchases.id, id));
+    const [purchase] = await db
+      .select()
+      .from(schema.partPurchases)
+      .where(eq(schema.partPurchases.id, id));
     return purchase;
   }
 
-  async getPartPurchasesByCustomer(customerId: number, companyId: number): Promise<schema.PartPurchase[]> {
-    return await db.select().from(schema.partPurchases)
-      .where(and(
-        eq(schema.partPurchases.customerId, customerId),
-        eq(schema.partPurchases.companyId, companyId),
-        isNull(schema.partPurchases.deletedAt)
-      ))
+  async getPartPurchasesByCustomer(
+    customerId: number,
+    companyId: number,
+  ): Promise<schema.PartPurchase[]> {
+    return await db
+      .select()
+      .from(schema.partPurchases)
+      .where(
+        and(
+          eq(schema.partPurchases.customerId, customerId),
+          eq(schema.partPurchases.companyId, companyId),
+          isNull(schema.partPurchases.deletedAt),
+        ),
+      )
       .orderBy(sql`${schema.partPurchases.purchaseDate} DESC`);
   }
 
   async createPartPurchase(purchase: schema.InsertPartPurchase): Promise<schema.PartPurchase> {
-    const [newPurchase] = await db.insert(schema.partPurchases).values(purchase as any).returning();
+    const [newPurchase] = await db
+      .insert(schema.partPurchases)
+      .values(purchase as any)
+      .returning();
     return newPurchase;
   }
 
-  async updatePartPurchase(id: number, updates: Partial<schema.InsertPartPurchase>): Promise<schema.PartPurchase> {
-    const [purchase] = await db.update(schema.partPurchases).set(updates).where(eq(schema.partPurchases.id, id)).returning();
+  async updatePartPurchase(
+    id: number,
+    updates: Partial<schema.InsertPartPurchase>,
+  ): Promise<schema.PartPurchase> {
+    const [purchase] = await db
+      .update(schema.partPurchases)
+      .set(updates)
+      .where(eq(schema.partPurchases.id, id))
+      .returning();
     return purchase;
   }
 
   // Service History Methods
   async getAllServiceHistory(companyId: number): Promise<schema.ServiceHistory[]> {
-    return await db.select().from(schema.serviceHistory)
-      .where(and(
-        eq(schema.serviceHistory.companyId, companyId),
-        isNull(schema.serviceHistory.deletedAt)
-      ))
+    return await db
+      .select()
+      .from(schema.serviceHistory)
+      .where(
+        and(
+          eq(schema.serviceHistory.companyId, companyId),
+          isNull(schema.serviceHistory.deletedAt),
+        ),
+      )
       .orderBy(sql`${schema.serviceHistory.serviceDate} DESC`);
   }
 
   async getServiceHistoryById(id: number): Promise<schema.ServiceHistory | undefined> {
-    const [record] = await db.select().from(schema.serviceHistory).where(eq(schema.serviceHistory.id, id));
+    const [record] = await db
+      .select()
+      .from(schema.serviceHistory)
+      .where(eq(schema.serviceHistory.id, id));
     return record;
   }
 
-  async getServiceHistoryByCustomer(customerId: number, companyId: number): Promise<schema.ServiceHistory[]> {
-    return await db.select().from(schema.serviceHistory)
-      .where(and(
-        eq(schema.serviceHistory.customerId, customerId),
-        eq(schema.serviceHistory.companyId, companyId),
-        isNull(schema.serviceHistory.deletedAt)
-      ))
+  async getServiceHistoryByCustomer(
+    customerId: number,
+    companyId: number,
+  ): Promise<schema.ServiceHistory[]> {
+    return await db
+      .select()
+      .from(schema.serviceHistory)
+      .where(
+        and(
+          eq(schema.serviceHistory.customerId, customerId),
+          eq(schema.serviceHistory.companyId, companyId),
+          isNull(schema.serviceHistory.deletedAt),
+        ),
+      )
       .orderBy(sql`${schema.serviceHistory.serviceDate} DESC`);
   }
 
   async createServiceHistory(record: schema.InsertServiceHistory): Promise<schema.ServiceHistory> {
-    const [newRecord] = await db.insert(schema.serviceHistory).values(record as any).returning();
+    const [newRecord] = await db
+      .insert(schema.serviceHistory)
+      .values(record as any)
+      .returning();
     return newRecord;
   }
 
-  async updateServiceHistory(id: number, updates: Partial<schema.InsertServiceHistory>): Promise<schema.ServiceHistory> {
-    const [record] = await db.update(schema.serviceHistory).set(updates).where(eq(schema.serviceHistory.id, id)).returning();
+  async updateServiceHistory(
+    id: number,
+    updates: Partial<schema.InsertServiceHistory>,
+  ): Promise<schema.ServiceHistory> {
+    const [record] = await db
+      .update(schema.serviceHistory)
+      .set(updates)
+      .where(eq(schema.serviceHistory.id, id))
+      .returning();
     return record;
   }
 
   // Warranty Methods
   async getAllWarranties(companyId: number): Promise<schema.Warranty[]> {
-    return await db.select().from(schema.warranties)
-      .where(and(
-        eq(schema.warranties.companyId, companyId),
-        isNull(schema.warranties.deletedAt)
-      ))
+    return await db
+      .select()
+      .from(schema.warranties)
+      .where(and(eq(schema.warranties.companyId, companyId), isNull(schema.warranties.deletedAt)))
       .orderBy(sql`${schema.warranties.warrantyStartDate} DESC`);
   }
 
   async getWarrantyById(id: number): Promise<schema.Warranty | undefined> {
-    const [warranty] = await db.select().from(schema.warranties).where(eq(schema.warranties.id, id));
+    const [warranty] = await db
+      .select()
+      .from(schema.warranties)
+      .where(eq(schema.warranties.id, id));
     return warranty;
   }
 
   async getWarrantiesByCustomer(customerId: number, companyId: number): Promise<schema.Warranty[]> {
-    return await db.select().from(schema.warranties)
-      .where(and(
-        eq(schema.warranties.customerId, customerId),
-        eq(schema.warranties.companyId, companyId),
-        isNull(schema.warranties.deletedAt)
-      ))
+    return await db
+      .select()
+      .from(schema.warranties)
+      .where(
+        and(
+          eq(schema.warranties.customerId, customerId),
+          eq(schema.warranties.companyId, companyId),
+          isNull(schema.warranties.deletedAt),
+        ),
+      )
       .orderBy(sql`${schema.warranties.warrantyStartDate} DESC`);
   }
 
   async createWarranty(warranty: schema.InsertWarranty): Promise<schema.Warranty> {
-    const [newWarranty] = await db.insert(schema.warranties).values(warranty as any).returning();
+    const [newWarranty] = await db
+      .insert(schema.warranties)
+      .values(warranty as any)
+      .returning();
     return newWarranty;
   }
 
-  async updateWarranty(id: number, updates: Partial<schema.InsertWarranty>): Promise<schema.Warranty> {
-    const [warranty] = await db.update(schema.warranties).set(updates).where(eq(schema.warranties.id, id)).returning();
+  async updateWarranty(
+    id: number,
+    updates: Partial<schema.InsertWarranty>,
+  ): Promise<schema.Warranty> {
+    const [warranty] = await db
+      .update(schema.warranties)
+      .set(updates)
+      .where(eq(schema.warranties.id, id))
+      .returning();
     return warranty;
   }
 
   // Communication Log Methods
   async getAllCommunicationLogs(companyId: number): Promise<schema.CommunicationLog[]> {
-    return await db.select().from(schema.communicationLogs)
-      .where(and(
-        eq(schema.communicationLogs.companyId, companyId),
-        isNull(schema.communicationLogs.deletedAt)
-      ))
+    return await db
+      .select()
+      .from(schema.communicationLogs)
+      .where(
+        and(
+          eq(schema.communicationLogs.companyId, companyId),
+          isNull(schema.communicationLogs.deletedAt),
+        ),
+      )
       .orderBy(sql`${schema.communicationLogs.contactDate} DESC`);
   }
 
   async getCommunicationLogById(id: number): Promise<schema.CommunicationLog | undefined> {
-    const [log] = await db.select().from(schema.communicationLogs).where(eq(schema.communicationLogs.id, id));
+    const [log] = await db
+      .select()
+      .from(schema.communicationLogs)
+      .where(eq(schema.communicationLogs.id, id));
     return log;
   }
 
-  async getCommunicationLogsByCustomer(customerId: number, companyId: number): Promise<schema.CommunicationLog[]> {
-    return await db.select().from(schema.communicationLogs)
-      .where(and(
-        eq(schema.communicationLogs.customerId, customerId),
-        eq(schema.communicationLogs.companyId, companyId),
-        isNull(schema.communicationLogs.deletedAt)
-      ))
+  async getCommunicationLogsByCustomer(
+    customerId: number,
+    companyId: number,
+  ): Promise<schema.CommunicationLog[]> {
+    return await db
+      .select()
+      .from(schema.communicationLogs)
+      .where(
+        and(
+          eq(schema.communicationLogs.customerId, customerId),
+          eq(schema.communicationLogs.companyId, companyId),
+          isNull(schema.communicationLogs.deletedAt),
+        ),
+      )
       .orderBy(sql`${schema.communicationLogs.contactDate} DESC`);
   }
 
-  async createCommunicationLog(log: schema.InsertCommunicationLog): Promise<schema.CommunicationLog> {
-    const [newLog] = await db.insert(schema.communicationLogs).values(log as any).returning();
+  async createCommunicationLog(
+    log: schema.InsertCommunicationLog,
+  ): Promise<schema.CommunicationLog> {
+    const [newLog] = await db
+      .insert(schema.communicationLogs)
+      .values(log as any)
+      .returning();
     return newLog;
   }
 
-  async updateCommunicationLog(id: number, updates: Partial<schema.InsertCommunicationLog>): Promise<schema.CommunicationLog> {
-    const [log] = await db.update(schema.communicationLogs).set(updates).where(eq(schema.communicationLogs.id, id)).returning();
+  async updateCommunicationLog(
+    id: number,
+    updates: Partial<schema.InsertCommunicationLog>,
+  ): Promise<schema.CommunicationLog> {
+    const [log] = await db
+      .update(schema.communicationLogs)
+      .set(updates)
+      .where(eq(schema.communicationLogs.id, id))
+      .returning();
     return log;
   }
 
   // Inter-Company Transfer Methods
   async getAllInterCompanyTransfers(companyId?: number): Promise<schema.InterCompanyTransfer[]> {
     if (companyId) {
-      return await db.select().from(schema.interCompanyTransfers)
-        .where(or(
-          eq(schema.interCompanyTransfers.fromCompanyId, companyId),
-          eq(schema.interCompanyTransfers.toCompanyId, companyId)
-        ))
+      return await db
+        .select()
+        .from(schema.interCompanyTransfers)
+        .where(
+          or(
+            eq(schema.interCompanyTransfers.fromCompanyId, companyId),
+            eq(schema.interCompanyTransfers.toCompanyId, companyId),
+          ),
+        )
         .orderBy(sql`${schema.interCompanyTransfers.transferDate} DESC`);
     }
-    return await db.select().from(schema.interCompanyTransfers)
+    return await db
+      .select()
+      .from(schema.interCompanyTransfers)
       .orderBy(sql`${schema.interCompanyTransfers.transferDate} DESC`);
   }
 
   async getInterCompanyTransferById(id: number): Promise<schema.InterCompanyTransfer | undefined> {
-    const [transfer] = await db.select().from(schema.interCompanyTransfers)
+    const [transfer] = await db
+      .select()
+      .from(schema.interCompanyTransfers)
       .where(eq(schema.interCompanyTransfers.id, id));
     return transfer;
   }
 
-  async createInterCompanyTransfer(transfer: schema.InsertInterCompanyTransfer): Promise<schema.InterCompanyTransfer> {
-    const [newTransfer] = await db.insert(schema.interCompanyTransfers).values(transfer).returning();
+  async createInterCompanyTransfer(
+    transfer: schema.InsertInterCompanyTransfer,
+  ): Promise<schema.InterCompanyTransfer> {
+    const [newTransfer] = await db
+      .insert(schema.interCompanyTransfers)
+      .values(transfer)
+      .returning();
     return newTransfer;
   }
 
   // Salary Advance Methods
   async getAllSalaryAdvances(companyId: number): Promise<schema.SalaryAdvance[]> {
-    return await db.select().from(schema.salaryAdvances)
+    return await db
+      .select()
+      .from(schema.salaryAdvances)
       .where(eq(schema.salaryAdvances.companyId, companyId))
       .orderBy(sql`${schema.salaryAdvances.advanceDate} DESC`);
   }
 
   async getSalaryAdvanceById(id: number): Promise<schema.SalaryAdvance | undefined> {
-    const [advance] = await db.select().from(schema.salaryAdvances)
+    const [advance] = await db
+      .select()
+      .from(schema.salaryAdvances)
       .where(eq(schema.salaryAdvances.id, id));
     return advance;
   }
 
   async getSalaryAdvancesByEmployee(employeeId: number): Promise<schema.SalaryAdvance[]> {
-    return await db.select().from(schema.salaryAdvances)
+    return await db
+      .select()
+      .from(schema.salaryAdvances)
       .where(eq(schema.salaryAdvances.employeeId, employeeId))
       .orderBy(sql`${schema.salaryAdvances.advanceDate} DESC`);
   }
 
   async getUnpaidSalaryAdvancesByEmployee(employeeId: number): Promise<schema.SalaryAdvance[]> {
-    return await db.select().from(schema.salaryAdvances)
-      .where(and(
-        eq(schema.salaryAdvances.employeeId, employeeId),
-        eq(schema.salaryAdvances.fullyPaid, false)
-      ))
+    return await db
+      .select()
+      .from(schema.salaryAdvances)
+      .where(
+        and(
+          eq(schema.salaryAdvances.employeeId, employeeId),
+          eq(schema.salaryAdvances.fullyPaid, false),
+        ),
+      )
       .orderBy(sql`${schema.salaryAdvances.advanceDate}`);
   }
 
@@ -4666,54 +5560,78 @@ export class DbStorage implements IStorage {
     return newAdvance;
   }
 
-  async updateSalaryAdvance(id: number, updates: Partial<schema.InsertSalaryAdvance>): Promise<schema.SalaryAdvance> {
-    const [advance] = await db.update(schema.salaryAdvances).set(updates)
-      .where(eq(schema.salaryAdvances.id, id)).returning();
+  async updateSalaryAdvance(
+    id: number,
+    updates: Partial<schema.InsertSalaryAdvance>,
+  ): Promise<schema.SalaryAdvance> {
+    const [advance] = await db
+      .update(schema.salaryAdvances)
+      .set(updates)
+      .where(eq(schema.salaryAdvances.id, id))
+      .returning();
     return advance;
   }
 
   // Salary Advance Deduction Methods
-  async getSalaryAdvanceDeductions(salaryAdvanceId: number): Promise<schema.SalaryAdvanceDeduction[]> {
-    return await db.select().from(schema.salaryAdvanceDeductions)
+  async getSalaryAdvanceDeductions(
+    salaryAdvanceId: number,
+  ): Promise<schema.SalaryAdvanceDeduction[]> {
+    return await db
+      .select()
+      .from(schema.salaryAdvanceDeductions)
       .where(eq(schema.salaryAdvanceDeductions.salaryAdvanceId, salaryAdvanceId))
       .orderBy(schema.salaryAdvanceDeductions.payrollMonth);
   }
 
-  async createSalaryAdvanceDeduction(deduction: schema.InsertSalaryAdvanceDeduction): Promise<schema.SalaryAdvanceDeduction> {
-    const [newDeduction] = await db.insert(schema.salaryAdvanceDeductions).values(deduction).returning();
+  async createSalaryAdvanceDeduction(
+    deduction: schema.InsertSalaryAdvanceDeduction,
+  ): Promise<schema.SalaryAdvanceDeduction> {
+    const [newDeduction] = await db
+      .insert(schema.salaryAdvanceDeductions)
+      .values(deduction)
+      .returning();
     return newDeduction;
   }
 
   // Draft POS Sales Methods
   async getAllDraftPosSales(userId: string, locationId?: number): Promise<schema.DraftPosSale[]> {
     if (locationId) {
-      return await db.select().from(schema.draftPosSales)
-        .where(and(
-          eq(schema.draftPosSales.userId, userId),
-          eq(schema.draftPosSales.locationId, locationId)
-        ))
+      return await db
+        .select()
+        .from(schema.draftPosSales)
+        .where(
+          and(
+            eq(schema.draftPosSales.userId, userId),
+            eq(schema.draftPosSales.locationId, locationId),
+          ),
+        )
         .orderBy(sql`${schema.draftPosSales.updatedAt} DESC`);
     }
-    return await db.select().from(schema.draftPosSales)
+    return await db
+      .select()
+      .from(schema.draftPosSales)
       .where(eq(schema.draftPosSales.userId, userId))
       .orderBy(sql`${schema.draftPosSales.updatedAt} DESC`);
   }
 
   async getDraftPosSaleById(id: number): Promise<any | undefined> {
-    const [draft] = await db.select().from(schema.draftPosSales)
+    const [draft] = await db
+      .select()
+      .from(schema.draftPosSales)
       .where(eq(schema.draftPosSales.id, id));
-    
+
     if (!draft) return undefined;
 
-    const items = await db.select({
-      id: schema.draftPosSaleItems.id,
-      stockItemId: schema.draftPosSaleItems.stockItemId,
-      stockItemName: schema.stockItems.name,
-      stockItemCode: schema.stockItems.code,
-      quantity: schema.draftPosSaleItems.quantity,
-      rate: schema.draftPosSaleItems.rate,
-      amount: schema.draftPosSaleItems.amount,
-    })
+    const items = await db
+      .select({
+        id: schema.draftPosSaleItems.id,
+        stockItemId: schema.draftPosSaleItems.stockItemId,
+        stockItemName: schema.stockItems.name,
+        stockItemCode: schema.stockItems.code,
+        quantity: schema.draftPosSaleItems.quantity,
+        rate: schema.draftPosSaleItems.rate,
+        amount: schema.draftPosSaleItems.amount,
+      })
       .from(schema.draftPosSaleItems)
       .leftJoin(schema.stockItems, eq(schema.draftPosSaleItems.stockItemId, schema.stockItems.id))
       .where(eq(schema.draftPosSaleItems.draftId, id));
@@ -4722,13 +5640,13 @@ export class DbStorage implements IStorage {
   }
 
   async createDraftPosSale(
-    draft: schema.InsertDraftPosSale, 
-    items: Array<{stockItemId: number, quantity: string, rate: string, amount: string}>
+    draft: schema.InsertDraftPosSale,
+    items: Array<{ stockItemId: number; quantity: string; rate: string; amount: string }>,
   ): Promise<schema.DraftPosSale> {
     const [newDraft] = await db.insert(schema.draftPosSales).values(draft).returning();
-    
+
     if (items && items.length > 0) {
-      const draftItems = items.map(item => ({
+      const draftItems = items.map((item) => ({
         draftId: newDraft.id,
         stockItemId: item.stockItemId,
         quantity: item.quantity,
@@ -4737,28 +5655,28 @@ export class DbStorage implements IStorage {
       }));
       await db.insert(schema.draftPosSaleItems).values(draftItems);
     }
-    
+
     return newDraft;
   }
 
   async updateDraftPosSale(
-    id: number, 
-    draft: Partial<schema.InsertDraftPosSale>, 
-    items?: Array<{stockItemId: number, quantity: string, rate: string, amount: string}>
+    id: number,
+    draft: Partial<schema.InsertDraftPosSale>,
+    items?: Array<{ stockItemId: number; quantity: string; rate: string; amount: string }>,
   ): Promise<schema.DraftPosSale> {
     const updateData = { ...draft, updatedAt: sql`now()` };
-    const [updatedDraft] = await db.update(schema.draftPosSales)
+    const [updatedDraft] = await db
+      .update(schema.draftPosSales)
       .set(updateData)
       .where(eq(schema.draftPosSales.id, id))
       .returning();
-    
+
     if (items) {
       // Delete existing items and insert new ones
-      await db.delete(schema.draftPosSaleItems)
-        .where(eq(schema.draftPosSaleItems.draftId, id));
-      
+      await db.delete(schema.draftPosSaleItems).where(eq(schema.draftPosSaleItems.draftId, id));
+
       if (items.length > 0) {
-        const draftItems = items.map(item => ({
+        const draftItems = items.map((item) => ({
           draftId: id,
           stockItemId: item.stockItemId,
           quantity: item.quantity,
@@ -4768,15 +5686,13 @@ export class DbStorage implements IStorage {
         await db.insert(schema.draftPosSaleItems).values(draftItems);
       }
     }
-    
+
     return updatedDraft;
   }
 
   async deleteDraftPosSale(id: number): Promise<void> {
-    await db.delete(schema.draftPosSaleItems)
-      .where(eq(schema.draftPosSaleItems.draftId, id));
-    await db.delete(schema.draftPosSales)
-      .where(eq(schema.draftPosSales.id, id));
+    await db.delete(schema.draftPosSaleItems).where(eq(schema.draftPosSaleItems.draftId, id));
+    await db.delete(schema.draftPosSales).where(eq(schema.draftPosSales.id, id));
   }
 
   // Company Settings
@@ -4788,9 +5704,11 @@ export class DbStorage implements IStorage {
     return settings;
   }
 
-  async upsertCompanySettings(settings: schema.InsertCompanySettings): Promise<schema.CompanySettings> {
+  async upsertCompanySettings(
+    settings: schema.InsertCompanySettings,
+  ): Promise<schema.CompanySettings> {
     const existing = await this.getCompanySettings(settings.companyId);
-    
+
     if (existing) {
       const [updated] = await db
         .update(schema.companySettings)
@@ -4799,10 +5717,7 @@ export class DbStorage implements IStorage {
         .returning();
       return updated;
     } else {
-      const [created] = await db
-        .insert(schema.companySettings)
-        .values(settings)
-        .returning();
+      const [created] = await db.insert(schema.companySettings).values(settings).returning();
       return created;
     }
   }
@@ -4820,22 +5735,19 @@ export class DbStorage implements IStorage {
     const [batch] = await db
       .select()
       .from(schema.mixBatches)
-      .where(and(
-        eq(schema.mixBatches.id, id),
-        eq(schema.mixBatches.companyId, companyId)
-      ));
+      .where(and(eq(schema.mixBatches.id, id), eq(schema.mixBatches.companyId, companyId)));
     return batch;
   }
 
   async createMixBatch(batch: schema.InsertMixBatch): Promise<schema.MixBatch> {
-    const [created] = await db
-      .insert(schema.mixBatches)
-      .values(batch)
-      .returning();
+    const [created] = await db.insert(schema.mixBatches).values(batch).returning();
     return created;
   }
 
-  async updateMixBatch(id: number, updates: Partial<schema.InsertMixBatch>): Promise<schema.MixBatch> {
+  async updateMixBatch(
+    id: number,
+    updates: Partial<schema.InsertMixBatch>,
+  ): Promise<schema.MixBatch> {
     const [updated] = await db
       .update(schema.mixBatches)
       .set({ ...updates, updatedAt: sql`now()` })
@@ -4845,13 +5757,16 @@ export class DbStorage implements IStorage {
   }
 
   // Mix Batch Sources
-  async getMixBatchSources(mixBatchId: number, companyId: number): Promise<schema.MixBatchSource[]> {
+  async getMixBatchSources(
+    mixBatchId: number,
+    companyId: number,
+  ): Promise<schema.MixBatchSource[]> {
     // First verify the mix batch belongs to this company
     const batch = await this.getMixBatchById(mixBatchId, companyId);
     if (!batch) {
       return [];
     }
-    
+
     return await db
       .select()
       .from(schema.mixBatchSources)
@@ -4859,18 +5774,12 @@ export class DbStorage implements IStorage {
   }
 
   async addMixBatchSource(source: schema.InsertMixBatchSource): Promise<schema.MixBatchSource> {
-    const [created] = await db
-      .insert(schema.mixBatchSources)
-      .values(source)
-      .returning();
+    const [created] = await db.insert(schema.mixBatchSources).values(source).returning();
     return created;
   }
   async createContainerSale(sale: schema.InsertContainerSale): Promise<schema.ContainerSale> {
-    const [created] = await db
-      .insert(schema.containerSales)
-      .values(sale)
-      .returning();
-    
+    const [created] = await db.insert(schema.containerSales).values(sale).returning();
+
     // Create customer balance entry
     await this.addCustomerBalanceEntry({
       companyId: sale.companyId,
@@ -4885,7 +5794,7 @@ export class DbStorage implements IStorage {
       currency: sale.currency || "USD",
       description: `Container sale - Invoice ${sale.invoiceNumber || created.id}`,
     });
-    
+
     return created;
   }
 
@@ -4897,14 +5806,14 @@ export class DbStorage implements IStorage {
       .orderBy(desc(schema.containerSales.saleDate));
   }
 
-  async getContainerSaleById(id: number, companyId: number): Promise<schema.ContainerSale | undefined> {
+  async getContainerSaleById(
+    id: number,
+    companyId: number,
+  ): Promise<schema.ContainerSale | undefined> {
     const [sale] = await db
       .select()
       .from(schema.containerSales)
-      .where(and(
-        eq(schema.containerSales.id, id),
-        eq(schema.containerSales.companyId, companyId)
-      ));
+      .where(and(eq(schema.containerSales.id, id), eq(schema.containerSales.companyId, companyId)));
     return sale;
   }
 
@@ -4912,7 +5821,7 @@ export class DbStorage implements IStorage {
     id: number,
     companyId: number,
     paidAmount: string,
-    paymentStatus: "PENDING" | "PARTIAL" | "PAID"
+    paymentStatus: "PENDING" | "PARTIAL" | "PAID",
   ): Promise<schema.ContainerSale> {
     const [updated] = await db
       .update(schema.containerSales)
@@ -4921,84 +5830,98 @@ export class DbStorage implements IStorage {
         paymentStatus,
         updatedAt: sql`now()`,
       })
-      .where(and(
-        eq(schema.containerSales.id, id),
-        eq(schema.containerSales.companyId, companyId)
-      ))
+      .where(and(eq(schema.containerSales.id, id), eq(schema.containerSales.companyId, companyId)))
       .returning();
 
     return updated;
   }
 
-  async getContainerSaleByContainerId(containerId: number, companyId: number): Promise<schema.ContainerSale | undefined> {
+  async getContainerSaleByContainerId(
+    containerId: number,
+    companyId: number,
+  ): Promise<schema.ContainerSale | undefined> {
     const [sale] = await db
       .select()
       .from(schema.containerSales)
-      .where(and(
-        eq(schema.containerSales.containerId, containerId),
-        eq(schema.containerSales.companyId, companyId)
-      ));
+      .where(
+        and(
+          eq(schema.containerSales.containerId, containerId),
+          eq(schema.containerSales.companyId, companyId),
+        ),
+      );
     return sale;
   }
 
-  async getContainerSalesByCustomer(customerId: number, companyId: number): Promise<schema.ContainerSale[]> {
+  async getContainerSalesByCustomer(
+    customerId: number,
+    companyId: number,
+  ): Promise<schema.ContainerSale[]> {
     return await db
       .select()
       .from(schema.containerSales)
-      .where(and(
-        eq(schema.containerSales.customerId, customerId),
-        eq(schema.containerSales.companyId, companyId)
-      ))
+      .where(
+        and(
+          eq(schema.containerSales.customerId, customerId),
+          eq(schema.containerSales.companyId, companyId),
+        ),
+      )
       .orderBy(desc(schema.containerSales.saleDate));
   }
 
   // Customer Balance API
-  async addCustomerBalanceEntry(entry: schema.InsertCustomerBalance): Promise<schema.CustomerBalance> {
+  async addCustomerBalanceEntry(
+    entry: schema.InsertCustomerBalance,
+  ): Promise<schema.CustomerBalance> {
     // Validate amounts are valid decimals
     const debitAmount = entry.debitAmount || "0";
     const creditAmount = entry.creditAmount || "0";
-    
+
     // Basic validation - ensure they're numeric strings
     if (isNaN(Number(debitAmount)) || isNaN(Number(creditAmount))) {
       throw new Error("Invalid debit or credit amount");
     }
 
-    // Use SQL to calculate running balance with native decimal precision
-    // This avoids float precision errors by using PostgreSQL's decimal arithmetic
-    const [latestBalance] = await db
-      .select({ balance: schema.customerBalances.balance })
-      .from(schema.customerBalances)
-      .where(and(
-        eq(schema.customerBalances.customerId, entry.customerId),
-        eq(schema.customerBalances.companyId, entry.companyId)
-      ))
-      .orderBy(desc(schema.customerBalances.id))
-      .limit(1);
+    return await db.transaction(async (tx) => {
+      // Serialize one customer's balance stream without blocking unrelated customers.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${entry.companyId}, ${entry.customerId})`);
 
-    const currentBalance = latestBalance?.balance || "0";
+      const [latestBalance] = await tx
+        .select({ balance: schema.customerBalances.balance })
+        .from(schema.customerBalances)
+        .where(
+          and(
+            eq(schema.customerBalances.customerId, entry.customerId),
+            eq(schema.customerBalances.companyId, entry.companyId),
+          ),
+        )
+        .orderBy(desc(schema.customerBalances.id))
+        .limit(1);
 
-    // Insert with SQL-calculated balance using PostgreSQL's decimal type
-    const [created] = await db
-      .insert(schema.customerBalances)
-      .values({
-        ...entry,
-        debitAmount: debitAmount,
-        creditAmount: creditAmount,
-        balance: sql`(${currentBalance}::decimal + ${debitAmount}::decimal - ${creditAmount}::decimal)`,
-      })
-      .returning();
+      const currentBalance = latestBalance?.balance || "0";
+      const [created] = await tx
+        .insert(schema.customerBalances)
+        .values({
+          ...entry,
+          debitAmount,
+          creditAmount,
+          balance: sql`(${currentBalance}::decimal + ${debitAmount}::decimal - ${creditAmount}::decimal)`,
+        })
+        .returning();
 
-    return created;
+      return created;
+    });
   }
 
   async getCustomerBalance(customerId: number, companyId: number): Promise<number> {
     const [result] = await db
       .select({ balance: schema.customerBalances.balance })
       .from(schema.customerBalances)
-      .where(and(
-        eq(schema.customerBalances.customerId, customerId),
-        eq(schema.customerBalances.companyId, companyId)
-      ))
+      .where(
+        and(
+          eq(schema.customerBalances.customerId, customerId),
+          eq(schema.customerBalances.companyId, companyId),
+        ),
+      )
       .orderBy(desc(schema.customerBalances.createdAt))
       .limit(1);
 
@@ -5009,7 +5932,7 @@ export class DbStorage implements IStorage {
     customerId: number,
     companyId: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
   ): Promise<schema.CustomerBalance[]> {
     const conditions = [
       eq(schema.customerBalances.customerId, customerId),
@@ -5038,19 +5961,27 @@ export class DbStorage implements IStorage {
       .where(eq(schema.roleFeaturePermissions.companyId, companyId));
   }
 
-  async getRoleFeaturePermission(companyId: number, role: string, featureKey: string): Promise<schema.RoleFeaturePermission | undefined> {
+  async getRoleFeaturePermission(
+    companyId: number,
+    role: string,
+    featureKey: string,
+  ): Promise<schema.RoleFeaturePermission | undefined> {
     const [permission] = await db
       .select()
       .from(schema.roleFeaturePermissions)
-      .where(and(
-        eq(schema.roleFeaturePermissions.companyId, companyId),
-        eq(schema.roleFeaturePermissions.role, role),
-        eq(schema.roleFeaturePermissions.featureKey, featureKey)
-      ));
+      .where(
+        and(
+          eq(schema.roleFeaturePermissions.companyId, companyId),
+          eq(schema.roleFeaturePermissions.role, role),
+          eq(schema.roleFeaturePermissions.featureKey, featureKey),
+        ),
+      );
     return permission;
   }
 
-  async upsertRoleFeaturePermission(permission: schema.InsertRoleFeaturePermission): Promise<schema.RoleFeaturePermission> {
+  async upsertRoleFeaturePermission(
+    permission: schema.InsertRoleFeaturePermission,
+  ): Promise<schema.RoleFeaturePermission> {
     const [result] = await db
       .insert(schema.roleFeaturePermissions)
       .values(permission)
@@ -5058,7 +5989,7 @@ export class DbStorage implements IStorage {
         target: [
           schema.roleFeaturePermissions.companyId,
           schema.roleFeaturePermissions.role,
-          schema.roleFeaturePermissions.featureKey
+          schema.roleFeaturePermissions.featureKey,
         ],
         set: {
           enabled: permission.enabled,
@@ -5069,9 +6000,11 @@ export class DbStorage implements IStorage {
     return result;
   }
 
-  async bulkUpsertRoleFeaturePermissions(permissions: schema.InsertRoleFeaturePermission[]): Promise<schema.RoleFeaturePermission[]> {
+  async bulkUpsertRoleFeaturePermissions(
+    permissions: schema.InsertRoleFeaturePermission[],
+  ): Promise<schema.RoleFeaturePermission[]> {
     if (permissions.length === 0) return [];
-    
+
     const results: schema.RoleFeaturePermission[] = [];
     for (const permission of permissions) {
       const result = await this.upsertRoleFeaturePermission(permission);
@@ -5097,7 +6030,12 @@ export class DbStorage implements IStorage {
   async replaceEmployeeMotoRates(
     employeeId: number,
     rates: Array<{ locationId: number; rate: string; sourceCompanyId?: number | null }>,
-    auditCtx?: { userId?: string | null; action?: string; sourceEmployeeId?: number | null; context?: any },
+    auditCtx?: {
+      userId?: string | null;
+      action?: string;
+      sourceEmployeeId?: number | null;
+      context?: any;
+    },
   ): Promise<schema.EmployeeMotoRate[]> {
     return await db.transaction(async (tx) => {
       // Serialize concurrent PUTs for the same employee. Lock is tx-scoped.
@@ -5171,7 +6109,12 @@ export class DbStorage implements IStorage {
   async replaceEmployeeMotoPctRates(
     employeeId: number,
     rates: Array<{ locationId: number; pct: string; sourceCompanyId?: number | null }>,
-    auditCtx?: { userId?: string | null; action?: string; sourceEmployeeId?: number | null; context?: any },
+    auditCtx?: {
+      userId?: string | null;
+      action?: string;
+      sourceEmployeeId?: number | null;
+      context?: any;
+    },
   ): Promise<schema.EmployeeMotoPctRate[]> {
     return await db.transaction(async (tx) => {
       await tx.execute(sql`SELECT pg_advisory_xact_lock(${employeeId}::bigint)`);
@@ -5235,7 +6178,11 @@ export class DbStorage implements IStorage {
     const sourceRows = await this.getEmployeeMotoRates(sourceEmployeeId);
     return this.replaceEmployeeMotoRates(
       targetEmployeeId,
-      sourceRows.map((r) => ({ locationId: r.locationId, rate: r.rate, sourceCompanyId: r.sourceCompanyId })),
+      sourceRows.map((r) => ({
+        locationId: r.locationId,
+        rate: r.rate,
+        sourceCompanyId: r.sourceCompanyId,
+      })),
       { userId, action: "copy_from", sourceEmployeeId },
     );
   }
@@ -5248,7 +6195,11 @@ export class DbStorage implements IStorage {
     const sourceRows = await this.getEmployeeMotoPctRates(sourceEmployeeId);
     return this.replaceEmployeeMotoPctRates(
       targetEmployeeId,
-      sourceRows.map((r) => ({ locationId: r.locationId, pct: r.pct, sourceCompanyId: r.sourceCompanyId })),
+      sourceRows.map((r) => ({
+        locationId: r.locationId,
+        pct: r.pct,
+        sourceCompanyId: r.sourceCompanyId,
+      })),
       { userId, action: "copy_from", sourceEmployeeId },
     );
   }
@@ -5381,14 +6332,25 @@ export class DbStorage implements IStorage {
     if (opts.action) conds.push(eq(schema.motoRateAudit.action, opts.action));
     const where = and(...conds);
     const [rows, totalRow] = await Promise.all([
-      db.select().from(schema.motoRateAudit).where(where).orderBy(desc(schema.motoRateAudit.createdAt)).limit(limit).offset(offset),
-      db.select({ c: sql<number>`count(*)::int` }).from(schema.motoRateAudit).where(where),
+      db
+        .select()
+        .from(schema.motoRateAudit)
+        .where(where)
+        .orderBy(desc(schema.motoRateAudit.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ c: sql<number>`count(*)::int` })
+        .from(schema.motoRateAudit)
+        .where(where),
     ]);
     return { rows, total: totalRow[0]?.c ?? 0 };
   }
 
   // A3: location-wide rate stats (for soft outlier warning)
-  async getLocationMotoRateStats(locationId: number): Promise<{ count: number; median: string | null; max: string | null; min: string | null }> {
+  async getLocationMotoRateStats(
+    locationId: number,
+  ): Promise<{ count: number; median: string | null; max: string | null; min: string | null }> {
     const result: any = await db.execute(sql`
       SELECT
         COUNT(*)::int AS count,
@@ -5403,7 +6365,10 @@ export class DbStorage implements IStorage {
   }
 
   // C2: read live rates as-of a specific date (for retroactive payroll runs)
-  async getEmployeeMotoRatesAsOf(employeeId: number, asOf: Date): Promise<schema.EmployeeMotoRate[]> {
+  async getEmployeeMotoRatesAsOf(
+    employeeId: number,
+    asOf: Date,
+  ): Promise<schema.EmployeeMotoRate[]> {
     // Active means: effective_from <= asOf AND (effective_to IS NULL OR effective_to > asOf)
     // Use COALESCE so backfilled rows (effective_from NULL) fall back to created_at.
     // Eliminates the overlap edge-case where a NULL-from row co-exists with a dated row.
@@ -5416,7 +6381,10 @@ export class DbStorage implements IStorage {
     return (result.rows ?? result) as schema.EmployeeMotoRate[];
   }
 
-  async getEmployeeMotoPctRatesAsOf(employeeId: number, asOf: Date): Promise<schema.EmployeeMotoPctRate[]> {
+  async getEmployeeMotoPctRatesAsOf(
+    employeeId: number,
+    asOf: Date,
+  ): Promise<schema.EmployeeMotoPctRate[]> {
     const result: any = await db.execute(sql`
       SELECT * FROM employee_moto_pct_rates
       WHERE employee_id = ${employeeId}
@@ -5427,17 +6395,26 @@ export class DbStorage implements IStorage {
   }
 
   // C1: rate templates
-  async getRateTemplates(companyId: number): Promise<Array<schema.RateTemplate & { items: schema.RateTemplateItem[] }>> {
+  async getRateTemplates(
+    companyId: number,
+  ): Promise<Array<schema.RateTemplate & { items: schema.RateTemplateItem[] }>> {
     const tpls = await db
       .select()
       .from(schema.rateTemplates)
-      .where(and(eq(schema.rateTemplates.companyId, companyId), isNull(schema.rateTemplates.deletedAt)))
+      .where(
+        and(eq(schema.rateTemplates.companyId, companyId), isNull(schema.rateTemplates.deletedAt)),
+      )
       .orderBy(desc(schema.rateTemplates.updatedAt));
     if (tpls.length === 0) return [];
     const items = await db
       .select()
       .from(schema.rateTemplateItems)
-      .where(inArray(schema.rateTemplateItems.templateId, tpls.map((t) => t.id)));
+      .where(
+        inArray(
+          schema.rateTemplateItems.templateId,
+          tpls.map((t) => t.id),
+        ),
+      );
     return tpls.map((t) => ({ ...t, items: items.filter((i) => i.templateId === t.id) }));
   }
 
@@ -5445,7 +6422,12 @@ export class DbStorage implements IStorage {
     companyId: number,
     name: string,
     description: string | null,
-    items: Array<{ locationId: number; rate?: string | null; pct?: string | null; sourceCompanyId?: number | null }>,
+    items: Array<{
+      locationId: number;
+      rate?: string | null;
+      pct?: string | null;
+      sourceCompanyId?: number | null;
+    }>,
     createdBy?: string | null,
   ): Promise<schema.RateTemplate & { items: schema.RateTemplateItem[] }> {
     return await db.transaction(async (tx) => {
@@ -5479,10 +6461,18 @@ export class DbStorage implements IStorage {
       .where(eq(schema.rateTemplates.id, templateId));
   }
 
-  async getRateTemplate(templateId: number): Promise<(schema.RateTemplate & { items: schema.RateTemplateItem[] }) | null> {
-    const [tpl] = await db.select().from(schema.rateTemplates).where(eq(schema.rateTemplates.id, templateId));
+  async getRateTemplate(
+    templateId: number,
+  ): Promise<(schema.RateTemplate & { items: schema.RateTemplateItem[] }) | null> {
+    const [tpl] = await db
+      .select()
+      .from(schema.rateTemplates)
+      .where(eq(schema.rateTemplates.id, templateId));
     if (!tpl) return null;
-    const items = await db.select().from(schema.rateTemplateItems).where(eq(schema.rateTemplateItems.templateId, templateId));
+    const items = await db
+      .select()
+      .from(schema.rateTemplateItems)
+      .where(eq(schema.rateTemplateItems.templateId, templateId));
     return { ...tpl, items };
   }
 
@@ -5495,18 +6485,24 @@ export class DbStorage implements IStorage {
     body?: string | null;
     payload?: any;
   }): Promise<schema.Notification> {
-    const [row] = await db.insert(schema.notifications).values({
-      userId: n.userId,
-      companyId: n.companyId ?? null,
-      type: n.type,
-      title: n.title,
-      body: n.body ?? null,
-      payload: n.payload ?? null,
-    }).returning();
+    const [row] = await db
+      .insert(schema.notifications)
+      .values({
+        userId: n.userId,
+        companyId: n.companyId ?? null,
+        type: n.type,
+        title: n.title,
+        body: n.body ?? null,
+        payload: n.payload ?? null,
+      })
+      .returning();
     return row;
   }
 
-  async getNotifications(userId: string, opts: { unreadOnly?: boolean; limit?: number } = {}): Promise<schema.Notification[]> {
+  async getNotifications(
+    userId: string,
+    opts: { unreadOnly?: boolean; limit?: number } = {},
+  ): Promise<schema.Notification[]> {
     const limit = Math.min(opts.limit ?? 50, 200);
     const conds = [eq(schema.notifications.userId, userId)];
     if (opts.unreadOnly) conds.push(isNull(schema.notifications.readAt));
