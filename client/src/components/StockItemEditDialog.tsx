@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus, X, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface StockItemEditDialogProps {
@@ -70,7 +70,7 @@ export function StockItemEditDialog({
 }: StockItemEditDialogProps) {
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  
+
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [barcode, setBarcode] = useState("");
@@ -79,6 +79,11 @@ export function StockItemEditDialog({
   const [parentStockItemId, setParentStockItemId] = useState<number | null>(null);
   const [sellingPrice, setSellingPrice] = useState("");
   const [active, setActive] = useState(true);
+
+  // Inline add-variant form state
+  const [showAddVariant, setShowAddVariant] = useState(false);
+  const [newVarCode, setNewVarCode] = useState("");
+  const [newVarName, setNewVarName] = useState("");
 
   // Fetch stock item details
   const { data: stockItem, isLoading } = useQuery<StockItem>({
@@ -92,7 +97,7 @@ export function StockItemEditDialog({
     enabled: open,
   });
 
-  // Fetch all stock items for parent selector
+  // Fetch all stock items for parent selector + variant list
   const { data: allStockItems = [] } = useQuery<ParentStockItem[]>({
     queryKey: ["/api/stock-items"],
     enabled: open,
@@ -102,6 +107,14 @@ export function StockItemEditDialog({
   const parentEligibleItems = allStockItems.filter(
     (si) => !si.parentStockItemId && si.id !== stockItemId,
   );
+
+  // Existing variants of this item (children pointing to it)
+  const existingVariants = allStockItems.filter(
+    (si) => si.parentStockItemId === stockItemId,
+  );
+
+  // This item is already acting as a parent if it has children
+  const isParent = existingVariants.length > 0;
 
   // Initialize form when stock item data loads
   useEffect(() => {
@@ -116,6 +129,15 @@ export function StockItemEditDialog({
       setActive(stockItem.active);
     }
   }, [stockItem]);
+
+  // Reset add-variant form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setShowAddVariant(false);
+      setNewVarCode("");
+      setNewVarName("");
+    }
+  }, [open]);
 
   // Update mutation
   const updateMutation = useMutation({
@@ -165,6 +187,39 @@ export function StockItemEditDialog({
     },
   });
 
+  // Create-variant mutation
+  const createVariantMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/stock-items", {
+        code: newVarCode.trim(),
+        name: newVarName.trim(),
+        uom: uom || stockItem?.uom || "PCS",
+        stockGroupId: stockGroupId ?? stockItem?.stockGroupId ?? null,
+        parentStockItemId: stockItemId,
+        sellingPrice: "0.00",
+        active: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/stock-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pos/stock-items"] });
+      toast({
+        title: "Variant Added",
+        description: `"${newVarName.trim()}" has been added as a variant.`,
+      });
+      setNewVarCode("");
+      setNewVarName("");
+      setShowAddVariant(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Add Variant",
+        description: error.message || "Could not create the variant.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSave = () => {
     if (!code.trim()) {
       toast({ title: "Validation Error", description: "Code is required", variant: "destructive" });
@@ -189,6 +244,18 @@ export function StockItemEditDialog({
       sellingPrice,
       active,
     });
+  };
+
+  const handleAddVariant = () => {
+    if (!newVarCode.trim()) {
+      toast({ title: "Validation Error", description: "Variant code is required", variant: "destructive" });
+      return;
+    }
+    if (!newVarName.trim()) {
+      toast({ title: "Validation Error", description: "Variant name is required", variant: "destructive" });
+      return;
+    }
+    createVariantMutation.mutate();
   };
 
   const handleDelete = () => {
@@ -294,31 +361,33 @@ export function StockItemEditDialog({
               </div>
             </div>
 
-            {/* Parent item selector */}
-            <div className="space-y-2">
-              <Label htmlFor="parentItem">Variant Of (optional)</Label>
-              <Select
-                value={parentStockItemId?.toString() || "none"}
-                onValueChange={(value) =>
-                  setParentStockItemId(value === "none" ? null : parseInt(value))
-                }
-              >
-                <SelectTrigger id="parentItem" data-testid="select-parent-item">
-                  <SelectValue placeholder="Standalone item (no parent)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Standalone item (no parent)</SelectItem>
-                  {parentEligibleItems.map((item) => (
-                    <SelectItem key={item.id} value={item.id.toString()}>
-                      {item.code} — {item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Set this to make the item a variant (e.g. 300cc) under a parent item.
-              </p>
-            </div>
+            {/* Parent item selector — hidden if this item already has children */}
+            {!isParent && (
+              <div className="space-y-2">
+                <Label htmlFor="parentItem">Variant Of (optional)</Label>
+                <Select
+                  value={parentStockItemId?.toString() || "none"}
+                  onValueChange={(value) =>
+                    setParentStockItemId(value === "none" ? null : parseInt(value))
+                  }
+                >
+                  <SelectTrigger id="parentItem" data-testid="select-parent-item">
+                    <SelectValue placeholder="Standalone item (no parent)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Standalone item (no parent)</SelectItem>
+                    {parentEligibleItems.map((item) => (
+                      <SelectItem key={item.id} value={item.id.toString()}>
+                        {item.code} — {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Set this to make the item a variant (e.g. 300cc) under a parent item.
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <Switch
@@ -329,6 +398,108 @@ export function StockItemEditDialog({
               />
               <Label htmlFor="active">Active</Label>
             </div>
+
+            {/* ── Variants section ── */}
+            {/* Show when: item already has children, OR item has no parent (eligible to be a parent) */}
+            {!parentStockItemId && (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b">
+                  <div>
+                    <p className="text-sm font-medium">Variants</p>
+                    <p className="text-xs text-muted-foreground">
+                      {isParent
+                        ? `${existingVariants.length} variant${existingVariants.length !== 1 ? "s" : ""} under this item`
+                        : "Add variants to turn this into a parent item (e.g. 300cc, 200cc)"}
+                    </p>
+                  </div>
+                  {!showAddVariant && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 text-xs"
+                      onClick={() => setShowAddVariant(true)}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Variant
+                    </Button>
+                  )}
+                </div>
+
+                {/* Existing variants list */}
+                {existingVariants.length > 0 && (
+                  <ul className="divide-y">
+                    {existingVariants.map((v) => (
+                      <li key={v.id} className="flex items-center gap-2 px-4 py-2.5 text-sm">
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-mono text-xs text-muted-foreground w-20 shrink-0">{v.code}</span>
+                        <span className="flex-1">{v.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* Inline add-variant form */}
+                {showAddVariant && (
+                  <div className="px-4 py-3 space-y-3 bg-muted/10">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Variant Code *</Label>
+                        <Input
+                          placeholder="e.g. M-01-300"
+                          value={newVarCode}
+                          onChange={(e) => setNewVarCode(e.target.value)}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Variant Name *</Label>
+                        <Input
+                          placeholder="e.g. Cylinder Head Assy 300cc"
+                          value={newVarName}
+                          onChange={(e) => setNewVarName(e.target.value)}
+                          className="h-8 text-sm"
+                          onKeyDown={(e) => e.key === "Enter" && handleAddVariant()}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Inherits UOM (<strong>{uom || stockItem?.uom}</strong>) and stock group from this item.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        onClick={handleAddVariant}
+                        disabled={createVariantMutation.isPending}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {createVariantMutation.isPending ? "Adding..." : "Add"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5 text-xs"
+                        onClick={() => {
+                          setShowAddVariant(false);
+                          setNewVarCode("");
+                          setNewVarName("");
+                        }}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {existingVariants.length === 0 && !showAddVariant && (
+                  <div className="px-4 py-4 text-center text-xs text-muted-foreground">
+                    No variants yet. Click "Add Variant" to create the first one.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <DialogFooter className="gap-2">
