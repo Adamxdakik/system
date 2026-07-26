@@ -455,10 +455,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/users/:id", requireAuth, requireRole("Admin"), async (req, res) => {
     try {
       const { id } = req.params;
+      const companyId = req.session.currentCompanyId;
 
       // Prevent deleting yourself
       if (req.user?.id === id) {
         return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+
+      // Security: verify the target user belongs to the caller's current company
+      if (companyId) {
+        const [link] = await db
+          .select({ uid: userCompanyRoles.userId })
+          .from(userCompanyRoles)
+          .where(and(eq(userCompanyRoles.userId, id), eq(userCompanyRoles.companyId, companyId)))
+          .limit(1);
+        if (!link) {
+          return res.status(403).json({ message: "Access denied: user not in your company" });
+        }
       }
 
       await storage.deleteUser(id);
@@ -520,6 +533,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/user-company-roles/:id", requireAuth, requireRole("Admin"), async (req, res) => {
     try {
       const { id } = req.params;
+      const companyId = req.session.currentCompanyId;
+
+      // Security: verify the role record belongs to the caller's current company
+      if (companyId) {
+        const [role] = await db
+          .select({ companyId: userCompanyRoles.companyId })
+          .from(userCompanyRoles)
+          .where(eq(userCompanyRoles.id, parseInt(id)))
+          .limit(1);
+        if (!role) return res.status(404).json({ message: "Role not found" });
+        if (role.companyId !== companyId) {
+          return res.status(403).json({ message: "Access denied: role belongs to a different company" });
+        }
+      }
+
       await storage.deleteUserCompanyRole(parseInt(id));
       res.status(204).send();
     } catch (error: any) {
@@ -597,7 +625,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Company management routes
   app.get("/api/companies", requireAuth, async (req, res) => {
     try {
-      const companies = await storage.getAllCompanies();
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+      // Security: return only companies this user belongs to, not all companies
+      // Admins see their own company; SuperAdmins (no company filter needed) are
+      // handled by the fact that they are enrolled in every company they manage.
+      const userRole = req.session.currentRole;
+      const isSuperAdmin = userRole === "SuperAdmin";
+      const companies = isSuperAdmin
+        ? await storage.getAllCompanies()
+        : await db
+            .select({
+              id: schema.companies.id,
+              code: schema.companies.code,
+              name: schema.companies.name,
+              active: schema.companies.active,
+              currency: schema.companies.currency,
+              fiscalYearStart: schema.companies.fiscalYearStart,
+              address: schema.companies.address,
+              phone: schema.companies.phone,
+              email: schema.companies.email,
+              taxNumber: schema.companies.taxNumber,
+              createdAt: schema.companies.createdAt,
+            })
+            .from(schema.companies)
+            .innerJoin(
+              schema.userCompanyRoles,
+              eq(schema.userCompanyRoles.companyId, schema.companies.id),
+            )
+            .where(eq(schema.userCompanyRoles.userId, req.user.id));
       res.json(companies);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
