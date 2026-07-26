@@ -184,7 +184,10 @@ class DrizzleAccountingTransaction implements AccountingTransaction {
         .select({ id: suppliers.id, companyId: suppliers.companyId })
         .from(suppliers)
         .where(inArray(suppliers.id, supplierIds));
-      const valid = new Set(rows.filter((row) => row.companyId === companyId).map((row) => row.id));
+      // Accept suppliers that explicitly belong to this company OR have no company assigned (global/legacy suppliers)
+      const valid = new Set(
+        rows.filter((row) => row.companyId === companyId || row.companyId == null).map((row) => row.id),
+      );
       issues.push(...supplierIds.filter((id) => !valid.has(id)).map((id) => `supplier:${id}`));
     }
     if (locationId != null) {
