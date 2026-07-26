@@ -583,88 +583,74 @@ export default function ContainerDetail() {
         </Card>
       )}
 
-      {/* ── Manual items (only when no POs but items exist) ───────────── */}
-      {containerItems.length > 0 && (
+      {/* ── Items · Charges · Totals — unified card ───────────────────── */}
+      {(containerItems.length > 0 || charges.length > 0) && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Items
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border overflow-hidden">
+          <CardContent className="p-0 overflow-hidden">
+
+            {/* Items table */}
+            {containerItems.length > 0 && (
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40">
-                    <TableHead className="font-semibold">Item</TableHead>
+                    <TableHead className="font-semibold pl-4">Item</TableHead>
                     <TableHead className="text-right font-semibold">Qty</TableHead>
                     <TableHead className="text-right font-semibold">Rate</TableHead>
-                    <TableHead className="text-right font-semibold">Total</TableHead>
+                    <TableHead className="text-right font-semibold pr-4">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {containerItems.map((item: any) => (
                     <TableRow key={item.id} data-testid={`row-manual-item-${item.id}`}>
-                      <TableCell className="font-medium">{item.itemName}</TableCell>
+                      <TableCell className="font-medium pl-4">{item.itemName}</TableCell>
                       <TableCell className="text-right font-mono text-sm">{formatNumber(item.quantity)}{item.uom ? ` ${item.uom}` : ""}</TableCell>
                       <TableCell className="text-right font-mono text-sm">${formatNumber(item.ratePerKg)}</TableCell>
-                      <TableCell className="text-right font-mono font-semibold">${formatNumber(item.lineTotal)}</TableCell>
+                      <TableCell className="text-right font-mono font-semibold pr-4">${formatNumber(item.lineTotal)}</TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="bg-primary/5 font-semibold">
-                    <TableCell colSpan={3} className="text-right text-sm">Items Total</TableCell>
-                    <TableCell className="text-right font-mono">${formatNumber(containerItems.reduce((s: number, i: any) => s + parseFloat(i.lineTotal), 0))}</TableCell>
-                  </TableRow>
                 </TableBody>
               </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            )}
 
-      {/* ── Extra Charges ──────────────────────────────────────────────── */}
-      {charges.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Extra Charges</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-0 divide-y rounded-lg border overflow-hidden">
-              {charges.map((charge: any) => (
-                <div key={charge.id} className="flex justify-between items-center px-4 py-2.5 text-sm" data-testid={`row-charge-${charge.chargeType.toLowerCase().replace(/\s/g, "-")}`}>
-                  <span className="font-medium">{charge.chargeType}</span>
-                  <span className={`font-mono font-semibold ${parseFloat(charge.amount) < 0 ? "text-red-500" : ""}`}>${formatNumber(charge.amount)}</span>
+            {/* Charges rows */}
+            {charges.length > 0 && (
+              <div className="divide-y border-t">
+                {charges.map((charge: any) => (
+                  <div
+                    key={charge.id}
+                    className="flex justify-between items-center px-4 py-2.5 text-sm"
+                    data-testid={`row-charge-${charge.chargeType.toLowerCase().replace(/\s/g, "-")}`}
+                  >
+                    <span className="text-muted-foreground">{charge.chargeType}</span>
+                    <span className={`font-mono ${parseFloat(charge.amount) < 0 ? "text-red-500" : ""}`}>${formatNumber(charge.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Totals footer */}
+            <div className="border-t bg-muted/30 divide-y">
+              {chargesTotal > 0 && (
+                <div className="flex justify-between items-center px-4 py-2.5 text-sm">
+                  <span className="text-muted-foreground">Stock Value</span>
+                  <span className="font-mono">${formatNumber(itemsTotal)}</span>
                 </div>
-              ))}
-              <div className="flex justify-between items-center px-4 py-2.5 text-sm font-semibold bg-muted/30">
-                <span>Total Charges</span>
-                <span className="font-mono">${formatNumber(chargesTotal)}</span>
+              )}
+              {chargesTotal > 0 && (
+                <div className="flex justify-between items-center px-4 py-2.5 text-sm">
+                  <span className="text-muted-foreground">Extra Charges</span>
+                  <span className="font-mono">+ ${formatNumber(chargesTotal)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center px-4 py-3 font-bold text-base">
+                <span>Grand Total</span>
+                <span className="font-mono text-primary" data-testid="text-grand-total-summary">${formatNumber(grandTotal)}</span>
               </div>
             </div>
+
           </CardContent>
         </Card>
       )}
-
-      {/* ── Grand Total summary ────────────────────────────────────────── */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardContent className="pt-4 pb-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Stock Value</span>
-            <span className="font-mono">${formatNumber(itemsTotal)}</span>
-          </div>
-          {chargesTotal > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Extra Charges</span>
-              <span className="font-mono">+ ${formatNumber(chargesTotal)}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center pt-2 border-t font-bold text-lg">
-            <span>Grand Total</span>
-            <span className="font-mono text-primary" data-testid="text-grand-total-summary">${formatNumber(grandTotal)}</span>
-          </div>
-        </CardContent>
-      </Card>
 
       <OffloadDialog
         open={showOffloadDialog}
