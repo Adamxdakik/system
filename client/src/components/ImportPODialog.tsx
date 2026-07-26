@@ -281,86 +281,6 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
 
   // ── Import ───────────────────────────────────────────────────────────────
 
-  /**
-   * Find or create a stock item.
-   * - For parents:   match by code, else by name, else create.
-   * - For variants:  match by parentStockItemId + variantLabel in the name, else create.
-   */
-  const resolveStockItem = async (
-    line: ContainerLine,
-    allItems: any[],
-  ): Promise<{ stockItemId: number; itemName: string }> => {
-    const { parentCode, parentName, variantLabel, uom } = line;
-
-    if (!variantLabel) {
-      // ── Standalone item ───────────────────────────────────────────
-      const existing =
-        (parentCode && allItems.find((s: any) => s.code?.toLowerCase() === parentCode.toLowerCase())) ||
-        allItems.find((s: any) => s.name?.toLowerCase() === parentName.toLowerCase());
-      if (existing) return { stockItemId: existing.id, itemName: existing.name };
-
-      // Create it
-      const res  = await apiRequest("POST", "/api/stock-items", {
-        code: parentCode || `AUTO-${Date.now()}`,
-        name: parentName,
-        uom,
-        active: true,
-        sellingPrice: "0.00",
-      });
-      const created = await res.json();
-      return { stockItemId: created.id, itemName: created.name };
-    }
-
-    // ── Variant item ──────────────────────────────────────────────────
-    // 1. Find (or create) the parent item
-    const parentItem =
-      (parentCode && allItems.find((s: any) => s.code?.toLowerCase() === parentCode.toLowerCase() && !s.parentStockItemId)) ||
-      allItems.find((s: any) => s.name?.toLowerCase() === parentName.toLowerCase() && !s.parentStockItemId);
-
-    let parentId: number;
-    if (parentItem) {
-      parentId = parentItem.id;
-    } else {
-      // Create parent
-      const res = await apiRequest("POST", "/api/stock-items", {
-        code: parentCode || `AUTO-${Date.now()}`,
-        name: parentName,
-        uom,
-        active: true,
-        sellingPrice: "0.00",
-      });
-      const created = await res.json();
-      parentId = created.id;
-    }
-
-    // 2. Find (or create) the variant
-    const variantName  = `${parentName} ${variantLabel}`;
-    const variantCode  = parentCode ? `${parentCode}-${variantLabel.replace(/[^a-z0-9]/gi, "")}` : `AUTO-${variantLabel}-${Date.now()}`;
-
-    // Re-read the latest stock items list (items may have just been created)
-    const freshItemsRes = await apiRequest("GET", "/api/stock-items");
-    const freshItems: any[] = await freshItemsRes.json();
-
-    const existingVariant = freshItems.find(
-      (s: any) =>
-        s.parentStockItemId === parentId &&
-        s.name?.toLowerCase().includes(variantLabel.toLowerCase()),
-    );
-    if (existingVariant) return { stockItemId: existingVariant.id, itemName: existingVariant.name };
-
-    // Create the variant
-    const res2 = await apiRequest("POST", "/api/stock-items", {
-      code: variantCode,
-      name: variantName,
-      uom,
-      parentStockItemId: parentId,
-      active: true,
-      sellingPrice: "0.00",
-    });
-    const createdVariant = await res2.json();
-    return { stockItemId: createdVariant.id, itemName: createdVariant.name };
-  };
-
   const handleImport = async () => {
     if (!parsedPO) return;
     if (issues.some((i) => i.type === "error")) {
@@ -382,7 +302,29 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
 
     setIsImporting(true);
     try {
-      // 1. Create container
+      // ── Build lookup caches from existing stock items ──────────────────
+      // These are updated in-place as we create new items, so subsequent
+      // lines always see items created earlier in the same import — no
+      // duplicates, no extra API calls.
+      const byCode    = new Map<string, any>(); // lowercase code  → item
+      const byName    = new Map<string, any>(); // lowercase name  → item
+      // variant cache key: `${parentId}:${variantLabel}` (e.g. "42:200cc")
+      const byVariant = new Map<string, any>();
+
+      const addToCache = (si: any) => {
+        if (si.code) byCode.set(si.code.toLowerCase(), si);
+        byName.set(si.name.toLowerCase(), si);
+        if (si.parentStockItemId) {
+          if (si.name.toLowerCase().includes("200cc"))
+            byVariant.set(`${si.parentStockItemId}:200cc`, si);
+          if (si.name.toLowerCase().includes("300cc"))
+            byVariant.set(`${si.parentStockItemId}:300cc`, si);
+        }
+      };
+
+      for (const si of stockItems) addToCache(si);
+
+      // ── 1. Create container ────────────────────────────────────────────
       const containerRes = await apiRequest("POST", "/api/containers", {
         containerNumber: parsedPO.header.containerNumber,
         supplierId:      supplier.id,
@@ -391,12 +333,92 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
       });
       const container = await containerRes.json();
 
-      // 2. Resolve & add items (sequentially to avoid race-conditions on new items)
-      // Snapshot current stock items list at start
-      let currentStockItems = [...stockItems];
-
+      // ── 2. Process each line sequentially ─────────────────────────────
+      let autoCreated = 0;
       for (const line of parsedPO.lines) {
-        const { stockItemId, itemName } = await resolveStockItem(line, currentStockItems);
+        let stockItemId: number;
+        let itemName: string;
+
+        if (!line.variantLabel) {
+          // ── Standalone item ──────────────────────────────────────────
+          const existing =
+            (line.parentCode && byCode.get(line.parentCode.toLowerCase())) ||
+            byName.get(line.parentName.toLowerCase());
+
+          if (existing) {
+            stockItemId = existing.id;
+            itemName    = existing.name;
+          } else {
+            const res     = await apiRequest("POST", "/api/stock-items", {
+              code:         line.parentCode || `AUTO-${Date.now()}`,
+              name:         line.parentName,
+              uom:          line.uom,
+              active:       true,
+              sellingPrice: "0.00",
+            });
+            const created = await res.json();
+            addToCache(created);
+            stockItemId = created.id;
+            itemName    = created.name;
+            autoCreated++;
+          }
+        } else {
+          // ── Variant: find/create parent first ────────────────────────
+          const existingParent =
+            (line.parentCode && byCode.get(line.parentCode.toLowerCase())) ||
+            byName.get(line.parentName.toLowerCase());
+
+          let parentId: number;
+          if (existingParent && !existingParent.parentStockItemId) {
+            // Existing top-level parent
+            parentId = existingParent.id;
+          } else if (existingParent && existingParent.parentStockItemId) {
+            // Matched a variant by name — climb to its parent
+            parentId = existingParent.parentStockItemId;
+          } else {
+            // Create the parent
+            const res     = await apiRequest("POST", "/api/stock-items", {
+              code:         line.parentCode || `AUTO-${Date.now()}`,
+              name:         line.parentName,
+              uom:          line.uom,
+              active:       true,
+              sellingPrice: "0.00",
+            });
+            const created = await res.json();
+            addToCache(created);
+            parentId = created.id;
+            autoCreated++;
+          }
+
+          // ── Find/create the variant ──────────────────────────────────
+          const cacheKey        = `${parentId}:${line.variantLabel}`;
+          const existingVariant = byVariant.get(cacheKey);
+
+          if (existingVariant) {
+            // Already exists — reuse, never duplicate
+            stockItemId = existingVariant.id;
+            itemName    = existingVariant.name;
+          } else {
+            const variantName = `${line.parentName} ${line.variantLabel}`;
+            const variantCode = line.parentCode
+              ? `${line.parentCode}-${line.variantLabel.replace(/[^a-z0-9]/gi, "")}`
+              : `AUTO-${Date.now()}`;
+
+            const res2     = await apiRequest("POST", "/api/stock-items", {
+              code:               variantCode,
+              name:               variantName,
+              uom:                line.uom,
+              parentStockItemId:  parentId,
+              active:             true,
+              sellingPrice:       "0.00",
+            });
+            const created2 = await res2.json();
+            addToCache(created2);          // cache immediately — next line sees it
+            stockItemId = created2.id;
+            itemName    = created2.name;
+            autoCreated++;
+          }
+        }
 
         await apiRequest("POST", `/api/containers/${container.id}/items`, {
           stockItemId,
@@ -407,7 +429,7 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
         });
       }
 
-      // 3. Charges
+      // ── 3. Charges ────────────────────────────────────────────────────
       if (parsedPO.charges.length > 0) {
         await apiRequest("POST", `/api/containers/${container.id}/charges`, {
           charges: parsedPO.charges.map((c) => ({
@@ -417,7 +439,7 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
         });
       }
 
-      // 4. Purchase voucher
+      // ── 4. Purchase voucher ───────────────────────────────────────────
       await apiRequest("POST", `/api/containers/${container.id}/create-purchase-voucher`, {});
 
       queryClient.invalidateQueries({ queryKey: ["/api/containers"] });
@@ -425,10 +447,15 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"]  });
       queryClient.invalidateQueries({ queryKey: ["/api/stock-items"] });
 
-      const variantCount = parsedPO.lines.filter((l) => l.variantLabel).length;
+      const variantLines = parsedPO.lines.filter((l) => l.variantLabel).length;
       toast({
         title: "PO Imported",
-        description: `Container ${parsedPO.header.containerNumber} — ${parsedPO.lines.length} line item${parsedPO.lines.length !== 1 ? "s" : ""}${variantCount > 0 ? ` (${variantCount} with engine variants auto-created)` : ""}.`,
+        description: [
+          `Container ${parsedPO.header.containerNumber}`,
+          `${parsedPO.lines.length} line item${parsedPO.lines.length !== 1 ? "s" : ""}`,
+          variantLines > 0 ? `${variantLines} variant line${variantLines !== 1 ? "s" : ""}` : null,
+          autoCreated > 0  ? `${autoCreated} new item${autoCreated !== 1 ? "s" : ""} created` : null,
+        ].filter(Boolean).join(" · "),
       });
 
       onOpenChange(false);
