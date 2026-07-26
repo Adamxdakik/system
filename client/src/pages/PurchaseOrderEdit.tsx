@@ -260,7 +260,7 @@ export default function PurchaseOrderEdit() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/containers"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/containers/${containerId ?? ""}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/containers/${po?.containerId ?? ""}`] });
       invalidateAccountingQueries(queryClient, poId);
       toast({
         title: "Purchase Order Updated",
