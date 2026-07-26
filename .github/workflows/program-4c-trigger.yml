@@ -1,5 +1,6 @@
 name: Program 4C trigger
 
+# second push activates this temporary workflow
 on:
   push:
     branches:
