@@ -479,6 +479,7 @@ export const stockItems = pgTable(
     openingValue: decimal("opening_value", { precision: 15, scale: 2 }).default("0"),
     reorderLevel: decimal("reorder_level", { precision: 15, scale: 3 }).default("0"),
     sellingPrice: decimal("selling_price", { precision: 15, scale: 2 }).default("0"),
+    parentStockItemId: integer("parent_stock_item_id"),
     active: boolean("active").notNull().default(true),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),

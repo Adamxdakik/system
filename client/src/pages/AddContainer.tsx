@@ -68,6 +68,14 @@ export default function AddContainer() {
   const { data: suppliers } = useQuery<any[]>({ queryKey: ["/api/suppliers"] });
   const { data: stockItems } = useQuery<StockItem[]>({ queryKey: ["/api/stock-items"] });
 
+  // IDs of items that are parents (have variant children) — we hide pure parents from
+  // search since you always want to receive a specific variant, not the parent itself.
+  const parentItemIds = new Set(
+    (stockItems || [])
+      .filter((si: any) => si.parentStockItemId)
+      .map((si: any) => si.parentStockItemId as number),
+  );
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -154,9 +162,22 @@ export default function AddContainer() {
     const t = term.toLowerCase();
     return (
       stockItems?.filter(
-        (si) => si.name.toLowerCase().includes(t) || si.code.toLowerCase().includes(t),
+        (si) =>
+          // Exclude pure-parent items — you always pick a specific variant or standalone
+          !parentItemIds.has(si.id) &&
+          (si.name.toLowerCase().includes(t) || si.code.toLowerCase().includes(t)),
       ) || []
     );
+  };
+
+  // For items that are variants, build a display label showing the parent name
+  const getDisplayLabel = (si: StockItem): string => {
+    const parentId = (si as any).parentStockItemId as number | null;
+    if (parentId) {
+      const parent = stockItems?.find((p) => p.id === parentId);
+      return parent ? `${parent.name} — ${si.name}` : si.name;
+    }
+    return si.name;
   };
 
   const selectItem = (index: number, si: StockItem) => {
@@ -408,7 +429,7 @@ export default function AddContainer() {
                                 }}
                                 data-testid={`option-stock-item-${si.id}`}
                               >
-                                <span className="font-medium">{si.name}</span>
+                                <span className="font-medium">{getDisplayLabel(si)}</span>
                                 <span className="text-xs text-muted-foreground ml-auto shrink-0">
                                   {si.code}
                                 </span>

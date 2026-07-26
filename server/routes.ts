@@ -6389,6 +6389,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updates.active = req.body.active;
       }
 
+      if (req.body.parentStockItemId !== undefined) {
+        updates.parentStockItemId = req.body.parentStockItemId
+          ? Number(req.body.parentStockItemId)
+          : null;
+      }
+
       // If updating code, check for duplicates
       if (updates.code && updates.code !== existingItem.code) {
         const duplicate = await storage.getStockItemByCode(

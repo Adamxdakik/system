@@ -2144,6 +2144,7 @@ export class DbStorage implements IStorage {
         stockItemName: schema.stockItems.name,
         stockItemUom: schema.stockItems.uom,
         stockGroupId: schema.stockItems.stockGroupId,
+        parentStockItemId: schema.stockItems.parentStockItemId,
         stockGroupName: sql<string>`COALESCE(${schema.stockGroups.name}, '')`,
         stockGroupCode: sql<string>`COALESCE(${schema.stockGroups.code}, '')`,
         lastSellingPrice:
@@ -2182,6 +2183,7 @@ export class DbStorage implements IStorage {
         stockItemName: schema.stockItems.name,
         stockItemUom: schema.stockItems.uom,
         stockGroupId: schema.stockItems.stockGroupId,
+        parentStockItemId: schema.stockItems.parentStockItemId,
         stockGroupName: sql<string>`COALESCE(${schema.stockGroups.name}, '')`,
         stockGroupCode: sql<string>`COALESCE(${schema.stockGroups.code}, '')`,
       })

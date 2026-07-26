@@ -42,10 +42,17 @@ interface StockGroup {
   name: string;
 }
 
+interface ParentStockItem {
+  id: number;
+  code: string;
+  name: string;
+  parentStockItemId: number | null;
+}
+
 // Extend the schema to make stockGroupId and companyId optional for the form
-// (companyId is added during submission)
 const formSchema = insertStockItemSchema.extend({
   stockGroupId: z.number().optional().nullable(),
+  parentStockItemId: z.number().optional().nullable(),
   companyId: z.number().optional(),
 });
 
@@ -64,6 +71,13 @@ export function StockItemCreateDialog({
     enabled: open,
   });
 
+  // Fetch stock items for parent selector (only non-variant items can be parents)
+  const { data: allStockItems = [] } = useQuery<ParentStockItem[]>({
+    queryKey: ["/api/stock-items"],
+    enabled: open,
+  });
+  const parentEligibleItems = allStockItems.filter((si) => !si.parentStockItemId);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -71,6 +85,7 @@ export function StockItemCreateDialog({
       name: "",
       uom: "",
       stockGroupId: null,
+      parentStockItemId: null,
       sellingPrice: "0.00",
       openingQty: "0",
       openingRate: "0.00",
@@ -236,6 +251,41 @@ export function StockItemCreateDialog({
                 )}
               />
             </div>
+
+            {/* Parent item selector — makes this item a variant of the chosen parent */}
+            <FormField
+              control={form.control}
+              name="parentStockItemId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Variant Of (optional)</FormLabel>
+                  <Select
+                    value={field.value?.toString() || "none"}
+                    onValueChange={(value) =>
+                      field.onChange(value === "none" ? null : parseInt(value))
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger data-testid="select-parent-item">
+                        <SelectValue placeholder="Standalone item (no parent)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Standalone item (no parent)</SelectItem>
+                      {parentEligibleItems.map((item) => (
+                        <SelectItem key={item.id} value={item.id.toString()}>
+                          {item.code} — {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Set this to make the item a variant (e.g. 300cc version) under a parent item.
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

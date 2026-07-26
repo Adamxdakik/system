@@ -45,6 +45,7 @@ interface StockItem {
   barcode: string | null;
   uom: string;
   stockGroupId: number | null;
+  parentStockItemId: number | null;
   sellingPrice: string;
   active: boolean;
 }
@@ -53,6 +54,13 @@ interface StockGroup {
   id: number;
   code: string;
   name: string;
+}
+
+interface ParentStockItem {
+  id: number;
+  code: string;
+  name: string;
+  parentStockItemId: number | null;
 }
 
 export function StockItemEditDialog({
@@ -68,6 +76,7 @@ export function StockItemEditDialog({
   const [barcode, setBarcode] = useState("");
   const [uom, setUom] = useState("");
   const [stockGroupId, setStockGroupId] = useState<number | null>(null);
+  const [parentStockItemId, setParentStockItemId] = useState<number | null>(null);
   const [sellingPrice, setSellingPrice] = useState("");
   const [active, setActive] = useState(true);
 
@@ -83,6 +92,17 @@ export function StockItemEditDialog({
     enabled: open,
   });
 
+  // Fetch all stock items for parent selector
+  const { data: allStockItems = [] } = useQuery<ParentStockItem[]>({
+    queryKey: ["/api/stock-items"],
+    enabled: open,
+  });
+
+  // Items eligible to be a parent: non-variant items, excluding the current item itself
+  const parentEligibleItems = allStockItems.filter(
+    (si) => !si.parentStockItemId && si.id !== stockItemId,
+  );
+
   // Initialize form when stock item data loads
   useEffect(() => {
     if (stockItem) {
@@ -91,6 +111,7 @@ export function StockItemEditDialog({
       setBarcode(stockItem.barcode || "");
       setUom(stockItem.uom);
       setStockGroupId(stockItem.stockGroupId);
+      setParentStockItemId(stockItem.parentStockItemId);
       setSellingPrice(stockItem.sellingPrice);
       setActive(stockItem.active);
     }
@@ -146,29 +167,15 @@ export function StockItemEditDialog({
 
   const handleSave = () => {
     if (!code.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Code is required",
-        variant: "destructive",
-      });
+      toast({ title: "Validation Error", description: "Code is required", variant: "destructive" });
       return;
     }
-
     if (!name.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Name is required",
-        variant: "destructive",
-      });
+      toast({ title: "Validation Error", description: "Name is required", variant: "destructive" });
       return;
     }
-
     if (!uom.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Unit of measure is required",
-        variant: "destructive",
-      });
+      toast({ title: "Validation Error", description: "Unit of measure is required", variant: "destructive" });
       return;
     }
 
@@ -178,6 +185,7 @@ export function StockItemEditDialog({
       barcode: barcode.trim() || null,
       uom: uom.trim(),
       stockGroupId,
+      parentStockItemId,
       sellingPrice,
       active,
     });
@@ -191,9 +199,7 @@ export function StockItemEditDialog({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
-          <div className="flex items-center justify-center py-8">
-            Loading...
-          </div>
+          <div className="flex items-center justify-center py-8">Loading...</div>
         </DialogContent>
       </Dialog>
     );
@@ -202,7 +208,7 @@ export function StockItemEditDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle data-testid="text-dialog-title">Edit Stock Item</DialogTitle>
           </DialogHeader>
@@ -286,6 +292,32 @@ export function StockItemEditDialog({
                   data-testid="input-selling-price"
                 />
               </div>
+            </div>
+
+            {/* Parent item selector */}
+            <div className="space-y-2">
+              <Label htmlFor="parentItem">Variant Of (optional)</Label>
+              <Select
+                value={parentStockItemId?.toString() || "none"}
+                onValueChange={(value) =>
+                  setParentStockItemId(value === "none" ? null : parseInt(value))
+                }
+              >
+                <SelectTrigger id="parentItem" data-testid="select-parent-item">
+                  <SelectValue placeholder="Standalone item (no parent)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Standalone item (no parent)</SelectItem>
+                  {parentEligibleItems.map((item) => (
+                    <SelectItem key={item.id} value={item.id.toString()}>
+                      {item.code} — {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Set this to make the item a variant (e.g. 300cc) under a parent item.
+              </p>
             </div>
 
             <div className="flex items-center gap-2">

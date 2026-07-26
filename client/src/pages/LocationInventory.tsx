@@ -46,6 +46,7 @@ interface InventoryItem {
   stockGroupId: number | null;
   stockGroupName: string | null;
   stockGroupCode: string | null;
+  parentStockItemId: number | null;
 }
 
 interface StockGroupSummary {
@@ -75,6 +76,7 @@ export default function LocationInventory({ posUser }: { posUser?: any } = {}) {
   const [locationSearchTerm, setLocationSearchTerm] = useState("");
   const [groupSearchTerm, setGroupSearchTerm] = useState("");
   const [itemSearchTerm, setItemSearchTerm] = useState("");
+  const [expandedVariantGroups, setExpandedVariantGroups] = useState<Set<number>>(new Set());
   const tableRef = useRef<HTMLDivElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const { setSelectedLocation } = useLocation();
@@ -135,6 +137,13 @@ export default function LocationInventory({ posUser }: { posUser?: any } = {}) {
     queryKey: selectedLocationLocal ? [`/api/locations/${selectedLocationLocal.id}/inventory`] : [],
     enabled: !!selectedLocationLocal,
   });
+
+  // Fetch all stock items so we can resolve parent item names for variant grouping
+  const { data: allStockItems = [] } = useQuery<{ id: number; name: string; code: string }[]>({
+    queryKey: ["/api/stock-items"],
+    enabled: !!selectedLocationLocal,
+  });
+  const stockItemNameMap = new Map(allStockItems.map((si) => [si.id, si.name]));
 
   // Filter out items with 0 quantity
   const inventory = inventoryData.filter(item => parseFloat(item.quantity || "0") !== 0);
@@ -710,43 +719,161 @@ export default function LocationInventory({ posUser }: { posUser?: any } = {}) {
                       </td>
                     </tr>
                   ) : (
-                    filteredStockItems.map((item, index) => (
-                      <tr
-                        key={item.inventoryId}
-                        data-testid={`row-item-${item.stockItemId}`}
-                        className={`border-t h-12 ${
-                          index === selectedRowIndex ? "bg-accent" : "hover-elevate"
-                        }`}
-                        onClick={() => setSelectedRowIndex(index)}
-                      >
-                        <td className="px-3 font-medium">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/locations/${selectedLocationLocal?.id}/stock-items/${item.stockItemId}/history`);
-                            }}
-                            className="text-left text-primary hover:underline cursor-pointer"
-                            data-testid={`link-item-${item.stockItemId}`}
+                    (() => {
+                      // Group variant items under their parent; standalone items render normally
+                      const variantGroups = new Map<number, InventoryItem[]>();
+                      const standaloneItems: InventoryItem[] = [];
+                      filteredStockItems.forEach((item) => {
+                        if (item.parentStockItemId) {
+                          const group = variantGroups.get(item.parentStockItemId) || [];
+                          group.push(item);
+                          variantGroups.set(item.parentStockItemId, group);
+                        } else if (!variantGroups.has(item.stockItemId)) {
+                          standaloneItems.push(item);
+                        }
+                      });
+
+                      // Build render order: parents first (with variants), then standalone
+                      const rows: React.ReactNode[] = [];
+                      let rowIndex = 0;
+
+                      // Variant parent rows
+                      variantGroups.forEach((variants, parentId) => {
+                        const parentName = stockItemNameMap.get(parentId) || `Item #${parentId}`;
+                        const totalQty = variants.reduce((s, v) => s + parseFloat(v.quantity || "0"), 0);
+                        const totalValue = variants.reduce((s, v) => s + parseFloat(v.totalValue || "0"), 0);
+                        const avgRate = totalQty > 0 ? totalValue / totalQty : 0;
+                        const isExpanded = expandedVariantGroups.has(parentId);
+                        const uom = variants[0]?.stockItemUom || "";
+
+                        rows.push(
+                          <tr
+                            key={`parent-${parentId}`}
+                            className="border-t h-12 bg-muted/10 hover-elevate cursor-pointer"
+                            onClick={() =>
+                              setExpandedVariantGroups((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(parentId)) next.delete(parentId);
+                                else next.add(parentId);
+                                return next;
+                              })
+                            }
                           >
-                            {item.stockItemName}
-                          </button>
-                        </td>
-                        <td className="px-3 text-right font-mono">
-                          {Math.floor(parseFloat(item.quantity)).toLocaleString()} {item.stockItemUom}
-                        </td>
-                        <td className="px-3"></td>
-                        {!posUser && (
-                          <>
+                            <td className="px-3 font-medium">
+                              <div className="flex items-center gap-2">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-150 ${isExpanded ? "rotate-90" : ""}`}
+                                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                </svg>
+                                <span>{parentName}</span>
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  ({variants.length} {variants.length === 1 ? "variant" : "variants"})
+                                </span>
+                              </div>
+                            </td>
                             <td className="px-3 text-right font-mono">
-                              ${parseFloat(item.averageRate).toFixed(2)}
+                              {Math.floor(totalQty).toLocaleString()} {uom}
                             </td>
-                            <td className="px-3 text-right font-mono font-medium">
-                              ${parseFloat(item.totalValue).toFixed(2)}
+                            <td className="px-3"></td>
+                            {!posUser && (
+                              <>
+                                <td className="px-3 text-right font-mono">${avgRate.toFixed(2)}</td>
+                                <td className="px-3 text-right font-mono font-medium">${totalValue.toFixed(2)}</td>
+                              </>
+                            )}
+                          </tr>,
+                        );
+
+                        if (isExpanded) {
+                          variants.forEach((item) => {
+                            rows.push(
+                              <tr
+                                key={item.inventoryId}
+                                data-testid={`row-item-${item.stockItemId}`}
+                                className="border-t h-11 bg-muted/20 hover-elevate"
+                                onClick={() => setSelectedRowIndex(rowIndex++)}
+                              >
+                                <td className="px-3">
+                                  <div className="flex items-center gap-2 pl-6">
+                                    <span className="text-muted-foreground/50 text-xs select-none">└</span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/locations/${selectedLocationLocal?.id}/stock-items/${item.stockItemId}/history`);
+                                      }}
+                                      className="text-left text-primary hover:underline cursor-pointer text-sm"
+                                      data-testid={`link-item-${item.stockItemId}`}
+                                    >
+                                      {item.stockItemName}
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="px-3 text-right font-mono text-sm">
+                                  {Math.floor(parseFloat(item.quantity)).toLocaleString()} {item.stockItemUom}
+                                </td>
+                                <td className="px-3"></td>
+                                {!posUser && (
+                                  <>
+                                    <td className="px-3 text-right font-mono text-sm">
+                                      ${parseFloat(item.averageRate).toFixed(2)}
+                                    </td>
+                                    <td className="px-3 text-right font-mono font-medium text-sm">
+                                      ${parseFloat(item.totalValue).toFixed(2)}
+                                    </td>
+                                  </>
+                                )}
+                              </tr>,
+                            );
+                          });
+                        }
+                      });
+
+                      // Standalone items (no parent)
+                      standaloneItems.forEach((item, index) => {
+                        rows.push(
+                          <tr
+                            key={item.inventoryId}
+                            data-testid={`row-item-${item.stockItemId}`}
+                            className={`border-t h-12 ${
+                              index === selectedRowIndex ? "bg-accent" : "hover-elevate"
+                            }`}
+                            onClick={() => setSelectedRowIndex(index)}
+                          >
+                            <td className="px-3 font-medium">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/locations/${selectedLocationLocal?.id}/stock-items/${item.stockItemId}/history`);
+                                }}
+                                className="text-left text-primary hover:underline cursor-pointer"
+                                data-testid={`link-item-${item.stockItemId}`}
+                              >
+                                {item.stockItemName}
+                              </button>
                             </td>
-                          </>
-                        )}
-                      </tr>
-                    ))
+                            <td className="px-3 text-right font-mono">
+                              {Math.floor(parseFloat(item.quantity)).toLocaleString()} {item.stockItemUom}
+                            </td>
+                            <td className="px-3"></td>
+                            {!posUser && (
+                              <>
+                                <td className="px-3 text-right font-mono">
+                                  ${parseFloat(item.averageRate).toFixed(2)}
+                                </td>
+                                <td className="px-3 text-right font-mono font-medium">
+                                  ${parseFloat(item.totalValue).toFixed(2)}
+                                </td>
+                              </>
+                            )}
+                          </tr>,
+                        );
+                      });
+
+                      return rows;
+                    })()
                   )}
                 </tbody>
               </table>

@@ -69,6 +69,7 @@ interface StockItem {
   barcode: string | null;
   uom: string;
   stockGroupId: number | null;
+  parentStockItemId: number | null;
   sellingPrice: string;
   active: boolean;
   companyId: number;
@@ -139,6 +140,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [expandedParents, setExpandedParents] = useState<Set<number>>(new Set());
 
   const { toast } = useToast();
 
@@ -189,17 +191,34 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
             if (locData.quantity !== 0) locationCount++;
           }
           const averageCost = totalQuantity !== 0 ? totalValue / totalQuantity : 0;
-          map.set(item.id, {
-            totalQuantity,
-            totalValue,
-            averageCost,
-            locationCount,
-          });
+          map.set(item.id, { totalQuantity, totalValue, averageCost, locationCount });
         }
       }
     }
     return map;
   }, [summaryData]);
+
+  // ── Variant relationship maps ────────────────────────────────────────────
+  // parentItemIds: IDs of stock items that have at least one variant child
+  const parentItemIds = useMemo(() => {
+    const ids = new Set<number>();
+    stockItems.forEach((item) => {
+      if (item.parentStockItemId) ids.add(item.parentStockItemId);
+    });
+    return ids;
+  }, [stockItems]);
+
+  // variantsByParent: parent ID → list of variant children
+  const variantsByParent = useMemo(() => {
+    const map = new Map<number, StockItem[]>();
+    stockItems.forEach((item) => {
+      if (item.parentStockItemId) {
+        const existing = map.get(item.parentStockItemId) || [];
+        map.set(item.parentStockItemId, [...existing, item]);
+      }
+    });
+    return map;
+  }, [stockItems]);
 
   // ── Mutations (all preserved) ───────────────────────────────────────────
   const deleteMutation = useMutation({
@@ -279,44 +298,116 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
     setEditDialogOpen(true);
   };
 
-  // ── Filtering ────────────────────────────────────────────────────────────
+  const toggleExpandedParent = (id: number) => {
+    setExpandedParents((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
   const getStockGroupName = (stockGroupId: number | null) => {
     if (!stockGroupId) return "Uncategorized";
     const group = stockGroups.find((g) => g.id === stockGroupId);
     return group ? group.name : "Unknown";
   };
 
-  const getItemStatus = (item: StockItem): "inactive" | "in-stock" | "out-of-stock" => {
-    if (!item.active) return "inactive";
-    const totals = productTotals.get(item.id);
-    return (totals?.totalQuantity ?? 0) > 0 ? "in-stock" : "out-of-stock";
+  // Returns aggregate totals for a parent item, or own totals for others
+  const getItemTotals = (item: StockItem): ProductTotals => {
+    if (parentItemIds.has(item.id)) {
+      const variants = variantsByParent.get(item.id) || [];
+      let totalQuantity = 0;
+      let totalValue = 0;
+      for (const v of variants) {
+        const vt = productTotals.get(v.id);
+        if (vt) {
+          totalQuantity += vt.totalQuantity;
+          totalValue += vt.totalValue;
+        }
+      }
+      return {
+        totalQuantity,
+        totalValue,
+        averageCost: totalQuantity ? totalValue / totalQuantity : 0,
+        locationCount: 0,
+      };
+    }
+    return productTotals.get(item.id) ?? {
+      totalQuantity: 0,
+      totalValue: 0,
+      averageCost: 0,
+      locationCount: 0,
+    };
   };
 
-  // Overview filtered
+  const getItemStatus = (
+    item: StockItem,
+    qty: number,
+  ): "inactive" | "in-stock" | "out-of-stock" => {
+    if (!item.active) return "inactive";
+    return qty > 0 ? "in-stock" : "out-of-stock";
+  };
+
+  // ── Filtering ────────────────────────────────────────────────────────────
+  // Variant items (parentStockItemId set) are hidden at top level — they appear
+  // nested under their parent when the parent row is expanded.
   const filteredOverviewItems = useMemo(() => {
     return stockItems.filter((item) => {
+      if (item.parentStockItemId) return false; // variants shown nested
+
+      const isParent = parentItemIds.has(item.id);
+      const variants = isParent ? (variantsByParent.get(item.id) || []) : [];
+
       const s = overviewSearch.toLowerCase();
-      const matchesSearch =
+      const selfMatches =
         !overviewSearch ||
         item.name.toLowerCase().includes(s) ||
         item.code.toLowerCase().includes(s) ||
         (item.barcode && item.barcode.toLowerCase().includes(s));
+      const variantMatches =
+        isParent &&
+        overviewSearch.length > 0 &&
+        variants.some(
+          (v) =>
+            v.name.toLowerCase().includes(s) || v.code.toLowerCase().includes(s),
+        );
+      if (!selfMatches && !variantMatches) return false;
 
       const matchesGroup =
         overviewGroup === "all" ||
         (overviewGroup === "uncategorized"
           ? !item.stockGroupId
           : item.stockGroupId === parseInt(overviewGroup));
+      if (!matchesGroup) return false;
 
-      const status = getItemStatus(item);
-      const matchesStatus = overviewStatus === "all" || overviewStatus === status;
+      // Compute effective totals (aggregate for parents)
+      let totalQty: number;
+      if (isParent && variants.length > 0) {
+        totalQty = variants.reduce((sum, v) => {
+          return sum + (productTotals.get(v.id)?.totalQuantity ?? 0);
+        }, 0);
+      } else {
+        totalQty = productTotals.get(item.id)?.totalQuantity ?? 0;
+      }
 
-      const totals = productTotals.get(item.id);
-      const matchesZero = !hideZeroStock || (totals?.totalQuantity ?? 0) > 0;
+      const status = item.active ? (totalQty > 0 ? "in-stock" : "out-of-stock") : "inactive";
+      if (overviewStatus !== "all" && overviewStatus !== status) return false;
+      if (hideZeroStock && totalQty === 0) return false;
 
-      return matchesSearch && matchesGroup && matchesStatus && matchesZero;
+      return true;
     });
-  }, [stockItems, overviewSearch, overviewGroup, overviewStatus, hideZeroStock, productTotals]);
+  }, [
+    stockItems,
+    overviewSearch,
+    overviewGroup,
+    overviewStatus,
+    hideZeroStock,
+    productTotals,
+    parentItemIds,
+    variantsByParent,
+  ]);
 
   const allFilteredSelected =
     filteredOverviewItems.length > 0 &&
@@ -325,11 +416,13 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
   // ── Summary card values ──────────────────────────────────────────────────
   const overviewStats = useMemo(
     () => ({
-      totalProducts: stockItems.length,
-      activeProducts: stockItems.filter((i) => i.active).length,
-      inStock: stockItems.filter((i) => (productTotals.get(i.id)?.totalQuantity ?? 0) > 0).length,
+      totalProducts: stockItems.filter((i) => !i.parentStockItemId).length,
+      activeProducts: stockItems.filter((i) => i.active && !i.parentStockItemId).length,
+      inStock: stockItems
+        .filter((i) => !i.parentStockItemId)
+        .filter((i) => (productTotals.get(i.id)?.totalQuantity ?? 0) > 0).length,
       outOfStock: stockItems.filter(
-        (i) => i.active && (productTotals.get(i.id)?.totalQuantity ?? 0) === 0,
+        (i) => i.active && !i.parentStockItemId && (productTotals.get(i.id)?.totalQuantity ?? 0) === 0,
       ).length,
     }),
     [stockItems, productTotals],
@@ -352,8 +445,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
     await XLSX.writeFile(workbook, "products.xlsx");
   };
 
-  const statusBadge = (item: StockItem) => {
-    const status = getItemStatus(item);
+  const statusBadge = (status: "inactive" | "in-stock" | "out-of-stock") => {
     if (status === "inactive") return <Badge variant="secondary">Inactive</Badge>;
     if (status === "in-stock")
       return (
@@ -383,7 +475,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
 
       {/* ── Toolbar ───────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 items-center">
-        {/* Search */}
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -394,7 +485,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
             data-testid="input-search"
           />
         </div>
-        {/* Category filter */}
         <Select value={overviewGroup} onValueChange={setOverviewGroup}>
           <SelectTrigger className="w-44 text-sm" data-testid="select-stock-group">
             <SelectValue placeholder="Category" />
@@ -409,7 +499,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
             ))}
           </SelectContent>
         </Select>
-        {/* Status filter */}
         <Select value={overviewStatus} onValueChange={setOverviewStatus}>
           <SelectTrigger className="w-40 text-sm" data-testid="select-stock-status">
             <SelectValue placeholder="Stock Status" />
@@ -421,7 +510,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
-        {/* Right-side actions */}
         <div className="flex gap-2 ml-auto flex-wrap">
           <Button
             variant="outline"
@@ -493,7 +581,7 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
         </div>
       </div>
 
-      {/* ── Merged table ──────────────────────────────────────────────── */}
+      {/* ── Table ─────────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
         <CardContent className="p-0">
           {isLoading ? (
@@ -530,15 +618,15 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                       </td>
                     </tr>
                   ) : (
-                    filteredOverviewItems.map((item) => {
-                      const totals = productTotals.get(item.id) || {
-                        totalQuantity: 0,
-                        totalValue: 0,
-                        averageCost: 0,
-                        locationCount: 0,
-                      };
+                    filteredOverviewItems.flatMap((item) => {
+                      const isParent = parentItemIds.has(item.id);
+                      const variants = variantsByParent.get(item.id) || [];
+                      const isExpanded = expandedParents.has(item.id);
+                      const totals = getItemTotals(item);
                       const isSelected = selectedIds.includes(item.id);
-                      return (
+                      const itemStatus = getItemStatus(item, totals.totalQuantity);
+
+                      const mainRow = (
                         <tr
                           key={item.id}
                           className="border-t hover-elevate h-12 cursor-pointer"
@@ -556,8 +644,32 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                           </td>
                           <td className="px-3 font-medium" data-testid={`name-${item.id}`}>
                             <div className="flex items-center gap-2">
+                              {isParent ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleExpandedParent(item.id);
+                                  }}
+                                  className="shrink-0 rounded hover:bg-muted p-0.5 transition-colors"
+                                >
+                                  <ChevronRight
+                                    className={`h-4 w-4 text-muted-foreground transition-transform duration-150 ${
+                                      isExpanded ? "rotate-90" : ""
+                                    }`}
+                                  />
+                                </button>
+                              ) : (
+                                <span className="w-5 shrink-0" />
+                              )}
                               <Package className="h-4 w-4 text-muted-foreground shrink-0" />
                               {item.name}
+                              {isParent && (
+                                <Badge variant="outline" className="text-xs ml-1 shrink-0">
+                                  {variants.length}{" "}
+                                  {variants.length === 1 ? "variant" : "variants"}
+                                </Badge>
+                              )}
                             </div>
                           </td>
                           <td
@@ -578,8 +690,11 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                               ? `$${totals.averageCost.toFixed(2)}`
                               : "—"}
                           </td>
-                          <td className="px-3">{statusBadge(item)}</td>
-                          <td className="px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-3">{statusBadge(itemStatus)}</td>
+                          <td
+                            className="px-3 text-center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Button
                               size="sm"
                               variant="ghost"
@@ -593,26 +708,114 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                           </td>
                         </tr>
                       );
+
+                      // Variant sub-rows — shown when parent row is expanded
+                      const variantRows =
+                        isParent && isExpanded
+                          ? variants.map((variant) => {
+                              const vt = productTotals.get(variant.id) ?? {
+                                totalQuantity: 0,
+                                totalValue: 0,
+                                averageCost: 0,
+                                locationCount: 0,
+                              };
+                              const variantStatus = getItemStatus(variant, vt.totalQuantity);
+                              return (
+                                <tr
+                                  key={`variant-${variant.id}`}
+                                  className="border-t bg-muted/20 hover-elevate h-11 cursor-pointer"
+                                  onClick={() => navigate(`/stock-query/${variant.id}`)}
+                                  data-testid={`row-stock-item-${variant.id}`}
+                                >
+                                  <td
+                                    className="px-3"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Checkbox
+                                      checked={selectedIds.includes(variant.id)}
+                                      onCheckedChange={(checked) =>
+                                        handleSelectItem(variant.id, checked as boolean)
+                                      }
+                                      data-testid={`checkbox-${variant.id}`}
+                                    />
+                                  </td>
+                                  <td
+                                    className="px-3"
+                                    data-testid={`name-${variant.id}`}
+                                  >
+                                    <div className="flex items-center gap-2 pl-6">
+                                      <span className="text-muted-foreground/50 text-xs select-none leading-none">
+                                        └
+                                      </span>
+                                      <Package className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                                      <span className="text-sm">{variant.name}</span>
+                                    </div>
+                                  </td>
+                                  <td
+                                    className="px-3 text-sm text-muted-foreground"
+                                    data-testid={`group-${variant.id}`}
+                                  >
+                                    {getStockGroupName(variant.stockGroupId)}
+                                  </td>
+                                  <td className="px-3 text-right font-mono text-sm">
+                                    {vt.totalQuantity !== 0
+                                      ? vt.totalQuantity % 1 === 0
+                                        ? vt.totalQuantity.toLocaleString()
+                                        : vt.totalQuantity.toFixed(2)
+                                      : "0"}
+                                  </td>
+                                  <td className="px-3 text-right font-mono text-sm">
+                                    {vt.averageCost > 0
+                                      ? `$${vt.averageCost.toFixed(2)}`
+                                      : "—"}
+                                  </td>
+                                  <td className="px-3">{statusBadge(variantStatus)}</td>
+                                  <td
+                                    className="px-3 text-center"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => handleEditClick(variant.id, e)}
+                                      data-testid={`button-edit-${variant.id}`}
+                                      className="gap-2"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                      Edit
+                                    </Button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          : [];
+
+                      return [mainRow, ...variantRows];
                     })
                   )}
-                  {filteredOverviewItems.length > 0 && (() => {
-                    const totalQty = filteredOverviewItems.reduce((sum, item) => {
-                      return sum + (productTotals.get(item.id)?.totalQuantity ?? 0);
-                    }, 0);
-                    return (
-                      <tr className="border-t bg-muted/30 font-semibold">
-                        <td className="px-3" />
-                        <td className="px-3 py-2.5 text-sm text-muted-foreground">
-                          {filteredOverviewItems.length} of {stockItems.length} products
-                        </td>
-                        <td className="px-3" />
-                        <td className="px-3 text-right font-mono text-sm">
-                          {totalQty % 1 === 0 ? totalQty.toLocaleString() : totalQty.toFixed(2)}
-                        </td>
-                        <td colSpan={3} />
-                      </tr>
-                    );
-                  })()}
+                  {filteredOverviewItems.length > 0 &&
+                    (() => {
+                      const totalQty = filteredOverviewItems.reduce(
+                        (sum, item) => sum + getItemTotals(item).totalQuantity,
+                        0,
+                      );
+                      return (
+                        <tr className="border-t bg-muted/30 font-semibold">
+                          <td className="px-3" />
+                          <td className="px-3 py-2.5 text-sm text-muted-foreground">
+                            {filteredOverviewItems.length} of{" "}
+                            {stockItems.filter((i) => !i.parentStockItemId).length} products
+                          </td>
+                          <td className="px-3" />
+                          <td className="px-3 text-right font-mono text-sm">
+                            {totalQty % 1 === 0
+                              ? totalQty.toLocaleString()
+                              : totalQty.toFixed(2)}
+                          </td>
+                          <td colSpan={3} />
+                        </tr>
+                      );
+                    })()}
                 </tbody>
               </table>
             </div>
