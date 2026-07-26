@@ -50,6 +50,25 @@ export function motorcyclePriceFitsVoucher(
   );
 }
 
+export function combinedMotorcyclePricesFitVoucher(
+  alreadyLinkedTotal: string | number,
+  newMotorcyclePrice: string | number,
+  voucherTotal: string | number,
+): boolean {
+  const linkedTotal = Number(alreadyLinkedTotal);
+  const newPrice = Number(newMotorcyclePrice);
+  const total = Number(voucherTotal);
+  return (
+    Number.isFinite(linkedTotal) &&
+    Number.isFinite(newPrice) &&
+    Number.isFinite(total) &&
+    linkedTotal >= 0 &&
+    newPrice > 0 &&
+    total > 0 &&
+    linkedTotal + newPrice <= total
+  );
+}
+
 export function warrantyDatesAreValid(
   warrantyStartDate: string | null | undefined,
   warrantyEndDate: string | null | undefined,

@@ -272,13 +272,7 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
         sql`v.deleted_at IS NULL`,
         sql`v.reversed_at IS NULL`,
         sql`v.reversal_of_voucher_id IS NULL`,
-        sql`NOT EXISTS (
-          SELECT 1
-          FROM bike_purchases linked
-          WHERE linked.company_id = v.company_id
-            AND linked.sale_voucher_id = v.id
-            AND linked.deleted_at IS NULL
-        )`,
+        sql`COALESCE(linked_sales."linkedMotorcycleTotal", 0) < v.total_amount`,
       ];
       if (locationId) conditions.push(sql`v.location_id = ${locationId}`);
       if (q) {
@@ -301,7 +295,10 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
           v.location_name AS "locationName",
           v.description,
           buyer."customerId",
-          buyer."customerName"
+          buyer."customerName",
+          COALESCE(linked_sales."linkedMotorcycleCount", 0)::integer AS "linkedMotorcycleCount",
+          COALESCE(linked_sales."linkedMotorcycleTotal", 0) AS "linkedMotorcycleTotal",
+          v.total_amount - COALESCE(linked_sales."linkedMotorcycleTotal", 0) AS "remainingAmount"
         FROM vouchers v
         LEFT JOIN LATERAL (
           SELECT
@@ -321,6 +318,15 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
           ORDER BY ve.id
           LIMIT 1
         ) buyer ON true
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*) AS "linkedMotorcycleCount",
+            COALESCE(SUM(linked.selling_price), 0) AS "linkedMotorcycleTotal"
+          FROM bike_purchases linked
+          WHERE linked.company_id = v.company_id
+            AND linked.sale_voucher_id = v.id
+            AND linked.deleted_at IS NULL
+        ) linked_sales ON true
         WHERE ${sql.join(conditions, sql` AND `)}
         ORDER BY v.voucher_date DESC, v.id DESC
         LIMIT ${limit}
@@ -436,28 +442,19 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
               { httpStatus: 409 },
             );
           }
-          if (Number(input.sellingPrice) > Number(voucher.totalAmount)) {
-            throw Object.assign(
-              new Error("Motorcycle selling price cannot exceed the finalized voucher total"),
-              { httpStatus: 400 },
-            );
-          }
-
-          const duplicateResult = await tx.execute(sql`
-            SELECT id
+          const linkedTotalResult = await tx.execute(sql`
+            SELECT COALESCE(SUM(selling_price), 0) AS "linkedTotal"
             FROM bike_purchases
             WHERE company_id = ${companyId}
               AND sale_voucher_id = ${voucher.id}
               AND id <> ${motorcycleId}
               AND deleted_at IS NULL
-            FOR UPDATE
           `);
-          if (duplicateResult.rows.length > 0) {
+          const linkedTotal = Number(linkedTotalResult.rows[0]?.linkedTotal ?? 0);
+          if (linkedTotal + Number(input.sellingPrice) > Number(voucher.totalAmount)) {
             throw Object.assign(
-              new Error("This Sales voucher is already linked to another motorcycle"),
-              {
-                httpStatus: 409,
-              },
+              new Error("The combined motorcycle prices cannot exceed the finalized voucher total"),
+              { httpStatus: 400 },
             );
           }
 
@@ -519,11 +516,6 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
           `);
         });
       } catch (error: any) {
-        if (error?.code === "23505") {
-          return res.status(409).json({
-            message: "This Sales voucher is already linked to another motorcycle",
-          });
-        }
         if (error?.httpStatus) {
           return res.status(error.httpStatus).json({ message: error.message });
         }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  combinedMotorcyclePricesFitVoucher,
   isActiveFinalizedSalesVoucher,
   isMotorcycleSaleEligible,
   linkedSaleCanBeReleased,
@@ -47,6 +48,12 @@ describe("motorcycle finalized sale policy", () => {
     expect(motorcyclePriceFitsVoucher("5000.01", "5000.00")).toBe(false);
     expect(motorcyclePriceFitsVoucher("0", "5000.00")).toBe(false);
     expect(motorcyclePriceFitsVoucher("not-a-number", "5000.00")).toBe(false);
+  });
+
+  it("allows several motorcycles on one voucher without exceeding its total", () => {
+    expect(combinedMotorcyclePricesFitVoucher("3000.00", "2000.00", "5000.00")).toBe(true);
+    expect(combinedMotorcyclePricesFitVoucher("3000.00", "2000.01", "5000.00")).toBe(false);
+    expect(combinedMotorcyclePricesFitVoucher("0", "5000.00", "5000.00")).toBe(true);
   });
 
   it("validates warranty order and requires reversal before release", () => {

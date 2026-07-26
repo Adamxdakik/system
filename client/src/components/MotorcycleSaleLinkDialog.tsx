@@ -37,6 +37,9 @@ interface FinalizedSaleVoucher {
   description: string | null;
   customerId: number | null;
   customerName: string | null;
+  linkedMotorcycleCount: number;
+  linkedMotorcycleTotal: string;
+  remainingAmount: string;
 }
 
 interface CustomerOption {
@@ -121,7 +124,7 @@ export function MotorcycleSaleLinkDialog({
   useEffect(() => {
     if (!selectedVoucher) return;
     if (selectedVoucher.customerId) setCustomerId(String(selectedVoucher.customerId));
-    if (!sellingPrice) setSellingPrice(selectedVoucher.totalAmount);
+    if (!sellingPrice) setSellingPrice(selectedVoucher.remainingAmount);
     setWarrantyStartDate(selectedVoucher.voucherDate);
   }, [selectedVoucher, sellingPrice]);
 
@@ -218,20 +221,24 @@ export function MotorcycleSaleLinkDialog({
               {vouchers.map((voucher) => (
                 <option key={voucher.id} value={voucher.id}>
                   {voucher.voucherNumber} · {voucher.voucherDate} ·{" "}
-                  {formatMoney(voucher.totalAmount, voucher.currency)}
+                  {formatMoney(voucher.remainingAmount, voucher.currency)} remaining
+                  {voucher.linkedMotorcycleCount > 0
+                    ? ` · ${voucher.linkedMotorcycleCount} motorcycle${voucher.linkedMotorcycleCount === 1 ? "" : "s"} already linked`
+                    : ""}
                   {voucher.customerName ? ` · ${voucher.customerName}` : ""}
                 </option>
               ))}
             </select>
             {!vouchersLoading && vouchers.length === 0 && (
               <p className="text-xs text-muted-foreground">
-                No unused active Sales vouchers match this motorcycle location and search.
+                No active Sales vouchers with remaining unlinked value match this location and
+                search.
               </p>
             )}
           </div>
 
           {selectedVoucher && (
-            <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-3">
+            <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-4">
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Voucher</p>
                 <p className="font-medium">{selectedVoucher.voucherNumber}</p>
@@ -246,6 +253,12 @@ export function MotorcycleSaleLinkDialog({
                 </p>
                 <p className="font-medium">
                   {formatMoney(selectedVoucher.totalAmount, selectedVoucher.currency)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Remaining</p>
+                <p className="font-medium">
+                  {formatMoney(selectedVoucher.remainingAmount, selectedVoucher.currency)}
                 </p>
               </div>
             </div>

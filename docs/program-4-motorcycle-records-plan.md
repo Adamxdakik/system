@@ -55,7 +55,7 @@ The motorcycle registry must use engine and chassis numbers as durable identifie
 - copy the finalized voucher number and date into the motorcycle sale record
 - save the motorcycle-specific selling price and warranty dates
 - lock customer, sale date, invoice, selling price, status, and deletion after linking
-- enforce one active motorcycle per finalized Sales voucher
+- allow multiple motorcycles on one finalized invoice while capping their combined linked prices at the voucher total
 - require the linked Sales voucher to be formally reversed before an administrator can release the motorcycle
 - preserve the existing POS, inventory, and accounting transaction boundaries without reposting financial or stock movement
 
@@ -63,7 +63,7 @@ The motorcycle registry must use engine and chassis numbers as durable identifie
 
 - Finalized motorcycle sales update the individual unit exactly once.
 - Draft, optional, deleted, reversed, and reversal vouchers cannot be linked.
-- The same motorcycle or Sales voucher cannot be sold twice.
+- The same motorcycle cannot be sold twice, and combined motorcycle prices cannot exceed the finalized voucher total.
 - Cross-company customers and mismatched locations are refused.
 - Manual edits cannot invent or erase a finalized motorcycle sale.
 - Corrections and cancellations follow the finalized-document safeguards established in Program 2.
