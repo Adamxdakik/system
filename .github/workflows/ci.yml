@@ -31,12 +31,8 @@ jobs:
       - name: Install exact dependencies
         run: npm ci --include=dev
 
-      - name: Extract and run reviewed integration script
-        shell: bash
-        run: |
-          sed -n "/python - <<'PY'/,/^          PY$/p" .github/workflows/program-4c-integrate.yml \
-            | sed '1d;$d;s/^          //' > /tmp/program-4c-integrate.py
-          python /tmp/program-4c-integrate.py
+      - name: Run deterministic Program 4C patcher
+        run: python scripts/program-4c-integrate.py
 
       - name: Format permanent Program 4C files
         run: >-
