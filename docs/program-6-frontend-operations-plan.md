@@ -13,16 +13,7 @@ Program 6 is stacked on the reviewed Program 5 head. It must not change accounti
 
 ## Phase 6A — Frontend quality and resilience
 
-**Status:** implementation complete; permanent CI validation in progress on the cleaned stacked branch.
-
-### Initial audit findings
-
-- route errors remained latched in the shared error boundary after navigation
-- stale deployment chunks were displayed as generic page failures instead of recovering once
-- lazy-route loading indicators did not expose a screen-reader status
-- the authenticated heartbeat sent while the tab was hidden and duplicated setup logic inside the router
-- icon-only application controls needed explicit accessible names
-- authentication failure briefly rendered a blank screen while redirecting to sign-in
+**Status:** implementation and permanent CI validation complete.
 
 ### Completed implementation
 
@@ -38,32 +29,36 @@ Program 6 is stacked on the reviewed Program 5 head. It must not change accounti
 - show an explicit loading state while returning an unauthenticated session to sign-in
 - add regression tests for stale-chunk recognition, reload-loop prevention, guard expiry, and restricted storage
 
-### Acceptance
-
-- ordinary rendering failures can be retried without a full refresh
-- navigation clears a previous page-level error state in both POS and desktop layouts
-- stale deployment chunks reload at most once per guard window
-- repeated stale-chunk failures cannot create a reload loop
-- page loading is announced through `role="status"`
-- hidden or offline tabs do not send routine heartbeats
-- global icon-only buttons have accessible labels
-- formatting, lint, TypeScript, tests, build, and permanent PostgreSQL safeguards remain green
-
 ## Phase 6B — Documentation and operational readiness
 
-### Planned scope
+**Status:** implementation complete; final permanent CI validation pending on the cleaned stacked branch.
 
-- deployment prerequisites and environment-variable inventory
-- release checklist and exact validation evidence
-- health, bandwidth, and export verification procedures
-- backup and rollback procedure
-- incident triage for authentication, database, stale frontend chunks, heavy APIs, and export capacity
-- operator ownership and post-deployment smoke checks
-- final open-risk and production-evidence register
+### Completed implementation
+
+- added a safe root `.env.example`
+- added a static, source-file-level environment usage audit
+- documented all runtime, platform, optional integration, telemetry, export, repair, CI, test, and build-tool variables
+- documented secret rotation and the consequences of rotating the session secret
+- added release prerequisites and exact release-record requirements
+- added verified backup guidance, build and migration sequence, health checks, smoke tests, bandwidth evidence, and export verification
+- documented application rollback, database restore choices, and post-rollback reconciliation
+- added incident triage for database, authentication, financial integrity, stale chunks, bandwidth, memory, exports, and optional integrations
+- added a final open-risk register with release-blocking production evidence
+- extended permanent tests so environment usage, the machine audit, operator documentation, and `.env.example` cannot drift silently
+
+### Required production evidence before final approval
+
+- deploy the exact reviewed commit
+- capture representative production bandwidth data from the Admin report
+- run small, normal, large-valid, and concurrent exports on the production instance size
+- record memory recovery and controlled capacity failures
+- record a verified pre-release database backup or snapshot identifier
+- merge stacked pull requests oldest-to-newest and rerun permanent CI after every retarget or rebase
 
 ## Guardrails
 
 - no merge without explicit approval
 - no temporary workflow or diagnostic file may remain
 - no dependency upgrade is included unless separately justified and approved
+- no application business behavior or schema is changed by Phase 6B
 - operational documents must match the exact reviewed commit and current environment behavior
