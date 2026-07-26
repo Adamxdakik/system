@@ -37,9 +37,17 @@ router.post("/stock-items", requireCompany, async (req, res): Promise<void> => {
     return;
   }
 
+  const { sellingPrice, openingQty, openingRate, reorderLevel, ...siRest } = parsed.data;
   const [item] = await db
     .insert(stockItemsTable)
-    .values({ companyId, ...parsed.data })
+    .values({
+      companyId,
+      ...siRest,
+      ...(sellingPrice != null && { sellingPrice: String(sellingPrice) }),
+      ...(openingQty != null && { openingQty: String(openingQty) }),
+      ...(openingRate != null && { openingRate: String(openingRate) }),
+      ...(reorderLevel != null && { reorderLevel: String(reorderLevel) }),
+    })
     .returning();
 
   res.status(201).json({
@@ -65,9 +73,14 @@ router.patch("/stock-items/:id", requireCompany, async (req, res): Promise<void>
     return;
   }
 
+  const { sellingPrice: updSP, reorderLevel: updRL, ...siUpdateRest } = parsed.data;
   const [item] = await db
     .update(stockItemsTable)
-    .set(parsed.data)
+    .set({
+      ...siUpdateRest,
+      ...(updSP != null && { sellingPrice: String(updSP) }),
+      ...(updRL != null && { reorderLevel: String(updRL) }),
+    })
     .where(and(eq(stockItemsTable.id, params.data.id), eq(stockItemsTable.companyId, companyId)))
     .returning();
 

@@ -76,7 +76,7 @@ router.get("/offloads", requireCompany, async (req, res): Promise<void> => {
 // GET /api/offloads/:id  — full detail with items
 router.get("/offloads/:id", requireCompany, async (req, res): Promise<void> => {
   const companyId = req.session.companyId!;
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
     return;

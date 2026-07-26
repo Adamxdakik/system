@@ -26,9 +26,14 @@ router.post("/employees", requireCompany, async (req, res): Promise<void> => {
     return;
   }
 
+  const { monthlySalary, ...empRest } = parsed.data;
   const [employee] = await db
     .insert(employeesTable)
-    .values({ companyId, ...parsed.data })
+    .values({
+      companyId,
+      ...empRest,
+      ...(monthlySalary != null && { monthlySalary: String(monthlySalary) }),
+    })
     .returning();
 
   res.status(201).json({ ...employee, monthlySalary: toNum(employee.monthlySalary) });
@@ -48,9 +53,13 @@ router.patch("/employees/:id", requireCompany, async (req, res): Promise<void> =
     return;
   }
 
+  const { monthlySalary: updSalary, ...empUpdateRest } = parsed.data;
   const [employee] = await db
     .update(employeesTable)
-    .set(parsed.data)
+    .set({
+      ...empUpdateRest,
+      ...(updSalary != null && { monthlySalary: String(updSalary) }),
+    })
     .where(and(eq(employeesTable.id, params.data.id), eq(employeesTable.companyId, companyId)))
     .returning();
 

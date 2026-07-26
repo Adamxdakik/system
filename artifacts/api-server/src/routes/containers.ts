@@ -47,9 +47,16 @@ router.post("/containers", requireCompany, async (req, res): Promise<void> => {
     return;
   }
 
+  const { freightCost, fumigationCost, otherCharges, ...rest } = parsed.data;
   const [container] = await db
     .insert(containersTable)
-    .values({ companyId, ...parsed.data })
+    .values({
+      companyId,
+      ...rest,
+      ...(freightCost != null && { freightCost: String(freightCost) }),
+      ...(fumigationCost != null && { fumigationCost: String(fumigationCost) }),
+      ...(otherCharges != null && { otherCharges: String(otherCharges) }),
+    })
     .returning();
 
   res.status(201).json({ ...container, supplierName: null, totalCost: null });
