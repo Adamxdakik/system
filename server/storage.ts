@@ -69,6 +69,8 @@ export interface IStorage {
 
   // User-Company Roles
   getUserCompaniesWithRoles(userId: string): Promise<UserCompanyRole[]>;
+  getUserCompaniesWithDetails(userId: string): Promise<any[]>;
+  getAllStockItemAliasMap(companyId: number): Promise<Map<string, any>>;
   createUserCompanyRole(role: InsertUserCompanyRole): Promise<UserCompanyRole>;
   updateUserCompanyRole(
     id: number,
@@ -186,8 +188,10 @@ export interface IStorage {
   // Purchase Orders
   getAllPurchaseOrders(companyId: number): Promise<PurchaseOrder[]>;
   getPurchaseOrderById(id: number): Promise<PurchaseOrder | undefined>;
+  getPurchaseOrderByVoucherId(voucherId: number): Promise<PurchaseOrder | undefined>;
   getPurchaseOrdersByContainer(containerId: number): Promise<PurchaseOrder[]>;
   getPurchaseOrdersBySupplier(supplierId: number, companyId: number): Promise<any[]>;
+  getPurchaseOrdersBySupplierAllCompanies(supplierId: number): Promise<any[]>;
   createPurchaseOrder(po: InsertPurchaseOrder): Promise<PurchaseOrder>;
   updatePurchaseOrder(id: number, updates: Partial<InsertPurchaseOrder>): Promise<PurchaseOrder>;
   deletePurchaseOrder(id: number): Promise<void>;
@@ -852,6 +856,49 @@ export class DbStorage implements IStorage {
       .select()
       .from(schema.userCompanyRoles)
       .where(eq(schema.userCompanyRoles.userId, userId));
+  }
+
+  async getUserCompaniesWithDetails(userId: string): Promise<any[]> {
+    return await db
+      .select({
+        id: schema.userCompanyRoles.id,
+        userId: schema.userCompanyRoles.userId,
+        companyId: schema.userCompanyRoles.companyId,
+        role: schema.userCompanyRoles.role,
+        assignedLocationId: schema.userCompanyRoles.assignedLocationId,
+        cashAccountId: schema.userCompanyRoles.cashAccountId,
+        posStation: schema.userCompanyRoles.posStation,
+        canSellNegativeStock: schema.userCompanyRoles.canSellNegativeStock,
+        canEditDaybook: schema.userCompanyRoles.canEditDaybook,
+        createdAt: schema.userCompanyRoles.createdAt,
+        companyCode: schema.companies.code,
+        companyName: schema.companies.name,
+        companyActive: schema.companies.active,
+      })
+      .from(schema.userCompanyRoles)
+      .innerJoin(schema.companies, eq(schema.userCompanyRoles.companyId, schema.companies.id))
+      .where(eq(schema.userCompanyRoles.userId, userId));
+  }
+
+  async getAllStockItemAliasMap(companyId: number): Promise<Map<string, any>> {
+    const [items, aliases] = await Promise.all([
+      db.select().from(schema.stockItems).where(eq(schema.stockItems.companyId, companyId)),
+      db
+        .select({
+          aliasCode: schema.stockItemCodeAliases.aliasCode,
+          stockItemId: schema.stockItemCodeAliases.stockItemId,
+        })
+        .from(schema.stockItemCodeAliases)
+        .where(eq(schema.stockItemCodeAliases.companyId, companyId)),
+    ]);
+    const byId = new Map(items.map((i) => [i.id, i]));
+    const map = new Map<string, any>();
+    for (const item of items) map.set(item.code.toLowerCase(), item);
+    for (const alias of aliases) {
+      const item = byId.get(alias.stockItemId);
+      if (item) map.set(alias.aliasCode.toLowerCase(), item);
+    }
+    return map;
   }
 
   async createUserCompanyRole(role: InsertUserCompanyRole): Promise<UserCompanyRole> {
@@ -1666,6 +1713,35 @@ export class DbStorage implements IStorage {
       .from(schema.purchaseOrders)
       .where(eq(schema.purchaseOrders.id, id));
     return po;
+  }
+
+  async getPurchaseOrderByVoucherId(voucherId: number): Promise<PurchaseOrder | undefined> {
+    const [po] = await db
+      .select()
+      .from(schema.purchaseOrders)
+      .where(eq(schema.purchaseOrders.voucherId, voucherId))
+      .limit(1);
+    return po;
+  }
+
+  async getPurchaseOrdersBySupplierAllCompanies(supplierId: number): Promise<any[]> {
+    return await db
+      .select({
+        id: schema.purchaseOrders.id,
+        poNumber: schema.purchaseOrders.poNumber,
+        containerNumber: schema.containers.containerNumber,
+        itemsTotal: schema.purchaseOrders.itemsTotal,
+        currency: schema.purchaseOrders.currency,
+        status: schema.purchaseOrders.status,
+        createdAt: schema.purchaseOrders.createdAt,
+        voucherId: schema.purchaseOrders.voucherId,
+        companyName: schema.companies.name,
+      })
+      .from(schema.purchaseOrders)
+      .leftJoin(schema.containers, eq(schema.purchaseOrders.containerId, schema.containers.id))
+      .leftJoin(schema.companies, eq(schema.purchaseOrders.companyId, schema.companies.id))
+      .where(eq(schema.purchaseOrders.supplierId, supplierId))
+      .orderBy(sql`${schema.purchaseOrders.createdAt} DESC`);
   }
 
   async getPurchaseOrdersByContainer(containerId: number): Promise<PurchaseOrder[]> {

@@ -122,6 +122,23 @@ app.use((_req, res, next) => {
 
 app.use(apiRequestLogger(log));
 
+// CSRF protection: reject state-changing requests whose Origin doesn't match
+// the server's own host. SameSite:lax stops most cross-site POST cookies, but
+// this Origin check closes the remaining vectors (e.g. same-site subdomain POSTs).
+app.use((req, res, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    const origin = req.headers.origin ?? "";
+    const referer = req.headers.referer ?? "";
+    const host = req.headers.host ?? "";
+    // Skip check if no Origin/Referer header (server-to-server, curl, mobile apps)
+    const source = origin || referer;
+    if (source && !source.includes(host)) {
+      return res.status(403).json({ message: "CSRF check failed: invalid origin" });
+    }
+  }
+  next();
+});
+
 (async () => {
   // Build info endpoint for frontend version checking (must be before registerRoutes)
   app.get("/api/build-info", (_req, res) => {

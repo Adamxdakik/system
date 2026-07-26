@@ -373,14 +373,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/login-history", requireAuth, requireRole("Admin"), async (req, res) => {
     try {
       const usernameFilter = (req.query.username as string) || "";
-      let rows = await db
+      const rows = await db
         .select()
         .from(loginHistory)
+        .where(
+          usernameFilter
+            ? sql`LOWER(${loginHistory.username}) LIKE LOWER(${"%" + usernameFilter + "%"})`
+            : undefined,
+        )
         .orderBy(desc(loginHistory.createdAt))
         .limit(200);
-      if (usernameFilter) {
-        rows = rows.filter((r) => r.username.toLowerCase().includes(usernameFilter.toLowerCase()));
-      }
       res.json(rows);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -607,19 +609,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const userCompanies = await storage.getUserCompaniesWithRoles(req.user.id);
-      // Join with companies to include company details
-      const companiesWithRoles = await Promise.all(
-        userCompanies.map(async (uc) => {
-          const company = await storage.getCompanyById(uc.companyId);
-          return {
-            ...uc,
-            companyCode: company?.code,
-            companyName: company?.name,
-            companyActive: company?.active,
-          };
-        }),
-      );
+      // Single JOIN query — no N+1 loop over getCompanyById
+      const companiesWithRoles = await storage.getUserCompaniesWithDetails(req.user.id);
       res.json(companiesWithRoles);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6980,6 +6971,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return undefined;
       };
 
+      // Pre-load alias map once to avoid N+1 per barcode row
+      const aliasMap = await storage.getAllStockItemAliasMap(req.session.currentCompanyId!);
+
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const rowNum = i + 2;
@@ -7005,10 +6999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Try to find stock item by code/alias or name (for preview purposes only - validation happens in validate step)
           if (itemBarcode) {
-            stockItem = await storage.getStockItemByCodeOrAlias(
-              itemBarcode,
-              req.session.currentCompanyId!,
-            );
+            stockItem = aliasMap.get(itemBarcode.toLowerCase()) ?? null;
             if (stockItem) {
               itemName = stockItem.name;
             }
@@ -7202,10 +7193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Try to find stock item by code/alias first, then by name
           let stockItem = null;
           if (item.barcode) {
-            stockItem = await storage.getStockItemByCodeOrAlias(
-              item.barcode,
-              req.session.currentCompanyId!,
-            );
+            stockItem = aliasMap.get(item.barcode.toLowerCase()) ?? null;
           }
           if (!stockItem && item.itemName) {
             stockItem = allStockItems.find((si) => si.name === item.itemName);
@@ -7275,10 +7263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Try to find stock item by code/alias first, then by name
           let stockItem = null;
           if (item.barcode) {
-            stockItem = await storage.getStockItemByCodeOrAlias(
-              item.barcode,
-              req.session.currentCompanyId!,
-            );
+            stockItem = aliasMap.get(item.barcode.toLowerCase()) ?? null;
           }
           if (!stockItem && item.itemName) {
             stockItem = allStockItems.find((si) => si.name === item.itemName);
@@ -11971,15 +11956,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filterCompanyId = companyId ? parseInt(companyId as string) : undefined;
 
       if (!filterCompanyId) {
-        // If no company filter, get POs from all companies
-        const companies = await storage.getAllCompanies();
-        const allPOs: any[] = [];
-
-        for (const company of companies) {
-          const pos = await storage.getPurchaseOrdersBySupplier(supplierId, company.id);
-          allPOs.push(...pos.map((po) => ({ ...po, companyName: company.name })));
-        }
-
+        // Single JOIN query across all companies — no per-company N+1 loop
+        const allPOs = await storage.getPurchaseOrdersBySupplierAllCompanies(supplierId);
         return res.json(allPOs);
       }
 
@@ -12927,8 +12905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If this is a Purchase voucher, also fetch the linked purchase order
       let purchaseOrder = null;
       if (voucher.voucherType === "Purchase") {
-        const allPOs = await storage.getAllPurchaseOrders(voucher.companyId);
-        const linkedPO = allPOs.find((po) => po.voucherId === id);
+        const linkedPO = await storage.getPurchaseOrderByVoucherId(id);
         if (linkedPO) {
           const lineItems = await storage.getLineItemsByPO(linkedPO.id);
           purchaseOrder = {
@@ -15120,8 +15097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session.currentCompanyId)
         return res.status(400).json({ message: "No company selected" });
 
-      const allPOs = await storage.getAllPurchaseOrders(req.session.currentCompanyId);
-      const po = allPOs.find((p: any) => p.voucherId === id);
+      const po = await storage.getPurchaseOrderByVoucherId(id);
       if (po) {
         return res.json({ containerId: po.containerId });
       }
@@ -15200,9 +15176,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // For Purchase vouchers, get purchase order line items
       if (voucher.voucherType === "Purchase") {
-        // Find the purchase order linked to this voucher
-        const allPOs = await storage.getAllPurchaseOrders(voucher.companyId);
-        const purchaseOrder = allPOs.find((po: any) => po.voucherId === id);
+        // Direct lookup by voucherId — avoids loading all POs
+        const purchaseOrder = await storage.getPurchaseOrderByVoucherId(id);
 
         if (purchaseOrder) {
           const lineItems = await storage.getLineItemsByPO(purchaseOrder.id);
