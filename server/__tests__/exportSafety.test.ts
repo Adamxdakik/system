@@ -6,7 +6,7 @@ import {
   ExportCapacityError,
   ExportConcurrencyGate,
   workbookMetrics,
-} from "../services/performance/exportSafety";
+} from "../lib/exportSafety";
 
 function deferred(): { promise: Promise<void>; resolve: () => void } {
   let resolve!: () => void;
