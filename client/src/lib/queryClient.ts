@@ -9,7 +9,7 @@ async function throwIfResNotOk(res: Response) {
     } catch {
       errorData = { message: text || res.statusText };
     }
-    
+
     // Create error with structured data for proper handling
     const error: any = new Error(errorData.message || res.statusText);
     error.status = res.status;
@@ -18,6 +18,33 @@ async function throwIfResNotOk(res: Response) {
     error.ledgerBalance = errorData.ledgerBalance;
     throw error;
   }
+}
+
+function isFinancialMutation(method: string, url: string): boolean {
+  if (method.toUpperCase() === "GET") return false;
+  return [
+    "/api/vouchers",
+    "/api/voucher-entries",
+    "/api/accounts/transfer",
+    "/api/accounts/adjust",
+    "/api/pos",
+    "/api/stock-transfers",
+    "/api/stock-adjustments",
+  ].some((prefix) => url.startsWith(prefix));
+}
+
+function isFinancialReadKey(queryKey: readonly unknown[]): boolean {
+  const key = queryKey[0];
+  if (typeof key !== "string") return false;
+  return [
+    "/api/accounts/",
+    "/api/vouchers",
+    "/api/ledger-accounts",
+    "/api/bank-accounts",
+    "/api/suppliers",
+    "/api/employees",
+    "/api/payroll/employees-with-balances",
+  ].some((prefix) => key.startsWith(prefix));
 }
 
 export async function apiRequest(
@@ -33,6 +60,14 @@ export async function apiRequest(
   });
 
   await throwIfResNotOk(res);
+
+  if (isFinancialMutation(method, url)) {
+    await queryClient.invalidateQueries({
+      predicate: (query) => isFinancialReadKey(query.queryKey),
+      refetchType: "active",
+    });
+  }
+
   return res;
 }
 
