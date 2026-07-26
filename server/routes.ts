@@ -19056,8 +19056,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         netPosition: totalAssets - totalLiabilities,
       });
     } catch (err: any) {
-      console.error("[net-profit-detail]", err);
-      res.status(500).json({ message: err.message });
+      console.error("[net-profit-detail] ERROR:", err?.message, err?.stack?.split("\n").slice(0,5).join(" | "));
+      res.status(500).json({ message: err?.message || "Internal server error" });
     }
   });
 

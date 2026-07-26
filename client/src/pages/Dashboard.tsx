@@ -217,12 +217,13 @@ export default function Dashboard() {
 
   const dateRange = getDateRange();
 
-  const { data: profitDetail, isLoading: profitDetailLoading } = useQuery<any>({
+  const { data: profitDetail, isLoading: profitDetailLoading, error: profitDetailError } = useQuery<any>({
     queryKey: [
       `/api/stats/net-profit-detail?fromDate=${dateRange.from}&toDate=${dateRange.to}`,
       selectedCompany?.id,
     ],
     enabled: !!selectedCompany && showProfitDetail,
+    retry: 1,
   });
 
   const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
@@ -696,6 +697,11 @@ export default function Dashboard() {
           {profitDetailLoading ? (
             <div className="p-6 space-y-4">
               {[1,2,3,4].map(i => <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />)}
+            </div>
+          ) : profitDetailError ? (
+            <div className="p-6 text-center text-destructive text-sm">
+              <p className="font-semibold mb-1">Failed to load breakdown</p>
+              <p className="text-muted-foreground text-xs">{(profitDetailError as any)?.message || "Unknown error"}</p>
             </div>
           ) : profitDetail ? (
             <div className="p-6 space-y-5">
