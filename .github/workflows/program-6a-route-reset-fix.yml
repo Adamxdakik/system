@@ -24,18 +24,19 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path("client/src/App.tsx")
           text = path.read_text(encoding="utf-8")
-          target = '''              <ErrorBoundary>
-                <Router user={user} />
-              </ErrorBoundary>'''
-          replacement = '''              <ErrorBoundary resetKey={currentLocation}>
-                <Router user={user} />
-              </ErrorBoundary>'''
+          text, replacement_count = re.subn(
+              r'<ErrorBoundary>\s*<Router user=\{user\} />\s*</ErrorBoundary>',
+              '<ErrorBoundary resetKey={currentLocation}>\n                <Router user={user} />\n              </ErrorBoundary>',
+              text,
+              count=1,
+          )
 
-          if target in text:
-              text = text.replace(target, replacement, 1)
+          if replacement_count != 1 and text.count('resetKey={currentLocation}') != 2:
+              raise SystemExit("Desktop error boundary could not be updated")
           if text.count('resetKey={currentLocation}') != 2:
               raise SystemExit("Both authenticated layouts must reset errors on navigation")
 
