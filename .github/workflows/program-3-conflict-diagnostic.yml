@@ -1,0 +1,46 @@
+name: Program 3 Conflict Diagnostic
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.event.pull_request.head.ref == 'agent/program-3-current-main-integration'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out current-main integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-3-current-main-integration
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Attempt Program 3 merge and print conflicts
+        shell: bash
+        run: |
+          set +e
+          git fetch origin agent/program-3-simplified-interface
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git merge --no-commit --no-ff origin/agent/program-3-simplified-interface
+          merge_status=$?
+          echo "MERGE_STATUS=$merge_status"
+          echo "CONFLICT_FILES_BEGIN"
+          git diff --name-only --diff-filter=U
+          echo "CONFLICT_FILES_END"
+          for file in $(git diff --name-only --diff-filter=U); do
+            echo "CONFLICT_FILE_BEGIN:$file"
+            awk '
+              /^<<<<<<< / {show=1; before=6}
+              show {print NR ":" $0}
+              /^>>>>>>> / {after=6}
+              after>0 {after--; if (after==0) show=0}
+            ' "$file"
+            echo "CONFLICT_FILE_END:$file"
+          done
+          git merge --abort || true
+          exit 0
