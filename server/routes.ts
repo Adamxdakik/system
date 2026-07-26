@@ -4249,7 +4249,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companyId = req.session.currentCompanyId;
       if (!companyId) return res.status(400).json({ message: "No company selected" });
       const allSuppliers = await storage.getAllSuppliers();
-      res.json(allSuppliers.filter((supplier) => supplier.companyId === companyId));
+      res.json(
+        allSuppliers.filter(
+          (supplier) => supplier.companyId === companyId || supplier.companyId == null,
+        ),
+      );
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -4262,7 +4266,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const companyId = req.session.currentCompanyId;
       if (!companyId) return res.status(400).json({ message: "No company selected" });
       const allSuppliers = await storage.getAllSuppliers();
-      const suppliers = allSuppliers.filter((supplier) => supplier.companyId === companyId);
+      // Include suppliers that belong to this company OR have no company assigned (legacy rows
+      // created before the company_id column was added via migration 0025).
+      const suppliers = allSuppliers.filter(
+        (supplier) => supplier.companyId === companyId || supplier.companyId == null,
+      );
 
       const suppliersWithStats = await Promise.all(
         suppliers.map(async (supplier) => {

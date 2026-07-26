@@ -42,6 +42,12 @@ export const primaryItems: NavigationItem[] = [
     activePrefixes: ["/"],
   },
   {
+    title: "Transactions",
+    url: "/vouchers",
+    icon: ArrowRightLeft,
+    activePrefixes: ["/vouchers"],
+  },
+  {
     title: "Transaction History",
     url: "/daybook",
     icon: BookOpen,
@@ -96,12 +102,6 @@ export const financeItems: NavigationItem[] = [
     title: "Accounts",
     url: "/accounts",
     icon: Landmark,
-  },
-  {
-    title: "Transactions",
-    url: "/vouchers",
-    icon: ArrowRightLeft,
-    activePrefixes: ["/vouchers"],
   },
   {
     title: "Payroll",

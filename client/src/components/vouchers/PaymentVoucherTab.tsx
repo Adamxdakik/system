@@ -201,12 +201,12 @@ export function PaymentVoucherTab({
             <div className="space-y-4">
               {/* Payment Details Card */}
               <Card>
-                <CardHeader className="p-4 sm:p-6 pb-3">
+                <CardHeader className="px-4 pt-3 pb-2">
                   <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                     Payment Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4 sm:p-6 pt-0">
+                <CardContent className="px-4 pb-4 pt-0">
                   <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_12rem] gap-4 items-start">
                     {/* Pay From */}
                     <FormField

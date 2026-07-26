@@ -198,7 +198,7 @@ export default function Payroll() {
     if (!text) return text;
     return text.replace(/\s*-\s*[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d{5,}\s*$/i, "").trim();
   };
-  const [selectedTab, setSelectedTab] = useState("employees");
+  const [selectedTab, setSelectedTab] = useState("worker-profiles");
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [bonusTab, setBonusTab] = useState<"sales" | "motos">("sales");
@@ -1695,49 +1695,35 @@ export default function Payroll() {
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Payroll</h1>
 
-      <div className="flex gap-6">
-        <nav className="w-56 shrink-0 space-y-4">
-          {[
-            {
-              label: "Payroll",
-              items: [
-                { key: "employees", label: "Employees", icon: Users as LucideIcon },
-                { key: "worker-profiles", label: "Worker Profiles", icon: User as LucideIcon },
-                { key: "run-payroll", label: "Run Payroll", icon: PlayCircle as LucideIcon },
-                { key: "advances", label: "Advances", icon: Banknote as LucideIcon },
-              ],
-            },
-          ].map((group) => (
-            <div key={group.label}>
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">
-                {group.label}
-              </h3>
-              <div className="space-y-1">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = selectedTab === item.key;
-                  return (
-                    <button
-                      key={item.key}
-                      onClick={() => setSelectedTab(item.key)}
-                      data-testid={`tab-${item.key}`}
-                      className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
-                        isActive
-                          ? "bg-background shadow-sm font-medium"
-                          : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
+      {/* Pill tab bar */}
+      <div className="flex gap-2 flex-wrap">
+        {(
+          [
+            { key: "worker-profiles", label: "Workers", icon: HardHat as LucideIcon },
+            { key: "run-payroll",     label: "Run Payroll", icon: PlayCircle as LucideIcon },
+            { key: "advances",        label: "Advances",    icon: Banknote as LucideIcon },
+          ] as { key: string; label: string; icon: LucideIcon }[]
+        ).map(({ key, label, icon: Icon }) => {
+          const active = selectedTab === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setSelectedTab(key)}
+              data-testid={`tab-${key}`}
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                active
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-transparent text-muted-foreground border-border hover:text-foreground hover:border-foreground/40"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          );
+        })}
+      </div>
 
-        <div className="flex-1 min-w-0">
+      <div>
         {selectedTab === "employees" && (
           <Card className="p-6">
             <div className="space-y-4">

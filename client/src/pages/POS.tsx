@@ -806,23 +806,6 @@ export default function POS({
                 />
               </div>
               <div className="flex gap-2 md:col-span-2">
-                {!posUser && (
-                  <Link href="/pos-import">
-                    <Button variant="outline" size="sm" className="gap-2" data-testid="button-import-sales">
-                      <Upload className="h-4 w-4" />
-                      Import Sales
-                    </Button>
-                  </Link>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowDraftDialog(true)}
-                  disabled={drafts.length === 0}
-                  data-testid="button-load-draft"
-                >
-                  Load Draft {drafts.length > 0 && `(${drafts.length})`}
-                </Button>
               </div>
             </div>
           </CollapsibleContent>

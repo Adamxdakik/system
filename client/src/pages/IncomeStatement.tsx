@@ -118,16 +118,24 @@ function IncomeStatementTab({
   const qs = new URLSearchParams({ year: selectedYear });
   if (selectedLocation !== "all") qs.append("locationId", selectedLocation);
 
+  const [hideZeroRows, setHideZeroRows] = useState(true);
+
   const { data, isLoading } = useQuery<IncomeStatementData>({
     queryKey: [`/api/stats/income-statement?${qs}`],
   });
 
   const months = data?.months ?? [];
-  const revenue = data?.revenue ?? [];
-  const cogs = data?.cogs ?? [];
-  const opex = data?.operatingExpenses ?? [];
-  const taxes = data?.governmentTaxes ?? [];
-  const duties = data?.dutiesAndCharges ?? [];
+
+  const isAllZero = (item: LineItem) =>
+    months.every((m) => !item.data[m.key] || item.data[m.key] === 0);
+  const filterRows = (items: LineItem[]) =>
+    hideZeroRows ? items.filter((i) => !isAllZero(i)) : items;
+
+  const revenue = filterRows(data?.revenue ?? []);
+  const cogs = filterRows(data?.cogs ?? []);
+  const opex = filterRows(data?.operatingExpenses ?? []);
+  const taxes = filterRows(data?.governmentTaxes ?? []);
+  const duties = filterRows(data?.dutiesAndCharges ?? []);
   const moneyOut = data?.moneyOut ?? {};
   const interestName = data?.interestName ?? "Interest";
   const interest = data?.interest ?? {};
@@ -252,6 +260,19 @@ function IncomeStatementTab({
 
       {/* Table */}
       <div className="rounded-xl border border-border/60 overflow-hidden">
+        {/* toolbar */}
+        <div className="flex items-center justify-end px-3 py-2 border-b border-border/60 bg-muted/30">
+          <button
+            onClick={() => setHideZeroRows(!hideZeroRows)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              hideZeroRows
+                ? "bg-foreground text-background border-foreground"
+                : "bg-transparent text-muted-foreground border-border hover:text-foreground"
+            }`}
+          >
+            {hideZeroRows ? "Showing active rows" : "Showing all rows"}
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             {/* Header */}

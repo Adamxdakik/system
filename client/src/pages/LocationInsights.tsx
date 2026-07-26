@@ -395,15 +395,6 @@ export default function LocationInsights({ embedded = false }: LocationInsightsP
                 </SelectContent>
               </Select>
             </div>
-            <Button
-              variant="outline"
-              className="gap-2 shrink-0"
-              onClick={() => setShowComparison(true)}
-              data-testid="button-compare-locations"
-            >
-              <Layers className="h-4 w-4" />
-              Compare Locations
-            </Button>
           </div>
 
           {selectedLocationForDetail && (
