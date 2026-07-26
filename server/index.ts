@@ -4,6 +4,7 @@ import connectPgSimple from "connect-pg-simple";
 import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
+import { registerMotorcycleSaleCustomerRoutes } from "./routes/motorcycleSaleCustomerRoutes";
 import { registerMotorcycleSaleRoutes } from "./routes/motorcycleSaleRoutes";
 import { registerMotorcycleRecordRoutes } from "./routes/motorcycleRecordRoutes";
 import { setupVite, log } from "./vite";
@@ -130,6 +131,7 @@ app.use(apiRequestLogger(log));
     res.json({ version: BUILD_VERSION });
   });
 
+  registerMotorcycleSaleCustomerRoutes(app);
   registerMotorcycleSaleRoutes(app);
   registerMotorcycleRecordRoutes(app);
   const server = await registerRoutes(app);
