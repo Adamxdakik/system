@@ -48,7 +48,7 @@ Program 6 is stacked on the reviewed Program 5 head. It must not change accounti
 
 ## Exact final validation
 
-Validated on exact head `beb1cabb5b1b9d155e065087855fd53010237fc3` in permanent CI run `30217326301`.
+The complete implementation was validated on head `beb1cabb5b1b9d155e065087855fd53010237fc3` in permanent CI run `30217326301`. The documentation-only evidence update was then validated on head `9c280f27433e0a04831055f1d846be68833e93a5` in permanent CI run `30217448127`.
 
 ### Application verification
 
