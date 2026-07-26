@@ -78,7 +78,10 @@ function coalesce<T>(key: string, load: () => Promise<T>): Promise<T> {
   return request;
 }
 
-async function loadLocationNames(companyId: number, ids: Iterable<number>): Promise<Record<number, string>> {
+async function loadLocationNames(
+  companyId: number,
+  ids: Iterable<number>,
+): Promise<Record<number, string>> {
   const uniqueIds = [...new Set(ids)].filter((id) => Number.isInteger(id) && id > 0);
   if (uniqueIds.length === 0) return {};
 
@@ -194,10 +197,7 @@ async function loadCompanyStockHistory(
         destinationLocationId: stockTransferVouchers.destinationLocationId,
       })
       .from(stockTransferItems)
-      .innerJoin(
-        stockTransferVouchers,
-        eq(stockTransferItems.transferId, stockTransferVouchers.id),
-      )
+      .innerJoin(stockTransferVouchers, eq(stockTransferItems.transferId, stockTransferVouchers.id))
       .innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id))
       .where(
         and(
@@ -353,7 +353,9 @@ async function loadCompanyStockHistory(
     });
   }
 
-  transactions.sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
+  transactions.sort(
+    (left, right) => new Date(left.date).getTime() - new Date(right.date).getTime(),
+  );
   const history = buildWeightedStockHistory({
     openingDate: monthStartDate,
     openingQty,
@@ -413,10 +415,7 @@ async function loadLocationStockHistory(
         outwardValue: sql<string>`COALESCE(SUM(CASE WHEN ${stockTransferItems.sourceLocationId} = ${locationId} THEN ${stockTransferItems.totalAmount}::numeric ELSE 0 END), 0)`,
       })
       .from(stockTransferItems)
-      .innerJoin(
-        stockTransferVouchers,
-        eq(stockTransferItems.transferId, stockTransferVouchers.id),
-      )
+      .innerJoin(stockTransferVouchers, eq(stockTransferItems.transferId, stockTransferVouchers.id))
       .innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id))
       .where(
         and(
@@ -603,10 +602,7 @@ async function loadLocationStockHistory(
   const afterSales = netMovement(afterSalesResult[0]);
   const afterOffload = netMovement(afterOffloadResult[0]);
   const afterMonthNetQty =
-    afterTransfer.quantity +
-    afterAdjustment.quantity +
-    afterSales.quantity +
-    afterOffload.quantity;
+    afterTransfer.quantity + afterAdjustment.quantity + afterSales.quantity + afterOffload.quantity;
   const afterMonthNetValue =
     afterTransfer.value + afterAdjustment.value + afterSales.value + afterOffload.value;
   const expectedClosingQty = currentQty - afterMonthNetQty;
@@ -626,10 +622,7 @@ async function loadLocationStockHistory(
         destinationLocationId: stockTransferVouchers.destinationLocationId,
       })
       .from(stockTransferItems)
-      .innerJoin(
-        stockTransferVouchers,
-        eq(stockTransferItems.transferId, stockTransferVouchers.id),
-      )
+      .innerJoin(stockTransferVouchers, eq(stockTransferItems.transferId, stockTransferVouchers.id))
       .innerJoin(vouchers, eq(stockTransferVouchers.voucherId, vouchers.id))
       .where(
         and(
@@ -858,7 +851,8 @@ async function loadLocationStockHistory(
 
 function parseRouteInteger(value: string): number {
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed <= 0) throw Object.assign(new Error("Invalid route parameter"), { status: 400 });
+  if (!Number.isInteger(parsed) || parsed <= 0)
+    throw Object.assign(new Error("Invalid route parameter"), { status: 400 });
   return parsed;
 }
 

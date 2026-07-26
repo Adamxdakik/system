@@ -67,7 +67,10 @@ export function calculateSignedAccountBalance(
   };
 }
 
-export function monthWindow(year: number, month: number): {
+export function monthWindow(
+  year: number,
+  month: number,
+): {
   monthStart: Date;
   nextMonthStart: Date;
   monthStartDate: string;
