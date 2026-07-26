@@ -1,0 +1,306 @@
+name: Program 4B customer integrity
+
+on:
+  push:
+    branches:
+      - agent/program-4-motorcycle-records
+    paths:
+      - .github/workflows/program-4b-customer-integrity.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/program-4-motorcycle-records
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --include=dev --silent
+
+      - name: Lock finalized invoice customer
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if old not in text:
+                  raise SystemExit(f"Expected block not found: {label}\n{old}")
+              return text.replace(old, new, 1)
+
+          route_path = Path("server/routes/motorcycleSaleRoutes.ts")
+          route = route_path.read_text()
+
+          route = replace_once(
+              route,
+              'import { asyncHandler } from "../lib/asyncHandler";\n',
+              'import { asyncHandler } from "../lib/asyncHandler";\n'
+              'import { voucherCustomerMatchesSelection } from "../services/motorcycles/finalizedSalePolicy";\n',
+              "route policy import",
+          )
+
+          route = replace_once(
+              route,
+              '          OR buyer."customerName" ILIKE ${pattern}\n',
+              '          OR COALESCE(buyer."customerName", linked_buyer."customerName") ILIKE ${pattern}\n',
+              "voucher search customer",
+          )
+
+          route = replace_once(
+              route,
+              '''          buyer."customerId",
+          buyer."customerName",
+''',
+              '''          COALESCE(buyer."customerId", linked_buyer."customerId") AS "customerId",
+          COALESCE(buyer."customerName", linked_buyer."customerName") AS "customerName",
+''',
+              "voucher customer selection",
+          )
+
+          route = replace_once(
+              route,
+              '''        ) buyer ON true
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*) AS "linkedMotorcycleCount",
+''',
+              '''        ) buyer ON true
+        LEFT JOIN LATERAL (
+          SELECT
+            linked.customer_id AS "customerId",
+            linked_customer.legal_name AS "customerName"
+          FROM bike_purchases linked
+          INNER JOIN customers linked_customer
+            ON linked_customer.id = linked.customer_id
+            AND linked_customer.company_id = linked.company_id
+            AND linked_customer.deleted_at IS NULL
+          WHERE linked.company_id = v.company_id
+            AND linked.sale_voucher_id = v.id
+            AND linked.deleted_at IS NULL
+          ORDER BY linked.id
+          LIMIT 1
+        ) linked_buyer ON true
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*) AS "linkedMotorcycleCount",
+''',
+              "linked invoice customer lateral",
+          )
+
+          route = replace_once(
+              route,
+              '''          let customerId = input.customerId ?? null;
+          if (!customerId) {
+            const inferredCustomerResult = await tx.execute(sql`
+              SELECT COALESCE(ve.customer_id, c.id) AS "customerId"
+              FROM voucher_entries ve
+              LEFT JOIN customers c
+                ON c.ledger_account_id = ve.ledger_account_id
+                AND c.company_id = ${companyId}
+                AND c.deleted_at IS NULL
+              WHERE ve.voucher_id = ${voucher.id}
+                AND ve.debit_amount > 0
+                AND (ve.customer_id IS NOT NULL OR c.id IS NOT NULL)
+              ORDER BY ve.id
+              LIMIT 1
+            `);
+            customerId = Number(inferredCustomerResult.rows[0]?.customerId) || null;
+          }
+''',
+              '''          const inferredCustomerResult = await tx.execute(sql`
+            SELECT "customerId"
+            FROM (
+              SELECT
+                COALESCE(ve.customer_id, c.id) AS "customerId",
+                1 AS priority,
+                ve.id AS source_id
+              FROM voucher_entries ve
+              LEFT JOIN customers c
+                ON c.ledger_account_id = ve.ledger_account_id
+                AND c.company_id = ${companyId}
+                AND c.deleted_at IS NULL
+              WHERE ve.voucher_id = ${voucher.id}
+                AND ve.debit_amount > 0
+                AND (ve.customer_id IS NOT NULL OR c.id IS NOT NULL)
+
+              UNION ALL
+
+              SELECT
+                linked.customer_id AS "customerId",
+                2 AS priority,
+                linked.id AS source_id
+              FROM bike_purchases linked
+              WHERE linked.company_id = ${companyId}
+                AND linked.sale_voucher_id = ${voucher.id}
+                AND linked.customer_id IS NOT NULL
+                AND linked.id <> ${motorcycleId}
+                AND linked.deleted_at IS NULL
+            ) inferred_customer
+            ORDER BY priority, source_id
+            LIMIT 1
+          `);
+          const inferredCustomerId =
+            Number(inferredCustomerResult.rows[0]?.customerId) || null;
+          if (
+            !voucherCustomerMatchesSelection(inferredCustomerId, input.customerId ?? null)
+          ) {
+            throw Object.assign(
+              new Error("Customer must match the finalized Sales voucher"),
+              { httpStatus: 409 },
+            );
+          }
+          const customerId = inferredCustomerId ?? input.customerId ?? null;
+''',
+              "transaction customer inference",
+          )
+
+          route_path.write_text(route)
+
+          component_path = Path("client/src/components/MotorcycleSaleLinkDialog.tsx")
+          component = component_path.read_text()
+          component = replace_once(
+              component,
+              '''  useEffect(() => {
+    if (!selectedVoucher) return;
+    if (selectedVoucher.customerId) setCustomerId(String(selectedVoucher.customerId));
+    if (!sellingPrice) setSellingPrice(selectedVoucher.remainingAmount);
+    setWarrantyStartDate(selectedVoucher.voucherDate);
+  }, [selectedVoucher, sellingPrice]);
+''',
+              '''  useEffect(() => {
+    if (!selectedVoucher) return;
+    setCustomerId(selectedVoucher.customerId ? String(selectedVoucher.customerId) : "");
+    if (!sellingPrice) setSellingPrice(selectedVoucher.remainingAmount);
+    setWarrantyStartDate(selectedVoucher.voucherDate);
+  }, [selectedVoucher, sellingPrice]);
+''',
+              "dialog voucher customer reset",
+          )
+          component = replace_once(
+              component,
+              '''                value={customerId}
+                onChange={(event) => setCustomerId(event.target.value)}
+                data-testid="select-motorcycle-sale-customer"
+''',
+              '''                value={customerId}
+                onChange={(event) => setCustomerId(event.target.value)}
+                disabled={Boolean(selectedVoucher?.customerId)}
+                data-testid="select-motorcycle-sale-customer"
+''',
+              "dialog customer lock",
+          )
+          component = replace_once(
+              component,
+              '''              <p className="text-xs text-muted-foreground">
+                Credit-sale customers are selected automatically when the voucher identifies them.
+              </p>
+''',
+              '''              <p className="text-xs text-muted-foreground">
+                {selectedVoucher?.customerId
+                  ? "Customer is locked to the finalized invoice."
+                  : "Select the customer for this cash sale."}
+              </p>
+''',
+              "dialog customer guidance",
+          )
+          component_path.write_text(component)
+
+          policy_path = Path("server/services/motorcycles/finalizedSalePolicy.ts")
+          policy = policy_path.read_text()
+          policy = replace_once(
+              policy,
+              '''export function warrantyDatesAreValid(
+''',
+              '''export function voucherCustomerMatchesSelection(
+  inferredCustomerId: number | null,
+  selectedCustomerId: number | null | undefined,
+): boolean {
+  return (
+    inferredCustomerId == null ||
+    selectedCustomerId == null ||
+    inferredCustomerId === selectedCustomerId
+  );
+}
+
+export function warrantyDatesAreValid(
+''',
+              "customer policy helper",
+          )
+          policy_path.write_text(policy)
+
+          test_path = Path("server/__tests__/motorcycleFinalizedSalePolicy.test.ts")
+          test = test_path.read_text()
+          test = replace_once(
+              test,
+              '''  motorcyclePriceFitsVoucher,
+  warrantyDatesAreValid,
+''',
+              '''  motorcyclePriceFitsVoucher,
+  voucherCustomerMatchesSelection,
+  warrantyDatesAreValid,
+''',
+              "customer policy test import",
+          )
+          test = replace_once(
+              test,
+              '''  it("validates warranty order and requires reversal before release", () => {
+''',
+              '''  it("locks an identified invoice customer while allowing cash-sale selection", () => {
+    expect(voucherCustomerMatchesSelection(21, 21)).toBe(true);
+    expect(voucherCustomerMatchesSelection(21, 22)).toBe(false);
+    expect(voucherCustomerMatchesSelection(21, null)).toBe(true);
+    expect(voucherCustomerMatchesSelection(null, 22)).toBe(true);
+  });
+
+  it("validates warranty order and requires reversal before release", () => {
+''',
+              "customer policy test case",
+          )
+          test_path.write_text(test)
+
+          doc_path = Path("docs/program-4-motorcycle-records-plan.md")
+          doc = doc_path.read_text()
+          doc = replace_once(
+              doc,
+              '''- infer the customer from credit-sale voucher entries or require an explicit customer for cash sales
+''',
+              '''- infer and lock the customer from credit-sale voucher entries or earlier motorcycles on the same invoice; require an explicit customer for a new cash sale
+''',
+              "roadmap customer scope",
+          )
+          doc = replace_once(
+              doc,
+              '''- Cross-company customers and mismatched locations are refused.
+''',
+              '''- Cross-company customers and mismatched locations are refused.
+- A finalized invoice's identified customer cannot be replaced during motorcycle linking.
+''',
+              "roadmap customer acceptance",
+          )
+          doc_path.write_text(doc)
+          PY
+
+          npx prettier --write \
+            client/src/components/MotorcycleSaleLinkDialog.tsx \
+            docs/program-4-motorcycle-records-plan.md \
+            server/__tests__/motorcycleFinalizedSalePolicy.test.ts \
+            server/routes/motorcycleSaleRoutes.ts \
+            server/services/motorcycles/finalizedSalePolicy.ts
+
+      - name: Commit customer integrity safeguard
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/src/components/MotorcycleSaleLinkDialog.tsx docs/program-4-motorcycle-records-plan.md server/__tests__/motorcycleFinalizedSalePolicy.test.ts server/routes/motorcycleSaleRoutes.ts server/services/motorcycles/finalizedSalePolicy.ts
+          git commit -m "Program 4B lock finalized invoice customer"
+          git push origin HEAD:agent/program-4-motorcycle-records
