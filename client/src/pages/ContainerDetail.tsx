@@ -798,19 +798,23 @@ export default function ContainerDetail() {
 
                       // Variant sub-rows (only when expanded)
                       ...(isExpanded
-                        ? group.items.map((item: any) => (
+                        ? group.items.map((item: any) => {
+                            // Prefer live stock item name over snapshot stored in container_items
+                            const liveSi = item.stockItemId ? stockItemMap.get(item.stockItemId) : null;
+                            const displayName = liveSi?.name ?? item.itemName;
+                            return (
                             <TableRow key={item.id} className="bg-muted/20" data-testid={`row-manual-item-${item.id}`}>
                               <TableCell className="pl-10 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-muted-foreground/50">└</span>
-                                  {item.itemName}
+                                  {displayName}
                                 </div>
                               </TableCell>
                               <TableCell className="text-right font-mono text-sm">{formatNumber(item.quantity)}</TableCell>
                               <TableCell className="text-right font-mono text-sm">${formatNumber(item.ratePerKg)}</TableCell>
                               <TableCell className="text-right font-mono font-semibold pr-4">${formatNumber(item.lineTotal)}</TableCell>
                             </TableRow>
-                          ))
+                          );})
                         : []),
                     ];
                   })}
