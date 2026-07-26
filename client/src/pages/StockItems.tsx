@@ -273,19 +273,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
     });
   }, [stockItems, overviewSearch, overviewGroup, overviewStatus, hideZeroStock, productTotals]);
 
-  const overviewStats = useMemo(
-    () => ({
-      totalProducts: stockItems.length,
-      activeProducts: stockItems.filter((item) => item.active).length,
-      inStock: stockItems.filter((item) => (productTotals.get(item.id)?.totalQuantity ?? 0) > 0)
-        .length,
-      outOfStock: stockItems.filter(
-        (item) => item.active && (productTotals.get(item.id)?.totalQuantity ?? 0) === 0,
-      ).length,
-    }),
-    [stockItems, productTotals],
-  );
-
   const activeFilterCount =
     Number(Boolean(overviewSearch.trim())) +
     Number(overviewGroup !== "all") +
@@ -377,41 +364,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
           </Button>
         </div>
       )}
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Products
-            </p>
-            <p className="text-2xl font-bold">{overviewStats.totalProducts}</p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Active
-            </p>
-            <p className="text-2xl font-bold">{overviewStats.activeProducts}</p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              In Stock
-            </p>
-            <p className="text-2xl font-bold text-emerald-600">{overviewStats.inStock}</p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Out of Stock
-            </p>
-            <p className="text-2xl font-bold text-amber-600">{overviewStats.outOfStock}</p>
-          </CardHeader>
-        </Card>
-      </div>
 
       <Card>
         <CardContent className="space-y-3 p-4">
@@ -691,18 +643,32 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                       </tr>
                     );
                   })}
+                  {filteredOverviewItems.length > 0 &&
+                    (() => {
+                      const totalQty = filteredOverviewItems.reduce(
+                        (sum, item) => sum + (productTotals.get(item.id)?.totalQuantity ?? 0),
+                        0,
+                      );
+                      return (
+                        <tr className="border-t bg-muted/30 font-semibold">
+                          <td className="px-3" />
+                          <td className="px-3 py-2.5 text-sm text-muted-foreground">
+                            {filteredOverviewItems.length} of {stockItems.length} products
+                          </td>
+                          <td className="px-3" />
+                          <td className="px-3 text-right font-mono text-sm">
+                            {formatQuantity(totalQty)}
+                          </td>
+                          <td colSpan={4} />
+                        </tr>
+                      );
+                    })()}
                 </tbody>
               </table>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {!isLoading && !isError && filteredOverviewItems.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Showing {filteredOverviewItems.length} of {stockItems.length} products
-        </p>
-      )}
 
       <StockItemEditDialog
         open={editDialogOpen}

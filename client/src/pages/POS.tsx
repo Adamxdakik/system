@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateSalesQueries } from "@/lib/invalidateSalesQueries";
 import { useLocation as useLocationContext } from "@/contexts/LocationContext";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -216,9 +217,6 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
 
   useEffect(() => {
     if (editVoucher && editVoucher.salesItems && editVoucher.salesItems.length > 0) {
-      console.log("[POS Edit] Loading voucher for edit:", editVoucher);
-      console.log("[POS Edit] Sales items:", editVoucher.salesItems);
-
       const newRows: SaleRow[] = editVoucher.salesItems.map((item: any, index: number) => ({
         id: String(index + 1),
         itemName: item.stockItemName || "",
@@ -235,18 +233,15 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
         amount: 0,
       });
       setRows(newRows);
-      console.log("[POS Edit] Set rows to:", newRows);
 
       if (editVoucher.description) setNotes(editVoucher.description);
       if (editVoucher.voucherDate) setSaleDate(editVoucher.voucherDate);
 
       if (editVoucher.entries && editVoucher.entries.length > 0) {
-        console.log("[POS Edit] Voucher entries:", editVoucher.entries);
         const debitEntry = editVoucher.entries.find(
           (entry: any) => parseFloat(entry.debitAmount || "0") > 0,
         );
         if (debitEntry) {
-          console.log("[POS Edit] Debit entry found:", debitEntry);
           if (debitEntry.ledgerAccountId) {
             const ledgerAccount = allLedgerAccounts.find(
               (acc: any) => acc.id === debitEntry.ledgerAccountId,
@@ -256,12 +251,10 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
                 setPaymentAccountType("cash");
                 setPaymentAccountId(String(debitEntry.ledgerAccountId));
                 setIsCreditSale(false);
-                console.log("[POS Edit] Set cash account:", debitEntry.ledgerAccountId);
               } else {
                 setPaymentAccountType("credit");
                 setPaymentAccountId(String(debitEntry.ledgerAccountId));
                 setIsCreditSale(true);
-                console.log("[POS Edit] Set credit sale:", debitEntry.ledgerAccountId);
               }
             } else {
               const isCreditSaleEntry = debitEntry.narration?.includes("Credit Sale");
@@ -308,7 +301,7 @@ export default function POS({ posUser, editVoucherId, onDirtyChange }: POSProps 
       queryClient.invalidateQueries({
         queryKey: activeLocation ? [`/api/locations/${activeLocation.id}/inventory`] : [],
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
+      invalidateSalesQueries(queryClient, editVoucherId ? Number(editVoucherId) : undefined);
       queryClient.invalidateQueries({ queryKey: ["/api/pos/drafts"] });
       toast({
         title: editVoucherId ? "Sale Updated" : "Sale Completed",
