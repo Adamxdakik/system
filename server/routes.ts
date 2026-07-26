@@ -9496,6 +9496,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Edit container details (number, date, supplier, status)
+  app.patch("/api/containers/:id", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const containerId = parseInt(req.params.id);
+      if (isNaN(containerId)) return res.status(400).json({ message: "Invalid container ID" });
+
+      const container = await storage.getContainerById(containerId);
+      if (!container) return res.status(404).json({ message: "Container not found" });
+      if (container.companyId !== req.session.currentCompanyId)
+        return res.status(403).json({ message: "Access denied" });
+
+      const allowed = ["containerNumber", "importDate", "supplierId", "status"] as const;
+      const updates: Record<string, any> = {};
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      if (updates.importDate) {
+        const d = new Date(updates.importDate);
+        if (!isNaN(d.getTime())) updates.importDate = d.toISOString().split("T")[0];
+      }
+      if (updates.supplierId) updates.supplierId = parseInt(updates.supplierId);
+
+      const updated = await storage.updateContainer(containerId, updates);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // Get container items
   app.get("/api/containers/:id/items", requireAuth, requireNonPOS, async (req, res) => {
     try {
@@ -9971,15 +10000,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(containerOffloads.containerId, containerId))
           .limit(1);
 
-        // If no offload record exists, just change status back and return
+        // If no offload record exists, just change status back to OTW and return
         if (!offloadRecord) {
           await db
             .update(containers)
-            .set({ status: "IN_TRANSIT" })
+            .set({ status: "OTW" })
             .where(eq(containers.id, containerId));
 
           return res.json({
-            message: "Container status reversed to IN_TRANSIT (no offload record to clean up)",
+            message: "Container status reversed to OTW (no offload record to clean up)",
           });
         }
 
@@ -10062,19 +10091,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
-          // Delete OFFLOAD-related vouchers only (DUTY-, OFFICE-, TRANS-, CHG- prefixes)
-          // DO NOT delete PO vouchers that track supplier balances
+          // Delete ALL vouchers linked to this container:
+          // - Offload vouchers (DUTY-, OFFICE-, TRANS-, CHG-)
+          // - Purchase voucher (MCONT-) created during import
           const containerVouchers = await tx
             .select()
             .from(vouchers)
             .where(
               and(
                 eq(vouchers.companyId, req.session.currentCompanyId!),
-                like(
-                  sql`LOWER(${vouchers.description})`,
-                  `%container ${container.containerNumber.toLowerCase()}%`,
-                ),
                 sql`(
+                  ${vouchers.voucherNumber} LIKE ${"MCONT-" + containerId} OR
                   ${vouchers.voucherNumber} LIKE 'DUTY-%' OR
                   ${vouchers.voucherNumber} LIKE 'OFFICE-%' OR
                   ${vouchers.voucherNumber} LIKE 'TRANS-%' OR
@@ -10083,23 +10110,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ),
             );
 
-          for (const voucher of containerVouchers) {
-            // Delete voucher entries first
-            await tx.delete(voucherEntries).where(eq(voucherEntries.voucherId, voucher.id));
-
-            // Delete the voucher
-            await tx.delete(vouchers).where(eq(vouchers.id, voucher.id));
+          for (const v of containerVouchers) {
+            await tx.delete(voucherEntries).where(eq(voucherEntries.voucherId, v.id));
+            await tx.delete(vouchers).where(eq(vouchers.id, v.id));
           }
 
           // Delete the offload record
           await tx.delete(containerOffloads).where(eq(containerOffloads.id, offloadRecord.id));
 
-          // Update container status back to IN_TRANSIT
+          // Restore container to OTW so it can be re-imported / edited
           await tx
             .update(containers)
-            .set({
-              status: "IN_TRANSIT",
-            })
+            .set({ status: "OTW" })
             .where(eq(containers.id, containerId));
         });
 

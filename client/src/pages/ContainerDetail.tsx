@@ -41,7 +41,7 @@ export default function ContainerDetail() {
   const containerId = params.id;
   const [showOffloadDialog, setShowOffloadDialog] = useState(false);
   const [showSellDialog, setShowSellDialog] = useState(false);
-  const [showTrackingDialog, setShowTrackingDialog] = useState(false);
+  const [showEditContainerDialog, setShowEditContainerDialog] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const [_location, setLocation] = useLocation();
@@ -154,7 +154,7 @@ export default function ContainerDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       toast({
         title: "Offload Reversed",
-        description: "Container status restored to IN_TRANSIT",
+        description: "Container restored to OTW — accounting vouchers reversed.",
       });
     },
     onError: (error: any) => {
@@ -204,55 +204,21 @@ export default function ContainerDetail() {
     },
   });
 
-  // Update tracking info mutation
-  const updateTrackingMutation = useMutation({
+  // Edit container mutation
+  const updateContainerMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("PATCH", `/api/containers/${containerId}/tracking`, data);
-      return response;
+      const res = await apiRequest("PATCH", `/api/containers/${containerId}`, data);
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/containers/${containerId}`] });
-      toast({
-        title: "Tracking Updated",
-        description: "Container tracking information has been updated",
-      });
-      setShowTrackingDialog(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/containers/active"] });
+      toast({ title: "Container Updated" });
+      setShowEditContainerDialog(false);
     },
     onError: (error: any) => {
-      toast({
-        title: "Update Failed",
-        description: error.message || "Failed to update tracking information",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Fetch tracking from API mutation
-  const fetchTrackingMutation = useMutation({
-    mutationFn: async (carrier?: string) => {
-      const response = await apiRequest("POST", `/api/containers/${containerId}/track`, { carrier });
-      return response;
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/containers/${containerId}`] });
-      if (data.message) {
-        toast({
-          title: "Tracking Initiated",
-          description: data.message,
-        });
-      } else {
-        toast({
-          title: "Tracking Updated",
-          description: "Container tracking information refreshed from carrier",
-        });
-      }
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Tracking Failed",
-        description: error.message || "Failed to fetch tracking information",
-        variant: "destructive",
-      });
+      toast({ title: "Update Failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -452,6 +418,16 @@ export default function ContainerDetail() {
             </>
           )}
           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEditContainerDialog(true)}
+            className="gap-2"
+            data-testid="button-edit-container"
+          >
+            <Edit className="w-4 h-4" />
+            Edit
+          </Button>
+          <Button
             variant="ghost"
             onClick={handleDeleteContainer}
             disabled={deleteContainerMutation.isPending}
@@ -615,74 +591,6 @@ export default function ContainerDetail() {
         );
       })()}
 
-      {/* ── Tracking (OTW only) ────────────────────────────────────────── */}
-      {container.status === "OTW" && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Ship className="h-4 w-4" />
-              Container Tracking
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowTrackingDialog(true)} data-testid="button-edit-tracking">
-                <Edit className="h-4 w-4 mr-1.5" /> Edit
-              </Button>
-              {container.carrier && (
-                <Button variant="default" size="sm" onClick={() => fetchTrackingMutation.mutate(container.carrier)} disabled={fetchTrackingMutation.isPending} data-testid="button-refresh-tracking">
-                  <RefreshCw className={`h-4 w-4 mr-1.5 ${fetchTrackingMutation.isPending ? "animate-spin" : ""}`} />
-                  Refresh
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {!container.carrier && !container.trackingStatus ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Navigation className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No tracking info — click Edit to add carrier details</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div><p className="text-xs text-muted-foreground">Carrier</p><p className="font-medium" data-testid="text-carrier">{container.carrier || "—"}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Vessel</p><p className="font-medium" data-testid="text-vessel">{container.vesselName || "—"}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Status</p>
-                    <Badge variant={container.trackingStatus === "Delivered" ? "default" : "secondary"} className="mt-0.5" data-testid="text-tracking-status">
-                      {container.trackingStatus || "Unknown"}
-                    </Badge>
-                  </div>
-                  <div><p className="text-xs text-muted-foreground">Last Updated</p><p className="font-medium text-xs" data-testid="text-last-update">{container.lastTrackingUpdate ? new Date(container.lastTrackingUpdate).toLocaleString() : "Never"}</p></div>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-t pt-3">
-                  <div><p className="text-xs text-muted-foreground flex items-center gap-1"><Anchor className="h-3 w-3" />Origin</p><p className="font-medium" data-testid="text-origin">{container.originPort || "—"}</p></div>
-                  <div><p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />Destination</p><p className="font-medium" data-testid="text-destination">{container.destinationPort || "—"}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Departure</p><p className="font-medium" data-testid="text-departure">{container.departureDate ? new Date(container.departureDate).toLocaleDateString() : "—"}</p></div>
-                  <div><p className="text-xs text-muted-foreground">ETA</p><p className="font-medium" data-testid="text-eta">{container.estimatedArrival ? new Date(container.estimatedArrival).toLocaleDateString() : "—"}</p></div>
-                </div>
-                {container.lastLocation && (
-                  <div className="border-t pt-3 text-sm">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5"><MapPin className="h-3 w-3" />Last Location</p>
-                    <p className="font-medium" data-testid="text-last-location">{container.lastLocation}</p>
-                  </div>
-                )}
-                {container.trackingEvents && (
-                  <div className="border-t pt-3">
-                    <p className="text-xs text-muted-foreground mb-2">Tracking Events</p>
-                    <div className="max-h-48 overflow-y-auto space-y-2">
-                      {JSON.parse(container.trackingEvents).slice(0, 10).map((event: any, idx: number) => (
-                        <div key={idx} className="text-sm border-l-2 border-muted pl-3 py-0.5">
-                          <p className="font-medium">{event.checkpoint_status || event.status}</p>
-                          <p className="text-muted-foreground text-xs">{event.checkpoint_date || event.date} — {event.location || event.checkpoint_delivery_substatus}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* ── Purchase Orders (hidden when manual / no POs) ──────────────── */}
       {pos.length > 0 && (
@@ -999,149 +907,67 @@ export default function ContainerDetail() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showTrackingDialog} onOpenChange={setShowTrackingDialog}>
-        <DialogContent className="max-w-lg">
+      {/* ── Edit Container Dialog ─────────────────────────────────────── */}
+      <Dialog open={showEditContainerDialog} onOpenChange={setShowEditContainerDialog}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Ship className="h-5 w-5" />
-              Edit Tracking Information
+              <Edit className="h-5 w-5" />
+              Edit Container
             </DialogTitle>
-            <DialogDescription>
-              Update shipping and tracking details for this container
-            </DialogDescription>
+            <DialogDescription>Update container details</DialogDescription>
           </DialogHeader>
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              updateTrackingMutation.mutate({
-                carrier: formData.get("carrier") || null,
-                vesselName: formData.get("vesselName") || null,
-                originPort: formData.get("originPort") || null,
-                destinationPort: formData.get("destinationPort") || null,
-                departureDate: formData.get("departureDate") || null,
-                estimatedArrival: formData.get("estimatedArrival") || null,
-                trackingStatus: formData.get("trackingStatus") || null,
-                lastLocation: formData.get("lastLocation") || null,
+              const fd = new FormData(e.currentTarget);
+              updateContainerMutation.mutate({
+                containerNumber: fd.get("containerNumber"),
+                importDate:      fd.get("importDate"),
+                supplierId:      fd.get("supplierId"),
+                status:          fd.get("status"),
               });
             }}
             className="space-y-4"
           >
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Carrier Code</label>
-                <Select name="carrier" defaultValue={container?.carrier || ""}>
-                  <SelectTrigger data-testid="select-carrier">
-                    <SelectValue placeholder="Select carrier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="maersk">Maersk</SelectItem>
-                    <SelectItem value="msc">MSC</SelectItem>
-                    <SelectItem value="cma-cgm">CMA CGM</SelectItem>
-                    <SelectItem value="cosco">COSCO</SelectItem>
-                    <SelectItem value="hapag-lloyd">Hapag-Lloyd</SelectItem>
-                    <SelectItem value="evergreen">Evergreen</SelectItem>
-                    <SelectItem value="one">ONE (Ocean Network Express)</SelectItem>
-                    <SelectItem value="yang-ming">Yang Ming</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Required for API tracking</p>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Vessel Name</label>
-                <Input
-                  name="vesselName"
-                  defaultValue={container?.vesselName || ""}
-                  placeholder="e.g., MSC Lorena"
-                  data-testid="input-vessel-name"
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Container Number</label>
+              <Input name="containerNumber" defaultValue={container?.containerNumber || ""} required data-testid="input-container-number" />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Origin Port</label>
-                <Input
-                  name="originPort"
-                  defaultValue={container?.originPort || ""}
-                  placeholder="e.g., Shanghai, China"
-                  data-testid="input-origin-port"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Destination Port</label>
-                <Input
-                  name="destinationPort"
-                  defaultValue={container?.destinationPort || ""}
-                  placeholder="e.g., Los Angeles, USA"
-                  data-testid="input-destination-port"
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Import Date</label>
+              <Input type="date" name="importDate" defaultValue={container?.importDate || ""} required data-testid="input-import-date" />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Departure Date</label>
-                <Input
-                  type="date"
-                  name="departureDate"
-                  defaultValue={container?.departureDate || ""}
-                  data-testid="input-departure-date"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">ETA</label>
-                <Input
-                  type="date"
-                  name="estimatedArrival"
-                  defaultValue={container?.estimatedArrival || ""}
-                  data-testid="input-eta"
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Supplier</label>
+              <Select name="supplierId" defaultValue={container?.supplierId?.toString() || ""}>
+                <SelectTrigger data-testid="select-supplier">
+                  <SelectValue placeholder="Select supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  {suppliers.map((s: any) => (
+                    <SelectItem key={s.id} value={s.id.toString()}>{s.legalName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <Select name="trackingStatus" defaultValue={container?.trackingStatus || ""}>
-                  <SelectTrigger data-testid="select-tracking-status">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="In Transit">In Transit</SelectItem>
-                    <SelectItem value="At Port">At Port</SelectItem>
-                    <SelectItem value="Customs Clearance">Customs Clearance</SelectItem>
-                    <SelectItem value="Delivered">Delivered</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Last Location</label>
-                <Input
-                  name="lastLocation"
-                  defaultValue={container?.lastLocation || ""}
-                  placeholder="Current location"
-                  data-testid="input-last-location"
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select name="status" defaultValue={container?.status || "OTW"}>
+                <SelectTrigger data-testid="select-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="OTW">On The Way</SelectItem>
+                  <SelectItem value="ARRIVED">Arrived</SelectItem>
+                  <SelectItem value="OFFLOADED">Offloaded</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowTrackingDialog(false)}
-                data-testid="button-cancel-tracking"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={updateTrackingMutation.isPending}
-                data-testid="button-save-tracking"
-              >
-                {updateTrackingMutation.isPending ? "Saving..." : "Save Tracking"}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowEditContainerDialog(false)}>Cancel</Button>
+              <Button type="submit" disabled={updateContainerMutation.isPending}>
+                {updateContainerMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </form>
