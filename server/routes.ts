@@ -9136,8 +9136,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No company selected" });
       }
 
+      // Normalise importDate to YYYY-MM-DD regardless of what the client sends
+      // (Excel / JS Date.toString() produces long locale strings that Postgres rejects)
+      let importDate = req.body.importDate;
+      if (importDate) {
+        const d = new Date(importDate);
+        if (!isNaN(d.getTime())) {
+          importDate = d.toISOString().split("T")[0];
+        }
+      }
+
       const data = insertContainerSchema.parse({
         ...req.body,
+        importDate,
         companyId: req.session.currentCompanyId,
       });
 
