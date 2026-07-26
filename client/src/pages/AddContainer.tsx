@@ -417,16 +417,29 @@ export default function AddContainer() {
                     </div>
 
                     {/* ── Qty / Rate / Total ── */}
+                    {/* Extract RHF's ref before spreading so the custom focus-tracking ref
+                        doesn't silently override it (which breaks form.watch → lineTotal = $0). */}
+                    {(() => {
+                      const { ref: qtyRegRef, ...qtyRegRest } = form.register(
+                        `items.${index}.quantity`,
+                        { valueAsNumber: true },
+                      );
+                      const { ref: rateRegRef, ...rateRegRest } = form.register(
+                        `items.${index}.ratePerKg`,
+                        { valueAsNumber: true },
+                      );
+                      return (
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Quantity</label>
                         <Input
-                          {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
+                          {...qtyRegRest}
                           type="number"
                           step="1"
                           min="1"
                           data-testid={`input-quantity-${index}`}
                           ref={(el) => {
+                            qtyRegRef(el);
                             qtyRefs.current[index] = el;
                           }}
                           onKeyDown={(e) => {
@@ -440,12 +453,13 @@ export default function AddContainer() {
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Rate (per unit)</label>
                         <Input
-                          {...form.register(`items.${index}.ratePerKg`, { valueAsNumber: true })}
+                          {...rateRegRest}
                           type="number"
                           step="0.01"
                           min="0"
                           data-testid={`input-rate-${index}`}
                           ref={(el) => {
+                            rateRegRef(el);
                             rateRefs.current[index] = el;
                           }}
                           onKeyDown={(e) => {
@@ -471,6 +485,8 @@ export default function AddContainer() {
                         </div>
                       </div>
                     </div>
+                      ); // close IIFE return
+                    })()} {/* close IIFE */}
                   </div>
                 );
               })}
