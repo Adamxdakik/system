@@ -5,15 +5,36 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, Plus, Trash2, Save, ChevronDown } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, ChevronDown, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface LineItem {
   id?: number;
@@ -41,18 +62,27 @@ const LineItemRow = memo(function LineItemRow({
   item: LineItem;
   index: number;
   stockItems: StockItem[];
-  onItemChange: (index: number, field: keyof LineItem, value: string | number | null, stockItem?: StockItem) => void;
+  onItemChange: (
+    index: number,
+    field: keyof LineItem,
+    value: string | number | null,
+    stockItem?: StockItem,
+  ) => void;
   onRemove: (index: number) => void;
   lineTotal: string;
 }) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  
+
   const filteredStockItems = useMemo(() => {
     if (!searchValue) return stockItems.slice(0, 50);
     const search = searchValue.toLowerCase();
     return stockItems
-      .filter(si => (si.name || '').toLowerCase().includes(search) || (si.code || '').toLowerCase().includes(search))
+      .filter(
+        (si) =>
+          (si.name || "").toLowerCase().includes(search) ||
+          (si.code || "").toLowerCase().includes(search),
+      )
       .slice(0, 50);
   }, [stockItems, searchValue]);
 
@@ -74,8 +104,8 @@ const LineItemRow = memo(function LineItemRow({
           </PopoverTrigger>
           <PopoverContent className="w-[300px] p-0" align="start">
             <Command shouldFilter={false}>
-              <CommandInput 
-                placeholder="Search items..." 
+              <CommandInput
+                placeholder="Search items..."
                 value={searchValue}
                 onValueChange={setSearchValue}
               />
@@ -92,7 +122,8 @@ const LineItemRow = memo(function LineItemRow({
                         setSearchValue("");
                       }}
                     >
-                      {si.name}{si.code ? ` (${si.code})` : ''}
+                      {si.name}
+                      {si.code ? ` (${si.code})` : ""}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -121,9 +152,7 @@ const LineItemRow = memo(function LineItemRow({
           data-testid={`input-rate-${index}`}
         />
       </TableCell>
-      <TableCell className="text-right font-mono">
-        ${lineTotal}
-      </TableCell>
+      <TableCell className="text-right font-mono">${lineTotal}</TableCell>
       <TableCell>
         <Button
           size="icon"
@@ -174,12 +203,18 @@ export default function PurchaseOrderEdit() {
   const [documentCharges, setDocumentCharges] = useState("0");
   const [discount, setDiscount] = useState("0");
   const [otherCharges, setOtherCharges] = useState("0");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [chargesOpen, setChargesOpen] = useState(false);
 
   const { data: stockItems } = useQuery<any[]>({
     queryKey: ["/api/stock-items"],
   });
 
-  const { data: po, isLoading, error } = useQuery<PurchaseOrder>({
+  const {
+    data: po,
+    isLoading,
+    error,
+  } = useQuery<PurchaseOrder>({
     queryKey: [`/api/purchase-orders/${poId}`],
     enabled: !!poId,
   });
@@ -189,14 +224,16 @@ export default function PurchaseOrderEdit() {
       setPoNumber(po.poNumber);
       setCurrency(po.currency);
       setStatus(po.status);
-      setItems(po.items.map(item => ({
-        id: item.id,
-        stockItemId: item.stockItemId,
-        itemName: item.itemName,
-        quantity: item.quantity,
-        rate: item.rate,
-        lineTotal: item.lineTotal,
-      })));
+      setItems(
+        po.items.map((item) => ({
+          id: item.id,
+          stockItemId: item.stockItemId,
+          itemName: item.itemName,
+          quantity: item.quantity,
+          rate: item.rate,
+          lineTotal: item.lineTotal,
+        })),
+      );
       setFreight(po.freight || "0");
       setSurcharge(po.surcharge || "0");
       setFumigation(po.fumigation || "0");
@@ -207,12 +244,12 @@ export default function PurchaseOrderEdit() {
   }, [po]);
 
   const updateMutation = useMutation({
-    mutationFn: async (data: { 
-      poNumber: string; 
-      currency: string; 
-      status: string; 
-      items: LineItem[]; 
-      freight: string; 
+    mutationFn: async (data: {
+      poNumber: string;
+      currency: string;
+      status: string;
+      items: LineItem[];
+      freight: string;
       surcharge: string;
       fumigation: string;
       documentCharges: string;
@@ -223,8 +260,8 @@ export default function PurchaseOrderEdit() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/containers"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/containers/${containerId ?? ""}`] });
-      invalidateAccountingQueries(queryClient, poId);
+      queryClient.invalidateQueries({ queryKey: [`/api/containers/${po?.containerId ?? ""}`] });
+      invalidateAccountingQueries(queryClient, poId ?? undefined);
       toast({
         title: "Purchase Order Updated",
         description: "The purchase order has been updated successfully.",
@@ -241,53 +278,67 @@ export default function PurchaseOrderEdit() {
   });
 
   const handleAddItem = useCallback(() => {
-    setItems(prev => [...prev, {
-      stockItemId: null,
-      itemName: "",
-      quantity: "1",
-      rate: "0",
-    }]);
+    setItems((prev) => [
+      ...prev,
+      {
+        stockItemId: null,
+        itemName: "",
+        quantity: "1",
+        rate: "0",
+      },
+    ]);
   }, []);
 
   const handleRemoveItem = useCallback((index: number) => {
-    setItems(prev => prev.filter((_, i) => i !== index));
+    setItems((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const handleItemChange = useCallback((index: number, field: keyof LineItem, value: string | number | null, stockItem?: StockItem) => {
-    setItems(prev => {
-      const newItems = [...prev];
-      const existingItem = newItems[index];
-      if (field === "stockItemId") {
-        // Normalize value to number for comparison
-        const numericId = typeof value === 'string' ? parseInt(value, 10) : value;
-        // If stockItem is passed directly, use it; otherwise fallback to lookup
-        const foundItem = stockItem || stockItems?.find((si: any) => si.id === numericId);
-        if (foundItem) {
-          newItems[index] = {
-            ...existingItem,
-            stockItemId: foundItem.id,
-            itemName: foundItem.name,
-          };
+  const handleItemChange = useCallback(
+    (
+      index: number,
+      field: keyof LineItem,
+      value: string | number | null,
+      stockItem?: StockItem,
+    ) => {
+      setItems((prev) => {
+        const newItems = [...prev];
+        const existingItem = newItems[index];
+        if (field === "stockItemId") {
+          // Normalize value to number for comparison
+          const numericId = typeof value === "string" ? parseInt(value, 10) : value;
+          // If stockItem is passed directly, use it; otherwise fallback to lookup
+          const foundItem = stockItem || stockItems?.find((si: any) => si.id === numericId);
+          if (foundItem) {
+            newItems[index] = {
+              ...existingItem,
+              stockItemId: foundItem.id,
+              itemName: foundItem.name,
+            };
+          } else {
+            // Preserve existing itemName if lookup fails (defensive - don't lose data)
+            newItems[index] = {
+              ...existingItem,
+              stockItemId:
+                typeof numericId === "number" && !isNaN(numericId)
+                  ? numericId
+                  : existingItem.stockItemId,
+              // Keep existing itemName - don't clear it
+            };
+          }
         } else {
-          // Preserve existing itemName if lookup fails (defensive - don't lose data)
           newItems[index] = {
             ...existingItem,
-            stockItemId: typeof numericId === 'number' && !isNaN(numericId) ? numericId : existingItem.stockItemId,
-            // Keep existing itemName - don't clear it
+            [field]: value,
           };
         }
-      } else {
-        newItems[index] = {
-          ...existingItem,
-          [field]: value,
-        };
-      }
-      return newItems;
-    });
-  }, [stockItems]);
+        return newItems;
+      });
+    },
+    [stockItems],
+  );
 
   const lineTotals = useMemo(() => {
-    return items.map(item => {
+    return items.map((item) => {
       const qty = parseFloat(item.quantity) || 0;
       const rate = parseFloat(item.rate) || 0;
       return (qty * rate).toFixed(2);
@@ -305,13 +356,20 @@ export default function PurchaseOrderEdit() {
     const documentChargesAmount = parseFloat(documentCharges) || 0;
     const discountAmount = parseFloat(discount) || 0;
     const otherChargesAmount = parseFloat(otherCharges) || 0;
-    return (freightAmount + surchargeAmount + fumigationAmount + documentChargesAmount - discountAmount + otherChargesAmount).toFixed(2);
+    return (
+      freightAmount +
+      surchargeAmount +
+      fumigationAmount +
+      documentChargesAmount -
+      discountAmount +
+      otherChargesAmount
+    ).toFixed(2);
   }, [freight, surcharge, fumigation, documentCharges, discount, otherCharges]);
 
   const grandTotal = useMemo(() => {
     return (parseFloat(itemsTotal) + parseFloat(chargesTotal)).toFixed(2);
   }, [itemsTotal, chargesTotal]);
-  
+
   const stockItemsList = useMemo(() => (stockItems || []) as StockItem[], [stockItems]);
 
   const handleSave = () => {
@@ -337,7 +395,7 @@ export default function PurchaseOrderEdit() {
       poNumber,
       currency,
       status,
-      items: items.map(item => ({
+      items: items.map((item) => ({
         stockItemId: item.stockItemId,
         itemName: item.itemName,
         quantity: item.quantity,
@@ -365,7 +423,9 @@ export default function PurchaseOrderEdit() {
       <div className="p-6">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-destructive">Failed to load purchase order. {(error as any)?.message}</p>
+            <p className="text-destructive">
+              Failed to load purchase order. {(error as any)?.message}
+            </p>
             <Button variant="outline" onClick={() => navigate("/daybook")} className="mt-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Daybook
@@ -377,223 +437,293 @@ export default function PurchaseOrderEdit() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/daybook")} data-testid="button-back">
+    <div className="space-y-5 p-4 sm:p-6">
+      <div className="flex items-start gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/daybook")}
+          data-testid="button-back"
+        >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Edit Purchase Order</h1>
-          <p className="text-muted-foreground">
-            {po.supplierName} ({po.supplierCode}) | Container: {po.containerNumber}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold">Edit Purchase Order</h1>
+            <Badge variant={po.status === "Closed" ? "secondary" : "default"}>{po.status}</Badge>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {po.supplierName} ({po.supplierCode}) · Container {po.containerNumber}
           </p>
         </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>PO Details</span>
-            <Badge variant={po.status === "Closed" ? "secondary" : "default"}>
-              {po.status}
-            </Badge>
-          </CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Order details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="poNumber">PO Number</Label>
-              <Input
-                id="poNumber"
-                value={poNumber}
-                onChange={(e) => setPoNumber(e.target.value)}
-                data-testid="input-po-number"
-              />
-            </div>
-            <div>
-              <Label htmlFor="currency">Currency</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger id="currency" data-testid="select-currency">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                  <SelectItem value="GBP">GBP</SelectItem>
-                  <SelectItem value="CDF">CDF</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger id="status" data-testid="select-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Open">Open</SelectItem>
-                  <SelectItem value="Closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="max-w-md space-y-2">
+            <Label htmlFor="poNumber">PO Number *</Label>
+            <Input
+              id="poNumber"
+              value={poNumber}
+              onChange={(event) => setPoNumber(event.target.value)}
+              data-testid="input-po-number"
+            />
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Line Items</Label>
-              <Button size="sm" variant="outline" onClick={handleAddItem} data-testid="button-add-item">
-                <Plus className="h-4 w-4 mr-1" />
-                Add Item
-              </Button>
+          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+            <div className="rounded-lg border">
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-auto w-full justify-between rounded-lg px-4 py-3 text-left"
+                >
+                  <span>
+                    <span className="block text-sm font-medium">Advanced order settings</span>
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      Currency and purchase-order status.
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="border-t px-4 py-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select value={currency} onValueChange={setCurrency}>
+                      <SelectTrigger id="currency" data-testid="select-currency">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                        <SelectItem value="CDF">CDF</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={status} onValueChange={setStatus}>
+                      <SelectTrigger id="status" data-testid="select-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Open">Open</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CollapsibleContent>
             </div>
-            
-            <div className="border rounded-md">
-              <Table>
-                <TableHeader>
+          </Collapsible>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
+          <div>
+            <CardTitle className="text-lg">Line items</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Confirm each product, quantity, and purchase rate.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={handleAddItem} data-testid="button-add-item">
+            <Plus className="mr-1 h-4 w-4" />
+            Add Item
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto rounded-md border">
+            <Table className="min-w-[760px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40%]">Item</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead className="text-right">Rate</TableHead>
+                  <TableHead className="text-right">Line Total</TableHead>
+                  <TableHead className="w-12" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item, index) => (
+                  <LineItemRow
+                    key={item.id || `new-${index}`}
+                    item={item}
+                    index={index}
+                    stockItems={stockItemsList}
+                    onItemChange={handleItemChange}
+                    onRemove={handleRemoveItem}
+                    lineTotal={lineTotals[index] || "0.00"}
+                  />
+                ))}
+                {items.length === 0 && (
                   <TableRow>
-                    <TableHead className="w-[40%]">Item</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Rate</TableHead>
-                    <TableHead className="text-right">Line Total</TableHead>
-                    <TableHead className="w-12"></TableHead>
+                    <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                      No items yet. Add an item to continue.
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item, index) => (
-                    <LineItemRow
-                      key={item.id || `new-${index}`}
-                      item={item}
-                      index={index}
-                      stockItems={stockItemsList}
-                      onItemChange={handleItemChange}
-                      onRemove={handleRemoveItem}
-                      lineTotal={lineTotals[index] || "0.00"}
-                    />
-                  ))}
-                  {items.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        No items. Click "Add Item" to add line items.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {items.length > 0 && (
-                    <TableRow className="bg-muted/50">
-                      <TableCell colSpan={3} className="text-right font-medium">
-                        Items Total:
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-bold">
-                        ${itemsTotal}
-                      </TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <Label>Freight & Other Charges</Label>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="freight">Freight</Label>
-                <Input
-                  id="freight"
-                  type="number"
-                  step="0.01"
-                  value={freight}
-                  onChange={(e) => setFreight(e.target.value)}
-                  className="text-right"
-                  data-testid="input-freight"
-                />
-              </div>
-              <div>
-                <Label htmlFor="surcharge">Surcharge</Label>
-                <Input
-                  id="surcharge"
-                  type="number"
-                  step="0.01"
-                  value={surcharge}
-                  onChange={(e) => setSurcharge(e.target.value)}
-                  className="text-right"
-                  data-testid="input-surcharge"
-                />
-              </div>
-              <div>
-                <Label htmlFor="fumigation">Fumigation</Label>
-                <Input
-                  id="fumigation"
-                  type="number"
-                  step="0.01"
-                  value={fumigation}
-                  onChange={(e) => setFumigation(e.target.value)}
-                  className="text-right"
-                  data-testid="input-fumigation"
-                />
-              </div>
-              <div>
-                <Label htmlFor="documentCharges">Document Charges</Label>
-                <Input
-                  id="documentCharges"
-                  type="number"
-                  step="0.01"
-                  value={documentCharges}
-                  onChange={(e) => setDocumentCharges(e.target.value)}
-                  className="text-right"
-                  data-testid="input-document-charges"
-                />
-              </div>
-              <div>
-                <Label htmlFor="discount">Discount</Label>
-                <Input
-                  id="discount"
-                  type="number"
-                  step="0.01"
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                  className="text-right"
-                  data-testid="input-discount"
-                />
-              </div>
-              <div>
-                <Label htmlFor="otherCharges">Other Charges</Label>
-                <Input
-                  id="otherCharges"
-                  type="number"
-                  step="0.01"
-                  value={otherCharges}
-                  onChange={(e) => setOtherCharges(e.target.value)}
-                  className="text-right"
-                  data-testid="input-other-charges"
-                />
-              </div>
-            </div>
-            
-            <div className="bg-muted/50 rounded-md p-4">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Grand Total:</span>
-                <span className="text-xl font-bold font-mono">${grandTotal}</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Items (${itemsTotal}) + Charges (${chargesTotal})
-              </p>
-            </div>
+                )}
+                {items.length > 0 && (
+                  <TableRow className="bg-muted/50">
+                    <TableCell colSpan={3} className="text-right font-medium">
+                      Items Total
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-bold">${itemsTotal}</TableCell>
+                    <TableCell />
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => navigate("/daybook")} data-testid="button-cancel">
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={updateMutation.isPending} data-testid="button-save">
-            {updateMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Save Changes
-          </Button>
-        </CardFooter>
+      </Card>
+
+      <Collapsible open={chargesOpen} onOpenChange={setChargesOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-auto w-full justify-between rounded-b-none px-6 py-4 text-left"
+            >
+              <span>
+                <span className="block text-base font-semibold">Freight and other charges</span>
+                <span className="block text-xs font-normal text-muted-foreground">
+                  Current net charges: ${chargesTotal}
+                </span>
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${chargesOpen ? "rotate-180" : ""}`}
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="border-t pt-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="freight">Freight</Label>
+                  <Input
+                    id="freight"
+                    type="number"
+                    step="0.01"
+                    value={freight}
+                    onChange={(event) => setFreight(event.target.value)}
+                    className="text-right"
+                    data-testid="input-freight"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="surcharge">Surcharge</Label>
+                  <Input
+                    id="surcharge"
+                    type="number"
+                    step="0.01"
+                    value={surcharge}
+                    onChange={(event) => setSurcharge(event.target.value)}
+                    className="text-right"
+                    data-testid="input-surcharge"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fumigation">Fumigation</Label>
+                  <Input
+                    id="fumigation"
+                    type="number"
+                    step="0.01"
+                    value={fumigation}
+                    onChange={(event) => setFumigation(event.target.value)}
+                    className="text-right"
+                    data-testid="input-fumigation"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="documentCharges">Document Charges</Label>
+                  <Input
+                    id="documentCharges"
+                    type="number"
+                    step="0.01"
+                    value={documentCharges}
+                    onChange={(event) => setDocumentCharges(event.target.value)}
+                    className="text-right"
+                    data-testid="input-document-charges"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="discount">Discount</Label>
+                  <Input
+                    id="discount"
+                    type="number"
+                    step="0.01"
+                    value={discount}
+                    onChange={(event) => setDiscount(event.target.value)}
+                    className="text-right"
+                    data-testid="input-discount"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="otherCharges">Other Charges</Label>
+                  <Input
+                    id="otherCharges"
+                    type="number"
+                    step="0.01"
+                    value={otherCharges}
+                    onChange={(event) => setOtherCharges(event.target.value)}
+                    className="text-right"
+                    data-testid="input-other-charges"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="grid grid-cols-3 gap-6 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Items</p>
+              <p className="font-mono font-semibold">${itemsTotal}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Charges</p>
+              <p className="font-mono font-semibold">${chargesTotal}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Grand Total</p>
+              <p className="font-mono text-xl font-bold">${grandTotal}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/daybook")}
+              data-testid="button-cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={updateMutation.isPending}
+              data-testid="button-save"
+            >
+              {updateMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save Changes
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

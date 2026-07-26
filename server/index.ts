@@ -136,7 +136,7 @@ app.use((req, res, next) => {
       return res.status(403).json({ message: "CSRF check failed: invalid origin" });
     }
   }
-  next();
+  return next();
 });
 
 (async () => {

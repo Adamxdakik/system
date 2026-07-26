@@ -1,25 +1,48 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  DollarSign, TrendingUp, Package, Wallet,
-  ShoppingCart, Wrench, BarChart3, Activity, CalendarIcon,
-  ArrowUpRight, Bike,
+  DollarSign,
+  TrendingUp,
+  Package,
+  Wallet,
+  ShoppingCart,
+  Wrench,
+  BarChart3,
+  Activity,
+  CalendarIcon,
+  ChevronDown,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "@/contexts/CompanyContext";
 import { useState } from "react";
 import { formatNumber } from "@/lib/utils";
 import {
-  format, startOfDay, endOfDay,
-  startOfMonth, endOfMonth, startOfYear, endOfYear,
+  format,
+  startOfDay,
+  endOfDay,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
 } from "date-fns";
 import {
-  AreaChart, Area, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, defs, linearGradient, stop,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 
 type DashboardMetrics = {
@@ -49,8 +72,18 @@ type DashboardMetrics = {
 };
 
 const months = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
@@ -71,7 +104,13 @@ const ChartTooltip = ({ active, payload, label, currency = false }: any) => {
 
 // ── Reusable trend card ────────────────────────────────────────────────────
 function TrendCard({
-  title, icon: Icon, dataKey, data, color, gradientId, currency = false,
+  title,
+  icon: Icon,
+  dataKey,
+  data,
+  color,
+  gradientId,
+  currency = false,
 }: {
   title: string;
   icon: React.ElementType;
@@ -98,7 +137,12 @@ function TrendCard({
                 <stop offset="95%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="hsl(var(--border))"
+              strokeOpacity={0.5}
+              vertical={false}
+            />
             <XAxis
               dataKey="label"
               tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
@@ -110,7 +154,7 @@ function TrendCard({
               axisLine={false}
               tickLine={false}
               width={42}
-              tickFormatter={(v) => currency ? `$${formatNumber(v)}` : formatNumber(v)}
+              tickFormatter={(v) => (currency ? `$${formatNumber(v)}` : formatNumber(v))}
             />
             <Tooltip content={<ChartTooltip currency={currency} />} />
             <Area
@@ -137,6 +181,7 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [showTrends, setShowTrends] = useState(false);
 
   const getDateRange = () => {
     switch (period) {
@@ -176,9 +221,12 @@ export default function Dashboard() {
 
   const getDisplayLabel = () => {
     switch (period) {
-      case "day":   return format(selectedDate, "MMM d, yyyy");
-      case "month": return `${months[selectedMonth]} ${selectedYear}`;
-      case "year":  return `${selectedYear}`;
+      case "day":
+        return format(selectedDate, "MMM d, yyyy");
+      case "month":
+        return `${months[selectedMonth]} ${selectedYear}`;
+      case "year":
+        return `${selectedYear}`;
     }
   };
 
@@ -193,7 +241,8 @@ export default function Dashboard() {
             Dashboard
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Business performance — <span className="text-foreground/70 font-medium">{getDisplayLabel()}</span>
+            Business performance —{" "}
+            <span className="text-foreground/70 font-medium">{getDisplayLabel()}</span>
           </p>
         </div>
 
@@ -213,7 +262,11 @@ export default function Dashboard() {
           {period === "day" && (
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[180px] justify-start text-left font-normal" data-testid="button-date-picker">
+                <Button
+                  variant="outline"
+                  className="w-[180px] justify-start text-left font-normal"
+                  data-testid="button-date-picker"
+                >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {format(selectedDate, "MMM d, yyyy")}
                 </Button>
@@ -222,7 +275,12 @@ export default function Dashboard() {
                 <Calendar
                   mode="single"
                   selected={selectedDate}
-                  onSelect={(date) => { if (date) { setSelectedDate(date); setCalendarOpen(false); } }}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      setCalendarOpen(false);
+                    }
+                  }}
                   initialFocus
                 />
               </PopoverContent>
@@ -231,32 +289,53 @@ export default function Dashboard() {
 
           {period === "month" && (
             <>
-              <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+              <Select
+                value={selectedMonth.toString()}
+                onValueChange={(v) => setSelectedMonth(parseInt(v))}
+              >
                 <SelectTrigger className="w-[130px]" data-testid="select-month">
                   <SelectValue placeholder="Month" />
                 </SelectTrigger>
                 <SelectContent>
-                  {months.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
+                  {months.map((m, i) => (
+                    <SelectItem key={i} value={i.toString()}>
+                      {m}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+              <Select
+                value={selectedYear.toString()}
+                onValueChange={(v) => setSelectedYear(parseInt(v))}
+              >
                 <SelectTrigger className="w-[100px]" data-testid="select-year-month">
                   <SelectValue placeholder="Year" />
                 </SelectTrigger>
                 <SelectContent>
-                  {years.map((y) => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
+                  {years.map((y) => (
+                    <SelectItem key={y} value={y.toString()}>
+                      {y}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </>
           )}
 
           {period === "year" && (
-            <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+            <Select
+              value={selectedYear.toString()}
+              onValueChange={(v) => setSelectedYear(parseInt(v))}
+            >
               <SelectTrigger className="w-[100px]" data-testid="select-year">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent>
-                {years.map((y) => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
+                {years.map((y) => (
+                  <SelectItem key={y} value={y.toString()}>
+                    {y}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}
@@ -267,12 +346,21 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse">
-              <CardContent className="pt-6"><div className="h-24 bg-muted rounded" /></CardContent>
+              <CardContent className="pt-6">
+                <div className="h-24 bg-muted rounded" />
+              </CardContent>
             </Card>
           ))}
         </div>
       ) : (
         <>
+          <div>
+            <h2 className="text-base font-semibold">Performance overview</h2>
+            <p className="text-sm text-muted-foreground">
+              The three numbers most users need first for the selected period.
+            </p>
+          </div>
+
           {/* ── Primary KPIs ─────────────────────────────────────────── */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Total Sales */}
@@ -378,8 +466,15 @@ export default function Dashboard() {
             </Card>
           </div>
 
+          <div className="pt-1">
+            <h2 className="text-base font-semibold">Financial and stock details</h2>
+            <p className="text-sm text-muted-foreground">
+              Supporting totals remain visible without competing with the main results.
+            </p>
+          </div>
+
           {/* ── Secondary metrics ────────────────────────────────────── */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
             {/* COGS */}
             <Card className="border-border/60">
               <CardContent className="pt-4 pb-4 px-4">
@@ -497,58 +592,76 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* ── Trend Charts ─────────────────────────────────────────── */}
-          {metrics?.trendData && metrics.trendData.length > 1 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <TrendCard
-                title="Sales Trend"
-                icon={BarChart3}
-                dataKey="sales"
-                data={metrics.trendData}
-                color="#10b981"
-                gradientId="grad-sales"
-                currency
-              />
-              <TrendCard
-                title="Units Sold Trend"
-                icon={Wrench}
-                dataKey="unitsSold"
-                data={metrics.trendData}
-                color="#8b5cf6"
-                gradientId="grad-units"
-              />
-              <TrendCard
-                title="Net Profit Trend"
-                icon={Activity}
-                dataKey="netProfit"
-                data={metrics.trendData}
-                color="#3b82f6"
-                gradientId="grad-profit"
-                currency
-              />
-              <TrendCard
-                title="Inventory Value Trend"
-                icon={Package}
-                dataKey="inventoryValue"
-                data={metrics.trendData}
-                color="#06b6d4"
-                gradientId="grad-inventory"
-                currency
-              />
-            </div>
-          )}
+          <Collapsible open={showTrends} onOpenChange={setShowTrends}>
+            <Card className="overflow-hidden border-border/60">
+              <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div>
+                  <h2 className="text-base font-semibold">Trends and movement</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Open the charts when you need deeper period analysis.
+                  </p>
+                </div>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-between sm:w-auto">
+                    {showTrends ? "Hide charts" : "Show charts"}
+                    <ChevronDown
+                      className={`ml-2 h-4 w-4 transition-transform ${showTrends ? "rotate-180" : ""}`}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
 
-          {metrics?.trendData && metrics.trendData.length <= 1 && (
-            <Card>
-              <CardContent className="py-10 text-center text-muted-foreground">
-                <BarChart3 className="h-9 w-9 mx-auto mb-3 opacity-30" />
-                <p className="font-medium">No trend data yet</p>
-                <p className="text-sm mt-1">
-                  Trend charts appear when there's more data. Try selecting a Month or Year view.
-                </p>
-              </CardContent>
+              <CollapsibleContent className="border-t p-4 sm:p-5">
+                {metrics?.trendData && metrics.trendData.length > 1 ? (
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <TrendCard
+                      title="Sales Trend"
+                      icon={BarChart3}
+                      dataKey="sales"
+                      data={metrics.trendData}
+                      color="#10b981"
+                      gradientId="grad-sales"
+                      currency
+                    />
+                    <TrendCard
+                      title="Units Sold Trend"
+                      icon={Wrench}
+                      dataKey="unitsSold"
+                      data={metrics.trendData}
+                      color="#8b5cf6"
+                      gradientId="grad-units"
+                    />
+                    <TrendCard
+                      title="Net Profit Trend"
+                      icon={Activity}
+                      dataKey="netProfit"
+                      data={metrics.trendData}
+                      color="#3b82f6"
+                      gradientId="grad-profit"
+                      currency
+                    />
+                    <TrendCard
+                      title="Inventory Value Trend"
+                      icon={Package}
+                      dataKey="inventoryValue"
+                      data={metrics.trendData}
+                      color="#06b6d4"
+                      gradientId="grad-inventory"
+                      currency
+                    />
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <BarChart3 className="mx-auto mb-3 h-9 w-9 opacity-30" />
+                    <p className="font-medium">No trend data yet</p>
+                    <p className="mt-1 text-sm">
+                      Trend charts appear when there is more data. Try a Month or Year view.
+                    </p>
+                  </div>
+                )}
+              </CollapsibleContent>
             </Card>
-          )}
+          </Collapsible>
         </>
       )}
     </div>

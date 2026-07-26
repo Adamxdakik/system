@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   ShoppingCart,
   ReceiptText,
-  Package,
   Layers,
   Truck,
   MapPin,
@@ -14,7 +13,6 @@ import {
   HeartHandshake,
   Building2,
   Cog,
-  BadgeCheck,
   Settings,
   BookOpen,
 } from "lucide-react";
@@ -42,10 +40,16 @@ export const primaryItems: NavigationItem[] = [
     activePrefixes: ["/"],
   },
   {
-    title: "Transactions",
-    url: "/vouchers",
-    icon: ArrowRightLeft,
-    activePrefixes: ["/vouchers"],
+    title: "New Sale",
+    url: "/pos",
+    icon: ShoppingCart,
+    activePrefixes: ["/pos"],
+  },
+  {
+    title: "Stock & Parts",
+    url: "/stock-items",
+    icon: Layers,
+    activePrefixes: ["/stock-items", "/stock-query"],
   },
   {
     title: "Transaction History",
@@ -59,12 +63,6 @@ export const primaryItems: NavigationItem[] = [
 
 export const salesItems: NavigationItem[] = [
   {
-    title: "New Sale",
-    url: "/pos",
-    icon: ShoppingCart,
-    activePrefixes: ["/pos"],
-  },
-  {
     title: "Sales History",
     url: "/sales-report",
     icon: ReceiptText,
@@ -75,12 +73,6 @@ export const salesItems: NavigationItem[] = [
 // ── Inventory ─────────────────────────────────────────────────────────────────
 
 export const inventoryItems: NavigationItem[] = [
-  {
-    title: "Parts & Stock",
-    url: "/stock-items",
-    icon: Layers,
-    activePrefixes: ["/stock-items", "/stock-query"],
-  },
   {
     title: "Shipments",
     url: "/containers",
@@ -102,6 +94,12 @@ export const financeItems: NavigationItem[] = [
     title: "Accounts",
     url: "/accounts",
     icon: Landmark,
+  },
+  {
+    title: "Transactions",
+    url: "/vouchers",
+    icon: ArrowRightLeft,
+    activePrefixes: ["/vouchers"],
   },
   {
     title: "Payroll",
@@ -167,13 +165,13 @@ export interface CommandItem extends NavigationItem {
 }
 
 export const commandItems: CommandItem[] = [
-  ...primaryItems.map((i) => ({ ...i, group: "Main" })),
-  ...salesItems.map((i) => ({ ...i, group: "Sales" })),
-  ...inventoryItems.map((i) => ({ ...i, group: "Inventory" })),
-  ...financeItems.map((i) => ({ ...i, group: "Finance" })),
-  ...customerSectionItems.map((i) => ({ ...i, group: "Customers" })),
-  ...operationsItems.map((i) => ({ ...i, group: "Operations" })),
-  ...adminItems.map((i) => ({ ...i, group: "Administration" })),
+  ...primaryItems.map((item) => ({ ...item, group: "Main" })),
+  ...salesItems.map((item) => ({ ...item, group: "Sales" })),
+  ...inventoryItems.map((item) => ({ ...item, group: "Inventory" })),
+  ...financeItems.map((item) => ({ ...item, group: "Finance" })),
+  ...customerSectionItems.map((item) => ({ ...item, group: "Customers" })),
+  ...operationsItems.map((item) => ({ ...item, group: "Operations" })),
+  ...adminItems.map((item) => ({ ...item, group: "Administration" })),
 ];
 
 // ── Legacy export kept for any remaining consumers ────────────────────────────
