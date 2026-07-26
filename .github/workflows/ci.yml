@@ -10,6 +10,31 @@ permissions:
   contents: read
 
 jobs:
+  typescript-diagnostic:
+    if: github.event_name == 'pull_request' && github.head_ref == 'agent/program-3-simplified-interface-rebased'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+      - name: Capture raw TypeScript output
+        run: npm run check:all > typescript-diagnostic.txt 2>&1 || true
+      - name: Upload TypeScript diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: program-3-typescript-diagnostic
+          path: typescript-diagnostic.txt
+          if-no-files-found: error
+          retention-days: 1
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
