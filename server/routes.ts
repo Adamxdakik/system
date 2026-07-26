@@ -9190,11 +9190,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get manual container items
       const containerItems = await storage.getContainerItems(containerId);
 
+      // Get offload record if container has been offloaded
+      const [offloadRecord] = await db
+        .select()
+        .from(containerOffloads)
+        .where(eq(containerOffloads.containerId, containerId))
+        .limit(1);
+
       res.json({
         container,
         pos: posWithItems,
         charges,
         items: containerItems,
+        offload: offloadRecord ?? null,
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Package, DollarSign, FileText, Truck, Trash2, HandCoins, Calendar, User, RotateCcw, Edit, Ship, MapPin, Navigation, RefreshCw, Anchor } from "lucide-react";
+import { ArrowLeft, Package, DollarSign, FileText, Truck, Trash2, HandCoins, Calendar, User, RotateCcw, Edit, Ship, MapPin, Navigation, RefreshCw, Anchor, Warehouse } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OffloadDialog } from "@/components/OffloadDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +26,7 @@ interface ContainerDetailData {
   pos: any[];
   charges: any[];
   items: any[];
+  offload: any | null;
 }
 
 const saleFormSchema = z.object({
@@ -62,6 +63,11 @@ export default function ContainerDetail() {
 
   const { data: allLedgerAccounts = [] } = useQuery<any[]>({
     queryKey: ["/api/ledger-accounts", companyId],
+    enabled: !!companyId,
+  });
+
+  const { data: locations = [] } = useQuery<any[]>({
+    queryKey: ["/api/locations", companyId],
     enabled: !!companyId,
   });
 
@@ -288,7 +294,7 @@ export default function ContainerDetail() {
     );
   }
 
-  const { container, pos, charges, items: containerItems = [] } = containerData;
+  const { container, pos, charges, items: containerItems = [], offload } = containerData;
   const supplier = suppliers.find((s: any) => s.id === container.supplierId);
 
   const itemsTotal = parseFloat(container.itemsTotal || "0");
@@ -347,14 +353,23 @@ export default function ContainerDetail() {
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           {container.status !== "OFFLOADED" && (
-            <Button onClick={() => setShowOffloadDialog(true)} variant="outline" className="gap-1.5" data-testid="button-offload-container">
+            <Button
+              onClick={() => setShowOffloadDialog(true)}
+              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+              data-testid="button-offload-container"
+            >
               <Truck className="w-4 h-4" />
-              Offload
+              Offload Container
             </Button>
           )}
           {container.status === "OFFLOADED" && (
             <>
-              <Button onClick={() => setShowOffloadDialog(true)} variant="outline" className="gap-1.5" data-testid="button-edit-offload">
+              <Button
+                onClick={() => setShowOffloadDialog(true)}
+                variant="secondary"
+                className="gap-2 shadow-sm"
+                data-testid="button-edit-offload"
+              >
                 <Edit className="w-4 h-4" />
                 Edit Offload
               </Button>
@@ -362,7 +377,7 @@ export default function ContainerDetail() {
                 onClick={() => { if (confirm("Reverse offload? This will delete inventory and vouchers created during offload.")) reverseOffloadMutation.mutate(parseInt(containerId!)); }}
                 variant="outline"
                 disabled={reverseOffloadMutation.isPending}
-                className="gap-1.5"
+                className="gap-2 border-muted-foreground/30 hover:bg-muted"
                 data-testid="button-reverse-offload"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -371,10 +386,11 @@ export default function ContainerDetail() {
             </>
           )}
           <Button
-            variant="destructive"
+            variant="ghost"
             onClick={handleDeleteContainer}
             disabled={deleteContainerMutation.isPending}
             size="icon"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             data-testid="button-delete-container"
             title="Delete Container"
           >
@@ -452,6 +468,86 @@ export default function ContainerDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Offload Details (OFFLOADED only) ──────────────────────────── */}
+      {container.status === "OFFLOADED" && offload && (() => {
+        const offloadLocation = locations.find((l: any) => l.id === offload.locationId);
+        const duties     = parseFloat(offload.duties || "0");
+        const transport  = parseFloat(offload.transportFees || "0");
+        const office     = parseFloat(offload.officeCharges || "0");
+        const transfer   = parseFloat(offload.transferCharges || "0");
+        const totalOffloadCharges = parseFloat(offload.totalCharges || "0");
+        const extraPerUnit = parseFloat(offload.additionalCostPerMoto || "0");
+        const landedTotal = grandTotal + totalOffloadCharges;
+        return (
+          <Card className="border-amber-500/30 bg-amber-500/5">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Warehouse className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <span className="font-semibold text-amber-700 dark:text-amber-400 text-sm">Offload Details</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Location</p>
+                  <p className="font-semibold">{offloadLocation?.name ?? `#${offload.locationId}`}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Date</p>
+                  <p className="font-semibold">{offload.offloadedAt ? new Date(offload.offloadedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Units Offloaded</p>
+                  <p className="font-semibold font-mono">{parseFloat(offload.totalMotos || "0").toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Extra / Unit</p>
+                  <p className="font-semibold font-mono">{extraPerUnit > 0 ? `$${formatNumber(extraPerUnit)}` : "—"}</p>
+                </div>
+              </div>
+
+              {/* Charges breakdown */}
+              {totalOffloadCharges > 0 && (
+                <div className="rounded-lg border border-amber-500/20 overflow-hidden mb-3">
+                  {duties > 0 && (
+                    <div className="flex justify-between px-3 py-2 text-sm border-b border-amber-500/10">
+                      <span className="text-muted-foreground">Duties</span>
+                      <span className="font-mono font-medium">${formatNumber(duties)}</span>
+                    </div>
+                  )}
+                  {transport > 0 && (
+                    <div className="flex justify-between px-3 py-2 text-sm border-b border-amber-500/10">
+                      <span className="text-muted-foreground">Transport Fees</span>
+                      <span className="font-mono font-medium">${formatNumber(transport)}</span>
+                    </div>
+                  )}
+                  {office > 0 && (
+                    <div className="flex justify-between px-3 py-2 text-sm border-b border-amber-500/10">
+                      <span className="text-muted-foreground">Office Charges</span>
+                      <span className="font-mono font-medium">${formatNumber(office)}</span>
+                    </div>
+                  )}
+                  {transfer > 0 && (
+                    <div className="flex justify-between px-3 py-2 text-sm border-b border-amber-500/10">
+                      <span className="text-muted-foreground">Transfer Charges</span>
+                      <span className="font-mono font-medium">${formatNumber(transfer)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between px-3 py-2 text-sm font-semibold bg-amber-500/10">
+                    <span>Total Offload Charges</span>
+                    <span className="font-mono">${formatNumber(totalOffloadCharges)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Landed total */}
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-xs text-muted-foreground">Container Cost + Offload Charges</span>
+                <span className="font-bold font-mono text-amber-700 dark:text-amber-400">${formatNumber(landedTotal)}</span>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* ── Tracking (OTW only) ────────────────────────────────────────── */}
       {container.status === "OTW" && (
