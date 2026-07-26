@@ -14,6 +14,42 @@ type TimelineEvent = {
   description: string;
 };
 
+type ServiceTimelineRow = {
+  id: number;
+  date: string;
+  serviceType: string | null;
+  mileage: number | null;
+  partsUsed: string | null;
+  technicianName: string | null;
+  notes: string | null;
+};
+
+type WarrantyTimelineRow = {
+  id: number;
+  date: string;
+  warrantyDuration: number | null;
+  warrantyStatus: string | null;
+  voidReason: string | null;
+  notes: string | null;
+};
+
+type CommunicationTimelineRow = {
+  id: number;
+  date: string;
+  contactType: string | null;
+  notes: string | null;
+};
+
+type AssemblyTimelineRow = {
+  id: number;
+  date: string;
+  stockItemName: string | null;
+  fromStage: string | null;
+  toStage: string | null;
+  technician: string | null;
+  locationName: string | null;
+};
+
 export function registerMotorcycleTimelineRoutes(app: Express): void {
   app.get(
     "/api/motorcycles/:id/timeline",
@@ -93,6 +129,11 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
         `),
         ]);
 
+      const serviceRows = serviceResult.rows as ServiceTimelineRow[];
+      const warrantyRows = warrantyResult.rows as WarrantyTimelineRow[];
+      const communicationRows = communicationResult.rows as CommunicationTimelineRow[];
+      const assemblyRows = assemblyResult.rows as AssemblyTimelineRow[];
+
       const events: TimelineEvent[] = [
         {
           id: `registry-${motorcycle.id}`,
@@ -115,7 +156,7 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
         });
       }
 
-      for (const row of serviceResult.rows as Array<any>) {
+      for (const row of serviceRows) {
         events.push({
           id: `service-${row.id}`,
           type: "service",
@@ -132,7 +173,7 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
         });
       }
 
-      for (const row of warrantyResult.rows as Array<any>) {
+      for (const row of warrantyRows) {
         events.push({
           id: `warranty-${row.id}`,
           type: "warranty",
@@ -148,7 +189,7 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
         });
       }
 
-      for (const row of communicationResult.rows as Array<any>) {
+      for (const row of communicationRows) {
         events.push({
           id: `communication-${row.id}`,
           type: "communication",
@@ -158,7 +199,7 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
         });
       }
 
-      for (const row of assemblyResult.rows as Array<any>) {
+      for (const row of assemblyRows) {
         events.push({
           id: `assembly-${row.id}`,
           type: "assembly",
@@ -177,8 +218,8 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
 
       events.sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
 
-      const serviceCount = serviceResult.rows.length;
-      const activeWarrantyCount = (warrantyResult.rows as Array<any>).filter(
+      const serviceCount = serviceRows.length;
+      const activeWarrantyCount = warrantyRows.filter(
         (row) => row.warrantyStatus === "Active",
       ).length;
       const today = new Date().toISOString().slice(0, 10);
@@ -187,10 +228,10 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
         motorcycle,
         summary: {
           serviceCount,
-          warrantyCount: warrantyResult.rows.length,
+          warrantyCount: warrantyRows.length,
           activeWarrantyCount,
-          communicationCount: communicationResult.rows.length,
-          assemblyLinked: assemblyResult.rows.length > 0,
+          communicationCount: communicationRows.length,
+          assemblyLinked: assemblyRows.length > 0,
           needsAttention: lifecycleNeedsAttention({
             status: motorcycle.status,
             serviceCount,
