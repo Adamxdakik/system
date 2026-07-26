@@ -33,13 +33,17 @@ export function shouldReloadForStaleChunk(
 ): boolean {
   if (!isStaleChunkError(error) || !storage) return false;
 
-  const previous = Number(storage.getItem(STALE_CHUNK_RELOAD_KEY));
-  if (Number.isFinite(previous) && now - previous < STALE_CHUNK_RELOAD_WINDOW_MS) {
+  try {
+    const previous = Number(storage.getItem(STALE_CHUNK_RELOAD_KEY));
+    if (Number.isFinite(previous) && now - previous < STALE_CHUNK_RELOAD_WINDOW_MS) {
+      return false;
+    }
+
+    storage.setItem(STALE_CHUNK_RELOAD_KEY, String(now));
+    return true;
+  } catch {
     return false;
   }
-
-  storage.setItem(STALE_CHUNK_RELOAD_KEY, String(now));
-  return true;
 }
 
 export function clearExpiredStaleChunkReloadGuard(
@@ -47,8 +51,13 @@ export function clearExpiredStaleChunkReloadGuard(
   now = Date.now(),
 ): void {
   if (!storage) return;
-  const previous = Number(storage.getItem(STALE_CHUNK_RELOAD_KEY));
-  if (!Number.isFinite(previous) || now - previous >= STALE_CHUNK_RELOAD_WINDOW_MS) {
-    storage.removeItem(STALE_CHUNK_RELOAD_KEY);
+
+  try {
+    const previous = Number(storage.getItem(STALE_CHUNK_RELOAD_KEY));
+    if (!Number.isFinite(previous) || now - previous >= STALE_CHUNK_RELOAD_WINDOW_MS) {
+      storage.removeItem(STALE_CHUNK_RELOAD_KEY);
+    }
+  } catch {
+    // Storage can be unavailable in privacy-restricted browser contexts.
   }
 }
