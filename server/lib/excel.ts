@@ -1,8 +1,5 @@
 import ExcelJS from "exceljs";
-import {
-  assertWorkbookWithinLimits,
-  configuredExportConcurrencyGate,
-} from "../services/performance/exportSafety";
+import { assertWorkbookWithinLimits, configuredExportConcurrencyGate } from "./exportSafety";
 
 // Drop-in compatible subset of the SheetJS (xlsx) API, backed by exceljs.
 // Designed to minimize call-site changes when migrating off `xlsx` (which
