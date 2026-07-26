@@ -1,3 +1,4 @@
+# Temporary self-removing workflow for the Program 3 branch rebuild.
 name: Program 3 rebase reconciliation
 
 on:
