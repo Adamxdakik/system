@@ -170,7 +170,7 @@ export function AppSidebar({ user }: { user?: any }) {
   // ── Active-state helpers ──────────────────────────────────────────────────
 
   const isGroupActive = (items: NavigationItem[]) =>
-    items.some((i) => matchesNavigationItem(location, i));
+    items.some((item) => matchesNavigationItem(location, item));
 
   const initials = user?.username ? user.username.substring(0, 2).toUpperCase() : "AD";
 
@@ -179,13 +179,13 @@ export function AppSidebar({ user }: { user?: any }) {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <SidebarHeader className="px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg overflow-hidden bg-white p-1 shadow-sm">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 shadow-sm">
             <img src={huangheLogo} alt="Huanghe Motors" className="h-full w-full object-contain" />
           </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-bold tracking-tight leading-tight">Huanghe Motors</span>
-            <span className="text-[10px] text-sidebar-foreground/40 leading-tight">
-              Business Management
+          <div className="flex min-w-0 flex-col">
+            <span className="text-sm font-bold leading-tight tracking-tight">Huanghe Motors</span>
+            <span className="text-[10px] leading-tight text-sidebar-foreground/40">
+              Daily Operations
             </span>
           </div>
         </div>
@@ -196,16 +196,18 @@ export function AppSidebar({ user }: { user?: any }) {
       {/* ── Content ────────────────────────────────────────────────────────── */}
       <SidebarContent className="overflow-y-auto overscroll-contain px-2 py-2">
         {permissionsLoading && (
-          <div className="px-2 py-3 space-y-2">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-8 rounded-md bg-sidebar-accent/40 animate-pulse" />
+          <div className="space-y-2 px-2 py-3">
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div key={item} className="h-8 animate-pulse rounded-md bg-sidebar-accent/40" />
             ))}
           </div>
         )}
-        <SidebarGroup className={`p-0 ${permissionsLoading ? "opacity-0 pointer-events-none" : ""}`}>
+        <SidebarGroup className={`p-0 ${permissionsLoading ? "pointer-events-none opacity-0" : ""}`}>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {/* Dashboard */}
+              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+                Daily work
+              </div>
               {primaryItems.filter(isItemVisible).map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
@@ -223,9 +225,11 @@ export function AppSidebar({ user }: { user?: any }) {
                 </SidebarMenuItem>
               ))}
 
-              <div className="my-1" />
+              <SidebarSeparator className="my-2 opacity-40" />
+              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+                More tools
+              </div>
 
-              {/* Sales */}
               <NavGroup
                 id="sales"
                 label="Sales"
@@ -237,7 +241,6 @@ export function AppSidebar({ user }: { user?: any }) {
                 currentPath={location}
               />
 
-              {/* Inventory */}
               <NavGroup
                 id="inventory"
                 label="Inventory"
@@ -251,7 +254,6 @@ export function AppSidebar({ user }: { user?: any }) {
 
               <SidebarSeparator className="my-2 opacity-40" />
 
-              {/* Finance */}
               <NavGroup
                 id="finance"
                 label="Finance"
@@ -263,7 +265,6 @@ export function AppSidebar({ user }: { user?: any }) {
                 currentPath={location}
               />
 
-              {/* Contacts */}
               <NavGroup
                 id="customers"
                 label="Contacts"
@@ -275,7 +276,6 @@ export function AppSidebar({ user }: { user?: any }) {
                 currentPath={location}
               />
 
-              {/* Operations */}
               <NavGroup
                 id="operations"
                 label="Operations"
@@ -287,7 +287,6 @@ export function AppSidebar({ user }: { user?: any }) {
                 currentPath={location}
               />
 
-              {/* Administration (admin only) */}
               {user?.role === "Admin" && (
                 <>
                   <SidebarSeparator className="my-2 opacity-40" />
@@ -313,13 +312,13 @@ export function AppSidebar({ user }: { user?: any }) {
       <SidebarFooter className="px-4 py-3">
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8 shrink-0">
-            <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+            <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-xs font-semibold truncate">{user?.username || "User"}</span>
-            <span className="text-[10px] text-sidebar-foreground/50 truncate">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-xs font-semibold">{user?.username || "User"}</span>
+            <span className="truncate text-[10px] text-sidebar-foreground/50">
               {user?.role || "Role"}
             </span>
           </div>
