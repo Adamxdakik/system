@@ -93,6 +93,7 @@ import {
   userCompanyRoles,
   fixedAssets,
 } from "@shared/schema";
+import * as schema from "@shared/schema";
 import {
   eq,
   and,
@@ -544,7 +545,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .limit(1);
         if (!role) return res.status(404).json({ message: "Role not found" });
         if (role.companyId !== companyId) {
-          return res.status(403).json({ message: "Access denied: role belongs to a different company" });
+          return res
+            .status(403)
+            .json({ message: "Access denied: role belongs to a different company" });
         }
       }
 
@@ -653,9 +656,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(schema.userCompanyRoles.companyId, schema.companies.id),
             )
             .where(eq(schema.userCompanyRoles.userId, req.user.id));
-      res.json(companies);
+      return res.json(companies);
     } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      return res.status(500).json({ message: error.message });
     }
   });
 
@@ -7193,7 +7196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json({
+      return res.json({
         fileHash,
         fileName: req.file.originalname,
         rowCount: rows.length,
@@ -7201,7 +7204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("PO Import parse error:", error);
-      res.status(500).json({ message: error.message });
+      return res.status(500).json({ message: error.message });
     }
   });
 
@@ -7227,8 +7230,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         errors.push("Selected supplier not found");
       }
 
-      // Get all stock items for validation
+      // Get all stock items and aliases for validation
       const allStockItems = await storage.getAllStockItems(req.session.currentCompanyId!);
+      const aliasMap = await storage.getAllStockItemAliasMap(req.session.currentCompanyId!);
 
       // Validate all items in the preview
       const containerPreview = preview.find((p: any) => p.containerNumber === containerNumber);
@@ -7264,13 +7268,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({
+      return res.json({
         valid: errors.length === 0,
         errors,
       });
     } catch (error: any) {
       console.error("PO Import validation error:", error);
-      res.status(500).json({ message: error.message });
+      return res.status(500).json({ message: error.message });
     }
   });
 
@@ -7297,8 +7301,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         validationErrors.push("Selected supplier not found");
       }
 
-      // Get all stock items for validation
+      // Get all stock items and aliases for validation
       const allStockItems = await storage.getAllStockItems(req.session.currentCompanyId!);
+      const aliasMap = await storage.getAllStockItemAliasMap(req.session.currentCompanyId!);
 
       // Validate all items in the preview
       const containerPreview = preview.find((p: any) => p.containerNumber === containerNumber);
@@ -7618,7 +7623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "Success",
       });
 
-      res.json({
+      return res.json({
         success: true,
         containerId: container.id,
         containerNumber: container.containerNumber,
@@ -7627,7 +7632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("PO Import error:", error);
-      res.status(500).json({ message: error.message });
+      return res.status(500).json({ message: error.message });
     }
   });
 
@@ -15401,13 +15406,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (transferItemsList.length > 0) {
             // Collect all location IDs to look up names in one query
             const locIdSet = new Set<number>();
-            if (transferVoucher.destinationLocationId) locIdSet.add(transferVoucher.destinationLocationId);
+            if (transferVoucher.destinationLocationId)
+              locIdSet.add(transferVoucher.destinationLocationId);
             if (transferVoucher.sourceLocationId) locIdSet.add(transferVoucher.sourceLocationId);
-            transferItemsList.forEach((it) => { if (it.sourceLocationId) locIdSet.add(it.sourceLocationId); });
+            transferItemsList.forEach((it) => {
+              if (it.sourceLocationId) locIdSet.add(it.sourceLocationId);
+            });
 
-            const locRows = locIdSet.size > 0
-              ? await db.select({ id: locations.id, name: locations.name }).from(locations).where(inArray(locations.id, Array.from(locIdSet)))
-              : [];
+            const locRows =
+              locIdSet.size > 0
+                ? await db
+                    .select({ id: locations.id, name: locations.name })
+                    .from(locations)
+                    .where(inArray(locations.id, Array.from(locIdSet)))
+                : [];
             const locMap = new Map(locRows.map((l) => [l.id, l.name]));
 
             const destinationLocationName = transferVoucher.destinationLocationId
@@ -15420,9 +15432,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const srcId = it.sourceLocationId ?? transferVoucher.sourceLocationId;
               if (srcId && locMap.get(srcId)) sourceLocNamesSet.add(locMap.get(srcId)!);
             }
-            const sourceLocationName = sourceLocNamesSet.size > 0
-              ? Array.from(sourceLocNamesSet).join(", ")
-              : null;
+            const sourceLocationName =
+              sourceLocNamesSet.size > 0 ? Array.from(sourceLocNamesSet).join(", ") : null;
 
             const itemsWithDetails = transferItemsList.map((item) => ({
               id: item.id,
@@ -16826,7 +16837,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const newQty = currentQty + oldQty;
             const newValue = currentValue + oldTotalCost;
             // Recompute averageRate so subsequent cost lookups are accurate
-            const newAvgRate = newQty > 0 ? newValue / newQty : existingInventory.averageRate ? parseFloat(existingInventory.averageRate) : 0;
+            const newAvgRate =
+              newQty > 0
+                ? newValue / newQty
+                : existingInventory.averageRate
+                  ? parseFloat(existingInventory.averageRate)
+                  : 0;
 
             await tx
               .update(inventory)
@@ -17022,7 +17038,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!existingVoucher) return res.status(404).json({ message: "Voucher not found" });
       if (existingVoucher.voucherType !== "Sales") {
-        return res.status(400).json({ message: "Only Sales vouchers can be deleted with this endpoint" });
+        return res
+          .status(400)
+          .json({ message: "Only Sales vouchers can be deleted with this endpoint" });
       }
 
       // Get the sales items so we can reverse inventory
@@ -17379,8 +17397,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(1);
 
       if (!existingVoucher) return res.status(404).json({ message: "Voucher not found" });
-      if (existingVoucher.voucherType !== "Stock Transfer" && existingVoucher.voucherType !== "StockTransfer") {
-        return res.status(400).json({ message: "Only Stock Transfer vouchers can be deleted with this endpoint" });
+      if (
+        existingVoucher.voucherType !== "Stock Transfer" &&
+        existingVoucher.voucherType !== "StockTransfer"
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Only Stock Transfer vouchers can be deleted with this endpoint" });
       }
 
       // Get the stockTransferVoucher to find destinationLocationId
@@ -17390,7 +17413,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(stockTransferVouchers.voucherId, voucherId))
         .limit(1);
 
-      if (!transferVoucher) return res.status(404).json({ message: "Stock transfer record not found" });
+      if (!transferVoucher)
+        return res.status(404).json({ message: "Stock transfer record not found" });
 
       const destinationLocationId = transferVoucher.destinationLocationId;
 
@@ -17429,7 +17453,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 .where(eq(inventory.id, sourceInv.id));
             } else {
               // Re-create inventory row at source if it was zeroed out
-              const [loc] = await tx.select().from(locations).where(eq(locations.id, sourceLocId)).limit(1);
+              const [loc] = await tx
+                .select()
+                .from(locations)
+                .where(eq(locations.id, sourceLocId))
+                .limit(1);
               if (loc) {
                 await tx.insert(inventory).values({
                   companyId,
@@ -17467,16 +17495,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Delete all related records
-          await tx.delete(stockTransferItems).where(eq(stockTransferItems.transferId, transferVoucher.id));
-          await tx.delete(stockTransferVouchers).where(eq(stockTransferVouchers.id, transferVoucher.id));
+          await tx
+            .delete(stockTransferItems)
+            .where(eq(stockTransferItems.transferId, transferVoucher.id));
+          await tx
+            .delete(stockTransferVouchers)
+            .where(eq(stockTransferVouchers.id, transferVoucher.id));
           await tx.delete(voucherEntries).where(eq(voucherEntries.voucherId, voucherId));
           await tx.delete(vouchers).where(eq(vouchers.id, voucherId));
         });
       } else {
         // Optional (draft) transfer — just delete records, no inventory to reverse
         await db.transaction(async (tx) => {
-          await tx.delete(stockTransferItems).where(eq(stockTransferItems.transferId, transferVoucher.id));
-          await tx.delete(stockTransferVouchers).where(eq(stockTransferVouchers.id, transferVoucher.id));
+          await tx
+            .delete(stockTransferItems)
+            .where(eq(stockTransferItems.transferId, transferVoucher.id));
+          await tx
+            .delete(stockTransferVouchers)
+            .where(eq(stockTransferVouchers.id, transferVoucher.id));
           await tx.delete(voucherEntries).where(eq(voucherEntries.voucherId, voucherId));
           await tx.delete(vouchers).where(eq(vouchers.id, voucherId));
         });
@@ -27819,11 +27855,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const manualStockItemIds = containerItemsList
         .map((i) => i.stockItemId)
         .filter((id): id is number => !!id && !allItems.find((a) => a.stockItemId === id));
-      const manualStockItemRows = manualStockItemIds.length > 0
-        ? await db.select({ id: stockItems.id, name: stockItems.name, code: stockItems.code })
-            .from(stockItems)
-            .where(inArray(stockItems.id, manualStockItemIds))
-        : [];
+      const manualStockItemRows =
+        manualStockItemIds.length > 0
+          ? await db
+              .select({ id: stockItems.id, name: stockItems.name, code: stockItems.code })
+              .from(stockItems)
+              .where(inArray(stockItems.id, manualStockItemIds))
+          : [];
       const manualStockItemMap = new Map(manualStockItemRows.map((s) => [s.id, s]));
 
       for (const item of containerItemsList) {
