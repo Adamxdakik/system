@@ -4,7 +4,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit:
@@ -17,12 +17,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: agent/program-6-frontend-operations
+          fetch-depth: 0
+          show-progress: false
 
-      - name: List referenced environment variables
+      - name: Write referenced environment-variable audit
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import json
           import re
 
           roots = [Path("server"), Path("client"), Path("scripts"), Path("shared"), Path("lib")]
@@ -45,8 +48,24 @@ jobs:
                       for match in pattern.finditer(text):
                           found.setdefault(match.group(1), set()).add(str(path))
 
-          print("PROGRAM_6B_ENVIRONMENT_VARIABLES_BEGIN")
-          for name in sorted(found):
-              print(f"{name}\t{','.join(sorted(found[name]))}")
-          print("PROGRAM_6B_ENVIRONMENT_VARIABLES_END")
+          output = {
+              "generatedBy": "Program 6B static environment usage audit",
+              "variables": [
+                  {"name": name, "files": sorted(found[name])}
+                  for name in sorted(found)
+              ],
+          }
+          target = Path("docs/operations/environment-usage.json")
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
           PY
+
+      - name: Commit audit and remove temporary workflow
+        shell: bash
+        run: |
+          git rm .github/workflows/program-6b-environment-audit.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/operations/environment-usage.json
+          git commit -m "Add Program 6B environment usage audit"
+          git push origin HEAD:agent/program-6-frontend-operations
