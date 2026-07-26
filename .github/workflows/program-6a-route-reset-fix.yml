@@ -1,0 +1,56 @@
+name: Program 6A Route Reset Fix
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.pull_request.head.ref == 'agent/program-6-frontend-operations'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out Program 6 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-6-frontend-operations
+          fetch-depth: 0
+
+      - name: Complete route-aware error reset
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("client/src/App.tsx")
+          text = path.read_text(encoding="utf-8")
+          target = '''              <ErrorBoundary>
+                <Router user={user} />
+              </ErrorBoundary>'''
+          replacement = '''              <ErrorBoundary resetKey={currentLocation}>
+                <Router user={user} />
+              </ErrorBoundary>'''
+
+          if target in text:
+              text = text.replace(target, replacement, 1)
+          if text.count('resetKey={currentLocation}') != 2:
+              raise SystemExit("Both authenticated layouts must reset errors on navigation")
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Format application shell
+        run: npx prettier --write client/src/App.tsx
+
+      - name: Commit fix and remove temporary workflow
+        shell: bash
+        run: |
+          git rm .github/workflows/program-6a-route-reset-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/src/App.tsx
+          git commit -m "Complete route-aware frontend error reset"
+          git push origin HEAD:agent/program-6-frontend-operations
