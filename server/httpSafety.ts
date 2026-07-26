@@ -1,10 +1,17 @@
 import { randomUUID } from "crypto";
 import express, { type ErrorRequestHandler, type RequestHandler } from "express";
-import { recordBandwidthSample } from "./services/observability/bandwidthTelemetry";
 
 export const JSON_BODY_LIMIT = "2mb";
 export const URL_ENCODED_BODY_LIMIT = "2mb";
 export const MULTIPART_FILE_LIMIT_BYTES = 10 * 1024 * 1024;
+
+export interface ApiBandwidthSample {
+  method: string;
+  path: string;
+  statusCode: number;
+  durationMillis: number;
+  responseBytes: number | null;
+}
 
 export function databaseHealthPayload(dbStatus: "ok" | "down", requestId: string) {
   return dbStatus === "ok"
@@ -73,7 +80,10 @@ function responseBytesFrom(
   return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
 }
 
-export function apiRequestLogger(writeLog: (message: string) => void): RequestHandler {
+export function apiRequestLogger(
+  writeLog: (message: string) => void,
+  recordBandwidthSample?: (sample: ApiBandwidthSample) => void,
+): RequestHandler {
   return (req, res, next) => {
     const start = Date.now();
 
@@ -103,7 +113,7 @@ export function apiRequestLogger(writeLog: (message: string) => void): RequestHa
 
         writeLog(JSON.stringify(entry));
 
-        if (req.path !== "/api/admin/bandwidth-report") {
+        if (recordBandwidthSample && req.path !== "/api/admin/bandwidth-report") {
           recordBandwidthSample({
             method: req.method,
             path: req.path,
