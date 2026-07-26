@@ -1,0 +1,67 @@
+name: Container Offload Reversal Diagnostic
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  diagnose:
+    if: github.event.pull_request.head.ref == 'agent/program-3-current-main-integration'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/program2_disposable_test
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: program2_disposable_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d program2_disposable_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Prepare disposable database
+        run: npm run db:migrate
+
+      - name: Capture exact reversal failure
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          npx tsx --tsconfig tsconfig.integration-tests.json \
+            server/__tests__/containerOffloadReversal.postgres.ts \
+            --confirm-disposable > /tmp/container-reversal.log 2>&1
+          status=$?
+          {
+            echo '### Container offload reversal diagnostic'
+            echo
+            echo "Exit status: $status"
+            echo
+            echo '```text'
+            cat /tmp/container-reversal.log
+            echo '```'
+          } > /tmp/container-reversal-comment.md
+          gh pr comment 12 --repo Adamxdakik/system --body-file /tmp/container-reversal-comment.md
+          exit 0
