@@ -4,7 +4,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   diagnose:
@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Attempt Program 3 merge and print conflicts
+      - name: Persist exact Program 3 conflict diff
         shell: bash
         run: |
           set +e
@@ -28,19 +28,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git merge --no-commit --no-ff origin/agent/program-3-simplified-interface
           merge_status=$?
-          echo "MERGE_STATUS=$merge_status"
-          echo "CONFLICT_FILES_BEGIN"
-          git diff --name-only --diff-filter=U
-          echo "CONFLICT_FILES_END"
-          for file in $(git diff --name-only --diff-filter=U); do
-            echo "CONFLICT_FILE_BEGIN:$file"
-            awk '
-              /^<<<<<<< / {show=1; before=6}
-              show {print NR ":" $0}
-              /^>>>>>>> / {after=6}
-              after>0 {after--; if (after==0) show=0}
-            ' "$file"
-            echo "CONFLICT_FILE_END:$file"
-          done
+          mkdir -p docs/diagnostics
+          git diff --name-only --diff-filter=U > docs/diagnostics/program3-conflict-files.txt
+          git diff --cc > docs/diagnostics/program3-conflicts.diff
           git merge --abort || true
-          exit 0
+          git add docs/diagnostics/program3-conflict-files.txt docs/diagnostics/program3-conflicts.diff
+          git commit -m "Record temporary Program 3 conflict report"
+          git push origin HEAD:agent/program-3-current-main-integration
+          exit $(( merge_status == 0 ? 1 : 0 ))
