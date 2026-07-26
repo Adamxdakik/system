@@ -31,7 +31,7 @@ Program 6 is stacked on the reviewed Program 5 head. It must not change accounti
 
 ## Phase 6B — Documentation and operational readiness
 
-**Status:** implementation complete; final permanent CI validation pending on the cleaned stacked branch.
+**Status:** implementation complete; final permanent CI validation in progress on the cleaned stacked branch.
 
 ### Completed implementation
 
