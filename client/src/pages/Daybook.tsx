@@ -812,14 +812,27 @@ export default function Daybook({ user }: { user?: any } = {}) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Map filter values → the actual voucherType strings they should match
+  const voucherTypeAliases: Record<string, string[]> = {
+    Sales: ["Sales", "POS"],
+    "Stock Transfer": ["Stock Transfer", "StockTransfer"],
+    Payment: ["Payment"],
+    Purchase: ["Purchase"],
+    Production: ["Production"],
+    Consumption: ["Consumption"],
+  };
+
   // Apply filters (date filtering is now done server-side via periodFilter)
   const filteredVouchers = useMemo(() => {
     if (filters.voucherType === "Offload") return [];
     return vouchers
       .filter((voucher) => {
-        // Voucher type filter
-        if (filters.voucherType !== "all" && voucher.voucherType !== filters.voucherType) {
-          return false;
+        // Voucher type filter — use alias map so "Sales" also catches "POS", etc.
+        if (filters.voucherType !== "all") {
+          const allowed = voucherTypeAliases[filters.voucherType];
+          if (allowed && !allowed.includes(voucher.voucherType)) return false;
+          // If no alias entry (unknown filter value) fall back to exact match
+          if (!allowed && voucher.voucherType !== filters.voucherType) return false;
         }
 
         // Search query filter
@@ -1682,13 +1695,11 @@ export default function Daybook({ user }: { user?: any } = {}) {
                   <SelectItem value="all">All Transactions</SelectItem>
                   <SelectItem value="Sales">Sales</SelectItem>
                   <SelectItem value="Payment">Payments</SelectItem>
-                  <SelectItem value="Receipt">Money Received</SelectItem>
                   <SelectItem value="Purchase">Purchases</SelectItem>
                   <SelectItem value="Stock Transfer">Stock Transfers</SelectItem>
-                  <SelectItem value="Offload">Shipment Receiving</SelectItem>
+                  <SelectItem value="Offload">Offloads (Received)</SelectItem>
                   <SelectItem value="Production">Production</SelectItem>
                   <SelectItem value="Consumption">Consumption</SelectItem>
-                  <SelectItem value="Journal">Journal Entries</SelectItem>
                 </SelectContent>
               </Select>
             </div>
