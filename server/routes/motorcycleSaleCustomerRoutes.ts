@@ -93,15 +93,11 @@ export function registerMotorcycleSaleCustomerRoutes(app: Express): void {
       const voucherCustomerId = Number(voucherCustomer?.customerId) || null;
       const linkedCustomerId = Number(linkedCustomer?.customerId) || null;
       const customerId = resolveFinalizedInvoiceCustomer(voucherCustomerId, linkedCustomerId);
-      const source = voucherCustomerId
-        ? "voucher"
-        : linkedCustomerId
-          ? "linked_motorcycle"
-          : null;
+      const source = voucherCustomerId ? "voucher" : linkedCustomerId ? "linked_motorcycle" : null;
       const customerName = voucherCustomerId
-        ? voucherCustomer?.customerName ?? null
+        ? (voucherCustomer?.customerName ?? null)
         : linkedCustomerId
-          ? linkedCustomer?.customerName ?? null
+          ? (linkedCustomer?.customerName ?? null)
           : null;
 
       return res.json({ customerId, customerName, source });
