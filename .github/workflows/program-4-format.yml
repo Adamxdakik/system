@@ -1,0 +1,54 @@
+name: Program 4 formatter
+
+on:
+  push:
+    branches:
+      - agent/program-4-motorcycle-records
+    paths:
+      - .github/workflows/program-4-format.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Program 4 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-4-motorcycle-records
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev --silent
+
+      - name: Format Program 4 files
+        run: >-
+          npx prettier --write
+          client/src/App.tsx
+          client/src/config/navigation.ts
+          client/src/pages/Motorcycles.tsx
+          server/index.ts
+          server/routes/motorcycleRecordRoutes.ts
+          migrations/0029_motorcycle_registry.sql
+          docs/program-4-motorcycle-records-plan.md
+
+      - name: Commit formatter output
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No formatting changes required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/src/App.tsx client/src/config/navigation.ts client/src/pages/Motorcycles.tsx server/index.ts server/routes/motorcycleRecordRoutes.ts migrations/0029_motorcycle_registry.sql docs/program-4-motorcycle-records-plan.md
+          git commit -m "Format Program 4A files"
+          git push origin HEAD:agent/program-4-motorcycle-records
