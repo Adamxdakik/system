@@ -90,5 +90,3 @@ Implementation, cleanup, and permanent CI validation are complete on draft PR #4
 ## Definition of done
 
 Program 3 is complete on draft PR #4. The final source-only head passed formatting, zero-warning lint, package and whole-application TypeScript checks, CI-safe tests, production build, the full migration chain with idempotent rerun, and all permanent PostgreSQL accounting, payroll, stock, container, POS-value, report, and audit regressions.
-
-Validated source head before this documentation-only record: `2a05704a2594ae0f6292689affe86c4960fa1ee6`.
