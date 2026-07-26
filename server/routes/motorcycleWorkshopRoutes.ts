@@ -230,7 +230,7 @@ export function registerMotorcycleWorkshopRoutes(app: Express): void {
               AND motorcycle_id = ${motorcycleId}
           ) AS linked
       `);
-      if (Boolean(result.rows[0]?.linked)) {
+      if (result.rows[0]?.linked) {
         return res.status(409).json({
           message: "A motorcycle with lifecycle history cannot be removed from the registry",
           code: "MOTORCYCLE_LIFECYCLE_LOCKED",
