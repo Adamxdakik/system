@@ -9129,6 +9129,212 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Bulk PO Import (single request, all server-side) ─────────────────────
+  // Replaces the old multi-step client flow (246 round-trips) with one call.
+  app.post("/api/containers/import-po", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) return res.status(400).json({ message: "No company selected" });
+
+      const { header, lines, charges: chargeLines } = req.body;
+      if (!header?.containerNumber) return res.status(400).json({ message: "Container number required" });
+      if (!header?.supplierId)      return res.status(400).json({ message: "Supplier required" });
+      if (!lines?.length)           return res.status(400).json({ message: "No line items provided" });
+
+      // Normalise date → YYYY-MM-DD
+      let importDate: string = header.importDate || new Date().toISOString().split("T")[0];
+      const pd = new Date(importDate);
+      if (!isNaN(pd.getTime())) importDate = pd.toISOString().split("T")[0];
+
+      // ── Load all stock items once, build lookup caches ───────────────
+      const allStockItems = await storage.getAllStockItems(companyId);
+
+      const byCode    = new Map<string, any>();
+      const byName    = new Map<string, any>();
+      const byNorm    = new Map<string, any>();
+      const byVariant = new Map<string, any>(); // `${parentId}:label`
+
+      const normCode = (s: string) => s.replace(/[\s\-_.]/g, "").toLowerCase();
+
+      const addToCache = (si: any) => {
+        if (si.code) {
+          byCode.set(si.code.toLowerCase(), si);
+          byNorm.set(normCode(si.code), si);
+        }
+        byName.set(si.name.toLowerCase(), si);
+        if (si.parentStockItemId) {
+          if (si.name.toLowerCase().includes("200cc")) byVariant.set(`${si.parentStockItemId}:200cc`, si);
+          if (si.name.toLowerCase().includes("300cc")) byVariant.set(`${si.parentStockItemId}:300cc`, si);
+        }
+      };
+
+      for (const si of allStockItems) addToCache(si);
+
+      const findParent = (code: string, name: string): any | undefined => {
+        if (code) {
+          const h1 = byCode.get(code.toLowerCase());
+          if (h1 && !h1.parentStockItemId) return h1;
+          const h2 = byNorm.get(normCode(code));
+          if (h2 && !h2.parentStockItemId) return h2;
+        }
+        const h3 = byName.get(name.toLowerCase());
+        if (h3 && !h3.parentStockItemId) return h3;
+        if (code) {
+          for (const [k, v] of byName) {
+            if (!v.parentStockItemId && k.startsWith(code.toLowerCase())) return v;
+          }
+        }
+        return undefined;
+      };
+
+      // ── Create container ─────────────────────────────────────────────
+      let container: any;
+      try {
+        container = await storage.createContainer({
+          companyId,
+          containerNumber: header.containerNumber,
+          supplierId: parseInt(header.supplierId),
+          status: header.status || "OTW",
+          importDate,
+        });
+      } catch (dbErr: any) {
+        if (dbErr.code === "23505" || dbErr.message?.includes("unique")) {
+          return res.status(409).json({
+            message: `Container "${header.containerNumber}" already exists. Delete it or use a different number.`,
+          });
+        }
+        throw dbErr;
+      }
+
+      // ── Resolve & create stock items, build container item rows ──────
+      let autoCreated = 0;
+      const itemRows: any[] = [];
+
+      for (const line of lines) {
+        const { parentCode = "", parentName = "", variantLabel, quantity, unitCost, weightKg, uom } = line;
+        let stockItemId: number | null = null;
+        let itemName = "";
+
+        if (!variantLabel) {
+          // Standalone
+          const existing = findParent(parentCode, parentName);
+          if (existing) {
+            stockItemId = existing.id; itemName = existing.name;
+          } else {
+            const created = await storage.createStockItem({
+              companyId, code: parentCode || `AUTO-${Date.now()}`,
+              name: parentName || parentCode, uom: uom || "PCS",
+              active: true, sellingPrice: "0.00",
+            });
+            addToCache(created); stockItemId = created.id; itemName = created.name; autoCreated++;
+          }
+        } else {
+          // Variant — find/create parent first
+          const existingParent = findParent(parentCode, parentName);
+          let parentId: number;
+          if (existingParent) {
+            parentId = existingParent.id;
+          } else {
+            const created = await storage.createStockItem({
+              companyId, code: parentCode || `AUTO-${Date.now()}`,
+              name: parentName || parentCode, uom: uom || "PCS",
+              active: true, sellingPrice: "0.00",
+            });
+            addToCache(created); parentId = created.id; autoCreated++;
+          }
+          // Find/create variant
+          const cacheKey = `${parentId}:${variantLabel}`;
+          const existing = byVariant.get(cacheKey);
+          if (existing) {
+            stockItemId = existing.id; itemName = existing.name;
+          } else {
+            const vName = `${parentName || parentCode} ${variantLabel}`;
+            const vCode = parentCode
+              ? `${parentCode}-${variantLabel.replace(/[^a-z0-9]/gi, "")}`
+              : `AUTO-${Date.now()}`;
+            const created = await storage.createStockItem({
+              companyId, code: vCode, name: vName, uom: uom || "PCS",
+              parentStockItemId: parentId, active: true, sellingPrice: "0.00",
+            });
+            addToCache(created); stockItemId = created.id; itemName = created.name; autoCreated++;
+          }
+        }
+
+        const qty  = parseFloat(quantity)  || 0;
+        const rate = parseFloat(unitCost)  || 0;
+        const kg   = parseFloat(weightKg)  || 0;
+        itemRows.push({ containerId: container.id, stockItemId, itemName,
+          quantity: qty.toString(), ratePerKg: rate.toString(),
+          weightKg: kg.toString(), lineTotal: (qty * rate).toFixed(2) });
+      }
+
+      // Batch insert container items
+      for (const row of itemRows) await storage.createContainerItem(row);
+
+      // ── Charges ──────────────────────────────────────────────────────
+      if (chargeLines?.length) {
+        for (const c of chargeLines) {
+          await storage.createContainerCharge({
+            containerId: container.id, chargeType: c.chargeType,
+            amount: parseFloat(c.amount).toFixed(2),
+          });
+        }
+      }
+
+      // ── Update container totals ──────────────────────────────────────
+      const savedItems   = await storage.getContainerItems(container.id);
+      const savedCharges = await storage.getChargesByContainer(container.id);
+      const itemsTotal   = savedItems.reduce((s, i) => s + parseFloat(i.lineTotal), 0);
+      const chargesTotal = savedCharges.reduce((s, c) => s + parseFloat(c.amount), 0);
+      const grandTotal   = itemsTotal + chargesTotal;
+
+      await storage.updateContainer(container.id, {
+        itemsTotal:   itemsTotal.toFixed(2),
+        chargesTotal: chargesTotal.toFixed(2),
+        grandTotal:   grandTotal.toFixed(2),
+      });
+
+      // ── Purchase voucher ─────────────────────────────────────────────
+      if (grandTotal > 0) {
+        let purchasesAccount = await storage.getLedgerAccountByCode("PURCHASES", companyId);
+        if (!purchasesAccount) {
+          purchasesAccount = await storage.createLedgerAccount({
+            companyId, code: "PURCHASES", name: "Purchases",
+            accountType: "Expense", openingBalance: "0",
+            openingBalanceSide: "Dr", active: true,
+          });
+        }
+        const voucherNumber = `MCONT-${container.id}`;
+        const itemNames = savedItems.map((i) => i.itemName).join(", ");
+        const voucher = await storage.createVoucher({
+          companyId, voucherNumber, voucherType: "Purchase",
+          voucherDate: importDate,
+          description: `Import ${container.containerNumber} - ${itemNames.substring(0, 100)}`,
+          totalAmount: grandTotal.toFixed(2), optional: false,
+        });
+        await storage.createVoucherEntry({
+          voucherId: voucher.id, ledgerAccountId: purchasesAccount.id,
+          debitAmount: grandTotal.toFixed(2), creditAmount: "0",
+          narration: `Container ${container.containerNumber} import`,
+        });
+        await storage.createVoucherEntry({
+          voucherId: voucher.id, supplierId: container.supplierId,
+          debitAmount: "0", creditAmount: grandTotal.toFixed(2),
+          narration: `Container ${container.containerNumber} import`,
+        });
+      }
+
+      res.json({
+        success: true, containerId: container.id,
+        containerNumber: container.containerNumber,
+        lineItems: itemRows.length, autoCreated, grandTotal: grandTotal.toFixed(2),
+      });
+    } catch (err: any) {
+      console.error("[import-po]", err);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // Create a manual container
   app.post("/api/containers", requireAuth, requireNonPOS, async (req, res) => {
     try {

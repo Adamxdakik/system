@@ -313,185 +313,50 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
 
     setIsImporting(true);
     try {
-      // ── Build lookup caches from existing stock items ──────────────────
-      // These are updated in-place as we create new items, so subsequent
-      // lines always see items created earlier in the same import — no
-      // duplicates, no extra API calls.
-      const byCode    = new Map<string, any>(); // exact lowercase code → item
-      const byName    = new Map<string, any>(); // exact lowercase name → item
-      const byNorm    = new Map<string, any>(); // alphanumeric-only code → item (M-01 = M01)
-      // variant cache key: `${parentId}:${variantLabel}` (e.g. "42:200cc")
-      const byVariant = new Map<string, any>();
-
-      /** Strip dashes, spaces, dots → lowercase. "M-01" → "m01" */
-      const norm = (s: string) => s.replace(/[\s\-_.]/g, "").toLowerCase();
-
-      /** Find an existing top-level (non-variant) item by code or name */
-      const findParent = (code: string, name: string): any | undefined => {
-        const cl = code.toLowerCase();
-        const nl = name.toLowerCase();
-        // 1. exact code match
-        if (code) {
-          const hit = byCode.get(cl);
-          if (hit && !hit.parentStockItemId) return hit;
-        }
-        // 2. normalised code match  (M-01 == M01 == m-01)
-        if (code) {
-          const hit = byNorm.get(norm(code));
-          if (hit && !hit.parentStockItemId) return hit;
-        }
-        // 3. exact name match
-        const byNH = byName.get(nl);
-        if (byNH && !byNH.parentStockItemId) return byNH;
-        // 4. existing item whose name STARTS WITH the code (e.g. code "M-01", name "M-01 Cylinder Head")
-        if (code) {
-          for (const [k, v] of byName) {
-            if (!v.parentStockItemId && k.startsWith(cl)) return v;
-          }
-        }
-        return undefined;
-      };
-
-      const addToCache = (si: any) => {
-        if (si.code) {
-          byCode.set(si.code.toLowerCase(), si);
-          byNorm.set(norm(si.code), si);
-        }
-        byName.set(si.name.toLowerCase(), si);
-        if (si.parentStockItemId) {
-          if (si.name.toLowerCase().includes("200cc"))
-            byVariant.set(`${si.parentStockItemId}:200cc`, si);
-          if (si.name.toLowerCase().includes("300cc"))
-            byVariant.set(`${si.parentStockItemId}:300cc`, si);
-        }
-      };
-
-      for (const si of stockItems) addToCache(si);
-
-      // ── 1. Create container ────────────────────────────────────────────
-      const containerRes = await apiRequest("POST", "/api/containers", {
-        containerNumber: parsedPO.header.containerNumber,
-        supplierId:      supplier.id,
-        status:          parsedPO.header.status,
-        importDate:      parsedPO.header.importDate,
+      // Single server-side call — all matching, creation, voucher done in one request.
+      const res = await apiRequest("POST", "/api/containers/import-po", {
+        header: {
+          containerNumber: parsedPO.header.containerNumber,
+          supplierId:      supplier.id,
+          status:          parsedPO.header.status,
+          importDate:      parsedPO.header.importDate,
+        },
+        lines: parsedPO.lines.map((l) => ({
+          parentCode:   l.parentCode,
+          parentName:   l.parentName,
+          variantLabel: l.variantLabel ?? null,
+          quantity:     l.quantity,
+          unitCost:     l.unitCost,
+          weightKg:     l.weightKg,
+          uom:          l.uom,
+        })),
+        charges: parsedPO.charges.map((c) => ({
+          chargeType: c.chargeType,
+          amount:     c.amount,
+        })),
       });
-      const container = await containerRes.json();
 
-      // ── 2. Process each line sequentially ─────────────────────────────
-      let autoCreated = 0;
-      for (const line of parsedPO.lines) {
-        let stockItemId: number;
-        let itemName: string;
-
-        if (!line.variantLabel) {
-          // ── Standalone item ──────────────────────────────────────────
-          const existing = findParent(line.parentCode, line.parentName);
-
-          if (existing) {
-            stockItemId = existing.id;
-            itemName    = existing.name;
-          } else {
-            const res     = await apiRequest("POST", "/api/stock-items", {
-              code:         line.parentCode || `AUTO-${Date.now()}`,
-              name:         line.parentName,
-              uom:          line.uom,
-              active:       true,
-              sellingPrice: "0.00",
-            });
-            const created = await res.json();
-            addToCache(created);
-            stockItemId = created.id;
-            itemName    = created.name;
-            autoCreated++;
-          }
-        } else {
-          // ── Variant: find/create parent first ────────────────────────
-          const existingParent = findParent(line.parentCode, line.parentName);
-
-          let parentId: number;
-          if (existingParent) {
-            // Found existing parent (findParent already guarantees it's top-level)
-            parentId = existingParent.id;
-          } else {
-            // Create the parent
-            const res     = await apiRequest("POST", "/api/stock-items", {
-              code:         line.parentCode || `AUTO-${Date.now()}`,
-              name:         line.parentName,
-              uom:          line.uom,
-              active:       true,
-              sellingPrice: "0.00",
-            });
-            const created = await res.json();
-            addToCache(created);
-            parentId = created.id;
-            autoCreated++;
-          }
-
-          // ── Find/create the variant ──────────────────────────────────
-          const cacheKey        = `${parentId}:${line.variantLabel}`;
-          const existingVariant = byVariant.get(cacheKey);
-
-          if (existingVariant) {
-            // Already exists — reuse, never duplicate
-            stockItemId = existingVariant.id;
-            itemName    = existingVariant.name;
-          } else {
-            const variantName = `${line.parentName} ${line.variantLabel}`;
-            const variantCode = line.parentCode
-              ? `${line.parentCode}-${line.variantLabel.replace(/[^a-z0-9]/gi, "")}`
-              : `AUTO-${Date.now()}`;
-
-            const res2     = await apiRequest("POST", "/api/stock-items", {
-              code:               variantCode,
-              name:               variantName,
-              uom:                line.uom,
-              parentStockItemId:  parentId,
-              active:             true,
-              sellingPrice:       "0.00",
-            });
-            const created2 = await res2.json();
-            addToCache(created2);          // cache immediately — next line sees it
-            stockItemId = created2.id;
-            itemName    = created2.name;
-            autoCreated++;
-          }
-        }
-
-        await apiRequest("POST", `/api/containers/${container.id}/items`, {
-          stockItemId,
-          itemName,
-          quantity:  line.quantity.toString(),
-          ratePerKg: line.unitCost.toString(),
-          weightKg:  line.weightKg.toString(),
-        });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(err.message || "Import failed");
       }
 
-      // ── 3. Charges ────────────────────────────────────────────────────
-      if (parsedPO.charges.length > 0) {
-        await apiRequest("POST", `/api/containers/${container.id}/charges`, {
-          charges: parsedPO.charges.map((c) => ({
-            chargeType: c.chargeType,
-            amount:     c.amount.toString(),
-          })),
-        });
-      }
-
-      // ── 4. Purchase voucher ───────────────────────────────────────────
-      await apiRequest("POST", `/api/containers/${container.id}/create-purchase-voucher`, {});
+      const result = await res.json();
 
       queryClient.invalidateQueries({ queryKey: ["/api/containers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/containers/active"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"]  });
+      queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stock-items"] });
 
-      const variantLines = parsedPO.lines.filter((l) => l.variantLabel).length;
       toast({
-        title: "PO Imported",
+        title: "PO Imported ✓",
         description: [
-          `Container ${parsedPO.header.containerNumber}`,
-          `${parsedPO.lines.length} line item${parsedPO.lines.length !== 1 ? "s" : ""}`,
-          variantLines > 0 ? `${variantLines} variant line${variantLines !== 1 ? "s" : ""}` : null,
-          autoCreated > 0  ? `${autoCreated} new item${autoCreated !== 1 ? "s" : ""} created` : null,
+          `Container ${result.containerNumber}`,
+          `${result.lineItems} line item${result.lineItems !== 1 ? "s" : ""}`,
+          result.autoCreated > 0
+            ? `${result.autoCreated} new item${result.autoCreated !== 1 ? "s" : ""} created`
+            : null,
+          `Total $${Number(result.grandTotal).toLocaleString()}`,
         ].filter(Boolean).join(" · "),
       });
 
