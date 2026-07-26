@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Package, DollarSign, FileText, Truck, Trash2, HandCoins, Calendar, User, RotateCcw, Edit, Ship, MapPin, Navigation, RefreshCw, Anchor, Warehouse } from "lucide-react";
+import { ArrowLeft, Package, DollarSign, FileText, Truck, Trash2, HandCoins, Calendar, User, RotateCcw, Edit, Ship, MapPin, Navigation, RefreshCw, Anchor, Warehouse, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OffloadDialog } from "@/components/OffloadDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +42,7 @@ export default function ContainerDetail() {
   const [showOffloadDialog, setShowOffloadDialog] = useState(false);
   const [showSellDialog, setShowSellDialog] = useState(false);
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const [_location, setLocation] = useLocation();
   const { selectedCompany } = useCompany();
@@ -77,6 +78,10 @@ export default function ContainerDetail() {
   const { data: containerSales = [] } = useQuery<ContainerSale[]>({
     queryKey: ["/api/container-sales", companyId],
     enabled: !!companyId,
+  });
+
+  const { data: allStockItems = [] } = useQuery<any[]>({
+    queryKey: ["/api/stock-items"],
   });
 
   const containerSale = containerSales.find((sale: ContainerSale) => sale.containerId === parseInt(containerId!));
@@ -295,6 +300,67 @@ export default function ContainerDetail() {
   }
 
   const { container, pos, charges, items: containerItems = [], offload } = containerData;
+
+  // ── Group container items by parent stock item ─────────────────────────
+  const stockItemMap = new Map<number, any>(allStockItems.map((si: any) => [si.id, si]));
+
+  interface ItemGroup {
+    key: string;
+    parentName: string;
+    isGrouped: boolean; // true = has multiple variants → collapsible
+    items: any[];
+    totalQty: number;
+    totalAmount: number;
+  }
+
+  const groupMap = new Map<string, ItemGroup>();
+  for (const item of containerItems) {
+    const si = item.stockItemId ? stockItemMap.get(item.stockItemId) : null;
+    let groupKey: string;
+    let parentName: string;
+    let isGrouped = false;
+
+    if (si?.parentStockItemId) {
+      // Variant — group under parent
+      const parent = stockItemMap.get(si.parentStockItemId);
+      groupKey = `parent-${si.parentStockItemId}`;
+      parentName = parent?.name ?? item.itemName.replace(/\s*(200cc|300cc)\s*/gi, "").trim();
+      isGrouped = true;
+    } else {
+      // Check if item name looks like a variant (e.g. "200CC", "M-02 200cc")
+      const variantMatch = item.itemName.match(/^(.*?)\s*(200cc|300cc)$/i);
+      if (variantMatch) {
+        const base = variantMatch[1].trim();
+        groupKey = `name-${base || item.itemName}`;
+        parentName = base || item.itemName;
+        isGrouped = true;
+      } else {
+        groupKey = `item-${item.id}`;
+        parentName = item.itemName;
+        isGrouped = false;
+      }
+    }
+
+    if (!groupMap.has(groupKey)) {
+      groupMap.set(groupKey, { key: groupKey, parentName, isGrouped, items: [], totalQty: 0, totalAmount: 0 });
+    }
+    const g = groupMap.get(groupKey)!;
+    g.items.push(item);
+    g.totalQty   += parseFloat(item.quantity  || "0");
+    g.totalAmount += parseFloat(item.lineTotal || "0");
+    // Only treat as grouped if there are actually multiple items
+    if (g.items.length > 1) g.isGrouped = true;
+  }
+
+  const itemGroups = Array.from(groupMap.values());
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
   const supplier = suppliers.find((s: any) => s.id === container.supplierId);
 
   const itemsTotal = parseFloat(container.itemsTotal || "0");
@@ -678,8 +744,8 @@ export default function ContainerDetail() {
         <Card>
           <CardContent className="p-0 overflow-hidden">
 
-            {/* Items table */}
-            {containerItems.length > 0 && (
+            {/* Items table — grouped by parent stock item */}
+            {itemGroups.length > 0 && (
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40">
@@ -690,14 +756,64 @@ export default function ContainerDetail() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {containerItems.map((item: any) => (
-                    <TableRow key={item.id} data-testid={`row-manual-item-${item.id}`}>
-                      <TableCell className="font-medium pl-4">{item.itemName}</TableCell>
-                      <TableCell className="text-right font-mono text-sm">{formatNumber(item.quantity)}{item.uom ? ` ${item.uom}` : ""}</TableCell>
-                      <TableCell className="text-right font-mono text-sm">${formatNumber(item.ratePerKg)}</TableCell>
-                      <TableCell className="text-right font-mono font-semibold pr-4">${formatNumber(item.lineTotal)}</TableCell>
-                    </TableRow>
-                  ))}
+                  {itemGroups.flatMap((group) => {
+                    const isExpanded = expandedGroups.has(group.key);
+
+                    if (!group.isGrouped) {
+                      // Single item — flat row, no expand
+                      const item = group.items[0];
+                      return [
+                        <TableRow key={item.id} data-testid={`row-manual-item-${item.id}`}>
+                          <TableCell className="font-medium pl-4">{item.itemName}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatNumber(item.quantity)}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">${formatNumber(item.ratePerKg)}</TableCell>
+                          <TableCell className="text-right font-mono font-semibold pr-4">${formatNumber(item.lineTotal)}</TableCell>
+                        </TableRow>,
+                      ];
+                    }
+
+                    // Grouped parent row + collapsible variant sub-rows
+                    return [
+                      // Parent summary row
+                      <TableRow
+                        key={group.key}
+                        className="cursor-pointer hover:bg-muted/50 font-medium"
+                        onClick={() => toggleGroup(group.key)}
+                      >
+                        <TableCell className="pl-3">
+                          <div className="flex items-center gap-2">
+                            <ChevronRight
+                              className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                            />
+                            <span>{group.parentName || "—"}</span>
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({group.items.length} variant{group.items.length !== 1 ? "s" : ""})
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">{formatNumber(group.totalQty)}</TableCell>
+                        <TableCell className="text-right text-muted-foreground text-sm">—</TableCell>
+                        <TableCell className="text-right font-mono font-semibold pr-4">${formatNumber(group.totalAmount)}</TableCell>
+                      </TableRow>,
+
+                      // Variant sub-rows (only when expanded)
+                      ...(isExpanded
+                        ? group.items.map((item: any) => (
+                            <TableRow key={item.id} className="bg-muted/20" data-testid={`row-manual-item-${item.id}`}>
+                              <TableCell className="pl-10 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-muted-foreground/50">└</span>
+                                  {item.itemName}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">{formatNumber(item.quantity)}</TableCell>
+                              <TableCell className="text-right font-mono text-sm">${formatNumber(item.ratePerKg)}</TableCell>
+                              <TableCell className="text-right font-mono font-semibold pr-4">${formatNumber(item.lineTotal)}</TableCell>
+                            </TableRow>
+                          ))
+                        : []),
+                    ];
+                  })}
                 </TableBody>
               </Table>
             )}
