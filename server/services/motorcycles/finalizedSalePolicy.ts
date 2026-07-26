@@ -69,6 +69,24 @@ export function combinedMotorcyclePricesFitVoucher(
   );
 }
 
+export function resolveFinalizedInvoiceCustomer(
+  voucherCustomerId: number | null,
+  linkedMotorcycleCustomerId: number | null,
+): number | null {
+  return voucherCustomerId ?? linkedMotorcycleCustomerId ?? null;
+}
+
+export function voucherCustomerMatchesSelection(
+  inferredCustomerId: number | null,
+  selectedCustomerId: number | null | undefined,
+): boolean {
+  return (
+    inferredCustomerId == null ||
+    selectedCustomerId == null ||
+    inferredCustomerId === selectedCustomerId
+  );
+}
+
 export function warrantyDatesAreValid(
   warrantyStartDate: string | null | undefined,
   warrantyEndDate: string | null | undefined,
