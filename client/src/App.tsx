@@ -68,6 +68,7 @@ const Assembly = lazy(() => import("@/pages/Assembly"));
 const IncomeStatement = lazy(() => import("@/pages/IncomeStatement"));
 const EmployeeInventory = lazy(() => import("@/pages/EmployeeInventory"));
 const Service = lazy(() => import("@/pages/Service"));
+const Motorcycles = lazy(() => import("@/pages/Motorcycles"));
 
 function PageLoader() {
   return (
@@ -175,6 +176,7 @@ function Router({ user }: { user: any }) {
         <Route path="/sales-report">{() => <SalesReport />}</Route>
         <Route path="/voucher-detail/:voucherId" component={VoucherDetail} />
         <Route path="/sold-containers" component={SoldContainers} />
+        <Route path="/motorcycles" component={Motorcycles} />
         <Route path="/moto-assembly">{() => <Assembly initialTab="assembly" />}</Route>
         <Route path="/assembly-history">{() => <Assembly initialTab="history" />}</Route>
         <Route path="/income-statement" component={IncomeStatement} />
