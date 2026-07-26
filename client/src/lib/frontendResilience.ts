@@ -26,6 +26,14 @@ export function isStaleChunkError(error: unknown): boolean {
   return STALE_CHUNK_PATTERNS.some((pattern) => pattern.test(message));
 }
 
+function storedReloadTime(storage: StorageLike): number | undefined {
+  const value = storage.getItem(STALE_CHUNK_RELOAD_KEY);
+  if (value === null) return undefined;
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export function shouldReloadForStaleChunk(
   error: unknown,
   storage: StorageLike | undefined,
@@ -34,8 +42,8 @@ export function shouldReloadForStaleChunk(
   if (!isStaleChunkError(error) || !storage) return false;
 
   try {
-    const previous = Number(storage.getItem(STALE_CHUNK_RELOAD_KEY));
-    if (Number.isFinite(previous) && now - previous < STALE_CHUNK_RELOAD_WINDOW_MS) {
+    const previous = storedReloadTime(storage);
+    if (previous !== undefined && now - previous < STALE_CHUNK_RELOAD_WINDOW_MS) {
       return false;
     }
 
@@ -53,8 +61,8 @@ export function clearExpiredStaleChunkReloadGuard(
   if (!storage) return;
 
   try {
-    const previous = Number(storage.getItem(STALE_CHUNK_RELOAD_KEY));
-    if (!Number.isFinite(previous) || now - previous >= STALE_CHUNK_RELOAD_WINDOW_MS) {
+    const previous = storedReloadTime(storage);
+    if (previous === undefined || now - previous >= STALE_CHUNK_RELOAD_WINDOW_MS) {
       storage.removeItem(STALE_CHUNK_RELOAD_KEY);
     }
   } catch {
