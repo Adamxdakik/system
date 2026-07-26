@@ -9,13 +9,8 @@ function reportLimit(value: unknown): number {
 }
 
 export function registerAdminBandwidthRoutes(app: Express): void {
-  app.get(
-    "/api/admin/bandwidth-report",
-    requireAuth,
-    requireRole("Admin"),
-    (req, res) => {
-      res.setHeader("Cache-Control", "no-store");
-      return res.json(getBandwidthTelemetryReport(reportLimit(req.query.limit)));
-    },
-  );
+  app.get("/api/admin/bandwidth-report", requireAuth, requireRole("Admin"), (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    return res.json(getBandwidthTelemetryReport(reportLimit(req.query.limit)));
+  });
 }

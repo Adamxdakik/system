@@ -62,7 +62,11 @@ export function requestBodyParsers(): RequestHandler[] {
   ];
 }
 
-function responseBytesFrom(contentLength: unknown, method: string, statusCode: number): number | null {
+function responseBytesFrom(
+  contentLength: unknown,
+  method: string,
+  statusCode: number,
+): number | null {
   if (method === "HEAD" || statusCode === 204 || statusCode === 304) return 0;
   if (contentLength === undefined) return null;
   const parsed = Number(contentLength);

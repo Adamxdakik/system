@@ -168,12 +168,7 @@ export class BandwidthTelemetry {
       50,
       120_000,
     );
-    this.windowMinutes = boundedInteger(
-      options.windowMinutes,
-      DEFAULT_WINDOW_MINUTES,
-      1,
-      60,
-    );
+    this.windowMinutes = boundedInteger(options.windowMinutes, DEFAULT_WINDOW_MINUTES, 1, 60);
   }
 
   reset(now = Date.now()): void {
@@ -183,7 +178,9 @@ export class BandwidthTelemetry {
 
   record(sample: BandwidthSample): void {
     const observedAt = Number.isFinite(sample.observedAt) ? Number(sample.observedAt) : Date.now();
-    const method = String(sample.method || "UNKNOWN").toUpperCase().slice(0, 16);
+    const method = String(sample.method || "UNKNOWN")
+      .toUpperCase()
+      .slice(0, 16);
     const normalizedPath = normalizeBandwidthPath(sample.path);
     let aggregateMethod = method;
     let aggregatePath = normalizedPath;
@@ -370,12 +367,7 @@ export class BandwidthTelemetry {
 
 const telemetryDisabled = process.env.DISABLE_BANDWIDTH_TELEMETRY === "true";
 const bandwidthTelemetry = new BandwidthTelemetry({
-  maxRoutes: environmentInteger(
-    "BANDWIDTH_TELEMETRY_MAX_ROUTES",
-    DEFAULT_MAX_ROUTES,
-    10,
-    2_000,
-  ),
+  maxRoutes: environmentInteger("BANDWIDTH_TELEMETRY_MAX_ROUTES", DEFAULT_MAX_ROUTES, 10, 2_000),
   heavyResponseBytes: environmentInteger(
     "BANDWIDTH_HEAVY_RESPONSE_BYTES",
     DEFAULT_HEAVY_RESPONSE_BYTES,

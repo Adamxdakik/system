@@ -13,9 +13,7 @@ describe("bandwidth telemetry", () => {
   });
 
   it("normalizes dynamic path identifiers without keeping query strings", () => {
-    expect(normalizeBandwidthPath("/api/vouchers/123?include=entries")).toBe(
-      "/api/vouchers/:id",
-    );
+    expect(normalizeBandwidthPath("/api/vouchers/123?include=entries")).toBe("/api/vouchers/:id");
     expect(
       normalizeBandwidthPath(
         "/api/jobs/550e8400-e29b-41d4-a716-446655440000/results/abcdef1234567890",
