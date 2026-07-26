@@ -1,0 +1,51 @@
+name: Program 5 Formatting Repair
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.event.pull_request.head.ref == 'agent/program-5-bandwidth-verification'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out Program 5 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-5-bandwidth-verification
+          fetch-depth: 0
+
+      - name: Install exact dependencies
+        run: npm ci
+
+      - name: Format permanent Program 5 files
+        run: |
+          npx prettier --write \
+            docs/program-5-database-performance-plan.md \
+            docs/program-5b-static-audit.md \
+            docs/program-5c-static-audit.md \
+            server/__tests__/bandwidthTelemetry.test.ts \
+            server/__tests__/heavyReadOptimization.test.ts \
+            server/httpSafety.ts \
+            server/index.ts \
+            server/routes/adminBandwidthRoutes.ts \
+            server/routes/optimizedAccountsRoutes.ts \
+            server/routes/optimizedStockHistoryRoutes.ts \
+            server/services/observability/bandwidthTelemetry.ts \
+            server/services/performance/heavyReadCalculations.ts
+
+      - name: Commit formatting and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/program-5-format.yml
+          git add docs server
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Format Program 5 implementation"
+          git push origin HEAD:agent/program-5-bandwidth-verification
