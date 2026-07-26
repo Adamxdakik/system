@@ -1747,3 +1747,59 @@ index 9ea1126,1137b68..0000000
                           </tr>
                         );
                       })()}
+diff --git a/docs/diagnostics/program3-conflicts.diff b/docs/diagnostics/program3-conflicts.diff
+index bbf25fc..5ffdab2 100644
+--- a/docs/diagnostics/program3-conflicts.diff
++++ b/docs/diagnostics/program3-conflicts.diff
+@@ -1701,49 +1701,4 @@ index 9ea1126,1137b68..0000000
+ +                         >
+ +                           <Button
+ +                             size="sm"
+-+                             variant="ghost"
+-+                             onClick={(event) => handleEditClick(item.id, event)}
+-+                             data-testid={`button-edit-${item.id}`}
+-+                             className="gap-2"
+-+                           >
+-+                             <Edit className="h-4 w-4" />
+-+                             Edit
+-+                           </Button>
+-+                         </td>
+-+                       </tr>
+-+                     );
+-+                   })}
+-+                   {filteredOverviewItems.length > 0 &&
+-+                     (() => {
+-+                       const totalQty = filteredOverviewItems.reduce(
+-+                         (sum, item) => sum + (productTotals.get(item.id)?.totalQuantity ?? 0),
+-++>>>>>>> origin/agent/program-3-simplified-interface
+-                          0,
+-                        );
+-                        return (
+-                          <tr className="border-t bg-muted/30 font-semibold">
+-                            <td className="px-3" />
+-                            <td className="px-3 py-2.5 text-sm text-muted-foreground">
+-++<<<<<<< HEAD
+- +                            {filteredOverviewItems.length} of{" "}
+- +                            {stockItems.filter((i) => !i.parentStockItemId).length} products
+- +                          </td>
+- +                          <td className="px-3" />
+- +                          <td className="px-3 text-right font-mono text-sm">
+- +                            {totalQty % 1 === 0
+- +                              ? totalQty.toLocaleString()
+- +                              : totalQty.toFixed(2)}
+- +                          </td>
+- +                          <td colSpan={3} />
+-++=======
+-+                             {filteredOverviewItems.length} of {stockItems.length} products
+-+                           </td>
+-+                           <td className="px-3" />
+-+                           <td className="px-3 text-right font-mono text-sm">
+-+                             {formatQuantity(totalQty)}
+-+                           </td>
+-+                           <td colSpan={4} />
+-++>>>>>>> origin/agent/program-3-simplified-interface
+-                          </tr>
+-                        );
+-                      })()}
+++                        
+\ No newline at end of file
