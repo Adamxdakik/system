@@ -1872,7 +1872,6 @@ export default function Payroll() {
 
         </div>
       )}
-      </div>
 
       {/* Employee Deposit Dialog */}
       <Dialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen}>

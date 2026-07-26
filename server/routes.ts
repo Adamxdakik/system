@@ -16918,6 +16918,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete a Sales voucher — reverses inventory, removes sales items, entries, and the voucher itself
+  app.delete("/api/vouchers/:id/sales", requireAuth, async (req, res) => {
+    try {
+      const voucherId = parseInt(req.params.id);
+      if (isNaN(voucherId)) return res.status(400).json({ message: "Invalid voucher ID" });
+
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) return res.status(400).json({ message: "No company selected" });
+
+      // Fetch voucher — must belong to current company and be a Sales type
+      const [existingVoucher] = await db
+        .select()
+        .from(vouchers)
+        .where(and(eq(vouchers.id, voucherId), eq(vouchers.companyId, companyId)))
+        .limit(1);
+
+      if (!existingVoucher) return res.status(404).json({ message: "Voucher not found" });
+      if (existingVoucher.voucherType !== "Sales") {
+        return res.status(400).json({ message: "Only Sales vouchers can be deleted with this endpoint" });
+      }
+
+      // Get the sales items so we can reverse inventory
+      const oldSalesItems = await db
+        .select()
+        .from(salesItems)
+        .where(eq(salesItems.voucherId, voucherId));
+
+      await db.transaction(async (tx) => {
+        // Reverse inventory: add back what was sold
+        for (const item of oldSalesItems) {
+          const qty = parseFloat(item.quantity);
+          const cost = parseFloat(item.costPrice || "0");
+
+          if (existingVoucher.locationId) {
+            const [inv] = await tx
+              .select()
+              .from(inventory)
+              .where(
+                and(
+                  eq(inventory.locationId, existingVoucher.locationId),
+                  eq(inventory.stockItemId, item.stockItemId),
+                ),
+              )
+              .limit(1);
+
+            if (inv) {
+              const newQty = parseFloat(inv.quantity) + qty;
+              await tx
+                .update(inventory)
+                .set({ quantity: newQty.toString() })
+                .where(eq(inventory.id, inv.id));
+            } else {
+              // Re-create inventory row if it was deleted
+              await tx.insert(inventory).values({
+                companyId,
+                locationId: existingVoucher.locationId,
+                stockItemId: item.stockItemId,
+                quantity: qty.toString(),
+                averageRate: cost.toString(),
+                lastUpdated: new Date(),
+              });
+            }
+          }
+        }
+
+        // Remove sales items, voucher entries, and the voucher
+        await tx.delete(salesItems).where(eq(salesItems.voucherId, voucherId));
+        await tx.delete(voucherEntries).where(eq(voucherEntries.voucherId, voucherId));
+        await tx.delete(vouchers).where(eq(vouchers.id, voucherId));
+      });
+
+      res.json({ message: "Sales voucher deleted successfully" });
+    } catch (error: any) {
+      console.error("[DELETE /api/vouchers/:id/sales]", error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Draft POS Sales Routes
   // Get all drafts for current user
   app.get("/api/pos/drafts", requireAuth, async (req, res) => {

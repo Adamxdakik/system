@@ -18,10 +18,21 @@ import {
   RefreshCw,
   ShoppingCart,
   Pencil,
+  Trash2,
   TrendingUp,
   TrendingDown,
   X,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { parseISO } from "date-fns";
 import { useDateFormat } from "@/contexts/DateFormatContext";
 import { getPeriodPresets, type PresetId } from "@/components/PeriodPresets";
@@ -94,6 +105,9 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
   const [searchTerm, setSearchTerm] = useState("");
   const [activePreset, setActivePreset] = useState<PresetId | string>("thisMonth");
 
+  // ── Delete state ──────────────────────────────────────────────────────────
+  const [deleteTarget, setDeleteTarget] = useState<InvoiceSummary | null>(null);
+
   // Apply "This Month" on mount
   useMemo(() => {
     const presets = getPeriodPresets();
@@ -104,6 +118,20 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
 
   const { toast } = useToast();
   const { formatDisplayDate } = useDateFormat();
+
+  // ── Delete mutation ───────────────────────────────────────────────────────
+  const deleteMutation = useMutation({
+    mutationFn: async (voucherId: number) =>
+      apiRequest("DELETE", `/api/vouchers/${voucherId}/sales`),
+    onSuccess: () => {
+      toast({ title: "Sale deleted", description: "The sale and its accounting entries have been removed." });
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
+      setDeleteTarget(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   // ── Recalculate cost prices ───────────────────────────────────────────────
   const recalculateMutation = useMutation({
@@ -408,6 +436,16 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                           <Pencil className="h-3 w-3" />
                           Edit
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 gap-1.5 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                          data-testid={`button-delete-sale-${inv.voucherId}`}
+                          onClick={() => setDeleteTarget(inv)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Delete
+                        </Button>
                       </div>
                     </div>
 
@@ -485,6 +523,28 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
           )}
         </CardContent>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this sale?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete invoice <strong>{deleteTarget?.voucherNumber}</strong> ({deleteTarget?.items.length} item{deleteTarget?.items.length !== 1 ? "s" : ""}, {fmtCurrency(deleteTarget?.totalSales ?? 0)}), reverse the inventory, and remove all accounting entries. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.voucherId)}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete Sale"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
