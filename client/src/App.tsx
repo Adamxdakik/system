@@ -338,7 +338,7 @@ function AuthenticatedApp() {
           </header>
           <main id="main-content" className="flex-1 overflow-y-auto p-6">
             <div className="max-w-7xl mx-auto">
-              <ErrorBoundary>
+              <ErrorBoundary resetKey={currentLocation}>
                 <Router user={user} />
               </ErrorBoundary>
             </div>
