@@ -146,7 +146,9 @@ function statusLabel(status: MotorcycleStatus): string {
   return statusOptions.find((option) => option.value === status)?.label ?? status;
 }
 
-function statusVariant(status: MotorcycleStatus): "default" | "secondary" | "outline" | "destructive" {
+function statusVariant(
+  status: MotorcycleStatus,
+): "default" | "secondary" | "outline" | "destructive" {
   switch (status) {
     case "IN_STOCK":
       return "default";
@@ -218,7 +220,13 @@ export default function Motorcycles() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async ({ id, payload }: { id: number | null; payload: Record<string, unknown> }) => {
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number | null;
+      payload: Record<string, unknown>;
+    }) => {
       const response = await apiRequest(
         id ? "PUT" : "POST",
         id ? `/api/motorcycles/${id}` : "/api/motorcycles",
@@ -272,7 +280,10 @@ export default function Motorcycles() {
     [motorcycles],
   );
 
-  const updateForm = <K extends keyof MotorcycleFormState>(key: K, value: MotorcycleFormState[K]) => {
+  const updateForm = <K extends keyof MotorcycleFormState>(
+    key: K,
+    value: MotorcycleFormState[K],
+  ) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
@@ -357,7 +368,9 @@ export default function Motorcycles() {
   };
 
   const handleDelete = (record: MotorcycleRecord) => {
-    const label = [record.brand, record.bikeModel, record.chassisNumber].filter(Boolean).join(" · ");
+    const label = [record.brand, record.bikeModel, record.chassisNumber]
+      .filter(Boolean)
+      .join(" · ");
     if (window.confirm(`Remove ${label || "this motorcycle"} from the active registry?`)) {
       deleteMutation.mutate(record.id);
     }
@@ -369,7 +382,8 @@ export default function Motorcycles() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Motorcycles</h1>
           <p className="mt-1 text-muted-foreground">
-            Track every motorcycle individually from arrival through reservation, sale, warranty, and service.
+            Track every motorcycle individually from arrival through reservation, sale, warranty,
+            and service.
           </p>
         </div>
         <Button onClick={openCreate} className="gap-2" data-testid="button-add-motorcycle">
@@ -516,13 +530,17 @@ export default function Motorcycles() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-mono text-xs">Engine: {record.engineNumber || "—"}</div>
+                        <div className="font-mono text-xs">
+                          Engine: {record.engineNumber || "—"}
+                        </div>
                         <div className="font-mono text-xs text-muted-foreground">
                           Chassis: {record.chassisNumber || "—"}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant(record.status)}>{statusLabel(record.status)}</Badge>
+                        <Badge variant={statusVariant(record.status)}>
+                          {statusLabel(record.status)}
+                        </Badge>
                       </TableCell>
                       <TableCell>{record.locationName || "—"}</TableCell>
                       <TableCell>
@@ -578,7 +596,8 @@ export default function Motorcycles() {
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit motorcycle" : "Add motorcycle"}</DialogTitle>
             <DialogDescription>
-              Record the motorcycle as one individual unit. Engine and chassis numbers must be unique.
+              Record the motorcycle as one individual unit. Engine and chassis numbers must be
+              unique.
             </DialogDescription>
           </DialogHeader>
 
