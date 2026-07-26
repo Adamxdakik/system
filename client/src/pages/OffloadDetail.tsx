@@ -1,11 +1,12 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
-import { ArrowLeft, Package, MapPin, Calendar, DollarSign, ExternalLink } from "lucide-react";
+import { ArrowLeft, Package, MapPin, Calendar, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -22,6 +23,7 @@ interface OffloadItem {
   rate: string;
   lineTotal: string;
   stockItemId: number;
+  stockItemCode?: string | null;
 }
 
 interface OffloadDetail {
@@ -43,10 +45,18 @@ interface OffloadDetail {
   items: OffloadItem[];
 }
 
-const fmt = (val: string | number | null | undefined): string => {
-  const n = parseFloat(val as string || "0");
-  if (isNaN(n) || n === 0) return "-";
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Format a number — strips trailing .00, shows 2 dp only when needed */
+const fmt = (val: string | number | null | undefined, fallback = "—"): string => {
+  const n = parseFloat((val as string) || "0");
+  if (isNaN(n) || n === 0) return fallback;
+  // Show up to 2 decimal places, stripping trailing zeros
+  return n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+};
+
+const money = (val: string | number | null | undefined): string => {
+  const n = parseFloat((val as string) || "0");
+  if (isNaN(n) || n === 0) return "—";
+  return `$ ${fmt(n)}`;
 };
 
 export default function OffloadDetail() {
@@ -84,123 +94,139 @@ export default function OffloadDetail() {
 
   const offloadDate = offload.offloadedAt
     ? format(parseISO(offload.offloadedAt.slice(0, 10)), "MMM dd, yyyy")
-    : "-";
+    : "—";
 
-  const totalCharges =
-    parseFloat(offload.duties || "0") +
-    parseFloat(offload.officeCharges || "0") +
-    parseFloat(offload.transferCharges || "0") +
-    parseFloat(offload.transportFees || "0");
-
+  const extraPerUnit = parseFloat(offload.additionalCostPerMoto || "0");
+  const totalChargesNum = parseFloat(offload.totalCharges || "0");
   const stockTotal = parseFloat(offload.itemsTotal || "0");
-  const grandTotal = stockTotal + totalCharges;
+  const grandTotal = stockTotal + totalChargesNum;
+  const containerPurchaseTotal = parseFloat(offload.grandTotal || "0");
+
+  // Only show charge rows that are non-zero
+  const charges: { label: string; value: string }[] = [
+    { label: "Duties", value: offload.duties },
+    { label: "Transport Fees", value: offload.transportFees },
+    { label: "Office Charges", value: offload.officeCharges },
+    { label: "Transfer Charges", value: offload.transferCharges },
+  ].filter((c) => parseFloat(c.value || "0") > 0);
+
+  const showExtraCols = extraPerUnit > 0;
 
   return (
     <div className="container mx-auto p-6 max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/daybook")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1 as any)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">Offload Detail</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold font-mono">{offload.containerNumber}</h1>
             <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30">
               <Package className="w-3 h-3 mr-1" />
               Offload
             </Badge>
           </div>
-          <p className="text-muted-foreground text-sm mt-0.5">Container {offload.containerNumber}</p>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            Received {offloadDate}
+            {offload.locationName ? ` · ${offload.locationName}` : ""}
+          </p>
         </div>
         <Button
           variant="outline"
           size="sm"
           onClick={() => navigate(`/containers/${offload.containerId}`)}
         >
-          <ExternalLink className="h-4 w-4 mr-2" />
-          View Container
+          <Package className="h-4 w-4 mr-2" />
+          View Shipment
         </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-              <Calendar className="h-4 w-4" />
-              Offload Date
+      {/* Top summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="py-3">
+          <CardContent className="px-4 py-0">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-1">
+              <Calendar className="h-3.5 w-3.5" />
+              Date
             </div>
-            <p className="font-semibold text-lg">{offloadDate}</p>
+            <p className="font-semibold">{offloadDate}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-              <MapPin className="h-4 w-4" />
+        <Card className="py-3">
+          <CardContent className="px-4 py-0">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-1">
+              <MapPin className="h-3.5 w-3.5" />
               Location
             </div>
-            <p className="font-semibold text-lg">{offload.locationName || "—"}</p>
+            <p className="font-semibold">{offload.locationName || "—"}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-              <DollarSign className="h-4 w-4" />
-              Grand Total
+        <Card className="py-3">
+          <CardContent className="px-4 py-0">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-1">
+              <Truck className="h-3.5 w-3.5" />
+              Units Received
             </div>
-            <p className="font-semibold text-lg font-mono">{fmt(grandTotal)}</p>
+            <p className="font-semibold font-mono">
+              {parseFloat(offload.totalMotos || "0").toLocaleString()}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="py-3">
+          <CardContent className="px-4 py-0">
+            <div className="text-muted-foreground text-xs mb-1">Container Purchase Total</div>
+            <p className="font-semibold font-mono text-primary">
+              {containerPurchaseTotal > 0 ? `$ ${fmt(containerPurchaseTotal)}` : money(grandTotal)}
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charges Breakdown */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Charges Breakdown</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Duties</p>
-              <p className="font-mono font-medium">{fmt(offload.duties)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Office Charges</p>
-              <p className="font-mono font-medium">{fmt(offload.officeCharges)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Transfer Charges</p>
-              <p className="font-mono font-medium">{fmt(offload.transferCharges)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Transport Fees</p>
-              <p className="font-mono font-medium">{fmt(offload.transportFees)}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Motos</p>
-              <p className="font-mono font-medium">{parseFloat(offload.totalMotos || "0").toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Additional Cost / Moto</p>
-              <p className="font-mono font-medium">{fmt(offload.additionalCostPerMoto)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground font-semibold">Total Charges</p>
-              <p className="font-mono font-bold text-red-600">{fmt(totalCharges)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Charges breakdown — only shown when there are any */}
+      {(charges.length > 0 || extraPerUnit > 0) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Extra Charges Paid</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-0">
+            {charges.map((c) => (
+              <div key={c.label} className="flex justify-between items-center py-2 border-b last:border-0 text-sm">
+                <span className="text-muted-foreground">{c.label}</span>
+                <span className="font-mono font-medium">{money(c.value)}</span>
+              </div>
+            ))}
+            {totalChargesNum > 0 && (
+              <div className="flex justify-between items-center py-2 border-b text-sm font-semibold">
+                <span>Total Extra Charges</span>
+                <span className="font-mono">{money(totalChargesNum)}</span>
+              </div>
+            )}
+            {extraPerUnit > 0 && (
+              <div className="flex justify-between items-center py-2 text-sm">
+                <span className="text-muted-foreground">
+                  Extra cost added per unit
+                  <span className="ml-2 text-xs text-muted-foreground/70">
+                    (distributed across {parseFloat(offload.totalMotos || "0").toLocaleString()} units)
+                  </span>
+                </span>
+                <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
+                  + $ {fmt(extraPerUnit)} / unit
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Stock Items */}
+      {/* Stock Items table */}
       <Card>
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Stock Items</CardTitle>
-            <span className="text-sm text-muted-foreground font-mono font-medium">
-              Total: {fmt(stockTotal)}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base">Items Received</CardTitle>
+            <span className="text-sm text-muted-foreground">
+              {offload.items.length} {offload.items.length === 1 ? "model" : "models"} ·{" "}
+              <span className="font-mono font-medium">{parseFloat(offload.totalMotos || "0").toLocaleString()} units</span>
             </span>
           </div>
         </CardHeader>
@@ -214,29 +240,90 @@ export default function OffloadDetail() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-primary/10">
-                  <TableHead className="font-bold">#</TableHead>
-                  <TableHead className="font-bold">Item Name</TableHead>
-                  <TableHead className="text-right font-bold">Qty</TableHead>
-                  <TableHead className="text-right font-bold">Rate</TableHead>
-                  <TableHead className="text-right font-bold">Total</TableHead>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="font-semibold w-8">#</TableHead>
+                  <TableHead className="font-semibold">Item</TableHead>
+                  <TableHead className="text-right font-semibold">Qty</TableHead>
+                  <TableHead className="text-right font-semibold">Unit Cost</TableHead>
+                  {showExtraCols && (
+                    <>
+                      <TableHead className="text-right font-semibold text-amber-600 dark:text-amber-400">
+                        Extra / Unit
+                      </TableHead>
+                      <TableHead className="text-right font-semibold">Landed / Unit</TableHead>
+                    </>
+                  )}
+                  <TableHead className="text-right font-semibold">Line Total</TableHead>
+                  {showExtraCols && (
+                    <TableHead className="text-right font-semibold">Landed Total</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {offload.items.map((item, idx) => (
-                  <TableRow key={item.id} className={idx % 2 === 0 ? "" : "bg-muted/30"}>
-                    <TableCell className="text-muted-foreground w-10">{idx + 1}</TableCell>
-                    <TableCell className="font-medium">{item.itemName}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {parseFloat(item.quantity || "0").toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">{fmt(item.rate)}</TableCell>
-                    <TableCell className="text-right font-mono font-medium">{fmt(item.lineTotal)}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-primary/10 font-bold">
-                  <TableCell colSpan={4} className="text-right">Stock Total</TableCell>
-                  <TableCell className="text-right font-mono">{fmt(stockTotal)}</TableCell>
+                {offload.items.map((item, idx) => {
+                  const qty = parseFloat(item.quantity || "0");
+                  const rate = parseFloat(item.rate || "0");
+                  const lineTotal = parseFloat(item.lineTotal || "0");
+                  const landedPerUnit = rate + extraPerUnit;
+                  const landedTotal = qty * landedPerUnit;
+
+                  return (
+                    <TableRow key={item.id} className={idx % 2 === 0 ? "" : "bg-muted/20"}>
+                      <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{item.itemName}</div>
+                        {item.stockItemCode && (
+                          <div className="text-xs text-muted-foreground font-mono">{item.stockItemCode}</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {qty.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {rate > 0 ? `$ ${fmt(rate)}` : "—"}
+                      </TableCell>
+                      {showExtraCols && (
+                        <>
+                          <TableCell className="text-right font-mono text-amber-600 dark:text-amber-400">
+                            + $ {fmt(extraPerUnit)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-medium">
+                            $ {fmt(landedPerUnit)}
+                          </TableCell>
+                        </>
+                      )}
+                      <TableCell className="text-right font-mono">
+                        {lineTotal > 0 ? `$ ${fmt(lineTotal)}` : "—"}
+                      </TableCell>
+                      {showExtraCols && (
+                        <TableCell className="text-right font-mono font-semibold">
+                          $ {fmt(landedTotal)}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
+
+                {/* Totals row */}
+                <TableRow className="bg-primary/5 font-semibold border-t-2">
+                  <TableCell colSpan={showExtraCols ? 5 : 3} className="text-right text-sm">
+                    Totals
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    $ {fmt(stockTotal)}
+                  </TableCell>
+                  {showExtraCols && (
+                    <>
+                      <TableCell />
+                      <TableCell className="text-right font-mono text-primary">
+                        $ {fmt(offload.items.reduce((s, i) => {
+                          const qty = parseFloat(i.quantity || "0");
+                          const rate = parseFloat(i.rate || "0");
+                          return s + qty * (rate + extraPerUnit);
+                        }, 0))}
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               </TableBody>
             </Table>
@@ -245,19 +332,22 @@ export default function OffloadDetail() {
       </Card>
 
       {/* Grand Total Summary */}
-      <Card className="bg-primary/5 border-primary/20">
-        <CardContent className="pt-4">
-          <div className="flex justify-between items-center text-lg font-bold">
-            <span>Stock Total</span>
-            <span className="font-mono">{fmt(stockTotal)}</span>
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="pt-5 pb-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Stock Cost</span>
+            <span className="font-mono">$ {fmt(stockTotal)}</span>
           </div>
-          <div className="flex justify-between items-center text-lg font-bold mt-1">
-            <span>Total Charges</span>
-            <span className="font-mono text-red-600">+ {fmt(totalCharges)}</span>
-          </div>
-          <div className="flex justify-between items-center text-xl font-bold mt-3 pt-3 border-t-2 border-primary/30">
-            <span>Grand Total</span>
-            <span className="font-mono text-primary">{fmt(grandTotal)}</span>
+          {totalChargesNum > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Extra Charges</span>
+              <span className="font-mono text-amber-600 dark:text-amber-400">+ $ {fmt(totalChargesNum)}</span>
+            </div>
+          )}
+          <Separator />
+          <div className="flex justify-between text-lg font-bold">
+            <span>Total Landed Cost</span>
+            <span className="font-mono text-primary">$ {fmt(grandTotal)}</span>
           </div>
         </CardContent>
       </Card>
