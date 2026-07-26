@@ -9,7 +9,7 @@ The motorcycle registry must use engine and chassis numbers as durable identifie
 ## Permanent constraints
 
 - Keep all records company-scoped.
-- Do not change accounting posting, inventory valuation, POS totals, or container costing as part of Phase 4A.
+- Do not change accounting posting, inventory valuation, POS totals, or container costing through motorcycle lifecycle work.
 - Preserve existing customer, service, warranty, communication, assembly, supplier, container, and location routes.
 - Keep legacy `bike_purchases` rows readable; missing registry details on historical rows must not block migration.
 - Engine and chassis numbers must be unique within each company for active records.
@@ -19,7 +19,7 @@ The motorcycle registry must use engine and chassis numbers as durable identifie
 
 ## Phase 4A — Motorcycle registry
 
-### Scope
+### Completed scope
 
 - individual motorcycle data model and migration
 - company-scoped motorcycle API
@@ -48,18 +48,24 @@ The motorcycle registry must use engine and chassis numbers as durable identifie
 
 ## Phase 4B — Sales and customer linkage
 
-### Planned scope
+### Completed scope
 
-- select an existing in-stock motorcycle during motorcycle sales
-- change lifecycle status through an explicit sale workflow
-- link the sold unit to its customer, invoice, date, price, and warranty
-- prevent the same motorcycle from being sold twice
-- preserve the existing POS and accounting transaction boundaries
+- link an in-stock or reserved motorcycle to an existing finalized Sales voucher
+- infer the customer from credit-sale voucher entries or require an explicit customer for cash sales
+- copy the finalized voucher number and date into the motorcycle sale record
+- save the motorcycle-specific selling price and warranty dates
+- lock customer, sale date, invoice, selling price, status, and deletion after linking
+- enforce one active motorcycle per finalized Sales voucher
+- require the linked Sales voucher to be formally reversed before an administrator can release the motorcycle
+- preserve the existing POS, inventory, and accounting transaction boundaries without reposting financial or stock movement
 
 ### Acceptance
 
 - Finalized motorcycle sales update the individual unit exactly once.
-- Draft or failed sales do not change motorcycle ownership or status.
+- Draft, optional, deleted, reversed, and reversal vouchers cannot be linked.
+- The same motorcycle or Sales voucher cannot be sold twice.
+- Cross-company customers and mismatched locations are refused.
+- Manual edits cannot invent or erase a finalized motorcycle sale.
 - Corrections and cancellations follow the finalized-document safeguards established in Program 2.
 
 ## Phase 4C — Workshop and assembly lifecycle
@@ -77,6 +83,6 @@ The motorcycle registry must use engine and chassis numbers as durable identifie
 - Service and warranty history remains company- and customer-scoped.
 - Assembly and workshop linkage does not mutate accounting or stock outside existing approved flows.
 
-## Definition of done for Phase 4A
+## Definition of done for Phases 4A–4B
 
-Phase 4A is complete only after the migration chain is idempotent, formatting and lint pass with zero warnings, package and whole-application TypeScript checks pass, CI-safe tests and production build pass, and all permanent PostgreSQL financial, payroll, stock, container, POS-value, report, and audit regressions remain green.
+Phases 4A–4B are complete only after the migration chain is idempotent, formatting and lint pass with zero warnings, package and whole-application TypeScript checks pass, CI-safe tests and production build pass, and all permanent PostgreSQL financial, payroll, stock, container, POS-value, report, and audit regressions remain green.
