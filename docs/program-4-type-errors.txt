@@ -1,6 +1,0 @@
-
-> rest-express@1.0.0 check:all:baseline
-> node scripts/check-typescript-baseline.mjs
-
-TypeScript baseline regressed:
-server/routes/motorcycleRecordRoutes.ts::TS7030: 4 (baseline 0)

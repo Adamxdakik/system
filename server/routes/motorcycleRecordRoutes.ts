@@ -300,7 +300,7 @@ export function registerMotorcycleRecordRoutes(app: Express): void {
           bp.id DESC
       `);
 
-      res.json(result.rows);
+      return res.json(result.rows);
     }),
   );
 
@@ -373,7 +373,7 @@ export function registerMotorcycleRecordRoutes(app: Express): void {
 
         const id = Number(result.rows[0]?.id);
         const motorcycle = await getMotorcycle(companyId, id);
-        res.status(201).json(motorcycle);
+        return res.status(201).json(motorcycle);
       } catch (error: any) {
         if (error?.code === "23505") {
           return res.status(409).json({
@@ -441,7 +441,7 @@ export function registerMotorcycleRecordRoutes(app: Express): void {
         }
 
         const motorcycle = await getMotorcycle(companyId, id);
-        res.json(motorcycle);
+        return res.json(motorcycle);
       } catch (error: any) {
         if (error?.code === "23505") {
           return res.status(409).json({
@@ -479,7 +479,7 @@ export function registerMotorcycleRecordRoutes(app: Express): void {
         return res.status(404).json({ message: "Motorcycle not found" });
       }
 
-      res.status(204).send();
+      return res.status(204).send();
     }),
   );
 }
