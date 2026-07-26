@@ -1,0 +1,7 @@
+
+> rest-express@1.0.0 check:all:baseline
+> node scripts/check-typescript-baseline.mjs
+
+TypeScript baseline regressed:
+server/lib/excel.ts::TS6307: 1 (baseline 0)
+exit_status=1
