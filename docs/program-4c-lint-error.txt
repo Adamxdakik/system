@@ -1,0 +1,6 @@
+
+> rest-express@1.0.0 lint:changed
+> node scripts/check-changed-files.mjs lint
+
+ESLint errors or warnings occur on changed lines:
+server/routes/motorcycleWorkshopRoutes.ts:233:11 Redundant Boolean call. (no-extra-boolean-cast)
