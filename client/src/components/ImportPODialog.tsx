@@ -180,14 +180,25 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
         setIssues([{ type: "error", message: 'Sheet "PO Header" not found — use the downloaded template.' }]);
         return;
       }
-      const headerRows = XLSX.utils.sheet_to_json<{ Field: string; Value: string }>(headerWs);
+      const headerRows = XLSX.utils.sheet_to_json<{ Field: string; Value: unknown }>(headerWs);
       const hm: Record<string, string> = {};
       for (const r of headerRows) {
-        if (r.Field) hm[r.Field.toLowerCase().trim()] = String(r.Value ?? "").trim();
+        if (!r.Field) continue;
+        const v = r.Value;
+        // Excel date cells arrive as JS Date objects — convert to YYYY-MM-DD
+        hm[r.Field.toLowerCase().trim()] =
+          v instanceof Date
+            ? v.toISOString().split("T")[0]
+            : String(v ?? "").trim();
       }
       const containerNumber = hm["container number"] ?? "";
       const supplierName    = hm["supplier name"]    ?? "";
-      const importDate      = hm["import date"]      ?? new Date().toISOString().split("T")[0];
+      // Normalise whatever came in to YYYY-MM-DD
+      const rawDate    = hm["import date"] ?? "";
+      const parsedDate = rawDate ? new Date(rawDate) : new Date();
+      const importDate = !isNaN(parsedDate.getTime())
+        ? parsedDate.toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0];
       const rawStatus       = (hm["status"] ?? "OTW").toUpperCase();
       const status          = ["OTW", "ARRIVED"].includes(rawStatus) ? rawStatus : "OTW";
 
