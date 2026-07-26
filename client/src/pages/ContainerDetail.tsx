@@ -304,212 +304,176 @@ export default function ContainerDetail() {
   const manualMotos = containerItems.reduce((sum: number, item: any) => sum + parseFloat(item.quantity || "0"), 0);
   const totalMotos = poMotos + manualMotos;
 
+  // Status badge styling
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    OTW:       { label: "On The Way",  className: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30" },
+    OFFLOADED: { label: "Offloaded",   className: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30" },
+    SOLD:      { label: "Sold",        className: "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30" },
+  };
+  const statusStyle = statusConfig[container.status] ?? { label: container.status, className: "bg-muted text-muted-foreground" };
+  const isManual = pos.length === 0;
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4 flex-wrap">
+    <div className="space-y-5 max-w-5xl">
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <div className="flex items-start gap-3 flex-wrap">
         <Link href={backUrl}>
-          <Button variant="ghost" size="icon" data-testid="button-back">
+          <Button variant="ghost" size="icon" className="mt-0.5 shrink-0" data-testid="button-back">
             <ArrowLeft className="w-4 h-4" />
           </Button>
         </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold" data-testid="text-container-number">
-            Container {container.containerNumber}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Imported on {new Date(container.importDate).toLocaleDateString()}
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold font-mono tracking-tight" data-testid="text-container-number">
+              {container.containerNumber}
+            </h1>
+            <Badge className={`${statusStyle.className} border font-medium`} data-testid="badge-status">
+              {statusStyle.label}
+            </Badge>
+            {isManual && (
+              <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+                Manual Entry
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Imported {new Date(container.importDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+            {supplier && <> · <span className="font-medium text-foreground/70">{supplier.legalName}</span></>}
           </p>
         </div>
-        <Badge variant={container.status === "OTW" ? "default" : "secondary"} data-testid="badge-status">
-          {container.status}
-        </Badge>
-        {!containerSale && (
-          <Button
-            onClick={() => setShowSellDialog(true)}
-            className="gap-2"
-            data-testid="button-sell-container"
-          >
-            <HandCoins className="w-4 h-4" />
-            Sell Container
-          </Button>
-        )}
-        {container.status !== "OFFLOADED" && (
-          <Button
-            onClick={() => setShowOffloadDialog(true)}
-            className="gap-2"
-            data-testid="button-offload-container"
-          >
-            <Truck className="w-4 h-4" />
-            Offload Container
-          </Button>
-        )}
-        {container.status === "OFFLOADED" && (
-          <>
-            <Button
-              onClick={() => setShowOffloadDialog(true)}
-              variant="outline"
-              className="gap-2"
-              data-testid="button-edit-offload"
-            >
-              <Edit className="w-4 h-4" />
-              Edit Offload
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          {!containerSale && (
+            <Button onClick={() => setShowSellDialog(true)} className="gap-1.5" data-testid="button-sell-container">
+              <HandCoins className="w-4 h-4" />
+              Sell Container
             </Button>
-            <Button
-              onClick={() => {
-                if (confirm("Reverse offload? This will delete inventory and vouchers created during offload.")) {
-                  reverseOffloadMutation.mutate(parseInt(containerId!));
-                }
-              }}
-              variant="outline"
-              disabled={reverseOffloadMutation.isPending}
-              className="gap-2"
-              data-testid="button-reverse-offload"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reverse Offload
+          )}
+          {container.status !== "OFFLOADED" && (
+            <Button onClick={() => setShowOffloadDialog(true)} variant="outline" className="gap-1.5" data-testid="button-offload-container">
+              <Truck className="w-4 h-4" />
+              Offload
             </Button>
-          </>
-        )}
-        <Button
-          variant="destructive"
-          onClick={handleDeleteContainer}
-          disabled={deleteContainerMutation.isPending}
-          className="gap-2"
-          data-testid="button-delete-container"
-        >
-          <Trash2 className="w-4 h-4" />
-          Delete Container
-        </Button>
+          )}
+          {container.status === "OFFLOADED" && (
+            <>
+              <Button onClick={() => setShowOffloadDialog(true)} variant="outline" className="gap-1.5" data-testid="button-edit-offload">
+                <Edit className="w-4 h-4" />
+                Edit Offload
+              </Button>
+              <Button
+                onClick={() => { if (confirm("Reverse offload? This will delete inventory and vouchers created during offload.")) reverseOffloadMutation.mutate(parseInt(containerId!)); }}
+                variant="outline"
+                disabled={reverseOffloadMutation.isPending}
+                className="gap-1.5"
+                data-testid="button-reverse-offload"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reverse
+              </Button>
+            </>
+          )}
+          <Button
+            variant="destructive"
+            onClick={handleDeleteContainer}
+            disabled={deleteContainerMutation.isPending}
+            size="icon"
+            data-testid="button-delete-container"
+            title="Delete Container"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
+      {/* ── Sold banner ────────────────────────────────────────────────── */}
       {containerSale && (
-        <Card className="border-green-500">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HandCoins className="h-5 w-5 text-green-600" />
-              Container Sold
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Sold to</p>
-                <p className="font-semibold" data-testid="text-sale-customer">
-                  {saleCustomer?.legalName || "Unknown Customer"}
-                </p>
-              </div>
+        <Card className="border-green-500/40 bg-green-500/5">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <HandCoins className="h-4 w-4 text-green-600" />
+              <span className="font-semibold text-green-700 dark:text-green-400">Container Sold</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div>
-                <p className="text-sm text-muted-foreground">Sale Date</p>
-                <p className="font-semibold" data-testid="text-sale-date">
-                  {new Date(containerSale.saleDate).toLocaleDateString()}
-                </p>
+                <p className="text-xs text-muted-foreground mb-0.5">Customer</p>
+                <p className="font-semibold" data-testid="text-sale-customer">{saleCustomer?.legalName || "Unknown"}</p>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">Sale Price</p>
-                <p className="font-semibold" data-testid="text-sale-price">
-                  ${formatNumber(containerSale.containerCost)}
-                </p>
+                <p className="text-xs text-muted-foreground mb-0.5">Sale Date</p>
+                <p className="font-semibold" data-testid="text-sale-date">{new Date(containerSale.saleDate).toLocaleDateString()}</p>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">Commission</p>
-                <p className="font-semibold" data-testid="text-sale-commission">
-                  ${formatNumber(containerSale.commission)}
-                </p>
+                <p className="text-xs text-muted-foreground mb-0.5">Container Cost</p>
+                <p className="font-semibold font-mono" data-testid="text-sale-price">${formatNumber(containerSale.containerCost)}</p>
               </div>
-            </div>
-            <div className="pt-2 border-t">
-              <p className="text-sm text-muted-foreground">Total Amount</p>
-              <p className="text-xl font-bold" data-testid="text-sale-total">
-                ${formatNumber(containerSale.totalAmount)}
-              </p>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Total (incl. commission)</p>
+                <p className="font-bold font-mono text-green-700 dark:text-green-400" data-testid="text-sale-total">${formatNumber(containerSale.totalAmount)}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Supplier</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-semibold" data-testid="text-supplier">
-              {supplier ? supplier.legalName : "Unknown"}
-            </div>
-            {supplier && (
-              <p className="text-xs text-muted-foreground">{supplier.code}</p>
+      {/* ── Summary strip ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="py-3">
+          <CardContent className="px-4 py-0">
+            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <FileText className="h-3 w-3" /> Supplier
+            </p>
+            <p className="font-semibold leading-tight" data-testid="text-supplier">
+              {supplier ? supplier.legalName : "—"}
+            </p>
+            {supplier?.code && <p className="text-xs text-muted-foreground font-mono mt-0.5">{supplier.code}</p>}
+          </CardContent>
+        </Card>
+
+        <Card className="py-3">
+          <CardContent className="px-4 py-0">
+            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <Package className="h-3 w-3" /> Stock Value
+            </p>
+            <p className="text-xl font-bold font-mono" data-testid="text-items-total">${formatNumber(itemsTotal)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {totalMotos > 0 ? `${totalMotos} units` : ""}
+              {pos.length > 0 ? ` · ${pos.length} PO${pos.length > 1 ? "s" : ""}` : isManual ? " · manual entry" : ""}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="py-3 border-primary/30 bg-primary/5">
+          <CardContent className="px-4 py-0">
+            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <DollarSign className="h-3 w-3" /> Grand Total
+            </p>
+            <p className="text-xl font-bold font-mono text-primary" data-testid="text-grand-total">${formatNumber(grandTotal)}</p>
+            {chargesTotal > 0 && (
+              <p className="text-xs text-muted-foreground mt-0.5">incl. ${formatNumber(chargesTotal)} in charges</p>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Items Total</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-items-total">
-              ${formatNumber(itemsTotal)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {pos.reduce((sum: number, po: any) => sum + po.items.length, 0)} items in {pos.length} PO(s)
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Grand Total</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-grand-total">
-              ${formatNumber(grandTotal)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Including ${formatNumber(Math.abs(chargesTotal))} in charges
-            </p>
           </CardContent>
         </Card>
       </div>
 
+      {/* ── Tracking (OTW only) ────────────────────────────────────────── */}
       {container.status === "OTW" && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2">
-              <Ship className="h-5 w-5" />
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Ship className="h-4 w-4" />
               Container Tracking
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowTrackingDialog(true)}
-                data-testid="button-edit-tracking"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Tracking
+              <Button variant="outline" size="sm" onClick={() => setShowTrackingDialog(true)} data-testid="button-edit-tracking">
+                <Edit className="h-4 w-4 mr-1.5" /> Edit
               </Button>
               {container.carrier && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => fetchTrackingMutation.mutate(container.carrier)}
-                  disabled={fetchTrackingMutation.isPending}
-                  data-testid="button-refresh-tracking"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${fetchTrackingMutation.isPending ? 'animate-spin' : ''}`} />
+                <Button variant="default" size="sm" onClick={() => fetchTrackingMutation.mutate(container.carrier)} disabled={fetchTrackingMutation.isPending} data-testid="button-refresh-tracking">
+                  <RefreshCw className={`h-4 w-4 mr-1.5 ${fetchTrackingMutation.isPending ? "animate-spin" : ""}`} />
                   Refresh
                 </Button>
               )}
@@ -517,101 +481,42 @@ export default function ContainerDetail() {
           </CardHeader>
           <CardContent>
             {!container.carrier && !container.trackingStatus ? (
-              <div className="text-center py-6 text-muted-foreground">
-                <Navigation className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>No tracking information available</p>
-                <p className="text-sm">Click "Edit Tracking" to add carrier and shipping details</p>
+              <div className="text-center py-8 text-muted-foreground">
+                <Navigation className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No tracking info — click Edit to add carrier details</p>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Carrier</p>
-                    <p className="font-medium" data-testid="text-carrier">
-                      {container.carrier || "Not set"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Vessel Name</p>
-                    <p className="font-medium" data-testid="text-vessel">
-                      {container.vesselName || "Not set"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge variant={container.trackingStatus === "Delivered" ? "default" : "secondary"} data-testid="text-tracking-status">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div><p className="text-xs text-muted-foreground">Carrier</p><p className="font-medium" data-testid="text-carrier">{container.carrier || "—"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Vessel</p><p className="font-medium" data-testid="text-vessel">{container.vesselName || "—"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Status</p>
+                    <Badge variant={container.trackingStatus === "Delivered" ? "default" : "secondary"} className="mt-0.5" data-testid="text-tracking-status">
                       {container.trackingStatus || "Unknown"}
                     </Badge>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Last Updated</p>
-                    <p className="font-medium text-sm" data-testid="text-last-update">
-                      {container.lastTrackingUpdate 
-                        ? new Date(container.lastTrackingUpdate).toLocaleString()
-                        : "Never"
-                      }
-                    </p>
-                  </div>
+                  <div><p className="text-xs text-muted-foreground">Last Updated</p><p className="font-medium text-xs" data-testid="text-last-update">{container.lastTrackingUpdate ? new Date(container.lastTrackingUpdate).toLocaleString() : "Never"}</p></div>
                 </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Anchor className="h-3 w-3" /> Origin Port
-                    </p>
-                    <p className="font-medium" data-testid="text-origin">
-                      {container.originPort || "Not set"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> Destination Port
-                    </p>
-                    <p className="font-medium" data-testid="text-destination">
-                      {container.destinationPort || "Not set"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Departure Date</p>
-                    <p className="font-medium" data-testid="text-departure">
-                      {container.departureDate 
-                        ? new Date(container.departureDate).toLocaleDateString()
-                        : "Not set"
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">ETA</p>
-                    <p className="font-medium" data-testid="text-eta">
-                      {container.estimatedArrival 
-                        ? new Date(container.estimatedArrival).toLocaleDateString()
-                        : "Not set"
-                      }
-                    </p>
-                  </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-t pt-3">
+                  <div><p className="text-xs text-muted-foreground flex items-center gap-1"><Anchor className="h-3 w-3" />Origin</p><p className="font-medium" data-testid="text-origin">{container.originPort || "—"}</p></div>
+                  <div><p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />Destination</p><p className="font-medium" data-testid="text-destination">{container.destinationPort || "—"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Departure</p><p className="font-medium" data-testid="text-departure">{container.departureDate ? new Date(container.departureDate).toLocaleDateString() : "—"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">ETA</p><p className="font-medium" data-testid="text-eta">{container.estimatedArrival ? new Date(container.estimatedArrival).toLocaleDateString() : "—"}</p></div>
                 </div>
-
                 {container.lastLocation && (
-                  <div className="pt-2 border-t">
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> Last Location
-                    </p>
-                    <p className="font-medium" data-testid="text-last-location">
-                      {container.lastLocation}
-                    </p>
+                  <div className="border-t pt-3 text-sm">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mb-0.5"><MapPin className="h-3 w-3" />Last Location</p>
+                    <p className="font-medium" data-testid="text-last-location">{container.lastLocation}</p>
                   </div>
                 )}
-
                 {container.trackingEvents && (
-                  <div className="pt-2 border-t">
-                    <p className="text-sm text-muted-foreground mb-2">Tracking Events</p>
+                  <div className="border-t pt-3">
+                    <p className="text-xs text-muted-foreground mb-2">Tracking Events</p>
                     <div className="max-h-48 overflow-y-auto space-y-2">
                       {JSON.parse(container.trackingEvents).slice(0, 10).map((event: any, idx: number) => (
-                        <div key={idx} className="text-sm border-l-2 border-muted pl-3 py-1">
+                        <div key={idx} className="text-sm border-l-2 border-muted pl-3 py-0.5">
                           <p className="font-medium">{event.checkpoint_status || event.status}</p>
-                          <p className="text-muted-foreground text-xs">
-                            {event.checkpoint_date || event.date} - {event.location || event.checkpoint_delivery_substatus}
-                          </p>
+                          <p className="text-muted-foreground text-xs">{event.checkpoint_date || event.date} — {event.location || event.checkpoint_delivery_substatus}</p>
                         </div>
                       ))}
                     </div>
@@ -623,111 +528,93 @@ export default function ContainerDetail() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Purchase Orders & Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {pos.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No purchase orders found</p>
-          ) : (
-            <div className="space-y-6">
-              {pos.map((po: any) => (
-                <div key={po.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold" data-testid={`text-po-${po.poNumber}`}>
-                      PO: {po.poNumber}
-                    </h3>
-                    <div className="flex items-center gap-4">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Currency: </span>
-                        <span className="font-medium">{po.currency}</span>
-                        <span className="text-muted-foreground ml-4">Total: </span>
-                        <span className="font-semibold">${formatNumber(po.itemsTotal)}</span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setLocation(`/purchase-orders/${po.id}/edit`)}
-                        data-testid={`button-edit-po-${po.id}`}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeletePO(po.id, po.poNumber)}
-                        disabled={deletePOMutation.isPending}
-                        data-testid={`button-delete-po-${po.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+      {/* ── Purchase Orders (hidden when manual / no POs) ──────────────── */}
+      {pos.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Purchase Orders
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {pos.map((po: any) => (
+              <div key={po.id} className="space-y-2">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono font-semibold text-sm" data-testid={`text-po-${po.poNumber}`}>{po.poNumber}</span>
+                    <Badge variant="outline" className="text-xs">{po.currency}</Badge>
+                    <span className="text-sm font-semibold font-mono">${formatNumber(po.itemsTotal)}</span>
                   </div>
-
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Item Name</TableHead>
-                          <TableHead className="text-right">Quantity</TableHead>
-                          <TableHead className="text-right">Rate</TableHead>
-                          <TableHead className="text-right">Line Total</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {po.items.map((item: any) => (
-                          <TableRow key={item.id} data-testid={`row-item-${item.id}`}>
-                            <TableCell className="font-medium">{item.itemName}</TableCell>
-                            <TableCell className="text-right">{formatNumber(item.quantity)} {item.uom || ""}</TableCell>
-                            <TableCell className="text-right">${formatNumber(item.rate)}</TableCell>
-                            <TableCell className="text-right font-semibold">
-                              ${formatNumber(item.lineTotal)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="flex items-center gap-1.5">
+                    <Button variant="ghost" size="sm" onClick={() => setLocation(`/purchase-orders/${po.id}/edit`)} data-testid={`button-edit-po-${po.id}`}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeletePO(po.id, po.poNumber)} disabled={deletePOMutation.isPending} data-testid={`button-delete-po-${po.id}`}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        <TableHead className="font-semibold">Item</TableHead>
+                        <TableHead className="text-right font-semibold">Qty</TableHead>
+                        <TableHead className="text-right font-semibold">Rate</TableHead>
+                        <TableHead className="text-right font-semibold">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {po.items.map((item: any) => (
+                        <TableRow key={item.id} data-testid={`row-item-${item.id}`}>
+                          <TableCell className="font-medium">{item.itemName}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">{formatNumber(item.quantity)}{item.uom ? ` ${item.uom}` : ""}</TableCell>
+                          <TableCell className="text-right font-mono text-sm">${formatNumber(item.rate)}</TableCell>
+                          <TableCell className="text-right font-mono font-semibold">${formatNumber(item.lineTotal)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
+      {/* ── Manual items (only when no POs but items exist) ───────────── */}
       {containerItems.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Manual Container Items</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Items
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
+            <div className="rounded-lg border overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Item Name</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Rate</TableHead>
-                    <TableHead className="text-right">Line Total</TableHead>
+                  <TableRow className="bg-muted/40">
+                    <TableHead className="font-semibold">Item</TableHead>
+                    <TableHead className="text-right font-semibold">Qty</TableHead>
+                    <TableHead className="text-right font-semibold">Rate</TableHead>
+                    <TableHead className="text-right font-semibold">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {containerItems.map((item: any) => (
                     <TableRow key={item.id} data-testid={`row-manual-item-${item.id}`}>
                       <TableCell className="font-medium">{item.itemName}</TableCell>
-                      <TableCell className="text-right">{formatNumber(item.quantity)} {item.uom || ""}</TableCell>
-                      <TableCell className="text-right">${formatNumber(item.ratePerKg)}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        ${formatNumber(item.lineTotal)}
-                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">{formatNumber(item.quantity)}{item.uom ? ` ${item.uom}` : ""}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">${formatNumber(item.ratePerKg)}</TableCell>
+                      <TableCell className="text-right font-mono font-semibold">${formatNumber(item.lineTotal)}</TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="bg-muted/30">
-                    <TableCell colSpan={3} className="font-bold text-right">Items Total:</TableCell>
-                    <TableCell className="text-right font-bold">
-                      ${formatNumber(containerItems.reduce((sum: number, item: any) => sum + parseFloat(item.lineTotal), 0))}
-                    </TableCell>
+                  <TableRow className="bg-primary/5 font-semibold">
+                    <TableCell colSpan={3} className="text-right text-sm">Items Total</TableCell>
+                    <TableCell className="text-right font-mono">${formatNumber(containerItems.reduce((s: number, i: any) => s + parseFloat(i.lineTotal), 0))}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -736,60 +623,45 @@ export default function ContainerDetail() {
         </Card>
       )}
 
+      {/* ── Extra Charges ──────────────────────────────────────────────── */}
       {charges.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Extra Charges</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Extra Charges</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Charge Type</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {charges.map((charge: any) => (
-                    <TableRow key={charge.id} data-testid={`row-charge-${charge.chargeType.toLowerCase().replace(/\s/g, "-")}`}>
-                      <TableCell className="font-medium">{charge.chargeType}</TableCell>
-                      <TableCell className={`text-right font-semibold ${parseFloat(charge.amount) < 0 ? "text-red-500" : ""}`}>
-                        ${formatNumber(charge.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell className="font-bold">Total Charges</TableCell>
-                    <TableCell className="text-right font-bold">
-                      ${formatNumber(chargesTotal)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+            <div className="space-y-0 divide-y rounded-lg border overflow-hidden">
+              {charges.map((charge: any) => (
+                <div key={charge.id} className="flex justify-between items-center px-4 py-2.5 text-sm" data-testid={`row-charge-${charge.chargeType.toLowerCase().replace(/\s/g, "-")}`}>
+                  <span className="font-medium">{charge.chargeType}</span>
+                  <span className={`font-mono font-semibold ${parseFloat(charge.amount) < 0 ? "text-red-500" : ""}`}>${formatNumber(charge.amount)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center px-4 py-2.5 text-sm font-semibold bg-muted/30">
+                <span>Total Charges</span>
+                <span className="font-mono">${formatNumber(chargesTotal)}</span>
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Items Total:</span>
-              <span className="font-semibold">${formatNumber(itemsTotal)}</span>
+      {/* ── Grand Total summary ────────────────────────────────────────── */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="pt-4 pb-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Stock Value</span>
+            <span className="font-mono">${formatNumber(itemsTotal)}</span>
+          </div>
+          {chargesTotal > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Extra Charges</span>
+              <span className="font-mono">+ ${formatNumber(chargesTotal)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Charges Total:</span>
-              <span className="font-semibold">${formatNumber(chargesTotal)}</span>
-            </div>
-            <div className="flex justify-between pt-2 border-t">
-              <span className="text-lg font-bold">Grand Total:</span>
-              <span className="text-lg font-bold">${formatNumber(grandTotal)}</span>
-            </div>
+          )}
+          <div className="flex justify-between items-center pt-2 border-t font-bold text-lg">
+            <span>Grand Total</span>
+            <span className="font-mono text-primary" data-testid="text-grand-total-summary">${formatNumber(grandTotal)}</span>
           </div>
         </CardContent>
       </Card>
