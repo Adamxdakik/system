@@ -15340,6 +15340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               id: stockTransferItems.id,
               transferId: stockTransferItems.transferId,
               stockItemId: stockTransferItems.stockItemId,
+              sourceLocationId: stockTransferItems.sourceLocationId,
               quantity: stockTransferItems.quantity,
               rate: stockTransferItems.rate,
               totalAmount: stockTransferItems.totalAmount,
@@ -15351,6 +15352,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .where(eq(stockTransferItems.transferId, transferVoucher.id));
 
           if (transferItemsList.length > 0) {
+            // Collect all location IDs to look up names in one query
+            const locIdSet = new Set<number>();
+            if (transferVoucher.destinationLocationId) locIdSet.add(transferVoucher.destinationLocationId);
+            if (transferVoucher.sourceLocationId) locIdSet.add(transferVoucher.sourceLocationId);
+            transferItemsList.forEach((it) => { if (it.sourceLocationId) locIdSet.add(it.sourceLocationId); });
+
+            const locRows = locIdSet.size > 0
+              ? await db.select({ id: locations.id, name: locations.name }).from(locations).where(inArray(locations.id, Array.from(locIdSet)))
+              : [];
+            const locMap = new Map(locRows.map((l) => [l.id, l.name]));
+
+            const destinationLocationName = transferVoucher.destinationLocationId
+              ? (locMap.get(transferVoucher.destinationLocationId) ?? null)
+              : null;
+
+            // Collect unique source location names (per item, or fall back to transfer-level)
+            const sourceLocNamesSet = new Set<string>();
+            for (const it of transferItemsList) {
+              const srcId = it.sourceLocationId ?? transferVoucher.sourceLocationId;
+              if (srcId && locMap.get(srcId)) sourceLocNamesSet.add(locMap.get(srcId)!);
+            }
+            const sourceLocationName = sourceLocNamesSet.size > 0
+              ? Array.from(sourceLocNamesSet).join(", ")
+              : null;
+
             const itemsWithDetails = transferItemsList.map((item) => ({
               id: item.id,
               voucherId: id,
@@ -15369,7 +15395,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isStockItem: true,
               totalAmount: isPOSUser ? null : item.totalAmount,
             }));
-            return res.json(itemsWithDetails);
+
+            return res.json({
+              entries: itemsWithDetails,
+              transfer: { sourceLocationName, destinationLocationName },
+            });
           }
         }
       }
@@ -27728,12 +27758,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Also include manual container items if any
       const containerItemsList = await storage.getContainerItems(offload.containerId);
+
+      // Look up stock item names for manual container items
+      const manualStockItemIds = containerItemsList
+        .map((i) => i.stockItemId)
+        .filter((id): id is number => !!id && !allItems.find((a) => a.stockItemId === id));
+      const manualStockItemRows = manualStockItemIds.length > 0
+        ? await db.select({ id: stockItems.id, name: stockItems.name, code: stockItems.code })
+            .from(stockItems)
+            .where(inArray(stockItems.id, manualStockItemIds))
+        : [];
+      const manualStockItemMap = new Map(manualStockItemRows.map((s) => [s.id, s]));
+
       for (const item of containerItemsList) {
         // Avoid duplicates — manual items may overlap PO items
         if (!allItems.find((i) => i.stockItemId === item.stockItemId)) {
+          const si = item.stockItemId ? manualStockItemMap.get(item.stockItemId) : null;
           allItems.push({
             id: item.id,
-            itemName: item.stockItemId ? item.stockItemId.toString() : "Item",
+            itemName: si?.name ?? (item.stockItemId ? `Item #${item.stockItemId}` : "Item"),
+            stockItemCode: si?.code ?? null,
             quantity: item.quantity,
             rate: "0",
             lineTotal: "0",

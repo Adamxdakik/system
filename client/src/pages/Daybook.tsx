@@ -575,7 +575,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
     enabled: detailSheetOpen && !!selectedVoucher && !!selectedCompany?.id,
   });
 
-  // Handle the response which can be either array (most types) or object with entries/purchaseOrder (Purchase type)
+  // Handle the response which can be either array (most types) or object with entries/purchaseOrder/transfer (Purchase/StockTransfer type)
   const viewVoucherEntries: ViewVoucherEntry[] = useMemo(() => {
     if (!viewVoucherEntriesRaw) return [];
     if (Array.isArray(viewVoucherEntriesRaw)) {
@@ -585,6 +585,12 @@ export default function Daybook({ user }: { user?: any } = {}) {
       return viewVoucherEntriesRaw.entries;
     }
     return [];
+  }, [viewVoucherEntriesRaw]);
+
+  // Extract transfer metadata (source/destination location names) for Stock Transfer vouchers
+  const transferMeta = useMemo<{ sourceLocationName: string | null; destinationLocationName: string | null } | null>(() => {
+    if (!viewVoucherEntriesRaw || Array.isArray(viewVoucherEntriesRaw)) return null;
+    return viewVoucherEntriesRaw.transfer ?? null;
   }, [viewVoucherEntriesRaw]);
 
   // Update purchaseOrderData when response changes (avoid setState in useMemo)
@@ -754,6 +760,17 @@ export default function Daybook({ user }: { user?: any } = {}) {
       return res.json();
     },
     enabled: !!selectedCompany?.id,
+  });
+
+  // Fetch full offload detail (includes individual items) when an offload is selected in the sheet
+  const { data: offloadDetail, isLoading: offloadDetailLoading } = useQuery<any>({
+    queryKey: ["/api/offloads", selectedOffload?.id, "detail"],
+    queryFn: async () => {
+      const res = await fetch(`/api/offloads/${selectedOffload!.id}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch offload detail");
+      return res.json();
+    },
+    enabled: !!selectedOffload?.id && detailSheetOpen,
   });
 
   // Clear per-company state when the active company changes
@@ -2964,6 +2981,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                   ].includes(selectedVoucher.voucherType) &&
                     (() => {
                       const isPOSUser = !user || user?.role?.startsWith("POS");
+                      const isTransfer = selectedVoucher.voucherType === "Stock Transfer" || selectedVoucher.voucherType === "StockTransfer";
                       const totalQty = viewVoucherEntries.reduce(
                         (sum: number, e: ViewVoucherEntry) =>
                           sum + Math.abs(parseFloat(e.quantity || "0")),
@@ -2976,93 +2994,121 @@ export default function Daybook({ user }: { user?: any } = {}) {
                               {getTransactionDisplayType(selectedVoucher.voucherType)} Details
                             </h3>
                             <div className="grid grid-cols-2 gap-3 text-sm">
+                              {/* From → To for stock transfers */}
+                              {isTransfer && transferMeta?.sourceLocationName && (
+                                <div className="col-span-2">
+                                  <p className="text-xs text-muted-foreground mb-1">Route</p>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge variant="outline" className="font-medium">{transferMeta.sourceLocationName}</Badge>
+                                    <span className="text-muted-foreground text-xs">→</span>
+                                    <Badge variant="outline" className="font-medium">{transferMeta.destinationLocationName ?? "—"}</Badge>
+                                  </div>
+                                </div>
+                              )}
+                              {isTransfer && !transferMeta?.sourceLocationName && transferMeta?.destinationLocationName && (
+                                <div className="col-span-2">
+                                  <p className="text-xs text-muted-foreground">To Location</p>
+                                  <p className="font-medium">{transferMeta.destinationLocationName}</p>
+                                </div>
+                              )}
                               <div>
-                                <p className="text-xs text-muted-foreground">Products</p>
+                                <p className="text-xs text-muted-foreground">Items</p>
                                 <p className="font-medium">{viewVoucherEntries.length}</p>
                               </div>
                               <div>
                                 <p className="text-xs text-muted-foreground">Total Quantity</p>
-                                <p className="font-medium font-mono">{totalQty.toFixed(3)}</p>
+                                <p className="font-medium font-mono">{formatNumber(totalQty)}</p>
                               </div>
                               {selectedVoucher.description && (
                                 <div className="col-span-2">
-                                  <p className="text-xs text-muted-foreground">Description</p>
+                                  <p className="text-xs text-muted-foreground">Notes</p>
                                   <p>{selectedVoucher.description}</p>
+                                </div>
+                              )}
+                              {!hideAmounts && (
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Total Value</p>
+                                  <p className="font-mono font-semibold">{formatAmount(selectedVoucher.totalAmount)}</p>
                                 </div>
                               )}
                             </div>
                           </div>
-                          <div className="py-4 border-b">
-                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                              Product Details
-                            </h3>
-                            <div className="border rounded-md overflow-x-auto">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Product</TableHead>
-                                    {selectedVoucher.voucherType === "Mixed" && (
-                                      <TableHead>Type</TableHead>
-                                    )}
-                                    <TableHead className="text-right">Qty</TableHead>
-                                    {!isPOSUser && !hideAmounts && (
-                                      <>
-                                        <TableHead className="text-right">Rate</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
-                                      </>
-                                    )}
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {viewVoucherEntries.map((entry: ViewVoucherEntry) => {
-                                    const qty = parseFloat(entry.quantity || "0");
-                                    const rate = entry.rate != null ? parseFloat(entry.rate) : 0;
-                                    const totalAmt =
-                                      entry.totalAmount != null
-                                        ? parseFloat(entry.totalAmount)
-                                        : qty * rate;
-                                    return (
-                                      <TableRow key={entry.id}>
-                                        <TableCell>
-                                          <div className="font-medium text-sm">
-                                            {entry.stockItemName || entry.accountName}
-                                          </div>
-                                        </TableCell>
-                                        {selectedVoucher.voucherType === "Mixed" && (
+                          {viewVoucherEntries.length > 0 && (
+                            <div className="py-4 border-b">
+                              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                                Items
+                              </h3>
+                              <div className="border rounded-md overflow-x-auto">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Product</TableHead>
+                                      {selectedVoucher.voucherType === "Mixed" && (
+                                        <TableHead>Type</TableHead>
+                                      )}
+                                      <TableHead className="text-right">Qty</TableHead>
+                                      {!isPOSUser && !hideAmounts && (
+                                        <>
+                                          <TableHead className="text-right">Rate</TableHead>
+                                          <TableHead className="text-right">Amount</TableHead>
+                                        </>
+                                      )}
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {viewVoucherEntries.map((entry: ViewVoucherEntry) => {
+                                      const qty = parseFloat(entry.quantity || "0");
+                                      const rate = entry.rate != null ? parseFloat(entry.rate) : 0;
+                                      const totalAmt =
+                                        entry.totalAmount != null
+                                          ? parseFloat(entry.totalAmount)
+                                          : qty * rate;
+                                      return (
+                                        <TableRow key={entry.id}>
                                           <TableCell>
-                                            <Badge
-                                              variant={
-                                                entry.adjustmentType === "Production"
-                                                  ? "default"
-                                                  : "secondary"
-                                              }
-                                              className="text-xs"
-                                            >
-                                              {entry.adjustmentType ||
-                                                (qty > 0 ? "Production" : "Consumption")}
-                                            </Badge>
+                                            <div className="font-medium text-sm">
+                                              {entry.stockItemName || entry.accountName}
+                                            </div>
+                                            {entry.stockItemCode && entry.stockItemCode !== "-" && (
+                                              <div className="text-xs text-muted-foreground font-mono">{entry.stockItemCode}</div>
+                                            )}
                                           </TableCell>
-                                        )}
-                                        <TableCell className="text-right font-mono text-sm">
-                                          {Math.round(Math.abs(qty)).toLocaleString()}
-                                        </TableCell>
-                                        {!isPOSUser && !hideAmounts && (
-                                          <>
-                                            <TableCell className="text-right font-mono text-sm">
-                                              {formatAmount(rate)}
+                                          {selectedVoucher.voucherType === "Mixed" && (
+                                            <TableCell>
+                                              <Badge
+                                                variant={
+                                                  entry.adjustmentType === "Production"
+                                                    ? "default"
+                                                    : "secondary"
+                                                }
+                                                className="text-xs"
+                                              >
+                                                {entry.adjustmentType ||
+                                                  (qty > 0 ? "Production" : "Consumption")}
+                                              </Badge>
                                             </TableCell>
-                                            <TableCell className="text-right font-mono text-sm">
-                                              {formatAmount(totalAmt)}
-                                            </TableCell>
-                                          </>
-                                        )}
-                                      </TableRow>
-                                    );
-                                  })}
-                                </TableBody>
-                              </Table>
+                                          )}
+                                          <TableCell className="text-right font-mono text-sm">
+                                            {formatNumber(Math.abs(qty))}
+                                          </TableCell>
+                                          {!isPOSUser && !hideAmounts && (
+                                            <>
+                                              <TableCell className="text-right font-mono text-sm">
+                                                {rate > 0 ? formatAmount(rate) : "—"}
+                                              </TableCell>
+                                              <TableCell className="text-right font-mono text-sm">
+                                                {totalAmt > 0 ? formatAmount(totalAmt) : "—"}
+                                              </TableCell>
+                                            </>
+                                          )}
+                                        </TableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                </Table>
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </>
                       );
                     })()}
@@ -3190,7 +3236,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
               </div>
 
               {/* Offload overview */}
-              <div className="py-4">
+              <div className="py-4 border-b">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                   Overview
                 </h3>
@@ -3208,50 +3254,127 @@ export default function Daybook({ user }: { user?: any } = {}) {
                     </div>
                   )}
                   <div>
-                    <p className="text-xs text-muted-foreground">Total Motorcycles</p>
+                    <p className="text-xs text-muted-foreground">Units Received</p>
                     <p className="font-medium font-mono">
-                      {parseFloat(selectedOffload.totalMotos || "0").toLocaleString()}
+                      {formatNumber(parseFloat(selectedOffload.totalMotos || "0"))}
                     </p>
                   </div>
-                  {!hideAmounts && (
-                    <>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Products Value</p>
-                        <p className="font-mono">{formatAmount(selectedOffload.itemsTotal)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Duties</p>
-                        <p className="font-mono">{formatAmount(selectedOffload.duties)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Office Charges</p>
-                        <p className="font-mono">{formatAmount(selectedOffload.officeCharges)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Transfer Charges</p>
-                        <p className="font-mono">{formatAmount(selectedOffload.transferCharges)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Transport Fees</p>
-                        <p className="font-mono">{formatAmount(selectedOffload.transportFees)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Total Charges</p>
-                        <p className="font-mono font-semibold">
-                          {formatAmount(selectedOffload.totalCharges)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Additional Cost / Motorcycle
-                        </p>
-                        <p className="font-mono">
-                          {formatAmount(selectedOffload.additionalCostPerMoto)}
-                        </p>
-                      </div>
-                    </>
+                  {!hideAmounts && offloadDetail?.grandTotal && parseFloat(offloadDetail.grandTotal) > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Container Purchase Total</p>
+                      <p className="font-mono font-semibold">{formatAmount(parseFloat(offloadDetail.grandTotal))}</p>
+                    </div>
                   )}
                 </div>
+              </div>
+
+              {/* Charges breakdown — only show non-zero rows */}
+              {!hideAmounts && (
+                <div className="py-4 border-b">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Charges Paid
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    {parseFloat(selectedOffload.duties || "0") > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Duties</span>
+                        <span className="font-mono">{formatAmount(selectedOffload.duties)}</span>
+                      </div>
+                    )}
+                    {parseFloat(selectedOffload.transportFees || "0") > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Transport Fees</span>
+                        <span className="font-mono">{formatAmount(selectedOffload.transportFees)}</span>
+                      </div>
+                    )}
+                    {parseFloat(selectedOffload.officeCharges || "0") > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Office Charges</span>
+                        <span className="font-mono">{formatAmount(selectedOffload.officeCharges)}</span>
+                      </div>
+                    )}
+                    {parseFloat(selectedOffload.transferCharges || "0") > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Transfer Charges</span>
+                        <span className="font-mono">{formatAmount(selectedOffload.transferCharges)}</span>
+                      </div>
+                    )}
+                    {parseFloat(selectedOffload.totalCharges || "0") > 0 && (
+                      <div className="flex justify-between font-semibold border-t pt-2 mt-1">
+                        <span>Total Extra Charges</span>
+                        <span className="font-mono">{formatAmount(selectedOffload.totalCharges)}</span>
+                      </div>
+                    )}
+                    {parseFloat(selectedOffload.additionalCostPerMoto || "0") > 0 && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Extra cost added per unit</span>
+                        <span className="font-mono">{formatAmount(selectedOffload.additionalCostPerMoto)}</span>
+                      </div>
+                    )}
+                    {parseFloat(selectedOffload.totalCharges || "0") === 0 && (
+                      <p className="text-muted-foreground text-xs">No extra charges recorded.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Individual items received */}
+              <div className="py-4">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  Items Received
+                </h3>
+                {offloadDetailLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading items…</p>
+                ) : offloadDetail?.items && offloadDetail.items.length > 0 ? (
+                  <div className="border rounded-md overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item</TableHead>
+                          <TableHead className="text-right">Qty</TableHead>
+                          {!hideAmounts && (
+                            <>
+                              <TableHead className="text-right">Unit Cost</TableHead>
+                              <TableHead className="text-right">Total</TableHead>
+                            </>
+                          )}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {offloadDetail.items.map((item: any) => {
+                          const qty = parseFloat(item.quantity || "0");
+                          const rate = parseFloat(item.rate || "0");
+                          const lineTotal = parseFloat(item.lineTotal || "0");
+                          return (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <div className="font-medium text-sm">{item.itemName}</div>
+                                {item.stockItemCode && (
+                                  <div className="text-xs text-muted-foreground font-mono">{item.stockItemCode}</div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {formatNumber(qty)}
+                              </TableCell>
+                              {!hideAmounts && (
+                                <>
+                                  <TableCell className="text-right font-mono text-sm">
+                                    {rate > 0 ? formatAmount(rate) : "—"}
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono text-sm font-semibold">
+                                    {lineTotal > 0 ? formatAmount(lineTotal) : "—"}
+                                  </TableCell>
+                                </>
+                              )}
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No item details available.</p>
+                )}
               </div>
             </div>
           )}
