@@ -9,9 +9,7 @@ const saleLinkSchema = z
   .object({
     voucherId: z.number().int().positive("Sales voucher is required"),
     customerId: z.number().int().positive().nullable().optional(),
-    sellingPrice: z
-      .string()
-      .regex(/^\d+(\.\d{1,2})?$/, "Selling price must have up to 2 decimals"),
+    sellingPrice: z.string().regex(/^\d+(\.\d{1,2})?$/, "Selling price must have up to 2 decimals"),
     warrantyStartDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Warranty start date must use YYYY-MM-DD")
@@ -388,7 +386,7 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
               httpStatus: 409,
             });
           }
-          if (!['IN_STOCK', 'RESERVED'].includes(motorcycle.status)) {
+          if (!["IN_STOCK", "RESERVED"].includes(motorcycle.status)) {
             throw Object.assign(
               new Error("Only in-stock or reserved motorcycles can be linked to a sale"),
               { httpStatus: 409 },
@@ -455,9 +453,12 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
             FOR UPDATE
           `);
           if (duplicateResult.rows.length > 0) {
-            throw Object.assign(new Error("This Sales voucher is already linked to another motorcycle"), {
-              httpStatus: 409,
-            });
+            throw Object.assign(
+              new Error("This Sales voucher is already linked to another motorcycle"),
+              {
+                httpStatus: 409,
+              },
+            );
           }
 
           let customerId = input.customerId ?? null;
@@ -479,10 +480,9 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
           }
 
           if (!customerId) {
-            throw Object.assign(
-              new Error("Select the customer who bought this motorcycle"),
-              { httpStatus: 400 },
-            );
+            throw Object.assign(new Error("Select the customer who bought this motorcycle"), {
+              httpStatus: 400,
+            });
           }
 
           const customerResult = await tx.execute(sql`
@@ -548,8 +548,9 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
         return res.status(400).json({ message: "Invalid motorcycle ID" });
       }
 
-      await db.transaction(async (tx) => {
-        const result = await tx.execute(sql`
+      await db
+        .transaction(async (tx) => {
+          const result = await tx.execute(sql`
           SELECT
             bp.sale_voucher_id AS "saleVoucherId",
             v.reversed_at AS "reversedAt"
@@ -562,26 +563,26 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
             AND bp.deleted_at IS NULL
           FOR UPDATE OF bp
         `);
-        const linked = result.rows[0] as
-          | { saleVoucherId: number | null; reversedAt: Date | null }
-          | undefined;
+          const linked = result.rows[0] as
+            | { saleVoucherId: number | null; reversedAt: Date | null }
+            | undefined;
 
-        if (!linked) {
-          throw Object.assign(new Error("Motorcycle not found"), { httpStatus: 404 });
-        }
-        if (!linked.saleVoucherId) {
-          throw Object.assign(new Error("Motorcycle is not linked to a finalized sale"), {
-            httpStatus: 409,
-          });
-        }
-        if (!linked.reversedAt) {
-          throw Object.assign(
-            new Error("Reverse the linked Sales voucher before releasing this motorcycle"),
-            { httpStatus: 409 },
-          );
-        }
+          if (!linked) {
+            throw Object.assign(new Error("Motorcycle not found"), { httpStatus: 404 });
+          }
+          if (!linked.saleVoucherId) {
+            throw Object.assign(new Error("Motorcycle is not linked to a finalized sale"), {
+              httpStatus: 409,
+            });
+          }
+          if (!linked.reversedAt) {
+            throw Object.assign(
+              new Error("Reverse the linked Sales voucher before releasing this motorcycle"),
+              { httpStatus: 409 },
+            );
+          }
 
-        await tx.execute(sql`
+          await tx.execute(sql`
           UPDATE bike_purchases
           SET
             status = 'IN_STOCK',
@@ -598,12 +599,13 @@ export function registerMotorcycleSaleRoutes(app: Express): void {
             AND company_id = ${companyId}
             AND deleted_at IS NULL
         `);
-      }).catch((error: any) => {
-        if (error?.httpStatus) {
+        })
+        .catch((error: any) => {
+          if (error?.httpStatus) {
+            throw error;
+          }
           throw error;
-        }
-        throw error;
-      });
+        });
 
       const motorcycle = await getMotorcycleSaleRecord(companyId, motorcycleId);
       return res.json(motorcycle);

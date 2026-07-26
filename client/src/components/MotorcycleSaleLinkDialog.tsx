@@ -148,7 +148,8 @@ export function MotorcycleSaleLinkDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/motorcycle-sales/vouchers"] });
       toast({
         title: "Finalized sale linked",
-        description: "The motorcycle is now sold to the selected customer and locked to the voucher.",
+        description:
+          "The motorcycle is now sold to the selected customer and locked to the voucher.",
       });
       onLinked();
       onOpenChange(false);
@@ -210,11 +211,14 @@ export function MotorcycleSaleLinkDialog({
               data-testid="select-motorcycle-sale-voucher"
             >
               <option value="">
-                {vouchersLoading ? "Loading finalized sales..." : "Select a finalized Sales voucher"}
+                {vouchersLoading
+                  ? "Loading finalized sales..."
+                  : "Select a finalized Sales voucher"}
               </option>
               {vouchers.map((voucher) => (
                 <option key={voucher.id} value={voucher.id}>
-                  {voucher.voucherNumber} · {voucher.voucherDate} · {formatMoney(voucher.totalAmount, voucher.currency)}
+                  {voucher.voucherNumber} · {voucher.voucherDate} ·{" "}
+                  {formatMoney(voucher.totalAmount, voucher.currency)}
                   {voucher.customerName ? ` · ${voucher.customerName}` : ""}
                 </option>
               ))}
@@ -237,7 +241,9 @@ export function MotorcycleSaleLinkDialog({
                 <p className="font-medium">{selectedVoucher.voucherDate}</p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Voucher total</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Voucher total
+                </p>
                 <p className="font-medium">
                   {formatMoney(selectedVoucher.totalAmount, selectedVoucher.currency)}
                 </p>
@@ -309,7 +315,11 @@ export function MotorcycleSaleLinkDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={linkMutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={linkMutation.isPending}
+          >
             Cancel
           </Button>
           <Button

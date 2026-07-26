@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Bike, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Bike, Link2, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { MotorcycleSaleLinkDialog } from "@/components/MotorcycleSaleLinkDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -169,6 +170,7 @@ export default function Motorcycles() {
   const [locationFilter, setLocationFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [saleLinkRecord, setSaleLinkRecord] = useState<MotorcycleRecord | null>(null);
   const [form, setForm] = useState<MotorcycleFormState>(blankForm);
 
   const queryParams = useMemo(() => {
@@ -563,6 +565,17 @@ export default function Motorcycles() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
+                          {(record.status === "IN_STOCK" || record.status === "RESERVED") && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setSaleLinkRecord(record)}
+                              aria-label="Link finalized sale"
+                              data-testid={`button-link-motorcycle-sale-${record.id}`}
+                            >
+                              <Link2 className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -871,6 +884,18 @@ export default function Motorcycles() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MotorcycleSaleLinkDialog
+        motorcycle={saleLinkRecord}
+        open={Boolean(saleLinkRecord)}
+        onOpenChange={(open) => {
+          if (!open) setSaleLinkRecord(null);
+        }}
+        onLinked={() => {
+          setSaleLinkRecord(null);
+          refetch();
+        }}
+      />
     </div>
   );
 }
