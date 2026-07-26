@@ -381,42 +381,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
         </div>
       )}
 
-      {/* ── Summary cards ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-              Total Products
-            </p>
-            <p className="text-2xl font-bold">{overviewStats.totalProducts}</p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-              Active Products
-            </p>
-            <p className="text-2xl font-bold">{overviewStats.activeProducts}</p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-              In Stock
-            </p>
-            <p className="text-2xl font-bold text-emerald-600">{overviewStats.inStock}</p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
-              Out of Stock
-            </p>
-            <p className="text-2xl font-bold text-amber-600">{overviewStats.outOfStock}</p>
-          </CardHeader>
-        </Card>
-      </div>
-
       {/* ── Toolbar ───────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 items-center">
         {/* Search */}
@@ -631,18 +595,30 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                       );
                     })
                   )}
+                  {filteredOverviewItems.length > 0 && (() => {
+                    const totalQty = filteredOverviewItems.reduce((sum, item) => {
+                      return sum + (productTotals.get(item.id)?.totalQuantity ?? 0);
+                    }, 0);
+                    return (
+                      <tr className="border-t bg-muted/30 font-semibold">
+                        <td className="px-3" />
+                        <td className="px-3 py-2.5 text-sm text-muted-foreground">
+                          {filteredOverviewItems.length} of {stockItems.length} products
+                        </td>
+                        <td className="px-3" />
+                        <td className="px-3 text-right font-mono text-sm">
+                          {totalQty % 1 === 0 ? totalQty.toLocaleString() : totalQty.toFixed(2)}
+                        </td>
+                        <td colSpan={3} />
+                      </tr>
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {!isLoading && filteredOverviewItems.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Showing {filteredOverviewItems.length} of {stockItems.length} products
-        </p>
-      )}
 
       {/* ── Shared dialogs (all preserved) ──────────────────────────────── */}
       {selectedStockItemId && (
