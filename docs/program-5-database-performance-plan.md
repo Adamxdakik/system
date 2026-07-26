@@ -6,6 +6,10 @@ Measure production traffic safely, then optimize the routes and export workloads
 
 Program 5 must preserve accounting, inventory, POS, container, payroll, motorcycle, and authorization behaviour. Performance work may change how data is fetched or serialized, but it must not change business results.
 
+## Current-main reconciliation
+
+The exact reviewed Program 5 delta was reapplied to the merged Program 4 `main` branch as an 18-file change. The newer purchase-order import, stock-item variant, database migration, and stock-table presentation commits already on `main` remain intact. No temporary reapplication workflow remains in the merge-ready branch.
+
 ## Phase order
 
 1. **5A — Production bandwidth verification**
@@ -90,7 +94,7 @@ Set `DISABLE_BANDWIDTH_TELEMETRY=true` to disable collection entirely.
 
 ### Remaining deployment evidence
 
-The implementation is complete, but acceptance still requires traffic from the deployed reviewed commit. Collect the Admin bandwidth report during representative daily use and confirm that the optimized routes show lower latency and resource pressure without response-shape or total differences.
+The implementation is complete, but deployment acceptance still requires traffic from the deployed reviewed commit. Collect the Admin bandwidth report during representative daily use and confirm that the optimized routes show lower latency and resource pressure without response-shape or total differences.
 
 ## Phase 5C — Exports and memory
 
@@ -129,7 +133,7 @@ Server workbook and concurrency limits can be adjusted with:
 
 Run representative small, normal, and large exports from the reviewed deployment. Confirm that valid files open correctly, excessive exports fail clearly, concurrent exports remain bounded, and server memory returns to its normal range after generation.
 
-## Final acceptance
+## Final code acceptance
 
 - formatting and changed-line lint pass with zero warnings
 - package and whole-application TypeScript checks pass
@@ -137,4 +141,5 @@ Run representative small, normal, and large exports from the reviewed deployment
 - the full PostgreSQL migration chain remains idempotent
 - permanent accounting, payroll, stock movement, container offload reversal, POS inventory value, report reconciliation, and read-only audits remain green
 - no temporary workflows remain in the branch
-- production bandwidth and representative export evidence are recorded before merge
+
+Production bandwidth and representative export evidence remain required before deployment approval.
