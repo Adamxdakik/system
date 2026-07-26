@@ -25,10 +25,7 @@ function positiveInteger(value: string | undefined, fallback: number): number {
 
 export function configuredWorkbookLimits(): WorkbookLimits {
   return {
-    maxWorksheets: positiveInteger(
-      process.env.EXPORT_MAX_WORKSHEETS,
-      DEFAULT_LIMITS.maxWorksheets,
-    ),
+    maxWorksheets: positiveInteger(process.env.EXPORT_MAX_WORKSHEETS, DEFAULT_LIMITS.maxWorksheets),
     maxRows: positiveInteger(process.env.EXPORT_MAX_ROWS, DEFAULT_LIMITS.maxRows),
     maxCells: positiveInteger(process.env.EXPORT_MAX_CELLS, DEFAULT_LIMITS.maxCells),
   };

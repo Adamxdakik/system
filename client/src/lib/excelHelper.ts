@@ -186,7 +186,9 @@ async function serializeWorkbook(workbook: ExcelJS.Workbook): Promise<ArrayBuffe
 
 export async function writeFile(workbook: ExcelJS.Workbook, filename: string): Promise<void> {
   if (activeDownload) {
-    throw new Error("Another Excel export is already being generated. Try again after it finishes.");
+    throw new Error(
+      "Another Excel export is already being generated. Try again after it finishes.",
+    );
   }
 
   const operation = (async () => {
