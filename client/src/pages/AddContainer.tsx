@@ -333,9 +333,17 @@ export default function AddContainer() {
               {itemFields.map((field, index) => {
                 const item = watchItems[index];
                 const lineTotal = (item?.quantity || 0) * (item?.ratePerKg || 0);
-                const activeTerm = search[index]; // undefined = not searching
+                const activeTerm = search[index];
                 const suggestions = activeTerm !== undefined ? getSuggestions(activeTerm) : [];
                 const displayValue = activeTerm !== undefined ? activeTerm : (item?.itemName ?? "");
+                const { ref: qtyRegRef, ...qtyRegRest } = form.register(
+                  `items.${index}.quantity`,
+                  { valueAsNumber: true },
+                );
+                const { ref: rateRegRef, ...rateRegRest } = form.register(
+                  `items.${index}.ratePerKg`,
+                  { valueAsNumber: true },
+                );
 
                 return (
                   <div
@@ -396,7 +404,6 @@ export default function AddContainer() {
                             }
                           }}
                           onFocus={() => {
-                            // Show search when focused with an existing value
                             const current = form.getValues(`items.${index}.itemName`);
                             if (current) {
                               setSearch((prev) => ({ ...prev, [index]: current }));
@@ -414,7 +421,6 @@ export default function AddContainer() {
                         />
                       </div>
 
-                      {/* Suggestions dropdown */}
                       {activeTerm !== undefined && suggestions.length > 0 && (
                         <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover text-popover-foreground border rounded-lg shadow-lg overflow-hidden">
                           <div className="max-h-56 overflow-y-auto">
@@ -439,7 +445,6 @@ export default function AddContainer() {
                         </div>
                       )}
 
-                      {/* No results hint */}
                       {activeTerm !== undefined &&
                         activeTerm.length > 0 &&
                         suggestions.length === 0 && (
@@ -454,12 +459,13 @@ export default function AddContainer() {
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Quantity</label>
                         <Input
-                          {...form.register(`items.${index}.quantity`, { valueAsNumber: true })}
+                          {...qtyRegRest}
                           type="number"
                           step="1"
                           min="1"
                           data-testid={`input-quantity-${index}`}
                           ref={(el) => {
+                            qtyRegRef(el);
                             qtyRefs.current[index] = el;
                           }}
                           onKeyDown={(e) => {
@@ -473,12 +479,13 @@ export default function AddContainer() {
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Rate (per unit)</label>
                         <Input
-                          {...form.register(`items.${index}.ratePerKg`, { valueAsNumber: true })}
+                          {...rateRegRest}
                           type="number"
                           step="0.01"
                           min="0"
                           data-testid={`input-rate-${index}`}
                           ref={(el) => {
+                            rateRegRef(el);
                             rateRefs.current[index] = el;
                           }}
                           onKeyDown={(e) => {
@@ -508,7 +515,6 @@ export default function AddContainer() {
                 );
               })}
 
-              {/* ── Add Item button ── */}
               <Button
                 type="button"
                 variant="outline"
@@ -520,7 +526,6 @@ export default function AddContainer() {
                 Add Another Item
               </Button>
 
-              {/* ── Items subtotal ── */}
               {watchItems.length > 0 && (
                 <div className="flex justify-end pt-1">
                   <span className="text-sm text-muted-foreground">
@@ -534,7 +539,6 @@ export default function AddContainer() {
             </CardContent>
           </Card>
 
-          {/* ── Freight & Other Charges ─────────────────────────────────── */}
           <Collapsible open={chargesOpen} onOpenChange={setChargesOpen}>
             <Card>
               <CollapsibleTrigger asChild>
@@ -626,7 +630,6 @@ export default function AddContainer() {
             </Card>
           </Collapsible>
 
-          {/* ── Grand Total ─────────────────────────────────────────────── */}
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="grid grid-cols-3 gap-4 py-4 text-sm">
               <div>
@@ -644,7 +647,6 @@ export default function AddContainer() {
             </CardContent>
           </Card>
 
-          {/* ── Actions ─────────────────────────────────────────────────── */}
           <div className="flex justify-end gap-3 pb-6">
             <Button
               type="button"
