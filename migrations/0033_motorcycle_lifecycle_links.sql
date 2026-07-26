@@ -1,5 +1,67 @@
 -- Program 4C: connect service, warranty, communication, and assembly history
 -- to an individual motorcycle without changing accounting or stock movements.
+-- The service-center and assembly tables historically came from the runtime
+-- schema, so create compatible versions when a clean SQL-only migration chain
+-- does not already contain them.
+
+CREATE TABLE IF NOT EXISTS service_history (
+  id serial PRIMARY KEY,
+  company_id integer NOT NULL,
+  customer_id integer NOT NULL,
+  service_date date NOT NULL,
+  bike_model text NOT NULL,
+  mileage integer,
+  service_type varchar(50) NOT NULL,
+  parts_used text,
+  technician_name varchar(100),
+  notes text,
+  deleted_at timestamp,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS warranties (
+  id serial PRIMARY KEY,
+  company_id integer NOT NULL,
+  customer_id integer NOT NULL,
+  bike_model text NOT NULL,
+  warranty_start_date date NOT NULL,
+  warranty_duration integer NOT NULL,
+  warranty_status varchar(20) NOT NULL DEFAULT 'Active',
+  void_reason text,
+  notes text,
+  deleted_at timestamp,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS communication_logs (
+  id serial PRIMARY KEY,
+  company_id integer NOT NULL,
+  customer_id integer NOT NULL,
+  contact_date date NOT NULL,
+  contact_type varchar(20) NOT NULL,
+  notes text,
+  deleted_at timestamp,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS assembly_history (
+  id serial PRIMARY KEY,
+  company_id integer NOT NULL,
+  location_id integer NOT NULL,
+  user_id varchar NOT NULL,
+  username text,
+  stock_item_id integer NOT NULL,
+  stock_item_name text,
+  action_type text NOT NULL,
+  from_stage text,
+  to_stage text,
+  qty_changed integer NOT NULL,
+  description text,
+  technician text,
+  status text DEFAULT 'pending',
+  completed boolean DEFAULT false,
+  created_at timestamp NOT NULL DEFAULT now()
+);
 
 ALTER TABLE service_history
   ADD COLUMN IF NOT EXISTS motorcycle_id integer;
