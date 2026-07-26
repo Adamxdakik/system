@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Persist exact Program 3 conflict diff
+      - name: Persist exact Program 3 conflict files
         shell: bash
         run: |
           set +e
@@ -28,11 +28,17 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git merge --no-commit --no-ff origin/agent/program-3-simplified-interface
           merge_status=$?
-          mkdir -p docs/diagnostics
+
+          rm -rf docs/diagnostics/conflicted
+          mkdir -p docs/diagnostics/conflicted
           git diff --name-only --diff-filter=U > docs/diagnostics/program3-conflict-files.txt
           git diff --cc > docs/diagnostics/program3-conflicts.diff
+          cp client/src/components/StockItemCreateDialog.tsx docs/diagnostics/conflicted/StockItemCreateDialog.conflict.tsx
+          cp client/src/components/StockItemEditDialog.tsx docs/diagnostics/conflicted/StockItemEditDialog.conflict.tsx
+          cp client/src/pages/StockItems.tsx docs/diagnostics/conflicted/StockItems.conflict.tsx
+
           git merge --abort || true
-          git add docs/diagnostics/program3-conflict-files.txt docs/diagnostics/program3-conflicts.diff
-          git commit -m "Record temporary Program 3 conflict report"
+          git add docs/diagnostics
+          git commit -m "Capture exact temporary Program 3 conflict files"
           git push origin HEAD:agent/program-3-current-main-integration
           exit $(( merge_status == 0 ? 1 : 0 ))
