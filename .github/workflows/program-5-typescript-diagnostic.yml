@@ -1,0 +1,50 @@
+name: Program 5 TypeScript Diagnostic
+
+on:
+  push:
+    branches:
+      - agent/program-5-bandwidth-verification
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out Program 5 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-5-bandwidth-verification
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Capture whole-app TypeScript errors
+        shell: bash
+        run: |
+          set +e
+          npm run check:all:baseline > /tmp/program-5-typescript.log 2>&1
+          status=$?
+          set -e
+          if [[ $status -ne 0 ]]; then
+            tail -200 /tmp/program-5-typescript.log > docs/program-5-typescript-errors.txt
+          fi
+          rm .github/workflows/program-5-typescript-diagnostic.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A .github/workflows/program-5-typescript-diagnostic.yml docs/program-5-typescript-errors.txt 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Record Program 5 TypeScript diagnostics"
+            git push origin HEAD:agent/program-5-bandwidth-verification
+          fi
+          exit $status
