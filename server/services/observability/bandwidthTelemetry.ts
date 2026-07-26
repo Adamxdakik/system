@@ -92,6 +92,7 @@ const DEFAULT_MAX_ROUTES = 250;
 const DEFAULT_HEAVY_RESPONSE_BYTES = 250 * 1024;
 const DEFAULT_SLOW_REQUEST_MILLIS = 750;
 const DEFAULT_WINDOW_MINUTES = 5;
+const OVERFLOW_METHOD = "OTHER";
 const OVERFLOW_PATH = "/api/:overflow";
 const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const INTEGER_SEGMENT = /^\d+$/;
@@ -184,17 +185,21 @@ export class BandwidthTelemetry {
     const observedAt = Number.isFinite(sample.observedAt) ? Number(sample.observedAt) : Date.now();
     const method = String(sample.method || "UNKNOWN").toUpperCase().slice(0, 16);
     const normalizedPath = normalizeBandwidthPath(sample.path);
-    let key = `${method} ${normalizedPath}`;
+    let aggregateMethod = method;
+    let aggregatePath = normalizedPath;
+    let key = `${aggregateMethod} ${aggregatePath}`;
 
-    if (!this.routes.has(key) && this.routes.size >= this.maxRoutes) {
-      key = `${method} ${OVERFLOW_PATH}`;
+    if (!this.routes.has(key) && this.routes.size >= this.maxRoutes - 1) {
+      aggregateMethod = OVERFLOW_METHOD;
+      aggregatePath = OVERFLOW_PATH;
+      key = `${aggregateMethod} ${aggregatePath}`;
     }
 
     let aggregate = this.routes.get(key);
     if (!aggregate) {
       aggregate = {
-        method,
-        path: key.endsWith(OVERFLOW_PATH) ? OVERFLOW_PATH : normalizedPath,
+        method: aggregateMethod,
+        path: aggregatePath,
         requestCount: 0,
         errorCount: 0,
         knownLengthCount: 0,
