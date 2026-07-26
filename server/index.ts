@@ -19,6 +19,10 @@ import {
   requestBodyParsers,
   requestIdMiddleware,
 } from "./httpSafety";
+import {
+  apiBandwidthMetrics,
+  registerBandwidthMetricsRoutes,
+} from "./bandwidthMetrics";
 import { SESSION_COOKIE_NAME, sessionCookieOptions } from "./authSecurity";
 import { securityHeaders } from "./securityHeaders";
 
@@ -68,6 +72,7 @@ declare module "express-session" {
 app.use(requestIdMiddleware);
 app.use(securityHeaders());
 app.use(requestBodyParsers());
+app.use(apiBandwidthMetrics());
 
 // Trust proxy for HTTPS termination
 // This is required for both Replit (development) and Render (production)
@@ -134,6 +139,10 @@ app.use(apiRequestLogger(log));
   app.get("/api/build-info", (_req, res) => {
     res.json({ version: BUILD_VERSION });
   });
+
+  // Process-local, admin-only production verification. This is intentionally
+  // registered before the generic route bundle and does not mutate business data.
+  registerBandwidthMetricsRoutes(app);
 
   // Lifecycle guards must run before generic assembly, service, and registry routes.
   registerMotorcycleWorkshopRoutes(app);
