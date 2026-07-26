@@ -337,11 +337,22 @@ async function createReplacementItems(
       );
     }
     const inventoryRow = lockedRows.get(requested.stockItemId)!;
-    const oldLine = requested.id ? originalById.get(requested.id) : undefined;
+    // Look up original cost: prefer matching by line ID, then fall back to any
+    // original line with the same stock item (handles POS edit where client
+    // doesn't send line IDs). Both paths guard against a zero averageRate that
+    // can result when net inventory quantity hits 0 after restoration.
+    const oldLineById = requested.id ? originalById.get(requested.id) : undefined;
+    const oldLineByItem = originalItems.find(
+      (oi) => oi.stockItemId === requested.stockItemId,
+    );
+    const oldLine = oldLineById ?? oldLineByItem;
+    const inventoryRate = decimalToScaledInteger(inventoryRow.averageRate, 2);
     const costCents =
-      oldLine && oldLine.stockItemId === requested.stockItemId
+      oldLine && parseFloat(oldLine.costPrice ?? "0") > 0
         ? decimalToScaledInteger(oldLine.costPrice, 2)
-        : decimalToScaledInteger(inventoryRow.averageRate, 2);
+        : inventoryRate > 0n
+          ? inventoryRate
+          : decimalToScaledInteger(oldLine?.costPrice ?? "0", 2);
     const product = productMap.get(requested.stockItemId);
     const configuredPrice = product?.sellingPrice
       ? decimalToScaledInteger(product.sellingPrice, 2)
