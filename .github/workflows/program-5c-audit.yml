@@ -1,0 +1,134 @@
+name: Program 5C Export Memory Audit
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    if: github.event.pull_request.head.ref == 'agent/program-5-bandwidth-verification'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out Program 5 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-5-bandwidth-verification
+          fetch-depth: 0
+
+      - name: Generate export and memory audit
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('.')
+          server_files = list((root / 'server').rglob('*.ts')) + list((root / 'server').rglob('*.tsx'))
+          client_files = list((root / 'client' / 'src').rglob('*.ts')) + list((root / 'client' / 'src').rglob('*.tsx'))
+          route_pattern = re.compile(r'app\.(get|post|put|patch|delete)\(\s*["\']([^"\']+)["\']', re.M)
+          export_terms = re.compile(r'export|excel|xlsx|pdf|csv|download|statement', re.I)
+          candidates = []
+
+          for path in server_files:
+              text = path.read_text(encoding='utf-8', errors='ignore')
+              matches = list(route_pattern.finditer(text))
+              line_starts = [0]
+              for match in re.finditer(r'\n', text):
+                  line_starts.append(match.end())
+              def line_number(offset):
+                  import bisect
+                  return bisect.bisect_right(line_starts, offset)
+              for index, match in enumerate(matches):
+                  start = match.start()
+                  end = matches[index + 1].start() if index + 1 < len(matches) else min(len(text), start + 18000)
+                  block = text[start:end]
+                  method, route = match.group(1).upper(), match.group(2)
+                  if not export_terms.search(route) and not export_terms.search(block[:1200]):
+                      continue
+                  metrics = {
+                      'lines': block.count('\n') + 1,
+                      'awaits': len(re.findall(r'\bawait\b', block)),
+                      'queries': len(re.findall(r'\.select\s*\(|\bdb\.execute\s*\(', block)),
+                      'loops': len(re.findall(r'\b(?:for|while)\s*\(', block)),
+                      'promise_all': len(re.findall(r'Promise\.all\s*\(', block)),
+                      'write_buffer': len(re.findall(r'writeBuffer|writeFile|xlsx\.write', block, re.I)),
+                      'buffers': len(re.findall(r'\bBuffer\b|arrayBuffer|blob\(', block, re.I)),
+                      'xlsx': len(re.findall(r'\bXLSX\b|ExcelJS|Workbook\(', block, re.I)),
+                      'pdf': len(re.findall(r'PDFDocument|pdfkit|puppeteer|\.pdf\b', block, re.I)),
+                      'limits': len(re.findall(r'\.limit\s*\(', block)),
+                  }
+                  risk = metrics['lines'] // 25 + metrics['awaits'] + metrics['queries'] * 3 + metrics['loops'] * 2 + metrics['write_buffer'] * 8 + metrics['buffers'] * 4 + metrics['xlsx'] * 5 + metrics['pdf'] * 5
+                  if metrics['queries'] > 0 and metrics['limits'] == 0:
+                      risk += 8
+                  candidates.append((risk, method, route, str(path), line_number(start), metrics))
+
+          client_hits = []
+          endpoint_pattern = re.compile(r'["\'`](/api/[^"\'`?${}\s]+)')
+          for path in client_files:
+              text = path.read_text(encoding='utf-8', errors='ignore')
+              for line_no, line in enumerate(text.splitlines(), 1):
+                  if export_terms.search(line) and ('/api/' in line or 'blob' in line.lower() or 'download' in line.lower()):
+                      endpoints = endpoint_pattern.findall(line)
+                      client_hits.append((str(path), line_no, ', '.join(endpoints), line.strip()[:220]))
+
+          memory_hits = []
+          for path in server_files:
+              text = path.read_text(encoding='utf-8', errors='ignore')
+              for line_no, line in enumerate(text.splitlines(), 1):
+                  if re.search(r'memoryStorage\(|writeBuffer|arrayBuffer|Buffer\.from|readFileSync|Promise\.all\(', line):
+                      memory_hits.append((str(path), line_no, line.strip()[:220]))
+
+          output = [
+              '# Program 5C Export and Memory Audit',
+              '',
+              'Generated from the exact Program 5 branch. This is a static audit; production telemetry and representative export sizes remain the final acceptance evidence.',
+              '',
+              '## Export-route candidates',
+              '',
+              '| Risk | Route | Source | Queries | Await | Loops | XLSX | PDF | Buffers | Write buffer | Limit | Lines |',
+              '|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|',
+          ]
+          for risk, method, route, path, line, m in sorted(candidates, reverse=True):
+              output.append(f"| {risk} | `{method} {route}` | `{path}:{line}` | {m['queries']} | {m['awaits']} | {m['loops']} | {m['xlsx']} | {m['pdf']} | {m['buffers']} | {m['write_buffer']} | {m['limits']} | {m['lines']} |")
+
+          output += ['', '## Client export/download call sites', '']
+          if client_hits:
+              for path, line, endpoints, content in client_hits:
+                  suffix = f' — `{endpoints}`' if endpoints else ''
+                  output.append(f'- `{path}:{line}`{suffix} — `{content}`')
+          else:
+              output.append('- No client export/download call sites detected.')
+
+          output += ['', '## Memory-sensitive call sites', '']
+          if memory_hits:
+              for path, line, content in memory_hits:
+                  output.append(f'- `{path}:{line}` — `{content}`')
+          else:
+              output.append('- No memory-sensitive call sites detected.')
+
+          output += [
+              '',
+              '## Audit scope',
+              '',
+              f'- Server TypeScript files scanned: {len(server_files)}',
+              f'- Client TypeScript files scanned: {len(client_files)}',
+              f'- Export route candidates: {len(candidates)}',
+              f'- Client export/download call sites: {len(client_hits)}',
+              f'- Memory-sensitive call sites: {len(memory_hits)}',
+          ]
+          Path('docs/program-5c-static-audit.md').write_text('\n'.join(output) + '\n', encoding='utf-8')
+          PY
+
+      - name: Commit audit and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/program-5c-static-audit.md
+          git rm .github/workflows/program-5c-audit.yml
+          git commit -m "Audit Program 5C export and memory paths"
+          git push origin HEAD:agent/program-5-bandwidth-verification
