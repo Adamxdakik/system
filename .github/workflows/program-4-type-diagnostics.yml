@@ -1,4 +1,4 @@
-name: Program 4 TypeScript diagnostics
+name: Program 4 TypeScript fix
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  diagnostics:
+  fix:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Program 4 branch
@@ -29,17 +29,35 @@ jobs:
       - name: Install exact dependencies
         run: npm ci --include=dev --silent
 
-      - name: Capture whole-app TypeScript diagnostics
+      - name: Normalize route handler returns
         shell: bash
         run: |
-          npm run check:all:baseline > docs/program-4-type-errors.txt 2>&1 || true
-          cat docs/program-4-type-errors.txt
+          python - <<'PY'
+          from pathlib import Path
 
-      - name: Commit diagnostics
+          path = Path("server/routes/motorcycleRecordRoutes.ts")
+          text = path.read_text()
+          replacements = {
+              "      res.json(result.rows);": "      return res.json(result.rows);",
+              "        res.status(201).json(motorcycle);": "        return res.status(201).json(motorcycle);",
+              "        res.json(motorcycle);": "        return res.json(motorcycle);",
+              "      res.status(204).send();": "      return res.status(204).send();",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"Expected route text not found: {old}")
+              text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+          npx prettier --write server/routes/motorcycleRecordRoutes.ts
+          rm -f docs/program-4-type-errors.txt
+
+      - name: Commit TypeScript fix
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/program-4-type-errors.txt
-          git commit -m "Capture Program 4 TypeScript diagnostics"
+          git add server/routes/motorcycleRecordRoutes.ts
+          git add -u docs/program-4-type-errors.txt
+          git commit -m "Fix Program 4A route return paths"
           git push origin HEAD:agent/program-4-motorcycle-records
