@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateSalesQueries } from "@/lib/invalidateSalesQueries";
 import { useLocation as useLocationContext } from "@/contexts/LocationContext";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -316,12 +317,9 @@ export default function POS({
         setShowPrintDialog(true);
       }
       queryClient.invalidateQueries({ queryKey: [`/api/locations/${activeLocation?.id}/inventory`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/ledger-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/suppliers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/voucher-sidebar"] });
+      invalidateSalesQueries(queryClient, editVoucherId ?? undefined);
     },
     onError: (error: any) => {
       toast({

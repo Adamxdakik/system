@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateSalesQueries } from "@/lib/invalidateSalesQueries";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -125,7 +126,7 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
       apiRequest("DELETE", `/api/vouchers/${voucherId}/sales`),
     onSuccess: () => {
       toast({ title: "Sale deleted", description: "The sale and its accounting entries have been removed." });
-      queryClient.invalidateQueries({ queryKey: [queryKey] });
+      invalidateSalesQueries(queryClient);
       setDeleteTarget(null);
     },
     onError: (error: Error) => {

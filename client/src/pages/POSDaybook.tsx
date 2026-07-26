@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateSalesQueries } from "@/lib/invalidateSalesQueries";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -306,10 +307,7 @@ export default function POSDaybook() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Transaction updated successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({
-        queryKey: [`/api/vouchers/${selectedVoucher?.id}`],
-      });
+      invalidateSalesQueries(queryClient, selectedVoucher?.id);
       setIsEditMode(false);
     },
     onError: (error: Error) =>
