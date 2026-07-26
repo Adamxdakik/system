@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import express, { type ErrorRequestHandler, type RequestHandler } from "express";
+import { recordBandwidthSample } from "./services/observability/bandwidthTelemetry";
 
 export const JSON_BODY_LIMIT = "2mb";
 export const URL_ENCODED_BODY_LIMIT = "2mb";
@@ -61,19 +62,27 @@ export function requestBodyParsers(): RequestHandler[] {
   ];
 }
 
+function responseBytesFrom(contentLength: unknown, method: string, statusCode: number): number | null {
+  if (method === "HEAD" || statusCode === 204 || statusCode === 304) return 0;
+  if (contentLength === undefined) return null;
+  const parsed = Number(contentLength);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
+}
+
 export function apiRequestLogger(writeLog: (message: string) => void): RequestHandler {
   return (req, res, next) => {
     const start = Date.now();
 
     res.on("finish", () => {
       if (req.path.startsWith("/api")) {
+        const durationMillis = Date.now() - start;
         const contentLength = res.getHeader("content-length");
         const entry: Record<string, string | number> = {
           requestId: req.requestId,
           method: req.method,
           path: req.path,
           statusCode: res.statusCode,
-          durationMillis: Date.now() - start,
+          durationMillis,
         };
 
         if (contentLength !== undefined) {
@@ -89,6 +98,16 @@ export function apiRequestLogger(writeLog: (message: string) => void): RequestHa
         }
 
         writeLog(JSON.stringify(entry));
+
+        if (req.path !== "/api/admin/bandwidth-report") {
+          recordBandwidthSample({
+            method: req.method,
+            path: req.path,
+            statusCode: res.statusCode,
+            durationMillis,
+            responseBytes: responseBytesFrom(contentLength, req.method, res.statusCode),
+          });
+        }
       }
     });
 
