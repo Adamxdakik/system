@@ -14,6 +14,10 @@ Make the ERP faster and easier for daily users by simplifying navigation, dashbo
 - Desktop and mobile behavior must both remain usable; wide data tables scroll inside their card instead of forcing body-level horizontal scrolling.
 - Each phase stays on this branch and draft PR. Do not merge until the full Program 3 diff is audited and approved.
 
+## Current-main reconciliation
+
+Program 3 was reconciled against the current `main` branch before the approved merge sequence. The simplified product create, edit, filter, and table layouts remain in place while the newer parent/variant selectors, inline variant creation, expandable variant rows, aggregate parent stock totals, and supplier-validation fixes from `main` are preserved. No temporary workflow or conflict diagnostic remains in the merge-ready branch.
+
 ## Phase 3A — Shell, navigation, and dashboard
 
 ### Scope
@@ -40,7 +44,7 @@ Make the ERP faster and easier for daily users by simplifying navigation, dashbo
 
 ## Phase 3B — Inventory and product workflow
 
-Implementation is complete on draft PR #4.
+Implementation is complete on the Program 3 merge-ready branch.
 
 ### Scope
 
@@ -53,19 +57,20 @@ Implementation is complete on draft PR #4.
 - Prioritize common stock fields and actions.
 - Consolidate redundant filters and make active filters obvious.
 - Keep advanced product/bale information collapsed by default.
-- Preserve exact quantities, rates, values, grouping, aliases, and location behavior.
+- Preserve exact quantities, rates, values, grouping, aliases, location behavior, and parent/variant relationships.
 - Improve empty, loading, and error states without adding new data sources.
 
 ### Acceptance
 
 - Users can find, create, and edit an item with fewer visual decisions.
 - Existing stock data and calculations display unchanged.
+- Parent and variant items retain their selectors, nested rows, and aggregate stock behavior.
 - Advanced details remain available and editable where currently permitted.
 - No new API calls are introduced solely for alternative presentation.
 
 ## Phase 3C — Sale and purchase forms
 
-Implementation, cleanup, and permanent CI validation are complete on draft PR #4.
+Implementation, cleanup, and permanent CI validation are complete on the Program 3 merge-ready branch.
 
 ### Scope
 
@@ -89,4 +94,4 @@ Implementation, cleanup, and permanent CI validation are complete on draft PR #4
 
 ## Definition of done
 
-Program 3 is complete on draft PR #4. The final source-only head passed formatting, zero-warning lint, package and whole-application TypeScript checks, CI-safe tests, production build, the full migration chain with idempotent rerun, and all permanent PostgreSQL accounting, payroll, stock, container, POS-value, report, and audit regressions.
+Program 3 is complete on the current-main integration branch. The final source-only head must pass formatting, zero-warning lint, package and whole-application TypeScript checks, CI-safe tests, production build, the full migration chain with idempotent rerun, and all permanent PostgreSQL accounting, payroll, stock, container, POS-value, report, and audit regressions before merge.
