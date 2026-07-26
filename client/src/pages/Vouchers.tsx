@@ -2883,10 +2883,6 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
           ...data
         } = input;
 
-          "[StockTransfer] MUTATION STEP B: Extracted data, isEditMode:",
-          !!_voucherIdToEdit,
-        );
-
         const isEditMode = !!_voucherIdToEdit;
 
         // Validate required data before proceeding
@@ -2961,10 +2957,6 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
             currency: selectedCurrency,
             exchangeRate: exchangeRate ? exchangeRate.toString() : undefined,
           };
-            "[StockTransfer] MUTATION STEP D2: Payload JSON test:",
-            JSON.stringify(voucherPayload),
-          );
-
           const transferRes = await modeApiRequest("POST", "/api/stock-transfers", {
             voucher: voucherPayload,
             destinationLocationId: data.destinationLocationId,
@@ -3066,10 +3058,6 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
       (entry) => !entry.rate || entry.rate === "" || entry.rate === "0",
     );
     if (entriesWithMissingRates.length > 0) {
-        "[StockTransfer] Fetching rates for entries with missing rates:",
-        entriesWithMissingRates.length,
-      );
-
       // Fetch rates from inventory for each entry with missing rate
       const ratePromises = entriesWithMissingRates.map(async (entry) => {
         try {
@@ -3110,9 +3098,6 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         }
       }
 
-        "[StockTransfer] Rates after auto-fill:",
-        validEntries.map((e) => ({ stockItemId: e.stockItemId, rate: e.rate })),
-      );
     }
 
     // Check for zero quantity entries
@@ -3133,12 +3118,6 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
     // Validate quantities against available inventory
     // When editing, we need to add back the original transfer quantities to available stock
     const isEditMode = !!voucherIdToEdit;
-      "[StockTransfer] STEP 4: isEditMode =",
-      isEditMode,
-      "voucherIdToEdit =",
-      voucherIdToEdit,
-    );
-
     // IMPORTANT: in edit mode, make sure we actually have the original stock transfer loaded.
     // If it's not in cache yet (common when you only change destination and submit quickly),
     // fetch it so the "add back original qty" logic works reliably.
