@@ -46,7 +46,33 @@ Program 6 is stacked on the reviewed Program 5 head. It must not change accounti
 - added a final open-risk register with release-blocking production evidence
 - extended permanent tests so environment usage, the machine audit, operator documentation, and `.env.example` cannot drift silently
 
-### Required production evidence before final approval
+## Exact final validation
+
+Validated on exact head `beb1cabb5b1b9d155e065087855fd53010237fc3` in permanent CI run `30217326301`.
+
+### Application verification
+
+- changed-file formatting: passed
+- changed-line lint with zero warnings: passed
+- package TypeScript: passed
+- whole-application TypeScript baseline: passed
+- CI-safe tests, including frontend resilience and environment-documentation drift coverage: passed
+- production build: passed
+
+### PostgreSQL safeguards
+
+- full migration chain: passed
+- idempotent migration rerun: passed
+- accounting integration: passed
+- transactional payroll: passed
+- exact stock movement: passed
+- exact container offload reversal: passed
+- POS inventory value: passed
+- accounting report reconciliation: passed
+- read-only financial audit: passed
+- read-only supplier-company audit: passed
+
+## Required production evidence before final approval
 
 - deploy the exact reviewed commit
 - capture representative production bandwidth data from the Admin report
