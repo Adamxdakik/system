@@ -17,7 +17,7 @@
     "lint:changed": "node scripts/check-changed-files.mjs lint",
     "check:all:baseline": "node scripts/check-typescript-baseline.mjs",
     "test": "vitest run",
-    "test:unit": "vitest run server/lib/__tests__/asyncHandler.test.ts server/lib/__tests__/excel.test.ts server/lib/__tests__/validate.test.ts server/__tests__/httpSafety.test.ts server/__tests__/authSecurity.test.ts server/__tests__/securityHeaders.test.ts server/__tests__/typescriptConfig.test.ts server/__tests__/financialIntegrity.test.ts server/__tests__/accountingRegression.test.ts server/__tests__/accountingReports.test.ts server/__tests__/financialRepairSafety.test.ts server/__tests__/accountingIdempotencyRegression.test.ts server/__tests__/finalizedVoucherCorrection.test.ts server/__tests__/finalizedMutationPolicy.test.ts server/__tests__/motorcycleFinalizedSalePolicy.test.ts server/__tests__/motorcycleLifecyclePolicy.test.ts server/__tests__/bandwidthTelemetry.test.ts",
+    "test:unit": "vitest run server/lib/__tests__/asyncHandler.test.ts server/lib/__tests__/excel.test.ts server/lib/__tests__/validate.test.ts server/__tests__/httpSafety.test.ts server/__tests__/authSecurity.test.ts server/__tests__/securityHeaders.test.ts server/__tests__/typescriptConfig.test.ts server/__tests__/financialIntegrity.test.ts server/__tests__/accountingRegression.test.ts server/__tests__/accountingReports.test.ts server/__tests__/financialRepairSafety.test.ts server/__tests__/accountingIdempotencyRegression.test.ts server/__tests__/finalizedVoucherCorrection.test.ts server/__tests__/finalizedMutationPolicy.test.ts server/__tests__/motorcycleFinalizedSalePolicy.test.ts server/__tests__/motorcycleLifecyclePolicy.test.ts server/__tests__/bandwidthTelemetry.test.ts server/__tests__/heavyReadOptimization.test.ts",
     "test:ci": "npm run test:unit",
     "test:integration": "vitest run server/__tests__/moto-rates-routes.test.ts server/__tests__/moto-rates-storage.test.ts server/__tests__/moto-rates-authed.test.ts",
     "test:financial-characterization": "vitest run server/__tests__/financialAudit.characterization.test.ts",
@@ -102,7 +102,7 @@
     "react-resizable-panels": "^2.1.7",
     "react-to-print": "^3.2.0",
     "recharts": "^2.15.2",
-    "remark-gfm": "^4.0.1",
+    "remark-gfm": "^4.1.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
@@ -130,7 +130,7 @@
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
     "eslint": "^9.13.0",
-    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.14",
     "eslint-plugin-unused-imports": "^4.4.1",
     "postcss": "^8.4.47",
@@ -143,6 +143,6 @@
     "vitest": "^2.1.4"
   },
   "optionalDependencies": {
-    "bufferutil": "^4.0.8"
+    "bufferutil": "^4.8.0"
   }
 }
