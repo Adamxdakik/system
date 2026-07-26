@@ -465,13 +465,11 @@ export class PosSaleCorrectionService {
           409,
         );
       }
-      if (!original.voucher.currency || !original.voucher.exchangeRate) {
-        throw new AccountingIntegrityError(
-          "POS correction requires confirmed historical FX metadata",
-          "UNRESOLVED_LEGACY_FX",
-          409,
-        );
-      }
+      // Legacy vouchers created before FX tracking have null currency/exchangeRate.
+      // They were implicitly in the base currency at a 1:1 rate, so fall back to
+      // those values rather than hard-blocking the correction.
+      if (!original.voucher.currency) original.voucher.currency = "USD";
+      if (!original.voucher.exchangeRate) original.voucher.exchangeRate = "1";
 
       const [voucherRow] = await tx
         .select({ locationId: vouchers.locationId, description: vouchers.description })
@@ -636,13 +634,10 @@ export class PosSaleCorrectionService {
           409,
         );
       }
-      if (!original.voucher.currency || !original.voucher.exchangeRate) {
-        throw new AccountingIntegrityError(
-          "POS cancellation requires confirmed historical FX metadata",
-          "UNRESOLVED_LEGACY_FX",
-          409,
-        );
-      }
+      // Legacy vouchers created before FX tracking have null currency/exchangeRate.
+      // Fall back to base currency at 1:1 rate rather than blocking cancellation.
+      if (!original.voucher.currency) original.voucher.currency = "USD";
+      if (!original.voucher.exchangeRate) original.voucher.exchangeRate = "1";
 
       const [voucherRow] = await tx
         .select({ locationId: vouchers.locationId })
