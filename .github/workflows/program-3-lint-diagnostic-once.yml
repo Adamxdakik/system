@@ -1,0 +1,32 @@
+name: Program 3 lint diagnostic once
+
+on:
+  push:
+    branches:
+      - agent/program-3-simplified-interface-rebased
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --include=dev
+      - run: npm run lint:changed > docs/program-3-lint-diagnostic.txt 2>&1 || true
+      - name: Commit diagnostic and remove workflow
+        run: |
+          rm .github/workflows/program-3-lint-diagnostic-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Capture Program 3 lint diagnostic"
+          git push origin HEAD:agent/program-3-simplified-interface-rebased
