@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { assertWorkbookWithinLimits, configuredExportConcurrencyGate } from "./exportSafety";
 
 // Drop-in compatible subset of the SheetJS (xlsx) API, backed by exceljs.
 // Designed to minimize call-site changes when migrating off `xlsx` (which
@@ -14,6 +15,8 @@ export interface CompatWorkbook {
   SheetNames: string[];
   Sheets: Record<string, ExcelJS.Worksheet>;
 }
+
+const exportGate = configuredExportConcurrencyGate();
 
 export const utils = {
   book_new: (): ExcelJS.Workbook => new ExcelJS.Workbook(),
@@ -36,7 +39,7 @@ export const utils = {
     } else {
       worksheet.addRow(sheetData.headers);
       for (const item of sheetData.data) {
-        worksheet.addRow(sheetData.headers.map((h) => item[h] ?? ""));
+        worksheet.addRow(sheetData.headers.map((header) => item[header] ?? ""));
       }
     }
     return worksheet;
@@ -102,9 +105,9 @@ export async function read(
 
   const SheetNames: string[] = [];
   const Sheets: Record<string, ExcelJS.Worksheet> = {};
-  workbook.eachSheet((ws) => {
-    SheetNames.push(ws.name);
-    Sheets[ws.name] = ws;
+  workbook.eachSheet((worksheet) => {
+    SheetNames.push(worksheet.name);
+    Sheets[worksheet.name] = worksheet;
   });
   return { workbook, SheetNames, Sheets };
 }
@@ -113,8 +116,16 @@ export async function write(
   workbook: ExcelJS.Workbook,
   _options?: { type?: "buffer"; bookType?: "xlsx" },
 ): Promise<Buffer> {
-  const buf = await workbook.xlsx.writeBuffer();
-  return Buffer.from(buf);
+  assertWorkbookWithinLimits(workbook);
+
+  return exportGate.run(async () => {
+    const serialized = await workbook.xlsx.writeBuffer();
+    const buffer = Buffer.from(serialized);
+    if (buffer.byteLength === 0) {
+      throw new Error("Excel export produced an empty file");
+    }
+    return buffer;
+  });
 }
 
 const XLSX = { utils, read, write };
