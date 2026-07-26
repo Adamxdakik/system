@@ -4,7 +4,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation } from "wouter";
-import { ArrowLeft, Plus, Trash2, Search } from "lucide-react";
+import { ArrowLeft, ChevronDown, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { StockItem } from "@shared/schema";
@@ -62,6 +63,8 @@ export default function AddContainer() {
 
   // search[index] = current text typed; undefined = no active search (show form value)
   const [search, setSearch] = useState<Record<number, string | undefined>>({});
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [chargesOpen, setChargesOpen] = useState(false);
   const qtyRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const rateRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
@@ -223,10 +226,13 @@ export default function AddContainer() {
           {/* ── Container Details ──────────────────────────────────────── */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Container Details</CardTitle>
+              <CardTitle className="text-lg">Shipment details</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Start with the container and supplier. Dates and status are available below.
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="containerNumber"
@@ -251,7 +257,7 @@ export default function AddContainer() {
                     <FormItem>
                       <FormLabel>Supplier *</FormLabel>
                       <Select
-                        onValueChange={(v) => field.onChange(parseInt(v))}
+                        onValueChange={(value) => field.onChange(parseInt(value, 10))}
                         value={field.value ? field.value.toString() : ""}
                       >
                         <FormControl>
@@ -260,9 +266,9 @@ export default function AddContainer() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {suppliers?.map((s) => (
-                            <SelectItem key={s.id} value={s.id.toString()}>
-                              {s.legalName}
+                          {suppliers?.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                              {supplier.legalName}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -273,65 +279,87 @@ export default function AddContainer() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="importDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Import Date *</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="date" data-testid="input-import-date" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-status">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="OTW">OTW (On The Way)</SelectItem>
-                          <SelectItem value="ARRIVED">Arrived</SelectItem>
-                          <SelectItem value="AVAILABLE">Available</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+                <div className="rounded-lg border">
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto w-full justify-between rounded-lg px-4 py-3 text-left"
+                    >
+                      <span>
+                        <span className="block text-sm font-medium">Shipment date and status</span>
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          Advanced receiving and transit settings.
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="border-t px-4 py-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="importDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Import Date *</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="date" data-testid="input-import-date" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-status">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="OTW">OTW (On The Way)</SelectItem>
+                                <SelectItem value="ARRIVED">Arrived</SelectItem>
+                                <SelectItem value="AVAILABLE">Available</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
             </CardContent>
           </Card>
 
           {/* ── Items ──────────────────────────────────────────────────── */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Items</CardTitle>
+              <CardTitle className="text-lg">Purchase items</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Add each product, quantity, and purchase rate. Totals update automatically.
+              </p>
             </CardHeader>
             <CardContent className="space-y-3">
               {itemFields.map((field, index) => {
                 const item = watchItems[index];
                 const lineTotal = (item?.quantity || 0) * (item?.ratePerKg || 0);
-                const activeTerm = search[index]; // undefined = not searching
+                const activeTerm = search[index];
                 const suggestions = activeTerm !== undefined ? getSuggestions(activeTerm) : [];
-                const displayValue =
-                  activeTerm !== undefined ? activeTerm : (item?.itemName ?? "");
-                // Extract RHF refs so we can merge them with focus-tracking refs without
-                // overriding them (overriding breaks form.watch → lineTotal stays $0).
-                const { ref: qtyRegRef, ...qtyRegRest } = form.register(
-                  `items.${index}.quantity`,
-                  { valueAsNumber: true },
-                );
+                const displayValue = activeTerm !== undefined ? activeTerm : (item?.itemName ?? "");
+                const { ref: qtyRegRef, ...qtyRegRest } = form.register(`items.${index}.quantity`, {
+                  valueAsNumber: true,
+                });
                 const { ref: rateRegRef, ...rateRegRest } = form.register(
                   `items.${index}.ratePerKg`,
                   { valueAsNumber: true },
@@ -395,8 +423,7 @@ export default function AddContainer() {
                               });
                             }
                           }}
-                          onFocus={(e) => {
-                            // Show search when focused with an existing value
+                          onFocus={() => {
                             const current = form.getValues(`items.${index}.itemName`);
                             if (current) {
                               setSearch((prev) => ({ ...prev, [index]: current }));
@@ -414,7 +441,6 @@ export default function AddContainer() {
                         />
                       </div>
 
-                      {/* Suggestions dropdown */}
                       {activeTerm !== undefined && suggestions.length > 0 && (
                         <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover text-popover-foreground border rounded-lg shadow-lg overflow-hidden">
                           <div className="max-h-56 overflow-y-auto">
@@ -439,12 +465,13 @@ export default function AddContainer() {
                         </div>
                       )}
 
-                      {/* No results hint */}
-                      {activeTerm !== undefined && activeTerm.length > 0 && suggestions.length === 0 && (
-                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border rounded-lg shadow-lg px-4 py-3 text-sm text-muted-foreground">
-                          No products found — will be saved as a custom item name.
-                        </div>
-                      )}
+                      {activeTerm !== undefined &&
+                        activeTerm.length > 0 &&
+                        suggestions.length === 0 && (
+                          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border rounded-lg shadow-lg px-4 py-3 text-sm text-muted-foreground">
+                            No products found — will be saved as a custom item name.
+                          </div>
+                        )}
                     </div>
 
                     {/* ── Qty / Rate / Total ── */}
@@ -508,7 +535,6 @@ export default function AddContainer() {
                 );
               })}
 
-              {/* ── Add Item button ── */}
               <Button
                 type="button"
                 variant="outline"
@@ -520,7 +546,6 @@ export default function AddContainer() {
                 Add Another Item
               </Button>
 
-              {/* ── Items subtotal ── */}
               {watchItems.length > 0 && (
                 <div className="flex justify-end pt-1">
                   <span className="text-sm text-muted-foreground">
@@ -534,93 +559,114 @@ export default function AddContainer() {
             </CardContent>
           </Card>
 
-          {/* ── Freight & Other Charges ─────────────────────────────────── */}
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
-              <CardTitle className="text-lg">Freight & Other Charges</CardTitle>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendCharge({ chargeType: "", amount: 0 })}
-                data-testid="button-add-charge"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Charge
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {chargeFields.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No charges added. Click "Add Charge" to add freight or other charges.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {chargeFields.map((field, index) => (
-                    <div key={field.id} className="flex gap-2 items-center">
-                      <Select
-                        onValueChange={(v) => form.setValue(`charges.${index}.chargeType`, v)}
-                        value={watchCharges[index]?.chargeType || ""}
-                      >
-                        <SelectTrigger
-                          className="flex-1"
-                          data-testid={`select-charge-type-${index}`}
-                        >
-                          <SelectValue placeholder="Select charge type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Freight">Freight</SelectItem>
-                          <SelectItem value="Duty">Duty</SelectItem>
-                          <SelectItem value="Insurance">Insurance</SelectItem>
-                          <SelectItem value="Handling">Handling</SelectItem>
-                          <SelectItem value="Documentation">Documentation</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        {...form.register(`charges.${index}.amount`, { valueAsNumber: true })}
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="Amount"
-                        className="w-32"
-                        data-testid={`input-charge-amount-${index}`}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeCharge(index)}
-                        data-testid={`button-remove-charge-${index}`}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex justify-end pt-2 border-t">
-                    <span className="text-sm text-muted-foreground">
-                      Charges Total:{" "}
-                      <span className="font-mono font-semibold text-foreground">
-                        ${chargesTotal.toFixed(2)}
-                      </span>
+          <Collapsible open={chargesOpen} onOpenChange={setChargesOpen}>
+            <Card>
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-auto w-full justify-between rounded-b-none px-6 py-4 text-left"
+                  data-testid="button-toggle-charges"
+                >
+                  <span>
+                    <span className="block text-base font-semibold">Freight and other charges</span>
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      {chargeFields.length === 0
+                        ? "No additional charges"
+                        : `${chargeFields.length} charge${chargeFields.length === 1 ? "" : "s"} · $${chargesTotal.toFixed(2)}`}
                     </span>
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${chargesOpen ? "rotate-180" : ""}`}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="space-y-3 border-t pt-4">
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => appendCharge({ chargeType: "", amount: 0 })}
+                      data-testid="button-add-charge"
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add Charge
+                    </Button>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  {chargeFields.length === 0 ? (
+                    <p className="py-5 text-center text-sm text-muted-foreground">
+                      No freight or other charges have been added.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {chargeFields.map((field, index) => (
+                        <div
+                          key={field.id}
+                          className="grid grid-cols-[minmax(0,1fr)_8rem_auto] items-center gap-2"
+                        >
+                          <Select
+                            onValueChange={(value) =>
+                              form.setValue(`charges.${index}.chargeType`, value)
+                            }
+                            value={watchCharges[index]?.chargeType || ""}
+                          >
+                            <SelectTrigger data-testid={`select-charge-type-${index}`}>
+                              <SelectValue placeholder="Select charge type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Freight">Freight</SelectItem>
+                              <SelectItem value="Duty">Duty</SelectItem>
+                              <SelectItem value="Insurance">Insurance</SelectItem>
+                              <SelectItem value="Handling">Handling</SelectItem>
+                              <SelectItem value="Documentation">Documentation</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            {...form.register(`charges.${index}.amount`, { valueAsNumber: true })}
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="Amount"
+                            data-testid={`input-charge-amount-${index}`}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeCharge(index)}
+                            data-testid={`button-remove-charge-${index}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
 
-          {/* ── Grand Total ─────────────────────────────────────────────── */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="py-4">
-              <div className="flex justify-between items-center text-lg font-bold">
-                <span>Grand Total:</span>
-                <span className="font-mono">${grandTotal.toFixed(2)}</span>
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="grid grid-cols-3 gap-4 py-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Items</p>
+                <p className="font-mono font-semibold">${itemsTotal.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Charges</p>
+                <p className="font-mono font-semibold">${chargesTotal.toFixed(2)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Grand Total</p>
+                <p className="font-mono text-xl font-bold">${grandTotal.toFixed(2)}</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* ── Actions ─────────────────────────────────────────────────── */}
           <div className="flex justify-end gap-3 pb-6">
             <Button
               type="button"
@@ -630,12 +676,8 @@ export default function AddContainer() {
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending}
-              data-testid="button-submit"
-            >
-              {createMutation.isPending ? "Creating..." : "Create Container"}
+            <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit">
+              {createMutation.isPending ? "Creating..." : "Create Shipment"}
             </Button>
           </div>
         </form>

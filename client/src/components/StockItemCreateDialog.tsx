@@ -1,12 +1,14 @@
-import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertStockItemSchema, type InsertStockItem } from "@shared/schema";
@@ -58,14 +62,11 @@ const formSchema = insertStockItemSchema.extend({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function StockItemCreateDialog({
-  open,
-  onOpenChange,
-}: StockItemCreateDialogProps) {
+export function StockItemCreateDialog({ open, onOpenChange }: StockItemCreateDialogProps) {
   const { toast } = useToast();
   const { selectedCompany } = useCompany();
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  // Fetch stock groups
   const { data: stockGroups = [] } = useQuery<StockGroup[]>({
     queryKey: ["/api/stock-groups"],
     enabled: open,
@@ -97,7 +98,12 @@ export function StockItemCreateDialog({
     shouldFocusError: true,
   });
 
-  // Create mutation
+  const resetAndClose = () => {
+    form.reset();
+    setAdvancedOpen(false);
+    onOpenChange(false);
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: InsertStockItem) => {
       return await apiRequest("POST", "/api/stock-items", data);
@@ -108,10 +114,9 @@ export function StockItemCreateDialog({
         title: "Stock Item Created",
         description: "The stock item has been created successfully.",
       });
-      form.reset();
-      onOpenChange(false);
+      resetAndClose();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Creation Failed",
         description: error.message || "Failed to create stock item",
@@ -136,12 +141,11 @@ export function StockItemCreateDialog({
     } as InsertStockItem);
   };
 
-  const onInvalid = (errors: any) => {
-    console.log("Form validation errors:", errors);
+  const onInvalid = (errors: FieldErrors<FormValues>) => {
     const errorMessages = Object.values(errors)
-      .map((err: any) => err.message)
-      .filter(Boolean);
-    
+      .map((error) => error?.message)
+      .filter((message): message is string => Boolean(message));
+
     if (errorMessages.length > 0) {
       toast({
         title: "Validation Error",
@@ -151,148 +155,155 @@ export function StockItemCreateDialog({
     }
   };
 
-  const handleCancel = () => {
-    form.reset();
-    onOpenChange(false);
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && !createMutation.isPending) {
+      resetAndClose();
+      return;
+    }
+    onOpenChange(nextOpen);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle data-testid="text-dialog-title">Create Stock Item</DialogTitle>
+          <DialogTitle data-testid="text-dialog-title">Add Product</DialogTitle>
+          <DialogDescription>
+            Enter the everyday product details first. Opening stock settings are available below
+            when needed.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Code *</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="e.g., ITEM001"
-                        data-testid="input-code"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-5 py-2">
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium">Product details</h3>
+                <p className="text-xs text-muted-foreground">
+                  These fields identify the item during sales and stock searches.
+                </p>
+              </div>
 
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name *</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Item name"
-                        data-testid="input-name"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Code *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., ITEM001" data-testid="input-code" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="uom"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unit of Measure *</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="e.g., Pieces, Kg, Box"
-                        data-testid="input-uom"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Item name" data-testid="input-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="uom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit of Measure *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="e.g., Pieces, Kg, Box"
+                          data-testid="input-uom"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="stockGroupId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Stock Group</FormLabel>
+                      <Select
+                        value={field.value?.toString() || "none"}
+                        onValueChange={(value) =>
+                          field.onChange(value === "none" ? null : Number.parseInt(value, 10))
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-stock-group">
+                            <SelectValue placeholder="Select a group" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Uncategorized</SelectItem>
+                          {stockGroups.map((group) => (
+                            <SelectItem key={group.id} value={group.id.toString()}>
+                              {group.code} - {group.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Parent item selector — makes this item a variant of the chosen parent */}
               <FormField
                 control={form.control}
-                name="stockGroupId"
+                name="parentStockItemId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Stock Group</FormLabel>
+                    <FormLabel>Variant Of (optional)</FormLabel>
                     <Select
                       value={field.value?.toString() || "none"}
-                      onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
+                      onValueChange={(value) =>
+                        field.onChange(value === "none" ? null : Number.parseInt(value, 10))
+                      }
                     >
                       <FormControl>
-                        <SelectTrigger data-testid="select-stock-group">
-                          <SelectValue placeholder="Select a group" />
+                        <SelectTrigger data-testid="select-parent-item">
+                          <SelectValue placeholder="Standalone item (no parent)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">Uncategorized</SelectItem>
-                        {stockGroups.map((group) => (
-                          <SelectItem key={group.id} value={group.id.toString()}>
-                            {group.code} - {group.name}
+                        <SelectItem value="none">Standalone item (no parent)</SelectItem>
+                        {parentEligibleItems.map((item) => (
+                          <SelectItem key={item.id} value={item.id.toString()}>
+                            {item.code} — {item.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Set this to make the item a variant (e.g. 300cc version) under a parent item.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-
-            {/* Parent item selector — makes this item a variant of the chosen parent */}
-            <FormField
-              control={form.control}
-              name="parentStockItemId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Variant Of (optional)</FormLabel>
-                  <Select
-                    value={field.value?.toString() || "none"}
-                    onValueChange={(value) =>
-                      field.onChange(value === "none" ? null : parseInt(value))
-                    }
-                  >
-                    <FormControl>
-                      <SelectTrigger data-testid="select-parent-item">
-                        <SelectValue placeholder="Standalone item (no parent)" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Standalone item (no parent)</SelectItem>
-                      {parentEligibleItems.map((item) => (
-                        <SelectItem key={item.id} value={item.id.toString()}>
-                          {item.code} — {item.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Set this to make the item a variant (e.g. 300cc version) under a parent item.
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="sellingPrice"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="sm:max-w-[calc(50%-0.5rem)]">
                     <FormLabel>Selling Price</FormLabel>
                     <FormControl>
                       <Input
@@ -308,109 +319,135 @@ export function StockItemCreateDialog({
                   </FormItem>
                 )}
               />
+            </section>
 
-              <FormField
-                control={form.control}
-                name="reorderLevel"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reorder Level</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        type="number"
-                        step="0.001"
-                        placeholder="0"
-                        data-testid="input-reorder-level"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+              <div className="rounded-lg border">
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-auto w-full justify-between rounded-lg px-4 py-3 text-left"
+                  >
+                    <span>
+                      <span className="block text-sm font-medium">
+                        Opening stock and reorder settings
+                      </span>
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        Advanced fields for initial balances and stock alerts.
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 transition-transform ${
+                        advancedOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
 
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="openingQty"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Opening Qty</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        type="number"
-                        step="0.001"
-                        placeholder="0"
-                        data-testid="input-opening-qty"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <CollapsibleContent className="border-t px-4 py-4">
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="reorderLevel"
+                      render={({ field }) => (
+                        <FormItem className="sm:max-w-[calc(50%-0.5rem)]">
+                          <FormLabel>Reorder Level</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              type="number"
+                              step="0.001"
+                              placeholder="0"
+                              data-testid="input-reorder-level"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-              <FormField
-                control={form.control}
-                name="openingRate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Opening Rate</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        data-testid="input-opening-rate"
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <FormField
+                        control={form.control}
+                        name="openingQty"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Opening Qty</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                type="number"
+                                step="0.001"
+                                placeholder="0"
+                                data-testid="input-opening-qty"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <FormField
-                control={form.control}
-                name="openingValue"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Opening Value</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        data-testid="input-opening-value"
+                      <FormField
+                        control={form.control}
+                        name="openingRate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Opening Rate</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                data-testid="input-opening-rate"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+
+                      <FormField
+                        control={form.control}
+                        name="openingValue"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Opening Value</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                data-testid="input-opening-value"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
 
             <DialogFooter>
-              <Button 
+              <Button
                 type="button"
-                variant="outline" 
-                onClick={handleCancel} 
+                variant="outline"
+                onClick={resetAndClose}
                 disabled={createMutation.isPending}
                 data-testid="button-cancel"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit"
-                disabled={createMutation.isPending}
-                data-testid="button-create"
-              >
+              <Button type="submit" disabled={createMutation.isPending} data-testid="button-create">
                 {createMutation.isPending ? "Creating..." : "Create Item"}
               </Button>
             </DialogFooter>

@@ -1,3 +1,0 @@
-client/src/components/StockItemCreateDialog.tsx
-client/src/components/StockItemEditDialog.tsx
-client/src/pages/StockItems.tsx
