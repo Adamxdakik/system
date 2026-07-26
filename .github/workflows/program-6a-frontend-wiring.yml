@@ -33,80 +33,64 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           app_path = Path("client/src/App.tsx")
           text = app_path.read_text(encoding="utf-8")
 
-          text = text.replace(
-              'import { OfflineBanner } from "@/components/OfflineBanner";\n',
-              'import { OfflineBanner } from "@/components/OfflineBanner";\n'
-              'import { PageLoader } from "@/components/PageLoader";\n'
-              'import { useHeartbeat } from "@/hooks/useHeartbeat";\n',
+          if 'import { PageLoader } from "@/components/PageLoader";' not in text:
+              text = text.replace(
+                  'import { OfflineBanner } from "@/components/OfflineBanner";\n',
+                  'import { OfflineBanner } from "@/components/OfflineBanner";\n'
+                  'import { PageLoader } from "@/components/PageLoader";\n'
+                  'import { useHeartbeat } from "@/hooks/useHeartbeat";\n',
+                  1,
+              )
+
+          text, loader_count = re.subn(
+              r'function PageLoader\(\) \{\n.*?\n\}\n\n',
+              '',
+              text,
+              count=1,
+              flags=re.S,
           )
+          if loader_count != 1 and 'function PageLoader()' in text:
+              raise SystemExit("PageLoader block could not be removed")
 
-          loader = '''function PageLoader() {
-            return (
-              <div className="flex items-center justify-center min-h-[300px]">
-                <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              </div>
-            );
-          }
-
-          '''
-          if loader not in text:
-              raise SystemExit("PageLoader block not found")
-          text = text.replace(loader, "")
-
-          heartbeat = '''  // Global heartbeat — keeps active-users list current for all authenticated users
-            useEffect(() => {
-              const send = () => {
-                fetch("/api/users/heartbeat", {
-                  method: "POST",
-                  credentials: "include",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ currentPage: window.location.pathname }),
-                }).catch(() => {});
-              };
-              send();
-              const timer = setInterval(send, 30000);
-              return () => clearInterval(timer);
-            }, [_location]);
-          '''
-          if heartbeat not in text:
-              raise SystemExit("Heartbeat block not found")
-          text = text.replace(
-              heartbeat,
+          text, heartbeat_count = re.subn(
+              r'  // Global heartbeat.*?\n  useEffect\(\(\) => \{.*?\n  \}, \[_location\]\);\n',
               '  // Keep the active-user list current without polling hidden or offline tabs.\n'
               '  useHeartbeat(_location);\n',
+              text,
+              count=1,
+              flags=re.S,
           )
+          if heartbeat_count != 1 and 'useHeartbeat(_location);' not in text:
+              raise SystemExit("Heartbeat block could not be replaced")
 
           text = text.replace(
               '<ErrorBoundary>\n              <Router user={user} />\n            </ErrorBoundary>',
               '<ErrorBoundary resetKey={currentLocation}>\n              <Router user={user} />\n            </ErrorBoundary>',
           )
 
-          loading = '''  if (isLoading) {
-            return (
-              <div className="flex items-center justify-center h-screen">
-                <p className="text-muted-foreground">Loading...</p>
-              </div>
-            );
-          }
-          '''
-          if loading not in text:
-              raise SystemExit("Authentication loading block not found")
-          text = text.replace(
-              loading,
+          text, loading_count = re.subn(
+              r'  if \(isLoading\) \{\n    return \(\n.*?\n    \);\n  \}\n',
               '  if (isLoading) {\n'
               '    return <PageLoader fullScreen label="Loading your workspace" />;\n'
               '  }\n',
+              text,
+              count=1,
+              flags=re.S,
           )
+          if loading_count != 1 and 'label="Loading your workspace"' not in text:
+              raise SystemExit("Authentication loading block could not be replaced")
 
           text = text.replace(
               '  if (error || !user) {\n    return null;\n  }',
               '  if (error || !user) {\n'
               '    return <PageLoader fullScreen label="Returning to sign in" />;\n'
               '  }',
+              1,
           )
 
           text = text.replace(
@@ -127,21 +111,40 @@ jobs:
           text = text.replace(
               '<SidebarTrigger data-testid="button-sidebar-toggle" />',
               '<SidebarTrigger aria-label="Toggle navigation" data-testid="button-sidebar-toggle" />',
+              1,
           )
           text = text.replace(
               '<main className="flex-1 overflow-y-auto p-6">',
               '<main id="main-content" className="flex-1 overflow-y-auto p-6">',
           )
 
+          required = [
+              'import { PageLoader } from "@/components/PageLoader";',
+              'useHeartbeat(_location);',
+              'label="Loading your workspace"',
+              'label="Returning to sign in"',
+              'resetKey={currentLocation}',
+              'aria-label="Sign out"',
+              'aria-label="Toggle navigation"',
+          ]
+          missing = [value for value in required if value not in text]
+          if missing:
+              raise SystemExit(f"Missing application wiring: {missing}")
+
           app_path.write_text(text, encoding="utf-8")
 
           package_path = Path("package.json")
           package_text = package_path.read_text(encoding="utf-8")
-          target = 'server/__tests__/exportSafety.test.ts"'
-          replacement = 'server/__tests__/exportSafety.test.ts server/__tests__/frontendResilience.test.ts"'
-          if target not in package_text:
-              raise SystemExit("test:unit insertion target not found")
-          package_path.write_text(package_text.replace(target, replacement, 1), encoding="utf-8")
+          if 'server/__tests__/frontendResilience.test.ts' not in package_text:
+              target = 'server/__tests__/exportSafety.test.ts"'
+              replacement = (
+                  'server/__tests__/exportSafety.test.ts '
+                  'server/__tests__/frontendResilience.test.ts"'
+              )
+              if target not in package_text:
+                  raise SystemExit("test:unit insertion target not found")
+              package_text = package_text.replace(target, replacement, 1)
+          package_path.write_text(package_text, encoding="utf-8")
           PY
 
       - name: Format Program 6A files
