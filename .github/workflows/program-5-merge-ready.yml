@@ -1,0 +1,112 @@
+name: Program 5 Merge Ready
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/program-5-merge-ready'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out current main branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-5-merge-ready
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Apply exact Program 5 delta
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! -f .github/workflows/program-5-merge-ready.yml ]]; then
+            echo 'Program 5 delta already applied.'
+            exit 0
+          fi
+
+          set +e
+          (
+            set -e
+            git fetch origin agent/program-4-motorcycle-records agent/program-5-bandwidth-verification
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+            files=(
+              client/src/lib/excelHelper.ts
+              docs/program-5-database-performance-plan.md
+              docs/program-5b-static-audit.md
+              docs/program-5c-static-audit.md
+              package.json
+              server/__tests__/bandwidthTelemetry.test.ts
+              server/__tests__/exportSafety.test.ts
+              server/__tests__/heavyReadOptimization.test.ts
+              server/httpSafety.ts
+              server/index.ts
+              server/lib/excel.ts
+              server/lib/exportSafety.ts
+              server/routes/adminBandwidthRoutes.ts
+              server/routes/optimizedAccountsRoutes.ts
+              server/routes/optimizedStockHistoryRoutes.ts
+              server/services/observability/bandwidthTelemetry.ts
+              server/services/performance/heavyReadCalculations.ts
+              tsconfig.tests.json
+            )
+
+            git diff --binary \
+              5c04034596461e9f68384bca00c2f4e3515dd99c \
+              5c36d72e2c57c52d3eff95361aad1824190660cd \
+              -- "${files[@]}" > /tmp/program5.patch
+
+            git apply --3way --index /tmp/program5.patch
+            git rm .github/workflows/program-5-merge-ready.yml
+
+            npx prettier --write "${files[@]}"
+            npm run check:all:baseline
+
+            actual=$(git diff --cached --name-only | sort)
+            expected=$(printf '%s\n' "${files[@]}" | sort)
+            expected=$(printf '%s\n%s\n' "$expected" '.github/workflows/program-5-merge-ready.yml' | sort)
+            if [[ "$actual" != "$expected" ]]; then
+              echo 'Unexpected Program 5 changed-file set'
+              echo 'Expected:'
+              echo "$expected"
+              echo 'Actual:'
+              echo "$actual"
+              exit 1
+            fi
+
+            git commit -m "Program 5: add bandwidth, heavy-read, and export safeguards"
+            git push origin HEAD:agent/program-5-merge-ready
+          ) > /tmp/program5-apply.log 2>&1
+          status=$?
+
+          if [[ $status -ne 0 ]]; then
+            {
+              echo '### Program 5 merge-ready error'
+              echo
+              echo '```text'
+              tail -n 180 /tmp/program5-apply.log
+              echo '```'
+            } > /tmp/program5-comment.md
+            gh pr comment "${{ github.event.pull_request.number }}" \
+              --repo Adamxdakik/system \
+              --body-file /tmp/program5-comment.md
+            exit 1
+          fi
+
+          cat /tmp/program5-apply.log
