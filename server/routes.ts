@@ -17270,6 +17270,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete a Stock Transfer voucher — reverses inventory, removes all related records
+  app.delete("/api/vouchers/:id/stock-transfer", requireAuth, requireNonPOS, async (req, res) => {
+    try {
+      const voucherId = parseInt(req.params.id);
+      if (isNaN(voucherId)) return res.status(400).json({ message: "Invalid voucher ID" });
+
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) return res.status(400).json({ message: "No company selected" });
+
+      // Only Admin and Owner can delete transfers
+      const userRole = req.session.currentRole;
+      if (userRole !== "Admin" && userRole !== "Owner") {
+        return res.status(403).json({ message: "Only Admin or Owner can delete stock transfers" });
+      }
+
+      // Fetch voucher — must belong to current company and be a StockTransfer type
+      const [existingVoucher] = await db
+        .select()
+        .from(vouchers)
+        .where(and(eq(vouchers.id, voucherId), eq(vouchers.companyId, companyId)))
+        .limit(1);
+
+      if (!existingVoucher) return res.status(404).json({ message: "Voucher not found" });
+      if (existingVoucher.voucherType !== "Stock Transfer" && existingVoucher.voucherType !== "StockTransfer") {
+        return res.status(400).json({ message: "Only Stock Transfer vouchers can be deleted with this endpoint" });
+      }
+
+      // Get the stockTransferVoucher to find destinationLocationId
+      const [transferVoucher] = await db
+        .select()
+        .from(stockTransferVouchers)
+        .where(eq(stockTransferVouchers.voucherId, voucherId))
+        .limit(1);
+
+      if (!transferVoucher) return res.status(404).json({ message: "Stock transfer record not found" });
+
+      const destinationLocationId = transferVoucher.destinationLocationId;
+
+      // Get all items so we can reverse inventory
+      const transferItemRows = await db
+        .select()
+        .from(stockTransferItems)
+        .where(eq(stockTransferItems.transferId, transferVoucher.id));
+
+      // Only reverse inventory if voucher was non-optional (i.e. it actually moved stock)
+      if (!existingVoucher.optional) {
+        await db.transaction(async (tx) => {
+          for (const item of transferItemRows) {
+            const qty = parseFloat(item.quantity);
+            const sourceLocId = item.sourceLocationId || transferVoucher.sourceLocationId;
+
+            if (!sourceLocId) continue;
+
+            // 1. Add back to source location
+            const [sourceInv] = await tx
+              .select()
+              .from(inventory)
+              .where(
+                and(
+                  eq(inventory.locationId, sourceLocId),
+                  eq(inventory.stockItemId, item.stockItemId),
+                ),
+              )
+              .limit(1);
+
+            if (sourceInv) {
+              const newQty = parseFloat(sourceInv.quantity) + qty;
+              await tx
+                .update(inventory)
+                .set({ quantity: newQty.toFixed(3), lastUpdated: new Date() })
+                .where(eq(inventory.id, sourceInv.id));
+            } else {
+              // Re-create inventory row at source if it was zeroed out
+              const [loc] = await tx.select().from(locations).where(eq(locations.id, sourceLocId)).limit(1);
+              if (loc) {
+                await tx.insert(inventory).values({
+                  companyId,
+                  locationId: sourceLocId,
+                  stockItemId: item.stockItemId,
+                  quantity: qty.toFixed(3),
+                  averageRate: item.rate || "0",
+                  totalValue: (qty * parseFloat(item.rate || "0")).toFixed(2),
+                  lastUpdated: new Date(),
+                });
+              }
+            }
+
+            // 2. Remove from destination location
+            if (destinationLocationId) {
+              const [destInv] = await tx
+                .select()
+                .from(inventory)
+                .where(
+                  and(
+                    eq(inventory.locationId, destinationLocationId),
+                    eq(inventory.stockItemId, item.stockItemId),
+                  ),
+                )
+                .limit(1);
+
+              if (destInv) {
+                const newQty = Math.max(0, parseFloat(destInv.quantity) - qty);
+                await tx
+                  .update(inventory)
+                  .set({ quantity: newQty.toFixed(3), lastUpdated: new Date() })
+                  .where(eq(inventory.id, destInv.id));
+              }
+            }
+          }
+
+          // Delete all related records
+          await tx.delete(stockTransferItems).where(eq(stockTransferItems.transferId, transferVoucher.id));
+          await tx.delete(stockTransferVouchers).where(eq(stockTransferVouchers.id, transferVoucher.id));
+          await tx.delete(voucherEntries).where(eq(voucherEntries.voucherId, voucherId));
+          await tx.delete(vouchers).where(eq(vouchers.id, voucherId));
+        });
+      } else {
+        // Optional (draft) transfer — just delete records, no inventory to reverse
+        await db.transaction(async (tx) => {
+          await tx.delete(stockTransferItems).where(eq(stockTransferItems.transferId, transferVoucher.id));
+          await tx.delete(stockTransferVouchers).where(eq(stockTransferVouchers.id, transferVoucher.id));
+          await tx.delete(voucherEntries).where(eq(voucherEntries.voucherId, voucherId));
+          await tx.delete(vouchers).where(eq(vouchers.id, voucherId));
+        });
+      }
+
+      res.json({ message: "Stock transfer deleted and inventory reversed successfully" });
+    } catch (error: any) {
+      console.error("[DELETE /api/vouchers/:id/stock-transfer]", error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Stock Transfers - PUT endpoint (update)
   app.put("/api/stock-transfers/:id", requireAuth, requireNonPOS, async (req, res) => {
     try {

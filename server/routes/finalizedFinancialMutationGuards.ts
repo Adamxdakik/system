@@ -136,6 +136,12 @@ function guardFinalizedMutation(lookup: VoucherLookup): RequestHandler {
       return res.status(400).json({ message: "No company selected" });
     }
 
+    // Admin and Owner can always mutate finalized vouchers — they have override authority
+    const userRole = req.session.currentRole;
+    if (userRole === "Admin" || userRole === "Owner") {
+      return next();
+    }
+
     try {
       const voucher = await lookup(id, companyId);
       if (!voucher) return next();

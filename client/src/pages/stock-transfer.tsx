@@ -37,7 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState, useEffect, useRef } from "react";
 import { format, parseISO } from "date-fns";
-import { X, Plus, Package, ArrowRight, Eye, Upload, Search, AlertCircle, FileDown, ChevronDown } from "lucide-react";
+import { X, Plus, Package, ArrowRight, Eye, Upload, Search, AlertCircle, FileDown, ChevronDown, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -99,6 +99,8 @@ export default function StockTransferPage({ posUser }: StockTransferPageProps) {
   
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingTransfer, setViewingTransfer] = useState<StockTransferVoucher | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; voucherNumber: string } | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
@@ -175,6 +177,24 @@ export default function StockTransferPage({ posUser }: StockTransferPageProps) {
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteTransferMutation = useMutation({
+    mutationFn: async (voucherId: number) => {
+      const response = await apiRequest("DELETE", `/api/vouchers/${voucherId}/stock-transfer`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Deleted", description: "Stock transfer deleted and inventory reversed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory-by-location"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stock-transfers"] });
+      setDeleteTarget(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setDeleteTarget(null);
     },
   });
 
@@ -878,6 +898,17 @@ export default function StockTransferPage({ posUser }: StockTransferPageProps) {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {!isPOS && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTarget({ id: voucher.id, voucherNumber: voucher.voucherNumber })}
+                            data-testid={`button-delete-transfer-${voucher.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -940,6 +971,29 @@ export default function StockTransferPage({ posUser }: StockTransferPageProps) {
               data-testid="button-proceed-negative-stock"
             >
               Proceed Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Stock Transfer?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-medium">{deleteTarget?.voucherNumber}</span> and reverse its inventory movements — stock will be returned to the source location and removed from the destination.
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-transfer">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={() => deleteTarget && deleteTransferMutation.mutate(deleteTarget.id)}
+              disabled={deleteTransferMutation.isPending}
+              data-testid="button-confirm-delete-transfer"
+            >
+              {deleteTransferMutation.isPending ? "Deleting..." : "Delete & Reverse"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
