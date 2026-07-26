@@ -379,6 +379,7 @@ function LedgerAccountForm({ form, onSubmit, onCancel, isPending }: { form: any;
                       <SelectItem value="Bank">Bank</SelectItem>
                       <SelectItem value="Cash">Cash</SelectItem>
                       <SelectItem value="Government Taxes">Government Taxes</SelectItem>
+                      <SelectItem value="Loans">Loans</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -485,6 +486,7 @@ function LedgerAccountForm({ form, onSubmit, onCancel, isPending }: { form: any;
                                         <SelectItem value="Bank">Bank</SelectItem>
                                         <SelectItem value="Cash">Cash</SelectItem>
                                         <SelectItem value="Government Taxes">Government Taxes</SelectItem>
+                                        <SelectItem value="Loans">Loans</SelectItem>
                                       </SelectContent>
                                     </Select>
                                     <FormMessage />
