@@ -12,6 +12,7 @@ import { registerMotorcycleSaleCustomerRoutes } from "./routes/motorcycleSaleCus
 import { registerMotorcycleSaleRoutes } from "./routes/motorcycleSaleRoutes";
 import { registerMotorcycleTimelineRoutes } from "./routes/motorcycleTimelineRoutes";
 import { registerMotorcycleWorkshopRoutes } from "./routes/motorcycleWorkshopRoutes";
+import { recordBandwidthSample } from "./services/observability/bandwidthTelemetry";
 import { setupVite, log } from "./vite";
 import type { User } from "@shared/schema";
 import {
@@ -128,7 +129,7 @@ app.use((_req, res, next) => {
   next();
 });
 
-app.use(apiRequestLogger(log));
+app.use(apiRequestLogger(log, recordBandwidthSample));
 
 (async () => {
   // Build info endpoint for frontend version checking (must be before registerRoutes)
