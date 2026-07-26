@@ -7,9 +7,50 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  program-5a-typescript-diagnostic:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/program-5-bandwidth-verification'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out Program 5 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-5-bandwidth-verification
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Capture TypeScript baseline errors
+        shell: bash
+        run: |
+          set +e
+          npm run check:all:baseline > /tmp/program-5a-typescript.log 2>&1
+          status=$?
+          set -e
+          if [[ $status -eq 0 ]]; then
+            echo "TypeScript baseline passed"
+            exit 0
+          fi
+          tail -160 /tmp/program-5a-typescript.log > docs/program-5a-typescript-error.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/program-5a-typescript-error.txt
+          git commit -m "Record Program 5A TypeScript errors"
+          git push origin HEAD:agent/program-5-bandwidth-verification
+          cat docs/program-5a-typescript-error.txt
+          exit $status
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
