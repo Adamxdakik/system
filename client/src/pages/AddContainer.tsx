@@ -305,6 +305,16 @@ export default function AddContainer() {
                 const suggestions = activeTerm !== undefined ? getSuggestions(activeTerm) : [];
                 const displayValue =
                   activeTerm !== undefined ? activeTerm : (item?.itemName ?? "");
+                // Extract RHF refs so we can merge them with focus-tracking refs without
+                // overriding them (overriding breaks form.watch → lineTotal stays $0).
+                const { ref: qtyRegRef, ...qtyRegRest } = form.register(
+                  `items.${index}.quantity`,
+                  { valueAsNumber: true },
+                );
+                const { ref: rateRegRef, ...rateRegRest } = form.register(
+                  `items.${index}.ratePerKg`,
+                  { valueAsNumber: true },
+                );
 
                 return (
                   <div
@@ -417,18 +427,6 @@ export default function AddContainer() {
                     </div>
 
                     {/* ── Qty / Rate / Total ── */}
-                    {/* Extract RHF's ref before spreading so the custom focus-tracking ref
-                        doesn't silently override it (which breaks form.watch → lineTotal = $0). */}
-                    {(() => {
-                      const { ref: qtyRegRef, ...qtyRegRest } = form.register(
-                        `items.${index}.quantity`,
-                        { valueAsNumber: true },
-                      );
-                      const { ref: rateRegRef, ...rateRegRest } = form.register(
-                        `items.${index}.ratePerKg`,
-                        { valueAsNumber: true },
-                      );
-                      return (
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Quantity</label>
@@ -485,8 +483,6 @@ export default function AddContainer() {
                         </div>
                       </div>
                     </div>
-                      ); // close IIFE return
-                    })()} {/* close IIFE */}
                   </div>
                 );
               })}
