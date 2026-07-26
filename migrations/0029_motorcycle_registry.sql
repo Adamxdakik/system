@@ -1,5 +1,20 @@
 -- Program 4A: first-class, individually tracked motorcycle records.
 -- Existing bike_purchases rows remain valid; new registry fields are nullable for legacy compatibility.
+-- The CREATE TABLE guard keeps the full clean-database migration chain valid for installations
+-- where this legacy service-history table was previously created only through schema push.
+
+CREATE TABLE IF NOT EXISTS bike_purchases (
+  id serial PRIMARY KEY,
+  company_id integer NOT NULL,
+  customer_id integer,
+  bike_model text NOT NULL,
+  color varchar(50),
+  sale_date date,
+  invoice_number varchar(100),
+  warranty_start_date date,
+  deleted_at timestamp without time zone,
+  created_at timestamp without time zone NOT NULL DEFAULT now()
+);
 
 ALTER TABLE bike_purchases
   ALTER COLUMN customer_id DROP NOT NULL,
