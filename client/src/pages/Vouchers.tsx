@@ -820,9 +820,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const isFactoryMode = appMode === "factory";
 
   // Handle opening voucher for editing
-  const handleEditVoucher = (voucherId: number) => {
+  const handleEditVoucher = (voucherId: number, voucherType?: string) => {
     const prefix = isFactoryMode ? "/factory" : "";
-    setLocation(`${prefix}/vouchers/${voucherId}/edit`);
+    if (voucherType === "Sales") {
+      setLocation(`/pos/edit/${voucherId}`);
+    } else {
+      setLocation(`${prefix}/vouchers/${voucherId}/edit`);
+    }
   };
 
   // Synchronize activeTab and editVoucherId with URL parameters

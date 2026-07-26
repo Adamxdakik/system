@@ -92,15 +92,15 @@ export default function LocationVouchers() {
     const vchType = txn.vchType.toLowerCase();
     
     if (vchType === 'production' || vchType === 'consumption') {
-      return txn.voucherId ? `/vouchers/${txn.voucherId}/edit` : null;
+      return txn.voucherId ? `/vouchers?edit=${txn.voucherId}&tab=adjustment` : null;
     }
-    
-    if (vchType === 'pos') {
+
+    if (vchType === 'sales' || vchType === 'pos') {
       return txn.voucherId ? `/pos/edit/${txn.voucherId}` : null;
     }
-    
+
     if (vchType === 'stock transfer') {
-      return txn.voucherId ? `/vouchers/${txn.voucherId}/edit` : null;
+      return txn.voucherId ? `/vouchers?edit=${txn.voucherId}&tab=transfer` : null;
     }
     
     if (vchType === 'po offload') {

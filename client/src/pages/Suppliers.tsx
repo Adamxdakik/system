@@ -68,6 +68,7 @@ export default function Suppliers() {
       selectCompany(targetCompany);
     }
     setSelectedSupplier(null);
+    // Purchase supplier transactions link to the container/PO, not voucher edit
     navigate(`/vouchers/${txn.voucherId}/edit`);
   };
 
