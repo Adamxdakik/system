@@ -136,7 +136,9 @@ describe("operations documentation", () => {
     );
 
     for (const name of exampleVariables) {
-      expect(documentation, `${name} from .env.example must be documented`).toContain(`\`${name}\``);
+      expect(documentation, `${name} from .env.example must be documented`).toContain(
+        `\`${name}\``,
+      );
     }
     expect(example).not.toMatch(/^\s*ALLOW_FINANCIAL_REPAIR\s*=\s*true\s*$/m);
     expect(example).not.toMatch(/^\s*FINANCIAL_REPAIR_SECRET\s*=.+$/m);

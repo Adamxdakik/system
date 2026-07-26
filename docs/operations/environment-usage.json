@@ -3,58 +3,39 @@
   "variables": [
     {
       "name": "ALLOW_FINANCIAL_REPAIR",
-      "files": [
-        "scripts/repair-financial-integrity.ts"
-      ]
+      "files": ["scripts/repair-financial-integrity.ts"]
     },
     {
       "name": "BANDWIDTH_HEAVY_RESPONSE_BYTES",
-      "files": [
-        "server/services/observability/bandwidthTelemetry.ts"
-      ]
+      "files": ["server/services/observability/bandwidthTelemetry.ts"]
     },
     {
       "name": "BANDWIDTH_SLOW_REQUEST_MILLIS",
-      "files": [
-        "server/services/observability/bandwidthTelemetry.ts"
-      ]
+      "files": ["server/services/observability/bandwidthTelemetry.ts"]
     },
     {
       "name": "BANDWIDTH_TELEMETRY_MAX_ROUTES",
-      "files": [
-        "server/services/observability/bandwidthTelemetry.ts"
-      ]
+      "files": ["server/services/observability/bandwidthTelemetry.ts"]
     },
     {
       "name": "BANDWIDTH_TELEMETRY_WINDOW_MINUTES",
-      "files": [
-        "server/services/observability/bandwidthTelemetry.ts"
-      ]
+      "files": ["server/services/observability/bandwidthTelemetry.ts"]
     },
     {
       "name": "BUILD_VERSION",
-      "files": [
-        "server/httpSafety.ts",
-        "server/index.ts"
-      ]
+      "files": ["server/httpSafety.ts", "server/index.ts"]
     },
     {
       "name": "CHANGED_FILES_BASE",
-      "files": [
-        "scripts/check-changed-files.mjs"
-      ]
+      "files": ["scripts/check-changed-files.mjs"]
     },
     {
       "name": "CHANGED_FILES_HEAD",
-      "files": [
-        "scripts/check-changed-files.mjs"
-      ]
+      "files": ["scripts/check-changed-files.mjs"]
     },
     {
       "name": "CHANGED_FILES_RANGE",
-      "files": [
-        "scripts/check-changed-files.mjs"
-      ]
+      "files": ["scripts/check-changed-files.mjs"]
     },
     {
       "name": "DATABASE_URL",
@@ -77,64 +58,43 @@
     },
     {
       "name": "DEV",
-      "files": [
-        "client/src/components/ErrorBoundary.tsx"
-      ]
+      "files": ["client/src/components/ErrorBoundary.tsx"]
     },
     {
       "name": "DISABLE_BANDWIDTH_TELEMETRY",
-      "files": [
-        "server/services/observability/bandwidthTelemetry.ts"
-      ]
+      "files": ["server/services/observability/bandwidthTelemetry.ts"]
     },
     {
       "name": "EXPORT_MAX_CELLS",
-      "files": [
-        "server/lib/exportSafety.ts"
-      ]
+      "files": ["server/lib/exportSafety.ts"]
     },
     {
       "name": "EXPORT_MAX_CONCURRENT",
-      "files": [
-        "server/lib/exportSafety.ts"
-      ]
+      "files": ["server/lib/exportSafety.ts"]
     },
     {
       "name": "EXPORT_MAX_QUEUE",
-      "files": [
-        "server/lib/exportSafety.ts"
-      ]
+      "files": ["server/lib/exportSafety.ts"]
     },
     {
       "name": "EXPORT_MAX_ROWS",
-      "files": [
-        "server/lib/exportSafety.ts"
-      ]
+      "files": ["server/lib/exportSafety.ts"]
     },
     {
       "name": "EXPORT_MAX_WORKSHEETS",
-      "files": [
-        "server/lib/exportSafety.ts"
-      ]
+      "files": ["server/lib/exportSafety.ts"]
     },
     {
       "name": "EXPORT_QUEUE_TIMEOUT_MS",
-      "files": [
-        "server/lib/exportSafety.ts"
-      ]
+      "files": ["server/lib/exportSafety.ts"]
     },
     {
       "name": "FINANCIAL_REPAIR_SECRET",
-      "files": [
-        "scripts/repair-financial-integrity.ts"
-      ]
+      "files": ["scripts/repair-financial-integrity.ts"]
     },
     {
       "name": "GEMINI_API_KEY",
-      "files": [
-        "server/chatService.ts",
-        "server/routes.ts"
-      ]
+      "files": ["server/chatService.ts", "server/routes.ts"]
     },
     {
       "name": "NODE_ENV",
@@ -183,10 +143,7 @@
     },
     {
       "name": "PGSSLMODE",
-      "files": [
-        "server/db.ts",
-        "server/index.ts"
-      ]
+      "files": ["server/db.ts", "server/index.ts"]
     },
     {
       "name": "PGUSER",
@@ -199,46 +156,31 @@
     },
     {
       "name": "PORT",
-      "files": [
-        "server/index.ts"
-      ]
+      "files": ["server/index.ts"]
     },
     {
       "name": "RENDER_GIT_COMMIT",
-      "files": [
-        "server/httpSafety.ts",
-        "server/index.ts"
-      ]
+      "files": ["server/httpSafety.ts", "server/index.ts"]
     },
     {
       "name": "REPLIT_DEV_DOMAIN",
-      "files": [
-        "server/__tests__/moto-rates-authed.test.ts"
-      ]
+      "files": ["server/__tests__/moto-rates-authed.test.ts"]
     },
     {
       "name": "REPL_ID",
-      "files": [
-        "server/authSecurity.ts"
-      ]
+      "files": ["server/authSecurity.ts"]
     },
     {
       "name": "SESSION_SECRET",
-      "files": [
-        "server/index.ts"
-      ]
+      "files": ["server/index.ts"]
     },
     {
       "name": "TEST_BASE_URL",
-      "files": [
-        "server/__tests__/moto-rates-routes.test.ts"
-      ]
+      "files": ["server/__tests__/moto-rates-routes.test.ts"]
     },
     {
       "name": "TRACKINGMORE_API_KEY",
-      "files": [
-        "server/routes.ts"
-      ]
+      "files": ["server/routes.ts"]
     }
   ]
 }
