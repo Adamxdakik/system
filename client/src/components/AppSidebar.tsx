@@ -202,7 +202,9 @@ export function AppSidebar({ user }: { user?: any }) {
             ))}
           </div>
         )}
-        <SidebarGroup className={`p-0 ${permissionsLoading ? "pointer-events-none opacity-0" : ""}`}>
+        <SidebarGroup
+          className={`p-0 ${permissionsLoading ? "pointer-events-none opacity-0" : ""}`}
+        >
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
               <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
