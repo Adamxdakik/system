@@ -20,6 +20,8 @@ import { LogOut, ShoppingCart, MapPin, BookOpen, Package } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { PageLoader } from "@/components/PageLoader";
+import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { CommandPalette, useCommandPalette } from "@/components/CommandPalette";
 import { useGlobalEscapeBack } from "@/hooks/use-escape-back";
 
@@ -70,14 +72,6 @@ const EmployeeInventory = lazy(() => import("@/pages/EmployeeInventory"));
 const Service = lazy(() => import("@/pages/Service"));
 const Motorcycles = lazy(() => import("@/pages/Motorcycles"));
 
-function PageLoader() {
-  return (
-    <div className="flex items-center justify-center min-h-[300px]">
-      <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-}
-
 function Router({ user }: { user: any }) {
   const isPOS = user?.role?.startsWith("POS");
   const [_location, navigate] = useLocation();
@@ -93,20 +87,8 @@ function Router({ user }: { user: any }) {
     }
   }, [isPOS, navigate]);
 
-  // Global heartbeat — keeps active-users list current for all authenticated users
-  useEffect(() => {
-    const send = () => {
-      fetch("/api/users/heartbeat", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPage: window.location.pathname }),
-      }).catch(() => {});
-    };
-    send();
-    const timer = setInterval(send, 30000);
-    return () => clearInterval(timer);
-  }, [_location]);
+  // Keep the active-user list current without polling hidden or offline tabs.
+  useHeartbeat(_location);
 
   if (isPOS) {
     return (
@@ -224,15 +206,11 @@ function AuthenticatedApp() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <PageLoader fullScreen label="Loading your workspace" />;
   }
 
   if (error || !user) {
-    return null;
+    return <PageLoader fullScreen label="Returning to sign in" />;
   }
 
   const isPOS = user.role.startsWith("POS");
@@ -256,8 +234,15 @@ function AuthenticatedApp() {
             </div>
             <div className="flex items-center gap-2 ml-auto">
               <span className="text-sm text-muted-foreground">{user.username}</span>
-              <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">
-                <LogOut className="h-4 w-4" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                aria-label="Sign out"
+                title="Sign out"
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
               </Button>
               <ThemeToggle />
             </div>
@@ -301,9 +286,9 @@ function AuthenticatedApp() {
             </Button>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-6">
+        <main id="main-content" className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">
-            <ErrorBoundary>
+            <ErrorBoundary resetKey={currentLocation}>
               <Router user={user} />
             </ErrorBoundary>
           </div>
@@ -320,7 +305,7 @@ function AuthenticatedApp() {
         <AppSidebar user={user} />
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between p-4 border-b h-16 gap-4">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <SidebarTrigger aria-label="Toggle navigation" data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-2 ml-auto">
               <Button
                 variant="outline"
@@ -337,14 +322,21 @@ function AuthenticatedApp() {
               <span className="text-sm text-muted-foreground">
                 {user.username} ({user.role})
               </span>
-              <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">
-                <LogOut className="h-4 w-4" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                aria-label="Sign out"
+                title="Sign out"
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
               </Button>
               <CompanySelector />
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-6">
+          <main id="main-content" className="flex-1 overflow-y-auto p-6">
             <div className="max-w-7xl mx-auto">
               <ErrorBoundary>
                 <Router user={user} />

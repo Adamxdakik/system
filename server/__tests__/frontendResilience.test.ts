@@ -37,9 +37,9 @@ describe("frontend resilience", () => {
 
     expect(shouldReloadForStaleChunk(error, storage, 1_000)).toBe(true);
     expect(shouldReloadForStaleChunk(error, storage, 1_001)).toBe(false);
-    expect(
-      shouldReloadForStaleChunk(error, storage, 1_000 + STALE_CHUNK_RELOAD_WINDOW_MS),
-    ).toBe(true);
+    expect(shouldReloadForStaleChunk(error, storage, 1_000 + STALE_CHUNK_RELOAD_WINDOW_MS)).toBe(
+      true,
+    );
   });
 
   it("clears only expired or invalid reload guards", () => {
