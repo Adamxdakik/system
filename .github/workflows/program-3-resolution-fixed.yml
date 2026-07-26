@@ -1,0 +1,70 @@
+name: Program 3 Resolution Fixed
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    if: github.event.pull_request.head.ref == 'agent/program-3-current-main-integration'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out current-main integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-3-current-main-integration
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Resolve and commit Program 3 integration
+        shell: bash
+        run: |
+          git fetch origin agent/program-3-simplified-interface
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git merge --no-commit --no-ff origin/agent/program-3-simplified-interface || true
+
+          python3 .github/scripts/resolve-program3-current-main.py
+
+          rm -rf docs/diagnostics
+          if git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- client server shared lib scripts '*.ts' '*.tsx'; then
+            echo 'Unresolved merge markers remain in application sources'
+            exit 1
+          fi
+
+          git rm \
+            .github/workflows/program-3-conflict-diagnostic.yml \
+            .github/workflows/program-3-resolution-fixed.yml \
+            .github/scripts/resolve-program3-current-main.py
+
+          npx prettier --write \
+            client/src/components/AppSidebar.tsx \
+            client/src/components/StockItemCreateDialog.tsx \
+            client/src/components/StockItemEditDialog.tsx \
+            client/src/config/navigation.ts \
+            client/src/pages/AddContainer.tsx \
+            client/src/pages/Dashboard.tsx \
+            client/src/pages/POS.tsx \
+            client/src/pages/PurchaseOrderEdit.tsx \
+            client/src/pages/StockItems.tsx \
+            docs/program-3-simplified-interface-plan.md \
+            server/index.ts \
+            server/routes.ts
+
+          npm run check:all:baseline
+
+          git add -A
+          git commit -m "Integrate Program 3 with stock item variants"
+          git push origin HEAD:agent/program-3-current-main-integration
