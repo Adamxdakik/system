@@ -168,18 +168,18 @@ export function registerFinalizedFinancialMutationGuards(
 ): void {
   registerTransactionalPayrollRoutes(app);
 
-  app.use("/api/vouchers/:id", requireAuth, guardFinalizedMutation(voucherById));
-  app.use("/api/voucher-entries/:id", requireAuth, guardFinalizedMutation(voucherByEntryId));
+  app.use("/api/vouchers/:id(\\d+)", requireAuth, guardFinalizedMutation(voucherById));
+  app.use("/api/voucher-entries/:id(\\d+)", requireAuth, guardFinalizedMutation(voucherByEntryId));
   app.use(
-    "/api/stock-transfer-items/:id",
+    "/api/stock-transfer-items/:id(\\d+)",
     requireAuth,
     guardFinalizedMutation(voucherByTransferItemId),
   );
   app.use(
-    "/api/stock-adjustment-items/:id",
+    "/api/stock-adjustment-items/:id(\\d+)",
     requireAuth,
     guardFinalizedMutation(voucherByAdjustmentItemId),
   );
-  app.use("/api/stock-transfers/:id", requireAuth, guardFinalizedMutation(voucherByTransferId));
-  app.use("/api/stock-adjustments/:id", requireAuth, guardFinalizedMutation(voucherByAdjustmentId));
+  app.use("/api/stock-transfers/:id(\\d+)", requireAuth, guardFinalizedMutation(voucherByTransferId));
+  app.use("/api/stock-adjustments/:id(\\d+)", requireAuth, guardFinalizedMutation(voucherByAdjustmentId));
 }
