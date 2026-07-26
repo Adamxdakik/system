@@ -1,0 +1,112 @@
+name: Program 3 latest main once
+
+on:
+  push:
+    branches:
+      - agent/program-3-simplified-interface-rebased
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge latest main and preserve the Program 3 container layout
+        run: |
+          git fetch origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            if [ "$conflicts" != "client/src/pages/AddContainer.tsx" ]; then
+              echo "Unexpected conflicts:"
+              echo "$conflicts"
+              exit 1
+            fi
+            git checkout --ours client/src/pages/AddContainer.tsx
+            git add client/src/pages/AddContainer.tsx
+          fi
+
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path("client/src/pages/AddContainer.tsx")
+          text = path.read_text()
+          start = '''                    {/* ── Qty / Rate / Total ── */}
+                    <div className="grid grid-cols-3 gap-3">'''
+          replacement = '''                    {/* ── Qty / Rate / Total ── */}
+                    {/* Keep React Hook Form's registration refs while retaining keyboard focus refs. */}
+                    {(() => {
+                      const { ref: qtyRegRef, ...qtyRegRest } = form.register(
+                        `items.${index}.quantity`,
+                        { valueAsNumber: true },
+                      );
+                      const { ref: rateRegRef, ...rateRegRest } = form.register(
+                        `items.${index}.ratePerKg`,
+                        { valueAsNumber: true },
+                      );
+                      return (
+                        <div className="grid grid-cols-3 gap-3">'''
+          if start not in text:
+              raise SystemExit("Quantity section anchor not found")
+          text = text.replace(start, replacement, 1)
+          text = text.replace(
+              '{...form.register(`items.${index}.quantity`, { valueAsNumber: true })}',
+              '{...qtyRegRest}',
+              1,
+          )
+          text = text.replace(
+              'ref={(el) => {\n                            qtyRefs.current[index] = el;',
+              'ref={(el) => {\n                            qtyRegRef(el);\n                            qtyRefs.current[index] = el;',
+              1,
+          )
+          text = text.replace(
+              '{...form.register(`items.${index}.ratePerKg`, { valueAsNumber: true })}',
+              '{...rateRegRest}',
+              1,
+          )
+          text = text.replace(
+              'ref={(el) => {\n                            rateRefs.current[index] = el;',
+              'ref={(el) => {\n                            rateRegRef(el);\n                            rateRefs.current[index] = el;',
+              1,
+          )
+          end = '''                    </div>
+                  </div>
+                );'''
+          end_replacement = '''                        </div>
+                      );
+                    })()}
+                  </div>
+                );'''
+          if end not in text:
+              raise SystemExit("Quantity section closing anchor not found")
+          text = text.replace(end, end_replacement, 1)
+          path.write_text(text)
+          PY
+
+          rm -f .github/workflows/program-3-purchase-fix-once.yml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --include=dev
+      - run: npx prettier --write client/src/pages/AddContainer.tsx client/src/pages/PurchaseOrderEdit.tsx
+
+      - name: Commit latest synchronized Program 3 branch
+        run: |
+          rm .github/workflows/program-3-latest-main-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Sync latest main fixes into Program 3"
+          git push origin HEAD:agent/program-3-simplified-interface-rebased
