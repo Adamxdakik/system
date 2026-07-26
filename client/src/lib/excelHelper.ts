@@ -20,6 +20,20 @@ export interface CompatWorkbook {
   Sheets: Record<string, ExcelJS.Worksheet>;
 }
 
+interface WorkbookMetrics {
+  worksheets: number;
+  rows: number;
+  cells: number;
+}
+
+const CLIENT_EXPORT_LIMITS = {
+  maxWorksheets: 50,
+  maxRows: 250_000,
+  maxCells: 3_000_000,
+};
+
+let activeDownload: Promise<void> | null = null;
+
 export const utils = {
   book_new: (): ExcelJS.Workbook => new ExcelJS.Workbook(),
 
@@ -35,12 +49,14 @@ export const utils = {
     if (!match) return { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
     const colToNum = (col: string) => {
       let num = 0;
-      for (let i = 0; i < col.length; i++) num = num * 26 + col.charCodeAt(i) - 64;
+      for (let index = 0; index < col.length; index++) {
+        num = num * 26 + col.charCodeAt(index) - 64;
+      }
       return num - 1;
     };
     return {
-      s: { r: parseInt(match[2]) - 1, c: colToNum(match[1]) },
-      e: { r: parseInt(match[4]) - 1, c: colToNum(match[3]) },
+      s: { r: parseInt(match[2], 10) - 1, c: colToNum(match[1]) },
+      e: { r: parseInt(match[4], 10) - 1, c: colToNum(match[3]) },
     };
   },
 
@@ -69,13 +85,13 @@ export const utils = {
     } else {
       worksheet.addRow(sheetData.headers);
       for (const item of sheetData.data) {
-        worksheet.addRow(sheetData.headers.map((h) => item[h] ?? ""));
+        worksheet.addRow(sheetData.headers.map((header) => item[header] ?? ""));
       }
     }
     if (sheetData["!cols"]) {
-      sheetData["!cols"].forEach((col, idx) => {
-        if (col?.wch && worksheet.columns[idx]) {
-          worksheet.getColumn(idx + 1).width = col.wch;
+      sheetData["!cols"].forEach((column, index) => {
+        if (column?.wch && worksheet.columns[index]) {
+          worksheet.getColumn(index + 1).width = column.wch;
         }
       });
     }
@@ -125,27 +141,88 @@ function unwrapCell(value: ExcelJS.CellValue): unknown {
   return value;
 }
 
+function workbookMetrics(workbook: ExcelJS.Workbook): WorkbookMetrics {
+  let rows = 0;
+  let cells = 0;
+
+  for (const worksheet of workbook.worksheets) {
+    rows += worksheet.actualRowCount;
+    worksheet.eachRow({ includeEmpty: false }, (row) => {
+      cells += row.actualCellCount;
+    });
+  }
+
+  return { worksheets: workbook.worksheets.length, rows, cells };
+}
+
+function assertClientWorkbookWithinLimits(workbook: ExcelJS.Workbook): void {
+  const metrics = workbookMetrics(workbook);
+
+  if (metrics.worksheets > CLIENT_EXPORT_LIMITS.maxWorksheets) {
+    throw new Error(
+      `This export contains ${metrics.worksheets} worksheets. Narrow the export and try again.`,
+    );
+  }
+  if (metrics.rows > CLIENT_EXPORT_LIMITS.maxRows) {
+    throw new Error(
+      `This export contains ${metrics.rows} rows. Narrow the date range or filters and try again.`,
+    );
+  }
+  if (metrics.cells > CLIENT_EXPORT_LIMITS.maxCells) {
+    throw new Error(
+      `This export contains ${metrics.cells} populated cells. Narrow the date range or filters and try again.`,
+    );
+  }
+}
+
+async function serializeWorkbook(workbook: ExcelJS.Workbook): Promise<ArrayBuffer> {
+  assertClientWorkbookWithinLimits(workbook);
+  const serialized = await workbook.xlsx.writeBuffer();
+  if (serialized.byteLength === 0) {
+    throw new Error("Excel export produced an empty file");
+  }
+  return serialized;
+}
+
 export async function writeFile(workbook: ExcelJS.Workbook, filename: string): Promise<void> {
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  if (activeDownload) {
+    throw new Error("Another Excel export is already being generated. Try again after it finishes.");
+  }
+
+  const operation = (async () => {
+    const buffer = await serializeWorkbook(workbook);
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    if (blob.size === 0) throw new Error("Excel export produced an empty file");
+
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    try {
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+    } finally {
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    }
+  })();
+
+  activeDownload = operation;
+  try {
+    await operation;
+  } finally {
+    if (activeDownload === operation) activeDownload = null;
+  }
 }
 
 export async function write(
   workbook: ExcelJS.Workbook,
   _options?: { type?: "buffer" | "array"; bookType?: "xlsx" },
 ): Promise<Uint8Array> {
-  const buf = await workbook.xlsx.writeBuffer();
-  return new Uint8Array(buf);
+  const buffer = await serializeWorkbook(workbook);
+  return new Uint8Array(buffer);
 }
 
 export async function read(
@@ -164,9 +241,9 @@ export async function read(
   }
   const SheetNames: string[] = [];
   const Sheets: Record<string, ExcelJS.Worksheet> = {};
-  workbook.eachSheet((ws) => {
-    SheetNames.push(ws.name);
-    Sheets[ws.name] = ws;
+  workbook.eachSheet((worksheet) => {
+    SheetNames.push(worksheet.name);
+    Sheets[worksheet.name] = worksheet;
   });
   return { workbook, SheetNames, Sheets };
 }
