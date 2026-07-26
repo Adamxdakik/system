@@ -9154,7 +9154,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const container = await storage.createContainer(data);
+      let container: Container;
+      try {
+        container = await storage.createContainer(data);
+      } catch (dbErr: any) {
+        if (dbErr.code === "23505" || dbErr.message?.includes("unique")) {
+          return res.status(409).json({
+            message: `Container number "${data.containerNumber}" already exists. Delete it first or use a different number.`,
+          });
+        }
+        throw dbErr;
+      }
 
       // If this is a manual container with cost information, create a purchase voucher
       if (hasManualCostData) {
