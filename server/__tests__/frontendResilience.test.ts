@@ -24,6 +24,20 @@ class MemoryStorage implements StorageLike {
   }
 }
 
+class RestrictedStorage implements StorageLike {
+  getItem(): string | null {
+    throw new Error("Storage access denied");
+  }
+
+  setItem(): void {
+    throw new Error("Storage access denied");
+  }
+
+  removeItem(): void {
+    throw new Error("Storage access denied");
+  }
+}
+
 describe("frontend resilience", () => {
   it("recognizes stale deployment chunk failures", () => {
     expect(isStaleChunkError(new Error("Failed to fetch dynamically imported module"))).toBe(true);
@@ -51,5 +65,13 @@ describe("frontend resilience", () => {
 
     clearExpiredStaleChunkReloadGuard(storage, 1_000 + STALE_CHUNK_RELOAD_WINDOW_MS);
     expect(storage.getItem(STALE_CHUNK_RELOAD_KEY)).toBeNull();
+  });
+
+  it("does not crash or reload when browser storage is restricted", () => {
+    const storage = new RestrictedStorage();
+    const error = new Error("Failed to fetch dynamically imported module");
+
+    expect(shouldReloadForStaleChunk(error, storage, 1_000)).toBe(false);
+    expect(() => clearExpiredStaleChunkReloadGuard(storage, 1_000)).not.toThrow();
   });
 });
