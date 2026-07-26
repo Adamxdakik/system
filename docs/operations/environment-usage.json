@@ -1,0 +1,186 @@
+{
+  "generatedBy": "Program 6B static environment usage audit",
+  "variables": [
+    {
+      "name": "ALLOW_FINANCIAL_REPAIR",
+      "files": ["scripts/repair-financial-integrity.ts"]
+    },
+    {
+      "name": "BANDWIDTH_HEAVY_RESPONSE_BYTES",
+      "files": ["server/services/observability/bandwidthTelemetry.ts"]
+    },
+    {
+      "name": "BANDWIDTH_SLOW_REQUEST_MILLIS",
+      "files": ["server/services/observability/bandwidthTelemetry.ts"]
+    },
+    {
+      "name": "BANDWIDTH_TELEMETRY_MAX_ROUTES",
+      "files": ["server/services/observability/bandwidthTelemetry.ts"]
+    },
+    {
+      "name": "BANDWIDTH_TELEMETRY_WINDOW_MINUTES",
+      "files": ["server/services/observability/bandwidthTelemetry.ts"]
+    },
+    {
+      "name": "BUILD_VERSION",
+      "files": ["server/httpSafety.ts", "server/index.ts"]
+    },
+    {
+      "name": "CHANGED_FILES_BASE",
+      "files": ["scripts/check-changed-files.mjs"]
+    },
+    {
+      "name": "CHANGED_FILES_HEAD",
+      "files": ["scripts/check-changed-files.mjs"]
+    },
+    {
+      "name": "CHANGED_FILES_RANGE",
+      "files": ["scripts/check-changed-files.mjs"]
+    },
+    {
+      "name": "DATABASE_URL",
+      "files": [
+        "lib/db/drizzle.config.ts",
+        "lib/db/src/index.ts",
+        "scripts/audit-financial-integrity.ts",
+        "scripts/audit-supplier-company-assignments.ts",
+        "scripts/enable-local-auth.ts",
+        "scripts/init-db-manual.ts",
+        "scripts/migrate.ts",
+        "scripts/repair-financial-integrity.ts",
+        "scripts/test-financial-integrity-postgres.ts",
+        "scripts/verify-moto-schema.ts",
+        "server/__tests__/payrollPosting.postgres.ts",
+        "server/__tests__/stockMovement.postgres.ts",
+        "server/db.ts",
+        "server/index.ts"
+      ]
+    },
+    {
+      "name": "DEV",
+      "files": ["client/src/components/ErrorBoundary.tsx"]
+    },
+    {
+      "name": "DISABLE_BANDWIDTH_TELEMETRY",
+      "files": ["server/services/observability/bandwidthTelemetry.ts"]
+    },
+    {
+      "name": "EXPORT_MAX_CELLS",
+      "files": ["server/lib/exportSafety.ts"]
+    },
+    {
+      "name": "EXPORT_MAX_CONCURRENT",
+      "files": ["server/lib/exportSafety.ts"]
+    },
+    {
+      "name": "EXPORT_MAX_QUEUE",
+      "files": ["server/lib/exportSafety.ts"]
+    },
+    {
+      "name": "EXPORT_MAX_ROWS",
+      "files": ["server/lib/exportSafety.ts"]
+    },
+    {
+      "name": "EXPORT_MAX_WORKSHEETS",
+      "files": ["server/lib/exportSafety.ts"]
+    },
+    {
+      "name": "EXPORT_QUEUE_TIMEOUT_MS",
+      "files": ["server/lib/exportSafety.ts"]
+    },
+    {
+      "name": "FINANCIAL_REPAIR_SECRET",
+      "files": ["scripts/repair-financial-integrity.ts"]
+    },
+    {
+      "name": "GEMINI_API_KEY",
+      "files": ["server/chatService.ts", "server/routes.ts"]
+    },
+    {
+      "name": "NODE_ENV",
+      "files": [
+        "server/authSecurity.ts",
+        "server/index.ts",
+        "server/routes.ts",
+        "server/securityHeaders.ts"
+      ]
+    },
+    {
+      "name": "PGDATABASE",
+      "files": [
+        "scripts/migrate.ts",
+        "scripts/verify-moto-schema.ts",
+        "server/db.ts",
+        "server/index.ts"
+      ]
+    },
+    {
+      "name": "PGHOST",
+      "files": [
+        "scripts/migrate.ts",
+        "scripts/verify-moto-schema.ts",
+        "server/db.ts",
+        "server/index.ts"
+      ]
+    },
+    {
+      "name": "PGPASSWORD",
+      "files": [
+        "scripts/migrate.ts",
+        "scripts/verify-moto-schema.ts",
+        "server/db.ts",
+        "server/index.ts"
+      ]
+    },
+    {
+      "name": "PGPORT",
+      "files": [
+        "scripts/migrate.ts",
+        "scripts/verify-moto-schema.ts",
+        "server/db.ts",
+        "server/index.ts"
+      ]
+    },
+    {
+      "name": "PGSSLMODE",
+      "files": ["server/db.ts", "server/index.ts"]
+    },
+    {
+      "name": "PGUSER",
+      "files": [
+        "scripts/migrate.ts",
+        "scripts/verify-moto-schema.ts",
+        "server/db.ts",
+        "server/index.ts"
+      ]
+    },
+    {
+      "name": "PORT",
+      "files": ["server/index.ts"]
+    },
+    {
+      "name": "RENDER_GIT_COMMIT",
+      "files": ["server/httpSafety.ts", "server/index.ts"]
+    },
+    {
+      "name": "REPLIT_DEV_DOMAIN",
+      "files": ["server/__tests__/moto-rates-authed.test.ts"]
+    },
+    {
+      "name": "REPL_ID",
+      "files": ["server/authSecurity.ts"]
+    },
+    {
+      "name": "SESSION_SECRET",
+      "files": ["server/index.ts"]
+    },
+    {
+      "name": "TEST_BASE_URL",
+      "files": ["server/__tests__/moto-rates-routes.test.ts"]
+    },
+    {
+      "name": "TRACKINGMORE_API_KEY",
+      "files": ["server/routes.ts"]
+    }
+  ]
+}
