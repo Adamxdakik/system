@@ -10,61 +10,6 @@ permissions:
   contents: write
 
 jobs:
-  program-4c-integrate:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/program-4-motorcycle-records'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Check out Program 4 branch
-        uses: actions/checkout@v4
-        with:
-          ref: agent/program-4-motorcycle-records
-          fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install exact dependencies
-        run: npm ci --include=dev
-
-      - name: Run deterministic Program 4C patcher
-        run: python scripts/program-4c-integrate.py
-
-      - name: Format permanent Program 4C files
-        run: >-
-          npx prettier --write
-          client/src/components/AssemblyMotorcycleRegisterDialog.tsx
-          client/src/components/MotorcycleLifecycleDialog.tsx
-          client/src/pages/Motorcycles.tsx
-          docs/program-4-motorcycle-records-plan.md
-          migrations/0033_motorcycle_lifecycle_links.sql
-          package.json
-          server/__tests__/motorcycleLifecyclePolicy.test.ts
-          server/index.ts
-          server/routes/motorcycleAssemblyLifecycleRoutes.ts
-          server/routes/motorcycleLifecycleOverviewRoutes.ts
-          server/routes/motorcycleTimelineRoutes.ts
-          server/routes/motorcycleWorkshopRoutes.ts
-          server/services/motorcycles/lifecyclePolicy.ts
-          server/services/motorcycles/lifecycleQueries.ts
-
-      - name: Commit integration
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add client/src/components/AssemblyMotorcycleRegisterDialog.tsx client/src/components/MotorcycleLifecycleDialog.tsx client/src/pages/Motorcycles.tsx docs/program-4-motorcycle-records-plan.md migrations/0033_motorcycle_lifecycle_links.sql package.json server/__tests__/motorcycleLifecyclePolicy.test.ts server/index.ts server/routes/motorcycleAssemblyLifecycleRoutes.ts server/routes/motorcycleLifecycleOverviewRoutes.ts server/routes/motorcycleTimelineRoutes.ts server/routes/motorcycleWorkshopRoutes.ts server/services/motorcycles/lifecyclePolicy.ts server/services/motorcycles/lifecycleQueries.ts
-          if git diff --cached --quiet; then
-            echo "No integration changes required"
-            exit 0
-          fi
-          git commit -m "Complete Program 4C lifecycle integration"
-          git push origin HEAD:agent/program-4-motorcycle-records
-
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -134,8 +79,11 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Check out repository
+      - name: Check out Program 4 branch
         uses: actions/checkout@v4
+        with:
+          ref: agent/program-4-motorcycle-records
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -146,8 +94,23 @@ jobs:
       - name: Install exact dependencies
         run: npm ci --include=dev
 
-      - name: Run full migration chain
-        run: npm run db:migrate
+      - name: Run full migration chain and capture failure
+        shell: bash
+        run: |
+          set +e
+          npm run db:migrate > /tmp/program-4c-migration.log 2>&1
+          status=$?
+          set -e
+          if [[ $status -ne 0 ]]; then
+            tail -120 /tmp/program-4c-migration.log > docs/program-4c-migration-error.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add docs/program-4c-migration-error.txt
+            git commit -m "Record Program 4C migration error"
+            git push origin HEAD:agent/program-4-motorcycle-records
+            cat docs/program-4c-migration-error.txt
+            exit $status
+          fi
 
       - name: Verify migration rerun is idempotent
         run: npm run db:migrate
