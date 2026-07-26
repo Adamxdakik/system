@@ -10,9 +10,12 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 import {
   DollarSign,
   TrendingUp,
+  TrendingDown,
   Package,
   Wallet,
   ShoppingCart,
@@ -21,6 +24,10 @@ import {
   Activity,
   CalendarIcon,
   ChevronDown,
+  Building2,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -182,6 +189,7 @@ export default function Dashboard() {
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [showTrends, setShowTrends] = useState(false);
+  const [showProfitDetail, setShowProfitDetail] = useState(false);
 
   const getDateRange = () => {
     switch (period) {
@@ -208,6 +216,14 @@ export default function Dashboard() {
   };
 
   const dateRange = getDateRange();
+
+  const { data: profitDetail, isLoading: profitDetailLoading } = useQuery<any>({
+    queryKey: [
+      `/api/stats/net-profit-detail?fromDate=${dateRange.from}&toDate=${dateRange.to}`,
+      selectedCompany?.id,
+    ],
+    enabled: !!selectedCompany && showProfitDetail,
+  });
 
   const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
     queryKey: [
@@ -411,12 +427,13 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Net Profit */}
+            {/* Net Profit — clickable for detail */}
             <Card
-              className={`relative overflow-hidden border-0 ring-1 ${
+              onClick={() => setShowProfitDetail(true)}
+              className={`relative overflow-hidden border-0 ring-1 cursor-pointer transition-all hover:ring-2 hover:scale-[1.01] ${
                 netProfitPositive
-                  ? "bg-gradient-to-br from-violet-950/80 to-violet-900/40 ring-violet-800/50"
-                  : "bg-gradient-to-br from-red-950/80 to-red-900/40 ring-red-800/50"
+                  ? "bg-gradient-to-br from-violet-950/80 to-violet-900/40 ring-violet-800/50 hover:ring-violet-600/70"
+                  : "bg-gradient-to-br from-red-950/80 to-red-900/40 ring-red-800/50 hover:ring-red-600/70"
               }`}
             >
               <div
@@ -447,7 +464,7 @@ export default function Dashboard() {
                         netProfitPositive ? "text-violet-500/60" : "text-red-500/60"
                       }`}
                     >
-                      Gross Profit — OpEx
+                      Tap for full breakdown
                     </p>
                   </div>
                   <div
@@ -664,6 +681,175 @@ export default function Dashboard() {
           </Collapsible>
         </>
       )}
+
+      {/* ── Net Profit Detail Sheet ──────────────────────────────────────── */}
+      <Sheet open={showProfitDetail} onOpenChange={setShowProfitDetail}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
+            <SheetTitle className="text-lg flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-violet-400" />
+              Profit & Position Breakdown
+            </SheetTitle>
+            <p className="text-sm text-muted-foreground">{getDisplayLabel()}</p>
+          </SheetHeader>
+
+          {profitDetailLoading ? (
+            <div className="p-6 space-y-4">
+              {[1,2,3,4].map(i => <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />)}
+            </div>
+          ) : profitDetail ? (
+            <div className="p-6 space-y-5">
+
+              {/* ── P&L ─────────────────────────────────────────────────── */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Profit & Loss — {getDisplayLabel()}</p>
+
+                {/* Revenue */}
+                <div className="rounded-xl border bg-card p-4 space-y-2 mb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold flex items-center gap-1.5"><ArrowUpRight className="h-4 w-4 text-green-500" />Revenue</span>
+                    <span className="font-mono font-bold text-green-400">{fmt(profitDetail.revenue.total)}</span>
+                  </div>
+                  {profitDetail.revenue.breakdown.map((r: any) => (
+                    <div key={r.label} className="flex items-center justify-between text-sm pl-5">
+                      <span className="text-muted-foreground">{r.label}</span>
+                      <span className="font-mono">{fmt(r.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* COGS */}
+                <div className="rounded-xl border bg-card p-4 mb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold flex items-center gap-1.5"><Minus className="h-4 w-4 text-orange-400" />Cost of Goods Sold</span>
+                    <span className="font-mono font-bold text-orange-400">−{fmt(profitDetail.cogs.total)}</span>
+                  </div>
+                </div>
+
+                {/* Gross Profit */}
+                <div className={`rounded-xl border p-4 mb-3 ${profitDetail.grossProfit >= 0 ? "bg-green-950/30 border-green-800/40" : "bg-red-950/30 border-red-800/40"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">Gross Profit</span>
+                    <span className={`font-mono font-bold ${profitDetail.grossProfit >= 0 ? "text-green-400" : "text-red-400"}`}>{fmt(profitDetail.grossProfit)}</span>
+                  </div>
+                </div>
+
+                {/* Operating Expenses */}
+                <div className="rounded-xl border bg-card p-4 space-y-2 mb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold flex items-center gap-1.5"><ArrowDownRight className="h-4 w-4 text-red-400" />Operating Expenses</span>
+                    <span className="font-mono font-bold text-red-400">−{fmt(profitDetail.operatingExpenses.total)}</span>
+                  </div>
+                  {profitDetail.operatingExpenses.breakdown.length === 0 && (
+                    <p className="text-xs text-muted-foreground pl-5">No expense entries this period</p>
+                  )}
+                  {profitDetail.operatingExpenses.breakdown.map((e: any) => (
+                    <div key={e.accountCode} className="flex items-center justify-between text-sm pl-5">
+                      <span className="text-muted-foreground">{e.accountName}</span>
+                      <span className="font-mono">{fmt(e.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Net Profit */}
+                <div className={`rounded-xl border p-4 ${profitDetail.netProfit >= 0 ? "bg-violet-950/40 border-violet-700/50" : "bg-red-950/40 border-red-700/50"}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold flex items-center gap-1.5">
+                      {profitDetail.netProfit >= 0 ? <TrendingUp className="h-4 w-4 text-violet-400" /> : <TrendingDown className="h-4 w-4 text-red-400" />}
+                      Net Profit
+                    </span>
+                    <span className={`font-mono font-bold text-lg ${profitDetail.netProfit >= 0 ? "text-violet-300" : "text-red-300"}`}>{fmt(profitDetail.netProfit)}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 pl-6">Revenue − COGS − Operating Expenses</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* ── What You Have (Assets) ────────────────────────────── */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">What You Have (Assets)</p>
+                <div className="rounded-xl border bg-card p-4 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><Wallet className="h-3.5 w-3.5" />Cash in Hand</span>
+                    <span className="font-mono font-semibold">{fmt(profitDetail.assets.cashInHand)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><Package className="h-3.5 w-3.5" />Motorcycles (Stock)</span>
+                    <span className="font-mono font-semibold">{fmt(profitDetail.assets.inventoryMoto)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><Wrench className="h-3.5 w-3.5" />Parts & Accessories (Stock)</span>
+                    <span className="font-mono font-semibold">{fmt(profitDetail.assets.inventoryParts)}</span>
+                  </div>
+                  {profitDetail.assets.customerReceivables > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="flex items-center gap-1.5 text-muted-foreground"><ArrowUpRight className="h-3.5 w-3.5" />Customer Receivables</span>
+                      <span className="font-mono font-semibold">{fmt(profitDetail.assets.customerReceivables)}</span>
+                    </div>
+                  )}
+                  <Separator className="my-1" />
+                  <div className="flex justify-between font-bold text-sm">
+                    <span>Total Assets</span>
+                    <span className="font-mono text-green-400">{fmt(profitDetail.assets.total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── What You Owe (Liabilities) ────────────────────────── */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">What You Owe (Liabilities)</p>
+                <div className="rounded-xl border bg-card p-4 space-y-3">
+                  {/* Supplier payables */}
+                  {profitDetail.liabilities.supplierBreakdown.length > 0 && (
+                    <>
+                      <p className="text-xs text-muted-foreground font-medium">Supplier Balances</p>
+                      {profitDetail.liabilities.supplierBreakdown.map((s: any) => (
+                        <div key={s.name} className="flex justify-between text-sm pl-2">
+                          <span className="text-muted-foreground">{s.name}</span>
+                          <span className="font-mono text-red-400">{fmt(s.balance)}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {/* Loans */}
+                  {profitDetail.liabilities.loanBreakdown.length > 0 && (
+                    <>
+                      <p className="text-xs text-muted-foreground font-medium mt-1">Loans</p>
+                      {profitDetail.liabilities.loanBreakdown.map((l: any) => (
+                        <div key={l.name} className="flex justify-between text-sm pl-2">
+                          <span className="text-muted-foreground">{l.name}</span>
+                          <span className="font-mono text-red-400">{fmt(l.balance)}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {profitDetail.liabilities.supplierBreakdown.length === 0 && profitDetail.liabilities.loanBreakdown.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No outstanding liabilities</p>
+                  )}
+                  <Separator className="my-1" />
+                  <div className="flex justify-between font-bold text-sm">
+                    <span>Total Liabilities</span>
+                    <span className="font-mono text-red-400">{fmt(profitDetail.liabilities.total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Net Position ──────────────────────────────────────── */}
+              <div className={`rounded-xl border p-4 ${profitDetail.netPosition >= 0 ? "bg-emerald-950/30 border-emerald-700/40" : "bg-red-950/30 border-red-700/40"}`}>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold flex items-center gap-1.5">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    Net Position (Assets − Liabilities)
+                  </span>
+                  <span className={`font-mono font-bold text-lg ${profitDetail.netPosition >= 0 ? "text-emerald-400" : "text-red-400"}`}>{fmt(profitDetail.netPosition)}</span>
+                </div>
+              </div>
+
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

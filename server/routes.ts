@@ -18854,6 +18854,212 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Net Profit Detail breakdown ─────────────────────────────────────────
+  app.get("/api/stats/net-profit-detail", requireAuth, async (req, res) => {
+    try {
+      const companyId = req.session.currentCompanyId;
+      if (!companyId) return res.status(400).json({ message: "No company selected" });
+
+      const fromDateStr = req.query.fromDate as string | undefined;
+      const toDateStr   = req.query.toDate   as string | undefined;
+
+      // ─── 1. Sales breakdown by stock group ─────────────────────────────
+      const salesItemsQ = db
+        .select({
+          stockGroupName: sql<string>`COALESCE(${stockGroups.name}, 'Uncategorised')`,
+          totalSales: sql<string>`COALESCE(SUM(${salesItems.totalSales}), 0)`,
+          totalCost:  sql<string>`COALESCE(SUM(${salesItems.totalCost}),  0)`,
+        })
+        .from(salesItems)
+        .leftJoin(saleRecords, eq(salesItems.saleId, saleRecords.id))
+        .leftJoin(stockItems,  eq(salesItems.stockItemId, stockItems.id))
+        .leftJoin(stockGroups, eq(stockItems.stockGroupId, stockGroups.id))
+        .where(and(
+          eq(saleRecords.companyId, companyId),
+          fromDateStr ? gte(saleRecords.saleDate, fromDateStr) : undefined,
+          toDateStr   ? lte(saleRecords.saleDate, toDateStr)   : undefined,
+        ))
+        .groupBy(sql`COALESCE(${stockGroups.name}, 'Uncategorised')`);
+
+      const salesRows = await salesItemsQ.execute();
+      let totalSales = 0, totalCost = 0;
+      const salesBreakdown: { label: string; amount: number }[] = [];
+      for (const r of salesRows) {
+        const s = parseFloat(r.totalSales);
+        const c = parseFloat(r.totalCost);
+        totalSales += s;
+        totalCost  += c;
+        salesBreakdown.push({ label: r.stockGroupName, amount: s });
+      }
+      const grossProfit = totalSales - totalCost;
+
+      // ─── 2. Per-account operating expenses ─────────────────────────────
+      const allAccounts = await storage.getAllLedgerAccounts(companyId);
+      const purchasesIds = new Set(
+        allAccounts.filter(a => a.code === "PURCHASES" || a.code === "STOCK_PURCHASES").map(a => a.id)
+      );
+      const expenseAccounts = allAccounts.filter(a =>
+        (a.accountType === "Expense" || a.accountType === "Direct Expense" ||
+         a.accountType === "Indirect Expense" || a.accountType === "Operating Expenses") &&
+        !purchasesIds.has(a.id)
+      );
+      const expenseAccountIds = new Set(expenseAccounts.map(a => a.id));
+
+      let periodVoucherIds: number[] = [];
+      if (fromDateStr && toDateStr) {
+        const pv = await db.select({ id: vouchers.id }).from(vouchers).where(and(
+          eq(vouchers.companyId, companyId),
+          eq(vouchers.optional, false),
+          gte(vouchers.voucherDate, fromDateStr),
+          lte(vouchers.voucherDate, toDateStr),
+        )).execute();
+        periodVoucherIds = pv.map(v => v.id);
+      }
+
+      const expenseByAccount: Record<number, number> = {};
+      if (periodVoucherIds.length > 0) {
+        const entries = await db.select({
+          ledgerAccountId: voucherEntries.ledgerAccountId,
+          debitAmount:  voucherEntries.debitAmount,
+          creditAmount: voucherEntries.creditAmount,
+        }).from(voucherEntries)
+          .where(inArray(voucherEntries.voucherId, periodVoucherIds)).execute();
+
+        for (const e of entries) {
+          if (e.ledgerAccountId && expenseAccountIds.has(e.ledgerAccountId)) {
+            expenseByAccount[e.ledgerAccountId] =
+              (expenseByAccount[e.ledgerAccountId] || 0) +
+              parseFloat(e.debitAmount || "0") - parseFloat(e.creditAmount || "0");
+          }
+        }
+      }
+
+      const opExBreakdown = expenseAccounts
+        .map(a => ({ accountName: a.name, accountCode: a.code, amount: expenseByAccount[a.id] || 0 }))
+        .filter(x => x.amount !== 0)
+        .sort((a, b) => b.amount - a.amount);
+      const operatingExpenses = opExBreakdown.reduce((s, x) => s + x.amount, 0);
+      const netProfit = grossProfit - operatingExpenses;
+
+      // ─── 3. Assets ─────────────────────────────────────────────────────
+      // Cash (all-time)
+      const cashAccountIds = allAccounts.filter(a => a.accountType === "Cash").map(a => a.id);
+      let cashInHand = 0;
+      if (cashAccountIds.length > 0) {
+        const allVIds = (await db.select({ id: vouchers.id }).from(vouchers)
+          .where(and(eq(vouchers.companyId, companyId), eq(vouchers.optional, false))).execute())
+          .map(v => v.id);
+        if (allVIds.length > 0) {
+          const cashEntries = await db.select({ d: voucherEntries.debitAmount, c: voucherEntries.creditAmount })
+            .from(voucherEntries)
+            .where(and(inArray(voucherEntries.voucherId, allVIds), inArray(voucherEntries.ledgerAccountId, cashAccountIds)))
+            .execute();
+          for (const e of cashEntries) cashInHand += parseFloat(e.d || "0") - parseFloat(e.c || "0");
+        }
+      }
+
+      // Inventory
+      const invRows = await db.select({
+        quantity: inventory.quantity,
+        totalValue: inventory.totalValue,
+        stockGroupName: sql<string>`COALESCE(${stockGroups.name}, 'Uncategorised')`,
+      }).from(inventory)
+        .innerJoin(locations, eq(inventory.locationId, locations.id))
+        .innerJoin(stockItems,  eq(inventory.stockItemId, stockItems.id))
+        .leftJoin(stockGroups, eq(stockItems.stockGroupId, stockGroups.id))
+        .where(and(eq(locations.companyId, companyId), isNull(locations.deletedAt)))
+        .execute();
+
+      let motoInv = 0, partsInv = 0;
+      for (const r of invRows) {
+        const v = parseFloat(r.totalValue || "0");
+        if (/moto|bike|motorcycle/i.test(r.stockGroupName)) motoInv += v; else partsInv += v;
+      }
+
+      // Customer receivables (Asset type accounts)
+      const assetAccountIds = allAccounts.filter(a => a.accountType === "Asset").map(a => a.id);
+      let customerReceivables = 0;
+      if (assetAccountIds.length > 0) {
+        const allVIds = (await db.select({ id: vouchers.id }).from(vouchers)
+          .where(and(eq(vouchers.companyId, companyId), eq(vouchers.optional, false))).execute())
+          .map(v => v.id);
+        if (allVIds.length > 0) {
+          const arEntries = await db.select({ d: voucherEntries.debitAmount, c: voucherEntries.creditAmount })
+            .from(voucherEntries)
+            .where(and(inArray(voucherEntries.voucherId, allVIds), inArray(voucherEntries.ledgerAccountId, assetAccountIds)))
+            .execute();
+          for (const e of arEntries) customerReceivables += parseFloat(e.d || "0") - parseFloat(e.c || "0");
+        }
+      }
+
+      // ─── 4. Liabilities ────────────────────────────────────────────────
+      // Supplier balances
+      const allSuppliers = await storage.getAllSuppliers(companyId);
+      const suppliersWithBal: { name: string; balance: number }[] = [];
+      for (const sup of allSuppliers) {
+        const allVIds = (await db.select({ id: vouchers.id }).from(vouchers)
+          .where(and(eq(vouchers.companyId, companyId), eq(vouchers.optional, false))).execute())
+          .map(v => v.id);
+        if (allVIds.length === 0) continue;
+        const entries = await db.select({ d: voucherEntries.debitAmount, c: voucherEntries.creditAmount })
+          .from(voucherEntries)
+          .where(and(inArray(voucherEntries.voucherId, allVIds), eq(voucherEntries.supplierId, sup.id)))
+          .execute();
+        const bal = entries.reduce((s, e) => s + parseFloat(e.c || "0") - parseFloat(e.d || "0"), 0);
+        if (bal > 0) suppliersWithBal.push({ name: sup.legalName, balance: bal });
+      }
+      suppliersWithBal.sort((a, b) => b.balance - a.balance);
+
+      // Loan accounts
+      const loanAccounts = allAccounts.filter(a => a.accountType === "Loans");
+      const loansBreakdown: { name: string; balance: number }[] = [];
+      let totalLoans = 0;
+      for (const la of loanAccounts) {
+        const allVIds = (await db.select({ id: vouchers.id }).from(vouchers)
+          .where(and(eq(vouchers.companyId, companyId), eq(vouchers.optional, false))).execute())
+          .map(v => v.id);
+        if (allVIds.length === 0) continue;
+        const entries = await db.select({ d: voucherEntries.debitAmount, c: voucherEntries.creditAmount })
+          .from(voucherEntries)
+          .where(and(inArray(voucherEntries.voucherId, allVIds), eq(voucherEntries.ledgerAccountId, la.id)))
+          .execute();
+        const bal = entries.reduce((s, e) => s + parseFloat(e.c || "0") - parseFloat(e.d || "0"), 0);
+        if (Math.abs(bal) > 0.01) { loansBreakdown.push({ name: la.name, balance: bal }); totalLoans += bal; }
+      }
+
+      const totalSupplierPayables = suppliersWithBal.reduce((s, x) => s + x.balance, 0);
+      const totalAssets = cashInHand + motoInv + partsInv + (customerReceivables > 0 ? customerReceivables : 0);
+      const totalLiabilities = totalSupplierPayables + totalLoans;
+
+      res.json({
+        period: { fromDate: fromDateStr, toDate: toDateStr },
+        revenue:  { total: totalSales, breakdown: salesBreakdown },
+        cogs:     { total: totalCost },
+        grossProfit,
+        operatingExpenses: { total: operatingExpenses, breakdown: opExBreakdown },
+        netProfit,
+        assets: {
+          cashInHand,
+          inventoryMoto:  motoInv,
+          inventoryParts: partsInv,
+          customerReceivables,
+          total: totalAssets,
+        },
+        liabilities: {
+          supplierPayables:    totalSupplierPayables,
+          supplierBreakdown:   suppliersWithBal,
+          loans:               totalLoans,
+          loanBreakdown:       loansBreakdown,
+          total:               totalLiabilities,
+        },
+        netPosition: totalAssets - totalLiabilities,
+      });
+    } catch (err: any) {
+      console.error("[net-profit-detail]", err);
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // Get monthly sales and profit data for Dashboard charts
   app.get("/api/stats/monthly-data", requireAuth, async (req, res) => {
     try {
