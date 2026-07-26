@@ -51,11 +51,13 @@ The motorcycle registry must use engine and chassis numbers as durable identifie
 ### Completed scope
 
 - link an in-stock or reserved motorcycle to an existing finalized Sales voucher
-- infer the customer from credit-sale voucher entries or require an explicit customer for cash sales
+- infer and lock the customer from credit-sale voucher entries or motorcycles already linked to the same invoice; require an explicit customer for a new cash-sale invoice
+- reset the customer selection whenever the operator changes the selected voucher
 - copy the finalized voucher number and date into the motorcycle sale record
 - save the motorcycle-specific selling price and warranty dates
 - lock customer, sale date, invoice, selling price, status, and deletion after linking
 - allow multiple motorcycles on one finalized invoice while capping their combined linked prices at the voucher total
+- enforce one customer per finalized invoice with a PostgreSQL transaction-level advisory lock and trigger
 - require the linked Sales voucher to be formally reversed before an administrator can release the motorcycle
 - preserve the existing POS, inventory, and accounting transaction boundaries without reposting financial or stock movement
 
@@ -65,6 +67,8 @@ The motorcycle registry must use engine and chassis numbers as durable identifie
 - Draft, optional, deleted, reversed, and reversal vouchers cannot be linked.
 - The same motorcycle cannot be sold twice, and combined motorcycle prices cannot exceed the finalized voucher total.
 - Cross-company customers and mismatched locations are refused.
+- A finalized invoice's identified customer cannot be replaced during motorcycle linking.
+- Concurrent links to the same cash-sale invoice cannot assign different customers.
 - Manual edits cannot invent or erase a finalized motorcycle sale.
 - Corrections and cancellations follow the finalized-document safeguards established in Program 2.
 
