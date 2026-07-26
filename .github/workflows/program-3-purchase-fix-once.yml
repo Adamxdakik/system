@@ -1,0 +1,42 @@
+name: Program 3 purchase fix once
+
+on:
+  push:
+    branches:
+      - agent/program-3-simplified-interface-rebased
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Correct purchase-order container invalidation
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          path = Path("client/src/pages/PurchaseOrderEdit.tsx")
+          text = path.read_text()
+          old = 'queryClient.invalidateQueries({ queryKey: [`/api/containers/${containerId ?? ""}`] });'
+          new = 'queryClient.invalidateQueries({ queryKey: [`/api/containers/${po?.containerId ?? ""}`] });'
+          if old not in text:
+              raise SystemExit("Expected invalidation line not found")
+          path.write_text(text.replace(old, new, 1))
+          PY
+          npx prettier --write client/src/pages/PurchaseOrderEdit.tsx
+      - name: Commit fix and remove workflow
+        run: |
+          rm .github/workflows/program-3-purchase-fix-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix Program 3 purchase-order invalidation"
+          git push origin HEAD:agent/program-3-simplified-interface-rebased
