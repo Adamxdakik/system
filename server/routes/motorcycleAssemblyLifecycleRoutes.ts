@@ -213,8 +213,9 @@ export function registerMotorcycleAssemblyLifecycleRoutes(app: Express): void {
 
         const motorcycle = await getMotorcycle(companyId, motorcycleId);
         return res.status(201).json(motorcycle);
-      } catch (error: any) {
-        if (error?.code === "23505") {
+      } catch (error: unknown) {
+        const typedError = error as { code?: string };
+        if (typedError.code === "23505") {
           return res.status(409).json({
             message: "Engine or chassis number is already registered",
             code: "DUPLICATE_MOTORCYCLE_IDENTITY",
