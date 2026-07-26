@@ -4,6 +4,13 @@ import connectPgSimple from "connect-pg-simple";
 import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
+import { registerMotorcycleAssemblyLifecycleRoutes } from "./routes/motorcycleAssemblyLifecycleRoutes";
+import { registerMotorcycleLifecycleOverviewRoutes } from "./routes/motorcycleLifecycleOverviewRoutes";
+import { registerMotorcycleRecordRoutes } from "./routes/motorcycleRecordRoutes";
+import { registerMotorcycleSaleCustomerRoutes } from "./routes/motorcycleSaleCustomerRoutes";
+import { registerMotorcycleSaleRoutes } from "./routes/motorcycleSaleRoutes";
+import { registerMotorcycleTimelineRoutes } from "./routes/motorcycleTimelineRoutes";
+import { registerMotorcycleWorkshopRoutes } from "./routes/motorcycleWorkshopRoutes";
 import { setupVite, log } from "./vite";
 import type { User } from "@shared/schema";
 import {
@@ -145,6 +152,14 @@ app.use((req, res, next) => {
     res.json({ version: BUILD_VERSION });
   });
 
+  // Lifecycle guards must run before generic assembly, service, and registry routes.
+  registerMotorcycleWorkshopRoutes(app);
+  registerMotorcycleTimelineRoutes(app);
+  registerMotorcycleLifecycleOverviewRoutes(app);
+  registerMotorcycleAssemblyLifecycleRoutes(app);
+  registerMotorcycleSaleCustomerRoutes(app);
+  registerMotorcycleSaleRoutes(app);
+  registerMotorcycleRecordRoutes(app);
   const server = await registerRoutes(app);
 
   app.use(errorHandler);
@@ -164,7 +179,7 @@ app.use((req, res, next) => {
       );
     }
 
-    // Serve static assets with cache control
+    // Custom static file serving with proper cache headers
     app.use(
       express.static(distPath, {
         setHeaders: (res, filePath) => {

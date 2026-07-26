@@ -116,7 +116,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     });
   }
 
-  const status = Number(err?.status || err?.statusCode) || 500;
+  const status = Number(err?.status || err?.statusCode || err?.httpStatus) || 500;
   if (status >= 500) {
     console.error(`[error-middleware] requestId=${req.requestId}`, err);
     return res.status(status).json({
