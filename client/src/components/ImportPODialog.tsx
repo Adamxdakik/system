@@ -217,12 +217,12 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
 
       itemRows.forEach((row: any, idx: number) => {
         const code     = String(row["Item Code"]  ?? "").trim();
-        const partName = String(row["Part Name"]   ?? "").trim();
+        const partName = String(row["Part Name"]   ?? "").trim() || code;
         const uom      = String(row["Unit"]        ?? "PCS").trim();
         const weight   = n(row["Weight per unit (kg)"]);
 
-        if (!partName) {
-          newIssues.push({ type: "error", message: `Row ${idx + 2}: "Part Name" is required.` });
+        if (!code && !partName) {
+          newIssues.push({ type: "error", message: `Row ${idx + 2}: "Item Code" or "Part Name" is required.` });
           return;
         }
 
