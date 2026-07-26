@@ -1,15 +1,14 @@
 name: Program 6A Frontend Wiring
 
 on:
-  push:
-    branches:
-      - agent/program-6-frontend-operations
+  pull_request:
 
 permissions:
   contents: write
 
 jobs:
   wire:
+    if: github.event.pull_request.head.ref == 'agent/program-6-frontend-operations'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
