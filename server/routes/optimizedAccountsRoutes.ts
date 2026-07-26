@@ -1,13 +1,6 @@
 import type { Express } from "express";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import {
-  bankAccounts,
-  fixedAssets,
-  ledgerAccounts,
-  suppliers,
-  voucherEntries,
-  vouchers,
-} from "@shared/schema";
+import { voucherEntries, vouchers } from "@shared/schema";
 import { requireAuth } from "../auth";
 import { db } from "../db";
 import { storage } from "../storage";
