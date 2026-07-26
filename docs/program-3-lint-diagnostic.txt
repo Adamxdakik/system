@@ -1,6 +1,0 @@
-
-> rest-express@1.0.0 lint:changed
-> node scripts/check-changed-files.mjs lint
-
-ESLint errors or warnings occur on changed lines:
-client/src/pages/StockItems.tsx:4:29 'CardHeader' is defined but never used. (unused-imports/no-unused-imports)
