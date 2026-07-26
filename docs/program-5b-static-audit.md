@@ -145,7 +145,7 @@ Generated from the exact Program 5 branch. This is code-level evidence only; pro
 
 ## Audit scope
 
-- Server TypeScript files scanned: 76
+- Server TypeScript files scanned: 77
 - Express routes detected: 436
 - Client TypeScript files scanned: 173
 - Unique client API references detected: 194
