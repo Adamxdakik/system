@@ -4,6 +4,7 @@ import connectPgSimple from "connect-pg-simple";
 import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
+import { registerAdminBandwidthRoutes } from "./routes/adminBandwidthRoutes";
 import { registerMotorcycleAssemblyLifecycleRoutes } from "./routes/motorcycleAssemblyLifecycleRoutes";
 import { registerMotorcycleLifecycleOverviewRoutes } from "./routes/motorcycleLifecycleOverviewRoutes";
 import { registerMotorcycleRecordRoutes } from "./routes/motorcycleRecordRoutes";
@@ -134,6 +135,8 @@ app.use(apiRequestLogger(log));
   app.get("/api/build-info", (_req, res) => {
     res.json({ version: BUILD_VERSION });
   });
+
+  registerAdminBandwidthRoutes(app);
 
   // Lifecycle guards must run before generic assembly, service, and registry routes.
   registerMotorcycleWorkshopRoutes(app);
