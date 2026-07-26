@@ -346,12 +346,6 @@ export default function ContainerDetail() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-wrap shrink-0">
-          {!containerSale && (
-            <Button onClick={() => setShowSellDialog(true)} className="gap-1.5" data-testid="button-sell-container">
-              <HandCoins className="w-4 h-4" />
-              Sell Container
-            </Button>
-          )}
           {container.status !== "OFFLOADED" && (
             <Button onClick={() => setShowOffloadDialog(true)} variant="outline" className="gap-1.5" data-testid="button-offload-container">
               <Truck className="w-4 h-4" />
