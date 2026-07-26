@@ -14,9 +14,7 @@ export function isMotorcycleSaleEligible(status: string): boolean {
   );
 }
 
-export function isActiveFinalizedSalesVoucher(
-  voucher: FinalizedSalesVoucherState,
-): boolean {
+export function isActiveFinalizedSalesVoucher(voucher: FinalizedSalesVoucherState): boolean {
   return (
     voucher.voucherType === "Sales" &&
     voucher.optional === false &&

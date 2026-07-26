@@ -27,19 +27,11 @@ describe("motorcycle finalized sale policy", () => {
     };
 
     expect(isActiveFinalizedSalesVoucher(activeSale)).toBe(true);
-    expect(
-      isActiveFinalizedSalesVoucher({ ...activeSale, voucherType: "Receipt" }),
-    ).toBe(false);
+    expect(isActiveFinalizedSalesVoucher({ ...activeSale, voucherType: "Receipt" })).toBe(false);
     expect(isActiveFinalizedSalesVoucher({ ...activeSale, optional: true })).toBe(false);
-    expect(
-      isActiveFinalizedSalesVoucher({ ...activeSale, deletedAt: new Date() }),
-    ).toBe(false);
-    expect(
-      isActiveFinalizedSalesVoucher({ ...activeSale, reversedAt: new Date() }),
-    ).toBe(false);
-    expect(
-      isActiveFinalizedSalesVoucher({ ...activeSale, reversalOfVoucherId: 41 }),
-    ).toBe(false);
+    expect(isActiveFinalizedSalesVoucher({ ...activeSale, deletedAt: new Date() })).toBe(false);
+    expect(isActiveFinalizedSalesVoucher({ ...activeSale, reversedAt: new Date() })).toBe(false);
+    expect(isActiveFinalizedSalesVoucher({ ...activeSale, reversalOfVoucherId: 41 })).toBe(false);
   });
 
   it("requires compatible locations when both records have a location", () => {
