@@ -1,0 +1,6 @@
+
+> rest-express@1.0.0 check:all:baseline
+> node scripts/check-typescript-baseline.mjs
+
+TypeScript baseline regressed:
+server/httpSafety.ts::TS6307: 1 (baseline 0)
