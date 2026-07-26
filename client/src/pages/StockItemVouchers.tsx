@@ -95,9 +95,9 @@ export default function StockItemVouchers() {
       return txn.poId ? `/purchase-orders/${txn.poId}/edit` : null;
     }
     
-    // Production/Consumption - navigate to voucher edit page
+    // Production/Consumption - navigate to adjustment tab
     if (vchType === 'production' || vchType === 'consumption') {
-      return txn.voucherId ? `/vouchers/${txn.voucherId}/edit` : null;
+      return txn.voucherId ? `/vouchers?edit=${txn.voucherId}&tab=adjustment` : null;
     }
     
     // POS sales - navigate to POS edit page
@@ -105,14 +105,14 @@ export default function StockItemVouchers() {
       return txn.voucherId ? `/pos/edit/${txn.voucherId}` : null;
     }
     
-    // Stock Transfer - navigate to voucher edit page
+    // Stock Transfer - navigate to transfer tab
     if (vchType.startsWith('stock transfer')) {
-      return txn.voucherId ? `/vouchers/${txn.voucherId}/edit` : null;
+      return txn.voucherId ? `/vouchers?edit=${txn.voucherId}&tab=transfer` : null;
     }
     
-    // Generic Sales - navigate to voucher edit page
+    // Generic Sales - navigate to POS edit page
     if (vchType === 'sales') {
-      return txn.voucherId ? `/vouchers/${txn.voucherId}/edit` : null;
+      return txn.voucherId ? `/pos/edit/${txn.voucherId}` : null;
     }
     
     return null;

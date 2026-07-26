@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateAccountingQueries, invalidateTransferQueries } from "@/lib/invalidateVoucherQueries";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -819,9 +820,13 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
   const isFactoryMode = appMode === "factory";
 
   // Handle opening voucher for editing
-  const handleEditVoucher = (voucherId: number) => {
+  const handleEditVoucher = (voucherId: number, voucherType?: string) => {
     const prefix = isFactoryMode ? "/factory" : "";
-    setLocation(`${prefix}/vouchers/${voucherId}/edit`);
+    if (voucherType === "Sales") {
+      setLocation(`/pos/edit/${voucherId}`);
+    } else {
+      setLocation(`${prefix}/vouchers/${voucherId}/edit`);
+    }
   };
 
   // Synchronize activeTab and editVoucherId with URL parameters
@@ -1568,16 +1573,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
 
       setOriginalPaymentTotal(0);
 
-      // Invalidate only essential queries for faster saves
-      // Balances are updated via voucher-sidebar, full account lists don't change
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/daybook"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/voucher-sidebar"] });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/accounts", paymentAccountType, paymentAccountId, "balance"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/ledger-accounts"] });
+      invalidateAccountingQueries(queryClient, voucherIdToEdit ?? undefined);
 
       // Clear edit mode and navigate back to daybook
       if (isEditMode) {
@@ -2264,15 +2260,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         description: `Journal voucher ${isEditMode ? "updated" : "created"} successfully`,
       });
 
-      // Invalidate only essential queries for faster saves
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/daybook"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/voucher-sidebar"] });
-      queryClient.invalidateQueries({
-        queryKey: ["/api/accounts", paymentAccountType, paymentAccountId, "balance"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/ledger-accounts"] });
+      invalidateAccountingQueries(queryClient, voucherIdToEdit ?? undefined);
 
       // Clear edit mode and navigate back to daybook or reset form
       if (isEditMode) {
@@ -2579,9 +2567,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         title: "Import successful",
         description: `${data.itemsCount} items transferred successfully.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory-by-location"] });
+      invalidateTransferQueries(queryClient);
       // Reset import state
       setImportDialogOpen(false);
       setImportFile(null);
@@ -2983,12 +2969,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         title: "Success",
         description: `Stock transfer voucher ${isEditMode ? "updated" : "created"} successfully`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/daybook"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stock-transfers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory-by-location"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/location-summary"] });
+      invalidateTransferQueries(queryClient, voucherIdToEdit ?? undefined);
 
       // Clear edit mode and navigate back to daybook or reset form
       if (isEditMode) {
@@ -3523,10 +3504,7 @@ export default function Vouchers({ posUser }: VouchersProps = {}) {
         title: "Success",
         description: `Production/Consumption voucher ${isEditMode ? "updated" : "created"} successfully`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/daybook"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stock-adjustments"] });
+      invalidateTransferQueries(queryClient, voucherIdToEdit ?? undefined);
 
       // Clear edit mode and navigate back to daybook or reset form
       if (isEditMode) {

@@ -503,7 +503,6 @@ export default function SalesReport({ embedded = false }: SalesReportProps = {})
                               {inv.items.length} item{inv.items.length !== 1 ? "s" : ""} · {fmtNum(inv.totalQuantity)} units
                             </td>
                             <td className="hidden sm:table-cell" />
-                            <td className="hidden md:table-cell" />
                             <td className="py-1.5 px-3 text-right font-mono hidden md:table-cell text-muted-foreground">
                               {fmtCurrency(invCost)}
                             </td>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateInventoryQueries } from "@/lib/invalidateVoucherQueries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -147,6 +148,7 @@ export default function MotoAssemblyPage({ embedded = false }: MotoAssemblyPageP
     }
     await queryClient.invalidateQueries({ queryKey: ["/api/assembly-history", companyId] });
     await queryClient.invalidateQueries({ queryKey: ["/api/assembly-history"] });
+    invalidateInventoryQueries(queryClient);
     await refetchInventory();
   };
 

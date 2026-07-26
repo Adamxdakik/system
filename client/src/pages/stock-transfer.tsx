@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateTransferQueries } from "@/lib/invalidateVoucherQueries";
 import { useLocation } from "wouter";
 import { formatNumber } from "@/lib/formatNumber";
 import { Button } from "@/components/ui/button";
@@ -170,9 +171,7 @@ export default function StockTransferPage({ posUser }: StockTransferPageProps) {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Stock transfer created successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory-by-location"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stock-transfers"] });
+      invalidateTransferQueries(queryClient);
       resetForm();
     },
     onError: (error: any) => {
@@ -187,9 +186,7 @@ export default function StockTransferPage({ posUser }: StockTransferPageProps) {
     },
     onSuccess: () => {
       toast({ title: "Deleted", description: "Stock transfer deleted and inventory reversed" });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory-by-location"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stock-transfers"] });
+      invalidateTransferQueries(queryClient);
       setDeleteTarget(null);
     },
     onError: (error: any) => {

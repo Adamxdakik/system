@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { invalidateTransferQueries } from "@/lib/invalidateVoucherQueries";
 import { useLocation } from "wouter";
 import {
   Dialog,
@@ -328,6 +329,7 @@ export function OffloadDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/containers"] });
       queryClient.invalidateQueries({ queryKey: [`/api/containers/${containerId}`] });
+      invalidateTransferQueries(queryClient);
       toast({
         title: "Container offloaded successfully",
         description: `Container ${containerNumber} has been offloaded to the selected location.`,

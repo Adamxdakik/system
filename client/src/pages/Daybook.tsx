@@ -1090,9 +1090,9 @@ export default function Daybook({ user }: { user?: any } = {}) {
   }
 
   const handleEdit = (voucher: Voucher) => {
-    // Sales vouchers use the dedicated edit page
+    // Sales vouchers use the native POS edit page
     if (voucher.voucherType === "Sales") {
-      navigate(`/vouchers/${voucher.id}/edit?from=daybook`);
+      navigate(`/pos/edit/${voucher.id}`);
       return;
     }
 
@@ -2391,7 +2391,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
                     className="gap-1"
                     onClick={() => {
                       setDetailSheetOpen(false);
-                      navigate(`/vouchers/${selectedVoucher.id}/edit?from=daybook`);
+                      navigate(`/pos/edit/${selectedVoucher.id}`);
                     }}
                   >
                     <ExternalLink className="w-4 h-4" />

@@ -16821,11 +16821,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           if (existingInventory) {
             const currentQty = parseFloat(existingInventory.quantity);
-            const newQty = currentQty + oldQty; // Add back what was sold
+            const currentValue = parseFloat(existingInventory.totalValue || "0");
+            const oldTotalCost = oldQty * oldCost;
+            const newQty = currentQty + oldQty;
+            const newValue = currentValue + oldTotalCost;
+            // Recompute averageRate so subsequent cost lookups are accurate
+            const newAvgRate = newQty > 0 ? newValue / newQty : existingInventory.averageRate ? parseFloat(existingInventory.averageRate) : 0;
 
             await tx
               .update(inventory)
-              .set({ quantity: newQty.toString() })
+              .set({
+                quantity: newQty.toString(),
+                totalValue: newValue.toString(),
+                averageRate: newAvgRate.toString(),
+              })
               .where(eq(inventory.id, existingInventory.id));
           } else {
             // Create inventory record if it doesn't exist (e.g., was deleted)

@@ -914,6 +914,8 @@ export default function Accounts() {
     const tabName = voucherTypeMap[voucher.voucherType];
     if (tabName) {
       navigate(`${base}/vouchers?edit=${voucher.voucherId}&tab=${tabName}`);
+    } else if (voucher.voucherType === "Sales") {
+      navigate(`/pos/edit/${voucher.voucherId}`);
     } else {
       navigate(`${base}/vouchers/${voucher.voucherId}/edit`);
     }
