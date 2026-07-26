@@ -1680,6 +1680,30 @@ export default function Payroll() {
   );
   const hasInvalidSalaries = selectedEmployeesForDeposit.length !== validSelectedEmployees.length;
 
+  // ── Worker profile computed values (used in unified layout) ─────────────────
+  const selectedWorkerProfile = selectedWorkerProfileId
+    ? workerStaff.find((w) => w.id === selectedWorkerProfileId) ?? null
+    : null;
+  const allGroupedWorkerIds = workerGroups.flatMap((g) => (g.members || []).map((m) => m.id));
+  const workerIdsInSelectedGroup =
+    workerProfileGroupFilter === -1
+      ? workerStaff.filter((w) => !allGroupedWorkerIds.includes(w.id)).map((w) => w.id)
+      : workerProfileGroupFilter !== null
+      ? (workerGroups.find((g) => g.id === workerProfileGroupFilter)?.members || []).map((m) => m.id)
+      : null;
+  const filteredWorkers = workerStaff.filter((w) => {
+    if (workerIdsInSelectedGroup !== null && !workerIdsInSelectedGroup.includes(w.id)) return false;
+    const q = workerProfileSearch.toLowerCase();
+    if (!q) return true;
+    return (
+      `${w.firstName} ${w.lastName}`.toLowerCase().includes(q) ||
+      (w.code || "").toLowerCase().includes(q) ||
+      (w.department || "").toLowerCase().includes(q)
+    );
+  });
+  const workerGroupMap: Record<number, string> = {};
+  workerGroups.forEach((g) => (g.members || []).forEach((m) => { workerGroupMap[m.id] = g.name; }));
+
   if (employeesLoading) {
     return (
       <div className="space-y-4">
@@ -1695,1035 +1719,159 @@ export default function Payroll() {
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Payroll</h1>
 
-      {/* Pill tab bar */}
-      <div className="flex gap-2 flex-wrap">
-        {(
-          [
-            { key: "worker-profiles", label: "Workers", icon: HardHat as LucideIcon },
-            { key: "run-payroll",     label: "Run Payroll", icon: PlayCircle as LucideIcon },
-            { key: "advances",        label: "Advances",    icon: Banknote as LucideIcon },
-          ] as { key: string; label: string; icon: LucideIcon }[]
-        ).map(({ key, label, icon: Icon }) => {
-          const active = selectedTab === key;
-          return (
-            <button
-              key={key}
-              onClick={() => setSelectedTab(key)}
-              data-testid={`tab-${key}`}
-              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
-                active
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-transparent text-muted-foreground border-border hover:text-foreground hover:border-foreground/40"
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      {selectedWorkerProfile ? (
+        <ERPWorkerDetail
+          worker={selectedWorkerProfile as any}
+          onBack={() => setSelectedWorkerProfileId(null)}
+          onEdit={(w) => { setSelectedWorkerForEdit(w as any); setEditWorkerDialogOpen(true); }}
+        />
+      ) : (
+        <div className="space-y-8">
 
-      <div>
-        {selectedTab === "employees" && (
-          <Card className="p-6">
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold">Warehouse Staff (Employees)</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Employees maintain running balance accounts. Deposit salary to increase balance, withdraw to decrease.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setCreateEmployeeDialogOpen(true)}
-                  data-testid="button-create-employee"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Employee
-                </Button>
+          {/* ── Workers ─────────────────────────────────────────── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-base font-semibold">Workers</h2>
+                <p className="text-sm text-muted-foreground">Click a worker to view their profile, statement, and advances</p>
               </div>
-
-              {/* Payroll Actions */}
-              {employeeStaff.length > 0 && (
-                <div className="rounded-md border bg-muted/30 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Payroll Actions</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setBulkDepositSelections({});
-                        setBulkDepositDialogOpen(true);
-                      }}
-                      data-testid="button-open-bulk-deposit"
-                    >
-                      <ArrowDownCircle className="h-4 w-4 mr-2" />
-                      Bulk Deposit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        const fromPending: Record<number, string> = {};
-                        for (const [empId, pb] of Object.entries(pendingBonuses)) {
-                          fromPending[parseInt(empId)] = pb.amount.toFixed(2);
-                        }
-                        setBulkBonusAmounts(fromPending);
-                        setBulkBonusStep("edit");
-                        setBulkBonusDialogOpen(true);
-                      }}
-                      data-testid="button-open-bulk-bonus"
-                    >
-                      <Gift className="h-4 w-4 mr-2" />
-                      Bulk Bonus Deposit
-                      {Object.keys(pendingBonuses).length > 0 && (
-                        <Badge className="ml-2" variant="default">
-                          {Object.keys(pendingBonuses).length}
-                        </Badge>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setBulkWithdrawalAmounts({});
-                        setBulkWithdrawalAccountId("");
-                        setBulkWithdrawalDialogOpen(true);
-                      }}
-                      data-testid="button-open-bulk-withdrawal"
-                    >
-                      <ArrowUpCircle className="h-4 w-4 mr-2" />
-                      Bulk Withdrawal
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {employeeStaff.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>No employees found</p>
-                  <p className="text-sm mt-2">Create employees from the Create Master Data page</p>
-                </div>
-              ) : (
-                <>
-                <div className="hidden md:block border rounded-md overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead data-testid="header-name" className="sticky left-0 bg-muted z-10">Name</TableHead>
-                        <TableHead data-testid="header-salary" className="text-right">Monthly Salary</TableHead>
-                        <TableHead data-testid="header-balance" className="text-right">Balance</TableHead>
-                        <TableHead data-testid="header-total-deposits" className="text-right">Deposits</TableHead>
-                        <TableHead data-testid="header-total-withdrawals" className="text-right">Withdrawals</TableHead>
-                        <TableHead data-testid="header-status">Status</TableHead>
-                        <TableHead data-testid="header-actions" className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {employeeStaff.map((employee) => {
-                        // Use the calculated balance from the API
-                        const balance = parseFloat(employee.calculatedBalance || "0");
-                        
-                        return (
-                        <TableRow 
-                          key={employee.id} 
-                          data-testid={`row-employee-${employee.id}`}
-                        >
-                          <TableCell data-testid={`cell-name-${employee.id}`} className="sticky left-0 bg-background z-10">
-                            <button
-                              onClick={() => setStatementEmployee(employee)}
-                              className="flex items-center gap-1 font-medium hover:underline cursor-pointer whitespace-nowrap"
-                              data-testid={`link-employee-statement-${employee.id}`}
-                            >
-                              <Receipt className="h-3 w-3 text-muted-foreground" />
-                              {employee.firstName} {employee.lastName}
-                            </button>
-                          </TableCell>
-                          <TableCell data-testid={`cell-salary-${employee.id}`} className="text-right font-mono">
-                            {formatAmount(parseFloat(employee.monthlySalary))}
-                          </TableCell>
-                          <TableCell data-testid={`cell-balance-${employee.id}`} className="text-right font-mono font-semibold">
-                            {formatAmount(balance)}
-                          </TableCell>
-                          <TableCell data-testid={`cell-deposits-${employee.id}`} className="text-right font-mono text-muted-foreground">
-                            {formatAmount(parseFloat(employee.totalDeposits || "0"))}
-                          </TableCell>
-                          <TableCell data-testid={`cell-withdrawals-${employee.id}`} className="text-right font-mono text-muted-foreground">
-                            {formatAmount(parseFloat(employee.totalWithdrawals || "0"))}
-                          </TableCell>
-                          <TableCell data-testid={`cell-status-${employee.id}`}>
-                            <Badge variant={employee.active ? "default" : "secondary"}>
-                              {employee.active ? "Active" : "Inactive"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell data-testid={`cell-actions-${employee.id}`} className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDeposit(employee)}
-                                data-testid={`button-deposit-${employee.id}`}
-                              >
-                                <TrendingUp className="h-4 w-4 mr-1" />
-                                Deposit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleBonus(employee)}
-                                data-testid={`button-bonus-${employee.id}`}
-                              >
-                                <DollarSign className="h-4 w-4 mr-1" />
-                                Bonus
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleWithdrawal(employee)}
-                                data-testid={`button-withdraw-${employee.id}`}
-                              >
-                                <TrendingDown className="h-4 w-4 mr-1" />
-                                Withdraw
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => { setEditingEmployee(employee); setEditEmployeeDialogOpen(true); }}
-                                data-testid={`button-edit-employee-${employee.id}`}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <ConfirmationDialog
-                                trigger={
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="text-destructive"
-                                    data-testid={`button-delete-${employee.id}`}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                }
-                                title="Delete Employee"
-                                description={`Are you sure you want to delete ${employee.firstName} ${employee.lastName}? This action cannot be undone.`}
-                                confirmText="Delete"
-                                variant="destructive"
-                                onConfirm={() => handleDeleteEmployee(employee)}
-                              />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-                <div className="md:hidden space-y-3">
-                  {employeeStaff.map((employee) => {
-                    const balance = parseFloat(employee.calculatedBalance || "0");
-                    return (
-                      <Card key={employee.id} data-testid={`card-employee-${employee.id}`}>
-                        <CardContent className="p-4 space-y-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <button
-                                onClick={() => setStatementEmployee(employee)}
-                                className="flex items-center gap-1 font-medium hover:underline cursor-pointer"
-                                data-testid={`link-employee-statement-mobile-${employee.id}`}
-                              >
-                                <Receipt className="h-3 w-3 text-muted-foreground" />
-                                {employee.firstName} {employee.lastName}
-                              </button>
-                            </div>
-                            <Badge variant={employee.active ? "default" : "secondary"}>
-                              {employee.active ? "Active" : "Inactive"}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                              <span className="text-muted-foreground block">Monthly Salary</span>
-                              <span className="font-mono">{formatAmount(parseFloat(employee.monthlySalary))}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-muted-foreground block">Balance</span>
-                              <span className="font-mono font-semibold">{formatAmount(balance)}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground block">Deposits</span>
-                              <span className="font-mono text-muted-foreground">{formatAmount(parseFloat(employee.totalDeposits || "0"))}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-muted-foreground block">Withdrawals</span>
-                              <span className="font-mono text-muted-foreground">{formatAmount(parseFloat(employee.totalWithdrawals || "0"))}</span>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2 pt-1 border-t">
-                            <Button size="sm" variant="outline" onClick={() => handleDeposit(employee)} data-testid={`button-deposit-mobile-${employee.id}`}>
-                              <TrendingUp className="h-4 w-4 mr-1" /> Deposit
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleBonus(employee)} data-testid={`button-bonus-mobile-${employee.id}`}>
-                              <DollarSign className="h-4 w-4 mr-1" /> Bonus
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleWithdrawal(employee)} data-testid={`button-withdraw-mobile-${employee.id}`}>
-                              <TrendingDown className="h-4 w-4 mr-1" /> Withdraw
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => { setEditingEmployee(employee); setEditEmployeeDialogOpen(true); }} data-testid={`button-edit-mobile-${employee.id}`}>
-                              <Pencil className="h-4 w-4 mr-1" /> Edit
-                            </Button>
-                            <ConfirmationDialog
-                              trigger={
-                                <Button size="sm" variant="ghost" className="text-destructive" data-testid={`button-delete-mobile-${employee.id}`}>
-                                  <Trash2 className="h-4 w-4 mr-1" /> Delete
-                                </Button>
-                              }
-                              title="Delete Employee"
-                              description={`Are you sure you want to delete ${employee.firstName} ${employee.lastName}? This action cannot be undone.`}
-                              confirmText="Delete"
-                              variant="destructive"
-                              onConfirm={() => handleDeleteEmployee(employee)}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-                </>
-              )}
-            </div>
-          </Card>
-        )}
-
-        {selectedTab === "workers" && (
-          <>
-          {/* Worker Payment Summary */}
-          <Card className="p-6 mb-4">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
-              <h3 className="text-lg font-semibold">Worker Payment Summary</h3>
-              <Button
-                onClick={() => setNewWorkerDialogOpen(true)}
-                data-testid="button-create-worker"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Create Workers
+              <Button onClick={() => setNewWorkerDialogOpen(true)} data-testid="button-new-worker-profile">
+                <Plus className="h-4 w-4 mr-2" /> New Worker
               </Button>
             </div>
-            {workerPaymentSummary ? (
-              <div className="space-y-4">
-                <div className="max-h-60 overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Worker Name</TableHead>
-                        <TableHead className="text-right">Total Paid</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {workerPaymentSummary.workerPayments.map((wp) => (
-                        <TableRow key={wp.workerId} data-testid={`worker-payment-${wp.workerId}`}>
-                          <TableCell className="font-mono">{wp.workerCode}</TableCell>
-                          <TableCell>{wp.workerName}</TableCell>
-                          <TableCell className="text-right font-mono" data-testid={`text-paid-${wp.workerId}`}>
-                            {formatAmount(parseFloat(wp.totalPaid))}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <span className="text-lg font-semibold">Grand Total Paid:</span>
-                  <span className="text-lg font-semibold font-mono" data-testid="text-grand-total">
-                    {formatAmount(parseFloat(workerPaymentSummary.grandTotal))}
-                  </span>
-                </div>
+
+            {workerGroups.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setWorkerProfileGroupFilter(null)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${workerProfileGroupFilter === null ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"}`}
+                  data-testid="filter-group-all"
+                >
+                  All Workers ({workerStaff.length})
+                </button>
+                {workerGroups.map(g => {
+                  const count = workerStaff.filter(w => (g.members || []).some(m => m.id === w.id)).length;
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => setWorkerProfileGroupFilter(g.id)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${workerProfileGroupFilter === g.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"}`}
+                      data-testid={`filter-group-${g.id}`}
+                    >
+                      {g.name} ({count})
+                    </button>
+                  );
+                })}
+                {(() => {
+                  const ungroupedCount = workerStaff.filter(w => !workerGroups.some(g => (g.members || []).some(m => m.id === w.id))).length;
+                  if (ungroupedCount === 0) return null;
+                  return (
+                    <button
+                      onClick={() => setWorkerProfileGroupFilter(-1)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${workerProfileGroupFilter === -1 ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"}`}
+                      data-testid="filter-group-ungrouped"
+                    >
+                      Ungrouped ({ungroupedCount})
+                    </button>
+                  );
+                })()}
               </div>
-            ) : (
-              <Skeleton className="h-40 w-full" />
             )}
-          </Card>
 
-          <Card className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <h2 className="text-lg font-semibold">Bulk Worker Payments</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Select workers and adjust amounts to process bulk salary payments
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCreateWorkerGroupDialogOpen(true)}
-                    data-testid="button-create-worker-group"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Group
-                  </Button>
-                  <Button
-                    onClick={() => setBulkPaymentDialogOpen(true)}
-                    disabled={selectedPayments.length === 0}
-                    data-testid="button-bulk-payment"
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Pay Selected ({selectedPayments.length})
-                  </Button>
-                </div>
-              </div>
+            <input
+              type="text"
+              placeholder="Search by name, code, or department..."
+              value={workerProfileSearch}
+              onChange={(e) => setWorkerProfileSearch(e.target.value)}
+              className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="input-search-worker-profiles"
+            />
 
-              {selectedPayments.length > 0 && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>{selectedPayments.length} workers selected</strong> - Total payment: {formatAmount(totalAmount)}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {workerStaff.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>No workers found</p>
-                  <p className="text-sm mt-2">Create workers from the Create Master Data page</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Worker Groups */}
-                  {workerGroups.map((group) => {
-                    const isExpanded = workerGroupsExpanded[group.id] ?? true;
-                    const groupMembers = group.members || [];
-                    const groupTotal = groupMembers.reduce((sum, member) => {
-                      const payment = workerPayments[member.id];
-                      return sum + (payment?.selected ? parseFloat(payment.amount || "0") : 0);
-                    }, 0);
-                    const selectedCount = groupMembers.filter(m => workerPayments[m.id]?.selected).length;
-                    
-                    return (
-                      <Collapsible
-                        key={group.id}
-                        open={isExpanded}
-                        onOpenChange={(open) => setWorkerGroupsExpanded(prev => ({ ...prev, [group.id]: open }))}
-                      >
-                        <Card className="border">
-                          <CollapsibleTrigger asChild>
-                            <div className="flex items-center justify-between p-4 cursor-pointer hover-elevate">
-                              <div className="flex items-center gap-3">
-                                <ChevronDown className={cn("h-5 w-5 transition-transform", isExpanded && "rotate-180")} />
-                                <div>
-                                  <h3 className="font-semibold">{group.name}</h3>
-                                  <p className="text-sm text-muted-foreground">
-                                    {groupMembers.length} workers - {selectedCount} selected - Total: {formatAmount(groupTotal)}
-                                  </p>
+            {employeesLoading ? (
+              <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-16 rounded-md bg-muted animate-pulse" />)}</div>
+            ) : filteredWorkers.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <HardHat className="mx-auto h-8 w-8 mb-3 opacity-30" />
+                  <p className="text-sm">{workerStaff.length === 0 ? "No workers found. Create workers using the New Worker button." : "No workers match your search or filter."}</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Group</TableHead>
+                          <TableHead className="text-right">Base Salary</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredWorkers.map((worker) => (
+                          <TableRow
+                            key={worker.id}
+                            className="cursor-pointer hover-elevate"
+                            onClick={() => setSelectedWorkerProfileId(worker.id)}
+                            data-testid={`row-worker-profile-${worker.id}`}
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                                  {(worker.firstName?.[0] ?? "").toUpperCase()}{(worker.lastName?.[0] ?? "").toUpperCase()}
                                 </div>
+                                <span className="font-medium text-sm" data-testid={`text-worker-name-${worker.id}`}>{worker.firstName} {worker.lastName}</span>
                               </div>
-                              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedWorkerGroupForMembers(group);
-                                    setWorkerGroupMembersDialogOpen(true);
-                                    // Initialize selections
-                                    const selections: Record<number, boolean> = {};
-                                    groupMembers.forEach(m => { selections[m.id] = true; });
-                                    setWorkerGroupMemberSelections(selections);
-                                  }}
-                                  data-testid={`button-manage-group-${group.id}`}
-                                >
-                                  <Pencil className="h-4 w-4 mr-1" />
-                                  Manage
-                                </Button>
-                                <ConfirmationDialog
-                                  trigger={
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="text-destructive hover:text-destructive"
-                                      data-testid={`button-delete-group-${group.id}`}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  }
-                                  title="Delete Worker Group"
-                                  description={`Are you sure you want to delete the group "${group.name}"? Workers will not be deleted but will become ungrouped.`}
-                                  confirmText="Delete"
-                                  variant="destructive"
-                                  onConfirm={() => deleteWorkerGroupMutation.mutate(group.id)}
-                                />
-                              </div>
-                            </div>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="border-t">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="w-12">
-                                      <Checkbox
-                                        checked={groupMembers.every(m => workerPayments[m.id]?.selected)}
-                                        onCheckedChange={(checked) => {
-                                          groupMembers.forEach(member => {
-                                            setWorkerOverrides(prev => ({
-                                              ...prev,
-                                              [member.id]: {
-                                                ...prev[member.id],
-                                                selected: !!checked,
-                                              }
-                                            }));
-                                          });
-                                        }}
-                                        data-testid={`checkbox-select-all-group-${group.id}`}
-                                      />
-                                    </TableHead>
-                                    <TableHead data-testid="header-name">Name</TableHead>
-                                    <TableHead data-testid="header-monthly-salary" className="text-right">Monthly Salary</TableHead>
-                                    <TableHead data-testid="header-advances" className="text-right">Advances</TableHead>
-                                    <TableHead data-testid="header-payment-amount" className="text-right">Payment Amount</TableHead>
-                                    <TableHead data-testid="header-actions" className="w-16">Actions</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {groupMembers.map((worker) => {
-                                    const advanceInfo = workerAdvances[worker.id] || { total: 0, count: 0 };
-                                    const monthlySalary = parseFloat(worker.monthlySalary || "0");
-                                    const paymentAmount = parseFloat(workerPayments[worker.id]?.amount || "0");
-                                    const hasNegativePayment = paymentAmount < 0;
-                                    
-                                    return (
-                                      <TableRow 
-                                        key={worker.id} 
-                                        data-testid={`row-worker-${worker.id}`}
-                                        className={workerPayments[worker.id]?.selected ? "bg-muted/50" : ""}
-                                      >
-                                        <TableCell>
-                                          <Checkbox
-                                            checked={workerPayments[worker.id]?.selected || false}
-                                            onCheckedChange={() => handleToggleWorker(worker.id)}
-                                            data-testid={`checkbox-worker-${worker.id}`}
-                                          />
-                                        </TableCell>
-                                        <TableCell data-testid={`cell-name-${worker.id}`}>
-                                          <button
-                                            onClick={() => setStatementEmployee(worker)}
-                                            className="flex items-center gap-1 text-primary hover:underline cursor-pointer whitespace-nowrap"
-                                            data-testid={`link-worker-statement-${worker.id}`}
-                                          >
-                                            {worker.firstName} {worker.lastName}
-                                            <DollarSign className="h-3 w-3" />
-                                          </button>
-                                        </TableCell>
-                                        <TableCell data-testid={`cell-monthly-salary-${worker.id}`} className="text-right font-mono text-muted-foreground">
-                                          {formatAmount(monthlySalary)}
-                                        </TableCell>
-                                        <TableCell data-testid={`cell-advances-${worker.id}`} className="text-right font-mono">
-                                          {advanceInfo.total > 0 ? (
-                                            <span className="text-destructive">
-                                              {formatAmount(advanceInfo.total)}
-                                              {advanceInfo.count > 0 && (
-                                                <span className="text-xs text-muted-foreground ml-1">
-                                                  ({advanceInfo.count})
-                                                </span>
-                                              )}
-                                            </span>
-                                          ) : (
-                                            "-"
-                                          )}
-                                        </TableCell>
-                                        <TableCell data-testid={`cell-amount-${worker.id}`} className="text-right">
-                                          <div className="flex items-center justify-end gap-2">
-                                            <Input
-                                              type="number"
-                                              step="0.01"
-                                              value={workerPayments[worker.id]?.amount || "0"}
-                                              onChange={(e) => handleUpdateAmount(worker.id, e.target.value)}
-                                              className={cn(
-                                                "w-32 text-right font-mono",
-                                                hasNegativePayment && "border-destructive"
-                                              )}
-                                              data-testid={`input-amount-${worker.id}`}
-                                            />
-                                            {hasNegativePayment && (
-                                              <AlertCircle className="h-4 w-4 text-destructive" />
-                                            )}
-                                          </div>
-                                        </TableCell>
-                                        <TableCell>
-                                          <ConfirmationDialog
-                                            trigger={
-                                              <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="text-destructive hover:text-destructive"
-                                                data-testid={`button-delete-worker-${worker.id}`}
-                                              >
-                                                <Trash2 className="h-4 w-4" />
-                                              </Button>
-                                            }
-                                            title="Delete Worker"
-                                            description={`Are you sure you want to delete ${worker.firstName} ${worker.lastName}? This action cannot be undone.`}
-                                            confirmText="Delete"
-                                            variant="destructive"
-                                            onConfirm={() => handleDeleteWorker(worker)}
-                                          />
-                                        </TableCell>
-                                      </TableRow>
-                                    );
-                                  })}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </CollapsibleContent>
-                        </Card>
-                      </Collapsible>
-                    );
-                  })}
-
-                  {/* Ungrouped Workers */}
-                  {ungroupedWorkers.length > 0 && (
-                    <Card className="border">
-                      <div className="p-4">
-                        <h3 className="font-semibold text-muted-foreground">Ungrouped Workers</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {ungroupedWorkers.length} workers not assigned to any group
-                        </p>
-                      </div>
-                      <div className="border-t">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-12">
-                                <Checkbox
-                                  checked={ungroupedWorkers.every(w => workerPayments[w.id]?.selected)}
-                                  onCheckedChange={(checked) => {
-                                    ungroupedWorkers.forEach(worker => {
-                                      setWorkerOverrides(prev => ({
-                                        ...prev,
-                                        [worker.id]: {
-                                          ...prev[worker.id],
-                                          selected: !!checked,
-                                        }
-                                      }));
-                                    });
-                                  }}
-                                  data-testid="checkbox-select-all-ungrouped"
-                                />
-                              </TableHead>
-                              <TableHead data-testid="header-name">Name</TableHead>
-                              <TableHead data-testid="header-monthly-salary" className="text-right">Monthly Salary</TableHead>
-                              <TableHead data-testid="header-advances" className="text-right">Advances</TableHead>
-                              <TableHead data-testid="header-payment-amount" className="text-right">Payment Amount</TableHead>
-                              <TableHead data-testid="header-actions" className="w-16">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {ungroupedWorkers.map((worker) => {
-                              const advanceInfo = workerAdvances[worker.id] || { total: 0, count: 0 };
-                              const monthlySalary = parseFloat(worker.monthlySalary || "0");
-                              const paymentAmount = parseFloat(workerPayments[worker.id]?.amount || "0");
-                              const hasNegativePayment = paymentAmount < 0;
-                              
-                              return (
-                                <TableRow 
-                                  key={worker.id} 
-                                  data-testid={`row-worker-${worker.id}`}
-                                  className={workerPayments[worker.id]?.selected ? "bg-muted/50" : ""}
-                                >
-                                  <TableCell>
-                                    <Checkbox
-                                      checked={workerPayments[worker.id]?.selected || false}
-                                      onCheckedChange={() => handleToggleWorker(worker.id)}
-                                      data-testid={`checkbox-worker-${worker.id}`}
-                                    />
-                                  </TableCell>
-                                  <TableCell data-testid={`cell-name-${worker.id}`}>
-                                    <button
-                                      onClick={() => setStatementEmployee(worker)}
-                                      className="flex items-center gap-1 text-primary hover:underline cursor-pointer whitespace-nowrap"
-                                      data-testid={`link-worker-statement-${worker.id}`}
-                                    >
-                                      {worker.firstName} {worker.lastName}
-                                      <DollarSign className="h-3 w-3" />
-                                    </button>
-                                  </TableCell>
-                                  <TableCell data-testid={`cell-monthly-salary-${worker.id}`} className="text-right font-mono text-muted-foreground">
-                                    {formatAmount(monthlySalary)}
-                                  </TableCell>
-                                  <TableCell data-testid={`cell-advances-${worker.id}`} className="text-right font-mono">
-                                    {advanceInfo.total > 0 ? (
-                                      <span className="text-destructive">
-                                        {formatAmount(advanceInfo.total)}
-                                        {advanceInfo.count > 0 && (
-                                          <span className="text-xs text-muted-foreground ml-1">
-                                            ({advanceInfo.count})
-                                          </span>
-                                        )}
-                                      </span>
-                                    ) : (
-                                      "-"
-                                    )}
-                                  </TableCell>
-                                  <TableCell data-testid={`cell-amount-${worker.id}`} className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        value={workerPayments[worker.id]?.amount || "0"}
-                                        onChange={(e) => handleUpdateAmount(worker.id, e.target.value)}
-                                        className={cn(
-                                          "w-32 text-right font-mono",
-                                          hasNegativePayment && "border-destructive"
-                                        )}
-                                        data-testid={`input-amount-${worker.id}`}
-                                      />
-                                      {hasNegativePayment && (
-                                        <AlertCircle className="h-4 w-4 text-destructive" />
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <ConfirmationDialog
-                                      trigger={
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          className="text-destructive hover:text-destructive"
-                                          data-testid={`button-delete-worker-${worker.id}`}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      }
-                                      title="Delete Worker"
-                                      description={`Are you sure you want to delete ${worker.firstName} ${worker.lastName}? This action cannot be undone.`}
-                                      confirmText="Delete"
-                                      variant="destructive"
-                                      onConfirm={() => handleDeleteWorker(worker)}
-                                    />
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </Card>
-                  )}
-
-                  {/* If no groups and no ungrouped workers but workerStaff has items (edge case) */}
-                  {workerGroups.length === 0 && ungroupedWorkers.length === 0 && workerStaff.length > 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p>Workers are being loaded...</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </Card>
-
-          {/* Create Worker Group Dialog */}
-          <Dialog open={createWorkerGroupDialogOpen} onOpenChange={setCreateWorkerGroupDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Worker Group</DialogTitle>
-                <DialogDescription>
-                  Create a new group to organize workers for bulk payments
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="worker-group-name">Group Name</Label>
-                  <Input
-                    id="worker-group-name"
-                    value={newWorkerGroupName}
-                    onChange={(e) => setNewWorkerGroupName(e.target.value)}
-                    placeholder="e.g., Factory A, Construction Team"
-                    data-testid="input-worker-group-name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="worker-group-description">Description (Optional)</Label>
-                  <Textarea
-                    id="worker-group-description"
-                    value={newWorkerGroupDescription}
-                    onChange={(e) => setNewWorkerGroupDescription(e.target.value)}
-                    placeholder="Brief description of this group"
-                    data-testid="input-worker-group-description"
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setCreateWorkerGroupDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => createWorkerGroupMutation.mutate()}
-                    disabled={!newWorkerGroupName.trim() || createWorkerGroupMutation.isPending}
-                    data-testid="button-confirm-create-group"
-                  >
-                    {createWorkerGroupMutation.isPending ? "Creating..." : "Create Group"}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Manage Worker Group Members Dialog */}
-          <Dialog open={workerGroupMembersDialogOpen} onOpenChange={setWorkerGroupMembersDialogOpen}>
-            <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Manage Group: {selectedWorkerGroupForMembers?.name}</DialogTitle>
-                <DialogDescription>
-                  Add or remove workers from this group
-                </DialogDescription>
-              </DialogHeader>
-              {(() => {
-                // Use live query data to get current group membership
-                const currentGroup = workerGroups.find(g => g.id === selectedWorkerGroupForMembers?.id);
-                const currentMembers = currentGroup?.members || [];
-                
-                return (
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Available Workers</h4>
-                    <div className="border rounded-md max-h-96 overflow-y-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-12">In Group</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead className="text-right">Monthly Salary</TableHead>
+                            </TableCell>
+                            <TableCell>
+                              {workerGroupMap[worker.id]
+                                ? <Badge variant="secondary" className="text-xs">{workerGroupMap[worker.id]}</Badge>
+                                : <span className="text-xs text-muted-foreground">—</span>}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm" data-testid={`text-worker-salary-${worker.id}`}>{formatAmount(parseFloat(worker.monthlySalary || "0"))}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-xs ${worker.active === false ? "text-muted-foreground" : "text-green-700 dark:text-green-400"}`} data-testid={`badge-worker-status-${worker.id}`}>
+                                {worker.active === false ? "Inactive" : "Active"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs"
+                                onClick={(e) => { e.stopPropagation(); setSelectedWorkerForEdit(worker); setEditWorkerDialogOpen(true); }}
+                                data-testid={`button-edit-profile-worker-${worker.id}`}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {workerStaff.map((worker) => {
-                            // Use live data to check membership
-                            const isInGroup = currentMembers.some(m => m.id === worker.id);
-                            
-                            return (
-                              <TableRow key={worker.id} data-testid={`row-member-${worker.id}`}>
-                                <TableCell>
-                                  <Checkbox
-                                    checked={isInGroup}
-                                    onCheckedChange={(checked) => {
-                                      if (checked) {
-                                        addWorkerToWorkerGroupMutation.mutate({
-                                          groupId: selectedWorkerGroupForMembers!.id,
-                                          workerId: worker.id,
-                                        });
-                                      } else {
-                                        removeWorkerFromWorkerGroupMutation.mutate({
-                                          groupId: selectedWorkerGroupForMembers!.id,
-                                          workerId: worker.id,
-                                        });
-                                      }
-                                    }}
-                                    disabled={addWorkerToWorkerGroupMutation.isPending || removeWorkerFromWorkerGroupMutation.isPending}
-                                    data-testid={`checkbox-member-${worker.id}`}
-                                  />
-                                </TableCell>
-                                <TableCell>{worker.firstName} {worker.lastName}</TableCell>
-                                <TableCell className="text-right font-mono">
-                                  {formatAmount(parseFloat(worker.monthlySalary || "0"))}
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button onClick={() => setWorkerGroupMembersDialogOpen(false)}>
-                        Done
-                      </Button>
-                    </div>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                );
-              })()}
-            </DialogContent>
-          </Dialog>
-        </>
-        )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-        {selectedTab === "worker-profiles" && (() => {
-          const selectedWorkerProfile = selectedWorkerProfileId
-            ? workerStaff.find(w => w.id === selectedWorkerProfileId) ?? null
-            : null;
+          {/* ── Run Payroll ──────────────────────────────────────── */}
+          <div>
+            <h2 className="text-base font-semibold mb-4">Run Payroll</h2>
+            <ERPRunPayroll />
+          </div>
 
-          // Workers belonging to the selected group filter (-1 = ungrouped)
-          const allGroupedWorkerIds = workerGroups.flatMap(g => (g.members || []).map(m => m.id));
-          const workerIdsInSelectedGroup = workerProfileGroupFilter === -1
-            ? workerStaff.filter(w => !allGroupedWorkerIds.includes(w.id)).map(w => w.id)
-            : workerProfileGroupFilter !== null
-              ? (workerGroups.find(g => g.id === workerProfileGroupFilter)?.members || []).map(m => m.id)
-              : null;
+          {/* ── Advances ─────────────────────────────────────────── */}
+          <div>
+            <h2 className="text-base font-semibold mb-4">Advances</h2>
+            <ERPAdvancesTab />
+          </div>
 
-          const filteredWorkers = workerStaff.filter(w => {
-            if (workerIdsInSelectedGroup !== null && !workerIdsInSelectedGroup.includes(w.id)) return false;
-            const q = workerProfileSearch.toLowerCase();
-            if (!q) return true;
-            return (
-              `${w.firstName} ${w.lastName}`.toLowerCase().includes(q) ||
-              (w.code || "").toLowerCase().includes(q) ||
-              (w.department || "").toLowerCase().includes(q)
-            );
-          });
-
-          // Group membership lookup: workerId → group name
-          const workerGroupMap: Record<number, string> = {};
-          workerGroups.forEach(g => (g.members || []).forEach(m => { workerGroupMap[m.id] = g.name; }));
-
-          if (selectedWorkerProfile) {
-            return (
-              <ERPWorkerDetail
-                worker={selectedWorkerProfile as any}
-                onBack={() => setSelectedWorkerProfileId(null)}
-                onEdit={(w) => {
-                  setSelectedWorkerForEdit(w as any);
-                  setEditWorkerDialogOpen(true);
-                }}
-              />
-            );
-          }
-
-          return (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <h2 className="text-lg font-semibold">Worker Profiles</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Click a worker to view their profile, statement, advances, and documents
-                  </p>
-                </div>
-                <Button onClick={() => setNewWorkerDialogOpen(true)} data-testid="button-new-worker-profile">
-                  <Plus className="h-4 w-4 mr-2" /> New Worker
-                </Button>
-              </div>
-
-              {/* Group filter tabs */}
-              {workerGroups.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setWorkerProfileGroupFilter(null)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${workerProfileGroupFilter === null ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"}`}
-                    data-testid="filter-group-all"
-                  >
-                    All Workers ({workerStaff.length})
-                  </button>
-                  {workerGroups.map(g => {
-                    const count = workerStaff.filter(w => (g.members || []).some(m => m.id === w.id)).length;
-                    return (
-                      <button
-                        key={g.id}
-                        onClick={() => setWorkerProfileGroupFilter(g.id)}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${workerProfileGroupFilter === g.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"}`}
-                        data-testid={`filter-group-${g.id}`}
-                      >
-                        {g.name} ({count})
-                      </button>
-                    );
-                  })}
-                  {/* Ungrouped workers button */}
-                  {(() => {
-                    const ungroupedCount = workerStaff.filter(w => !workerGroups.some(g => (g.members || []).some(m => m.id === w.id))).length;
-                    if (ungroupedCount === 0) return null;
-                    return (
-                      <button
-                        onClick={() => setWorkerProfileGroupFilter(-1)}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${workerProfileGroupFilter === -1 ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"}`}
-                        data-testid="filter-group-ungrouped"
-                      >
-                        Ungrouped ({ungroupedCount})
-                      </button>
-                    );
-                  })()}
-                </div>
-              )}
-
-              <input
-                type="text"
-                placeholder="Search by name, code, or department..."
-                value={workerProfileSearch}
-                onChange={(e) => setWorkerProfileSearch(e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                data-testid="input-search-worker-profiles"
-              />
-
-              {employeesLoading ? (
-                <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-16 rounded-md bg-muted animate-pulse" />)}</div>
-              ) : filteredWorkers.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center text-muted-foreground">
-                    <HardHat className="mx-auto h-8 w-8 mb-3 opacity-30" />
-                    <p className="text-sm">{workerStaff.length === 0 ? "No workers found. Create workers using the New Worker button." : "No workers match your search or filter."}</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Group</TableHead>
-                            <TableHead className="text-right">Base Salary</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredWorkers.map((worker) => (
-                            <TableRow
-                              key={worker.id}
-                              className="cursor-pointer hover-elevate"
-                              onClick={() => setSelectedWorkerProfileId(worker.id)}
-                              data-testid={`row-worker-profile-${worker.id}`}
-                            >
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-semibold flex-shrink-0">
-                                    {(worker.firstName?.[0] ?? "").toUpperCase()}{(worker.lastName?.[0] ?? "").toUpperCase()}
-                                  </div>
-                                  <span className="font-medium text-sm" data-testid={`text-worker-name-${worker.id}`}>{worker.firstName} {worker.lastName}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                {workerGroupMap[worker.id]
-                                  ? <Badge variant="secondary" className="text-xs">{workerGroupMap[worker.id]}</Badge>
-                                  : <span className="text-xs text-muted-foreground">—</span>}
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-sm" data-testid={`text-worker-salary-${worker.id}`}>{formatAmount(parseFloat(worker.monthlySalary || "0"))}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className={`text-xs ${worker.active === false ? "text-muted-foreground" : "text-green-700 dark:text-green-400"}`} data-testid={`badge-worker-status-${worker.id}`}>
-                                  {worker.active === false ? "Inactive" : "Active"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-xs"
-                                  onClick={(e) => { e.stopPropagation(); setSelectedWorkerForEdit(worker); setEditWorkerDialogOpen(true); }}
-                                  data-testid={`button-edit-profile-worker-${worker.id}`}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          );
-        })()}
-
-        {selectedTab === "run-payroll" && (
-          <ERPRunPayroll />
-        )}
-
-        {selectedTab === "advances" && (
-          <ERPAdvancesTab />
-        )}
         </div>
+      )}
       </div>
 
       {/* Employee Deposit Dialog */}
