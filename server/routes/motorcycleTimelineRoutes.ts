@@ -4,11 +4,7 @@ import { requireAuth, requireNonPOS } from "../auth";
 import { db } from "../db";
 import { asyncHandler } from "../lib/asyncHandler";
 import { lifecycleNeedsAttention } from "../services/motorcycles/lifecyclePolicy";
-import {
-  companyIdFrom,
-  getMotorcycle,
-  positiveId,
-} from "../services/motorcycles/lifecycleQueries";
+import { companyIdFrom, getMotorcycle, positiveId } from "../services/motorcycles/lifecycleQueries";
 
 type TimelineEvent = {
   id: string;
@@ -32,8 +28,9 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
       const motorcycle = await getMotorcycle(companyId, motorcycleId);
       if (!motorcycle) return res.status(404).json({ message: "Motorcycle not found" });
 
-      const [serviceResult, warrantyResult, communicationResult, assemblyResult] = await Promise.all([
-        db.execute(sql`
+      const [serviceResult, warrantyResult, communicationResult, assemblyResult] =
+        await Promise.all([
+          db.execute(sql`
           SELECT
             id,
             service_date AS date,
@@ -48,7 +45,7 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
             AND deleted_at IS NULL
           ORDER BY service_date DESC, id DESC
         `),
-        db.execute(sql`
+          db.execute(sql`
           SELECT
             id,
             warranty_start_date AS date,
@@ -62,7 +59,7 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
             AND deleted_at IS NULL
           ORDER BY warranty_start_date DESC, id DESC
         `),
-        db.execute(sql`
+          db.execute(sql`
           SELECT
             id,
             contact_date AS date,
@@ -74,7 +71,7 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
             AND deleted_at IS NULL
           ORDER BY contact_date DESC, id DESC
         `),
-        db.execute(sql`
+          db.execute(sql`
           SELECT
             ah.id,
             ah.created_at AS date,
@@ -94,7 +91,7 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
             AND link.motorcycle_id = ${motorcycleId}
           ORDER BY ah.created_at DESC, ah.id DESC
         `),
-      ]);
+        ]);
 
       const events: TimelineEvent[] = [
         {
@@ -112,7 +109,9 @@ export function registerMotorcycleTimelineRoutes(app: Express): void {
           type: "sale",
           date: motorcycle.saleDate,
           title: "Motorcycle sold",
-          description: [motorcycle.customerName, motorcycle.invoiceNumber].filter(Boolean).join(" · "),
+          description: [motorcycle.customerName, motorcycle.invoiceNumber]
+            .filter(Boolean)
+            .join(" · "),
         });
       }
 

@@ -74,19 +74,24 @@ The motorcycle registry must use engine and chassis numbers as durable identifie
 
 ## Phase 4C — Workshop and assembly lifecycle
 
-### Planned scope
+### Completed scope
 
-- select registered motorcycles in service and warranty records
-- show a unified motorcycle timeline for sale, warranty, service, communication, and assembly events
-- connect completed assembly output to the individual motorcycle registry where applicable
-- add operational lifecycle filters and exception indicators
+- link service, warranty, and communication records to an individual registered motorcycle
+- keep existing customer service-center and historical free-text records compatible
+- show a unified timeline for registry, sale, warranty, service, communication, and assembly events
+- register completed Final Product assembly output as individual motorcycles without changing aggregate inventory
+- cap registrations at completed output quantity and prevent reopening linked completed output
+- add lifecycle counts, exception indicators, and operational filters to the motorcycle registry
+- lock motorcycle removal after workshop or assembly history exists
 
 ### Acceptance
 
-- Workshop users can locate a motorcycle by engine or chassis number.
-- Service and warranty history remains company- and customer-scoped.
-- Assembly and workshop linkage does not mutate accounting or stock outside existing approved flows.
+- Workshop users can locate a motorcycle by engine or chassis number and open its complete lifecycle.
+- New service, warranty, and communication records remain company- and customer-scoped.
+- Completed assembly output can create only the number of individual units recorded as completed.
+- Assembly and workshop linkage does not create, reverse, or mutate accounting or stock movements.
+- Existing customer, workshop, warranty, communication, and assembly pages remain compatible.
 
-## Definition of done for Phases 4A–4B
+## Definition of done for Phases 4A–4C
 
-Phases 4A–4B are complete only after the migration chain is idempotent, formatting and lint pass with zero warnings, package and whole-application TypeScript checks pass, CI-safe tests and production build pass, and all permanent PostgreSQL financial, payroll, stock, container, POS-value, report, and audit regressions remain green.
+Phases 4A–4C are complete only after the migration chain is idempotent, formatting and lint pass with zero warnings, package and whole-application TypeScript checks pass, CI-safe tests and production build pass, and all permanent PostgreSQL financial, payroll, stock, container, POS-value, report, and audit regressions remain green.

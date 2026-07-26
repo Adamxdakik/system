@@ -1,6 +1,19 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Bike, Link2, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  Bike,
+  Factory,
+  Link2,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { AssemblyMotorcycleRegisterDialog } from "@/components/AssemblyMotorcycleRegisterDialog";
+import { MotorcycleLifecycleDialog } from "@/components/MotorcycleLifecycleDialog";
 import { MotorcycleSaleLinkDialog } from "@/components/MotorcycleSaleLinkDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,6 +70,16 @@ interface MotorcycleRecord {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+interface LifecycleOverview {
+  motorcycleId: number;
+  serviceCount: number;
+  warrantyCount: number;
+  activeWarrantyCount: number;
+  communicationCount: number;
+  assemblyLinked: boolean;
+  needsAttention: boolean;
 }
 
 interface CustomerOption {
@@ -171,6 +194,9 @@ export default function Motorcycles() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saleLinkRecord, setSaleLinkRecord] = useState<MotorcycleRecord | null>(null);
+  const [lifecycleRecord, setLifecycleRecord] = useState<MotorcycleRecord | null>(null);
+  const [isAssemblyRegisterOpen, setIsAssemblyRegisterOpen] = useState(false);
+  const [lifecycleFilter, setLifecycleFilter] = useState("all");
   const [form, setForm] = useState<MotorcycleFormState>(blankForm);
 
   const queryParams = useMemo(() => {
@@ -199,6 +225,11 @@ export default function Motorcycles() {
       }
       return response.json();
     },
+  });
+
+  const { data: lifecycleOverview = [] } = useQuery<LifecycleOverview[]>({
+    queryKey: ["/api/motorcycle-lifecycle/overview", selectedCompany?.id],
+    enabled: !!selectedCompany?.id,
   });
 
   const { data: customers = [] } = useQuery<CustomerOption[]>({
@@ -281,6 +312,40 @@ export default function Motorcycles() {
     }),
     [motorcycles],
   );
+
+  const lifecycleById = useMemo(
+    () => new Map(lifecycleOverview.map((overview) => [overview.motorcycleId, overview])),
+    [lifecycleOverview],
+  );
+
+  const visibleMotorcycles = useMemo(() => {
+    if (lifecycleFilter === "all") return motorcycles;
+    return motorcycles.filter((record) => {
+      const overview = lifecycleById.get(record.id);
+      if (!overview) return lifecycleFilter === "no-history";
+      switch (lifecycleFilter) {
+        case "attention":
+          return overview.needsAttention;
+        case "service":
+          return overview.serviceCount > 0;
+        case "warranty":
+          return overview.activeWarrantyCount > 0;
+        case "assembly":
+          return overview.assemblyLinked;
+        case "no-history":
+          return (
+            overview.serviceCount === 0 &&
+            overview.warrantyCount === 0 &&
+            overview.communicationCount === 0 &&
+            !overview.assemblyLinked
+          );
+        default:
+          return true;
+      }
+    });
+  }, [lifecycleById, lifecycleFilter, motorcycles]);
+
+  const attentionCount = lifecycleOverview.filter((record) => record.needsAttention).length;
 
   const updateForm = <K extends keyof MotorcycleFormState>(
     key: K,
@@ -388,10 +453,21 @@ export default function Motorcycles() {
             and service.
           </p>
         </div>
-        <Button onClick={openCreate} className="gap-2" data-testid="button-add-motorcycle">
-          <Plus className="h-4 w-4" />
-          Add motorcycle
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsAssemblyRegisterOpen(true)}
+            className="gap-2"
+            data-testid="button-register-assembly-unit"
+          >
+            <Factory className="h-4 w-4" />
+            Register assembly unit
+          </Button>
+          <Button onClick={openCreate} className="gap-2" data-testid="button-add-motorcycle">
+            <Plus className="h-4 w-4" />
+            Add motorcycle
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -421,6 +497,15 @@ export default function Motorcycles() {
         </Card>
       </div>
 
+      {attentionCount > 0 && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+          <AlertTriangle className="h-4 w-4 text-destructive" />
+          <span>
+            {attentionCount} motorcycle{attentionCount === 1 ? "" : "s"} need lifecycle review.
+          </span>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Find a motorcycle</CardTitle>
@@ -428,7 +513,7 @@ export default function Motorcycles() {
             Search by brand, model, engine number, chassis number, invoice, customer, or container.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_220px_auto]">
+        <CardContent className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_190px_190px_210px_auto]">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -465,7 +550,28 @@ export default function Motorcycles() {
               </option>
             ))}
           </select>
-          <Button variant="outline" onClick={() => refetch()} className="gap-2">
+          <select
+            className={selectClassName}
+            value={lifecycleFilter}
+            onChange={(event) => setLifecycleFilter(event.target.value)}
+            aria-label="Filter by lifecycle"
+            data-testid="select-motorcycle-lifecycle-filter"
+          >
+            <option value="all">All lifecycle records</option>
+            <option value="attention">Needs attention</option>
+            <option value="service">Has service history</option>
+            <option value="warranty">Active warranty</option>
+            <option value="assembly">Assembly linked</option>
+            <option value="no-history">No lifecycle history</option>
+          </select>
+          <Button
+            variant="outline"
+            onClick={() => {
+              refetch();
+              queryClient.invalidateQueries({ queryKey: ["/api/motorcycle-lifecycle/overview"] });
+            }}
+            className="gap-2"
+          >
             <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
@@ -491,7 +597,7 @@ export default function Motorcycles() {
                 Try again
               </Button>
             </div>
-          ) : motorcycles.length === 0 ? (
+          ) : visibleMotorcycles.length === 0 ? (
             <div className="flex min-h-56 flex-col items-center justify-center gap-3 text-center">
               <div className="rounded-full bg-muted p-4">
                 <Bike className="h-7 w-7 text-muted-foreground" />
@@ -517,11 +623,12 @@ export default function Motorcycles() {
                     <TableHead>Customer / invoice</TableHead>
                     <TableHead className="text-right">Cost</TableHead>
                     <TableHead className="text-right">Selling price</TableHead>
-                    <TableHead className="w-24 text-right">Actions</TableHead>
+                    <TableHead>Lifecycle</TableHead>
+                    <TableHead className="w-32 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {motorcycles.map((record) => (
+                  {visibleMotorcycles.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell>
                         <div className="font-medium">
@@ -564,7 +671,45 @@ export default function Motorcycles() {
                         {formatMoney(record.sellingPrice)}
                       </TableCell>
                       <TableCell>
+                        {(() => {
+                          const overview = lifecycleById.get(record.id);
+                          if (!overview)
+                            return <span className="text-xs text-muted-foreground">—</span>;
+                          return (
+                            <div className="space-y-1 text-xs">
+                              <div className="flex flex-wrap gap-1">
+                                {overview.serviceCount > 0 && (
+                                  <Badge variant="outline">{overview.serviceCount} service</Badge>
+                                )}
+                                {overview.activeWarrantyCount > 0 && (
+                                  <Badge variant="outline">Warranty</Badge>
+                                )}
+                                {overview.assemblyLinked && (
+                                  <Badge variant="outline">Assembly</Badge>
+                                )}
+                                {overview.needsAttention && (
+                                  <Badge variant="destructive">Review</Badge>
+                                )}
+                              </div>
+                              <span className="text-muted-foreground">
+                                {overview.communicationCount} communication
+                                {overview.communicationCount === 1 ? "" : "s"}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setLifecycleRecord(record)}
+                            aria-label="Open motorcycle lifecycle"
+                            data-testid={`button-motorcycle-lifecycle-${record.id}`}
+                          >
+                            <Activity className="h-4 w-4" />
+                          </Button>
                           {(record.status === "IN_STOCK" || record.status === "RESERVED") && (
                             <Button
                               variant="ghost"
@@ -884,6 +1029,23 @@ export default function Motorcycles() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MotorcycleLifecycleDialog
+        motorcycle={lifecycleRecord}
+        open={Boolean(lifecycleRecord)}
+        onOpenChange={(open) => {
+          if (!open) setLifecycleRecord(null);
+        }}
+      />
+
+      <AssemblyMotorcycleRegisterDialog
+        open={isAssemblyRegisterOpen}
+        onOpenChange={setIsAssemblyRegisterOpen}
+        onRegistered={() => {
+          refetch();
+          queryClient.invalidateQueries({ queryKey: ["/api/motorcycle-lifecycle/overview"] });
+        }}
+      />
 
       <MotorcycleSaleLinkDialog
         motorcycle={saleLinkRecord}

@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
 import { registerMotorcycleAssemblyLifecycleRoutes } from "./routes/motorcycleAssemblyLifecycleRoutes";
+import { registerMotorcycleLifecycleOverviewRoutes } from "./routes/motorcycleLifecycleOverviewRoutes";
 import { registerMotorcycleRecordRoutes } from "./routes/motorcycleRecordRoutes";
 import { registerMotorcycleSaleCustomerRoutes } from "./routes/motorcycleSaleCustomerRoutes";
 import { registerMotorcycleSaleRoutes } from "./routes/motorcycleSaleRoutes";
@@ -137,6 +138,7 @@ app.use(apiRequestLogger(log));
   // Lifecycle guards must run before generic assembly, service, and registry routes.
   registerMotorcycleWorkshopRoutes(app);
   registerMotorcycleTimelineRoutes(app);
+  registerMotorcycleLifecycleOverviewRoutes(app);
   registerMotorcycleAssemblyLifecycleRoutes(app);
   registerMotorcycleSaleCustomerRoutes(app);
   registerMotorcycleSaleRoutes(app);

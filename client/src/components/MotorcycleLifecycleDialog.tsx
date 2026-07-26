@@ -1,14 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  Activity,
-  Bike,
-  Factory,
-  MessageSquare,
-  Shield,
-  ShoppingCart,
-  Wrench,
-} from "lucide-react";
+import { Activity, Bike, Factory, MessageSquare, Shield, ShoppingCart, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -189,7 +181,11 @@ export function MotorcycleLifecycleDialog({
       setVoidReason("");
     },
     onError: (error: Error) => {
-      toast({ title: "Could not save lifecycle record", description: error.message, variant: "destructive" });
+      toast({
+        title: "Could not save lifecycle record",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -222,19 +218,29 @@ export function MotorcycleLifecycleDialog({
           <div className="overflow-x-auto">
             <TabsList className="inline-flex min-w-max">
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              <TabsTrigger value="service" disabled={!hasCustomer}>Add service</TabsTrigger>
-              <TabsTrigger value="warranty" disabled={!hasCustomer}>Add warranty</TabsTrigger>
-              <TabsTrigger value="communication" disabled={!hasCustomer}>Add communication</TabsTrigger>
+              <TabsTrigger value="service" disabled={!hasCustomer}>
+                Add service
+              </TabsTrigger>
+              <TabsTrigger value="warranty" disabled={!hasCustomer}>
+                Add warranty
+              </TabsTrigger>
+              <TabsTrigger value="communication" disabled={!hasCustomer}>
+                Add communication
+              </TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="timeline" className="space-y-4 pt-3">
             {isLoading ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">Loading lifecycle...</div>
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                Loading lifecycle...
+              </div>
             ) : isError || !timeline ? (
               <div className="flex flex-col items-center gap-3 py-12 text-center">
                 <p className="text-sm text-muted-foreground">Could not load this lifecycle.</p>
-                <Button variant="outline" onClick={() => refetch()}>Retry</Button>
+                <Button variant="outline" onClick={() => refetch()}>
+                  Retry
+                </Button>
               </div>
             ) : (
               <>
@@ -287,7 +293,9 @@ export function MotorcycleLifecycleDialog({
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <p className="font-medium">{event.title}</p>
-                              <span className="text-xs text-muted-foreground">{formatDate(event.date)}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(event.date)}
+                              </span>
                             </div>
                             <p className="mt-1 text-sm text-muted-foreground">
                               {event.description || "No additional details"}
@@ -306,33 +314,78 @@ export function MotorcycleLifecycleDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="lifecycle-service-date">Service date *</Label>
-                <Input id="lifecycle-service-date" type="date" value={serviceDate} onChange={(event) => setServiceDate(event.target.value)} />
+                <Input
+                  id="lifecycle-service-date"
+                  type="date"
+                  value={serviceDate}
+                  onChange={(event) => setServiceDate(event.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lifecycle-service-type">Service type *</Label>
-                <select id="lifecycle-service-type" className={selectClassName} value={serviceType} onChange={(event) => setServiceType(event.target.value)}>
-                  {SERVICE_TYPES.map((type) => <option key={type}>{type}</option>)}
+                <select
+                  id="lifecycle-service-type"
+                  className={selectClassName}
+                  value={serviceType}
+                  onChange={(event) => setServiceType(event.target.value)}
+                >
+                  {SERVICE_TYPES.map((type) => (
+                    <option key={type}>{type}</option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lifecycle-mileage">Mileage</Label>
-                <Input id="lifecycle-mileage" type="number" min="0" value={mileage} onChange={(event) => setMileage(event.target.value)} />
+                <Input
+                  id="lifecycle-mileage"
+                  type="number"
+                  min="0"
+                  value={mileage}
+                  onChange={(event) => setMileage(event.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lifecycle-technician">Technician</Label>
-                <Input id="lifecycle-technician" value={technicianName} onChange={(event) => setTechnicianName(event.target.value)} />
+                <Input
+                  id="lifecycle-technician"
+                  value={technicianName}
+                  onChange={(event) => setTechnicianName(event.target.value)}
+                />
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="lifecycle-parts">Parts used</Label>
-                <Input id="lifecycle-parts" value={partsUsed} onChange={(event) => setPartsUsed(event.target.value)} />
+                <Input
+                  id="lifecycle-parts"
+                  value={partsUsed}
+                  onChange={(event) => setPartsUsed(event.target.value)}
+                />
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="lifecycle-service-notes">Notes</Label>
-                <Textarea id="lifecycle-service-notes" value={serviceNotes} onChange={(event) => setServiceNotes(event.target.value)} />
+                <Textarea
+                  id="lifecycle-service-notes"
+                  value={serviceNotes}
+                  onChange={(event) => setServiceNotes(event.target.value)}
+                />
               </div>
             </div>
             <div className="flex justify-end">
-              <Button disabled={recordMutation.isPending || !serviceDate || !serviceType} onClick={() => recordMutation.mutate({ path: "service-records", payload: { serviceDate, serviceType, mileage: mileage ? Number(mileage) : null, technicianName: technicianName || null, partsUsed: partsUsed || null, notes: serviceNotes || null } })}>
+              <Button
+                disabled={recordMutation.isPending || !serviceDate || !serviceType}
+                onClick={() =>
+                  recordMutation.mutate({
+                    path: "service-records",
+                    payload: {
+                      serviceDate,
+                      serviceType,
+                      mileage: mileage ? Number(mileage) : null,
+                      technicianName: technicianName || null,
+                      partsUsed: partsUsed || null,
+                      notes: serviceNotes || null,
+                    },
+                  })
+                }
+              >
                 {recordMutation.isPending ? "Saving..." : "Add service record"}
               </Button>
             </div>
@@ -342,31 +395,74 @@ export function MotorcycleLifecycleDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="lifecycle-warranty-date">Warranty start *</Label>
-                <Input id="lifecycle-warranty-date" type="date" value={warrantyStartDate} onChange={(event) => setWarrantyStartDate(event.target.value)} />
+                <Input
+                  id="lifecycle-warranty-date"
+                  type="date"
+                  value={warrantyStartDate}
+                  onChange={(event) => setWarrantyStartDate(event.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lifecycle-warranty-duration">Duration (months) *</Label>
-                <Input id="lifecycle-warranty-duration" type="number" min="1" max="120" value={warrantyDuration} onChange={(event) => setWarrantyDuration(event.target.value)} />
+                <Input
+                  id="lifecycle-warranty-duration"
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={warrantyDuration}
+                  onChange={(event) => setWarrantyDuration(event.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lifecycle-warranty-status">Status *</Label>
-                <select id="lifecycle-warranty-status" className={selectClassName} value={warrantyStatus} onChange={(event) => setWarrantyStatus(event.target.value)}>
-                  <option>Active</option><option>Expired</option><option>Void</option>
+                <select
+                  id="lifecycle-warranty-status"
+                  className={selectClassName}
+                  value={warrantyStatus}
+                  onChange={(event) => setWarrantyStatus(event.target.value)}
+                >
+                  <option>Active</option>
+                  <option>Expired</option>
+                  <option>Void</option>
                 </select>
               </div>
               {warrantyStatus === "Void" && (
                 <div className="space-y-2">
                   <Label htmlFor="lifecycle-void-reason">Void reason</Label>
-                  <Input id="lifecycle-void-reason" value={voidReason} onChange={(event) => setVoidReason(event.target.value)} />
+                  <Input
+                    id="lifecycle-void-reason"
+                    value={voidReason}
+                    onChange={(event) => setVoidReason(event.target.value)}
+                  />
                 </div>
               )}
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="lifecycle-warranty-notes">Notes</Label>
-                <Textarea id="lifecycle-warranty-notes" value={warrantyNotes} onChange={(event) => setWarrantyNotes(event.target.value)} />
+                <Textarea
+                  id="lifecycle-warranty-notes"
+                  value={warrantyNotes}
+                  onChange={(event) => setWarrantyNotes(event.target.value)}
+                />
               </div>
             </div>
             <div className="flex justify-end">
-              <Button disabled={recordMutation.isPending || !warrantyStartDate || Number(warrantyDuration) < 1} onClick={() => recordMutation.mutate({ path: "warranty-records", payload: { warrantyStartDate, warrantyDuration: Number(warrantyDuration), warrantyStatus, voidReason: voidReason || null, notes: warrantyNotes || null } })}>
+              <Button
+                disabled={
+                  recordMutation.isPending || !warrantyStartDate || Number(warrantyDuration) < 1
+                }
+                onClick={() =>
+                  recordMutation.mutate({
+                    path: "warranty-records",
+                    payload: {
+                      warrantyStartDate,
+                      warrantyDuration: Number(warrantyDuration),
+                      warrantyStatus,
+                      voidReason: voidReason || null,
+                      notes: warrantyNotes || null,
+                    },
+                  })
+                }
+              >
                 {recordMutation.isPending ? "Saving..." : "Add warranty record"}
               </Button>
             </div>
@@ -376,21 +472,44 @@ export function MotorcycleLifecycleDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="lifecycle-contact-date">Contact date *</Label>
-                <Input id="lifecycle-contact-date" type="date" value={contactDate} onChange={(event) => setContactDate(event.target.value)} />
+                <Input
+                  id="lifecycle-contact-date"
+                  type="date"
+                  value={contactDate}
+                  onChange={(event) => setContactDate(event.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lifecycle-contact-type">Contact type *</Label>
-                <select id="lifecycle-contact-type" className={selectClassName} value={contactType} onChange={(event) => setContactType(event.target.value)}>
-                  <option>Call</option><option>WhatsApp</option>
+                <select
+                  id="lifecycle-contact-type"
+                  className={selectClassName}
+                  value={contactType}
+                  onChange={(event) => setContactType(event.target.value)}
+                >
+                  <option>Call</option>
+                  <option>WhatsApp</option>
                 </select>
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="lifecycle-communication-notes">Notes</Label>
-                <Textarea id="lifecycle-communication-notes" value={communicationNotes} onChange={(event) => setCommunicationNotes(event.target.value)} />
+                <Textarea
+                  id="lifecycle-communication-notes"
+                  value={communicationNotes}
+                  onChange={(event) => setCommunicationNotes(event.target.value)}
+                />
               </div>
             </div>
             <div className="flex justify-end">
-              <Button disabled={recordMutation.isPending || !contactDate} onClick={() => recordMutation.mutate({ path: "communication-records", payload: { contactDate, contactType, notes: communicationNotes || null } })}>
+              <Button
+                disabled={recordMutation.isPending || !contactDate}
+                onClick={() =>
+                  recordMutation.mutate({
+                    path: "communication-records",
+                    payload: { contactDate, contactType, notes: communicationNotes || null },
+                  })
+                }
+              >
                 {recordMutation.isPending ? "Saving..." : "Add communication"}
               </Button>
             </div>

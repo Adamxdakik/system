@@ -152,10 +152,7 @@ export function registerMotorcycleAssemblyLifecycleRoutes(app: Express): void {
           const input = parsed.data;
           const model = cleanText(input.bikeModel) || history.stockItemName;
           if (!model) throw routeError("Motorcycle model is required", 400);
-          const notes = [
-            `Registered from assembly history #${historyId}`,
-            cleanText(input.notes),
-          ]
+          const notes = [`Registered from assembly history #${historyId}`, cleanText(input.notes)]
             .filter(Boolean)
             .join(" · ");
 

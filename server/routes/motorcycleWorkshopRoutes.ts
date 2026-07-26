@@ -50,7 +50,9 @@ export function registerMotorcycleWorkshopRoutes(app: Express): void {
       if (!motorcycleId) return res.status(400).json({ message: "Invalid motorcycle ID" });
       const parsed = serviceInputSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Invalid service" });
+        return res
+          .status(400)
+          .json({ message: parsed.error.issues[0]?.message ?? "Invalid service" });
       }
 
       try {
@@ -103,7 +105,9 @@ export function registerMotorcycleWorkshopRoutes(app: Express): void {
       if (!motorcycleId) return res.status(400).json({ message: "Invalid motorcycle ID" });
       const parsed = warrantyInputSchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: parsed.error.issues[0]?.message ?? "Invalid warranty" });
+        return res
+          .status(400)
+          .json({ message: parsed.error.issues[0]?.message ?? "Invalid warranty" });
       }
 
       try {
