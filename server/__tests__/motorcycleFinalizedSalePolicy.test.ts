@@ -6,6 +6,8 @@ import {
   linkedSaleCanBeReleased,
   motorcycleAndVoucherLocationsMatch,
   motorcyclePriceFitsVoucher,
+  resolveFinalizedInvoiceCustomer,
+  voucherCustomerMatchesSelection,
   warrantyDatesAreValid,
 } from "../services/motorcycles/finalizedSalePolicy";
 
@@ -54,6 +56,17 @@ describe("motorcycle finalized sale policy", () => {
     expect(combinedMotorcyclePricesFitVoucher("3000.00", "2000.00", "5000.00")).toBe(true);
     expect(combinedMotorcyclePricesFitVoucher("3000.00", "2000.01", "5000.00")).toBe(false);
     expect(combinedMotorcyclePricesFitVoucher("0", "5000.00", "5000.00")).toBe(true);
+  });
+
+  it("resolves and locks the finalized invoice customer", () => {
+    expect(resolveFinalizedInvoiceCustomer(21, 22)).toBe(21);
+    expect(resolveFinalizedInvoiceCustomer(null, 22)).toBe(22);
+    expect(resolveFinalizedInvoiceCustomer(null, null)).toBeNull();
+
+    expect(voucherCustomerMatchesSelection(21, 21)).toBe(true);
+    expect(voucherCustomerMatchesSelection(21, 22)).toBe(false);
+    expect(voucherCustomerMatchesSelection(21, null)).toBe(true);
+    expect(voucherCustomerMatchesSelection(null, 22)).toBe(true);
   });
 
   it("validates warranty order and requires reversal before release", () => {
