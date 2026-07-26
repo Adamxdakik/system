@@ -13,32 +13,35 @@ Program 6 is stacked on the reviewed Program 5 head. It must not change accounti
 
 ## Phase 6A — Frontend quality and resilience
 
-**Status:** implementation in progress on the stacked Program 6 branch.
+**Status:** implementation complete; permanent CI validation in progress on the cleaned stacked branch.
 
 ### Initial audit findings
 
-- route errors remain latched in the shared error boundary after navigation
-- stale deployment chunks are displayed as generic page failures instead of recovering once
-- lazy-route loading indicators do not expose a screen-reader status
-- the authenticated heartbeat sends while the tab is hidden and duplicates setup logic inside the router
-- icon-only application controls need explicit accessible names
-- authentication failure briefly renders a blank screen while redirecting to sign-in
+- route errors remained latched in the shared error boundary after navigation
+- stale deployment chunks were displayed as generic page failures instead of recovering once
+- lazy-route loading indicators did not expose a screen-reader status
+- the authenticated heartbeat sent while the tab was hidden and duplicated setup logic inside the router
+- icon-only application controls needed explicit accessible names
+- authentication failure briefly rendered a blank screen while redirecting to sign-in
 
-### Implementation scope
+### Completed implementation
 
-- add route-aware error-boundary reset behavior
-- recognize stale lazy-loaded deployment chunks and permit one guarded reload
-- add a manual application reload action for unrecoverable frontend failures
-- replace anonymous spinners with an accessible shared page loader
-- move heartbeat behavior into a visibility-aware hook
-- expose accessible names for icon-only global controls
+- reset page-level error boundaries whenever the authenticated route changes
+- recognize stale lazy-loaded deployment chunks and permit one guarded automatic reload
+- prevent stale-chunk reload loops with a 60-second session guard
+- tolerate privacy-restricted browser storage without crashing recovery handling
+- provide manual page retry and full-application reload actions
+- replace anonymous spinners with an accessible shared page loader using `role="status"`
+- move heartbeat behavior into a hook that pauses while offline or hidden
+- use `keepalive` for the authenticated heartbeat during page transitions
+- expose accessible labels for global sign-out and sidebar controls
 - show an explicit loading state while returning an unauthenticated session to sign-in
-- add regression tests for stale-chunk detection and reload-loop prevention
+- add regression tests for stale-chunk recognition, reload-loop prevention, guard expiry, and restricted storage
 
 ### Acceptance
 
 - ordinary rendering failures can be retried without a full refresh
-- navigation clears a previous page-level error state
+- navigation clears a previous page-level error state in both POS and desktop layouts
 - stale deployment chunks reload at most once per guard window
 - repeated stale-chunk failures cannot create a reload loop
 - page loading is announced through `role="status"`
