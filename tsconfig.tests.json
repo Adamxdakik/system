@@ -13,10 +13,15 @@
     }
   },
   "include": [
+    "client/src/lib/frontendResilience.ts",
     "server/__tests__/authSecurity.test.ts",
     "server/__tests__/httpSafety.test.ts",
     "server/__tests__/securityHeaders.test.ts",
     "server/__tests__/typescriptConfig.test.ts",
+    "server/__tests__/frontendBuildSafety.test.ts",
+    "server/__tests__/frontendInteractionSafety.test.ts",
+    "server/__tests__/frontendResilience.test.ts",
+    "server/__tests__/operationsDocumentation.test.ts",
     "server/__tests__/testTypes.d.ts",
     "server/lib/__tests__/**/*.test.ts",
     "server/authSecurity.ts",
@@ -42,5 +47,9 @@
     "server/lib/validate.ts"
   ],
   "exclude": ["node_modules", "dist", ".cache", "_trash"],
-  "references": [{ "path": "./tsconfig.shared.json" }]
+  "references": [
+    {
+      "path": "./tsconfig.shared.json"
+    }
+  ]
 }

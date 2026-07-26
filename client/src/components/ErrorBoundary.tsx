@@ -1,100 +1,131 @@
-import { Component, type ReactNode, type ErrorInfo } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import { AlertTriangle, RefreshCw, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import {
+  errorMessage,
+  isStaleChunkError,
+  shouldReloadForStaleChunk,
+  type StorageLike,
+} from "@/lib/frontendResilience";
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  resetKey?: string;
 }
 
 interface State {
   hasError: boolean;
   error?: Error;
-  isChunkError: boolean;
+  recoveringFromStaleChunk: boolean;
 }
 
-/** Detect "Failed to fetch dynamically imported module" — stale deployment chunks */
-function isChunkLoadError(error: Error): boolean {
-  const msg = error?.message ?? "";
-  return (
-    msg.includes("Failed to fetch dynamically imported module") ||
-    msg.includes("Importing a module script failed") ||
-    msg.includes("error loading dynamically imported module") ||
-    /Loading chunk \d+ failed/.test(msg)
-  );
+function sessionStorageOrUndefined(): StorageLike | undefined {
+  try {
+    return typeof window === "undefined" ? undefined : window.sessionStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, isChunkError: false };
+    this.state = { hasError: false, recoveringFromStaleChunk: false };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, isChunkError: isChunkLoadError(error) };
+    return { hasError: true, error, recoveringFromStaleChunk: false };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("ErrorBoundary caught:", error, info.componentStack);
 
-    // Stale deployment chunk — reload automatically once so the browser gets
-    // the freshly deployed HTML + new chunk filenames.
-    if (isChunkLoadError(error)) {
-      const alreadyReloaded = sessionStorage.getItem("chunk-reload") === "1";
-      if (!alreadyReloaded) {
-        sessionStorage.setItem("chunk-reload", "1");
-        window.location.reload();
-      }
+    if (shouldReloadForStaleChunk(error, sessionStorageOrUndefined())) {
+      this.setState({ recoveringFromStaleChunk: true }, () => window.location.reload());
+    }
+  }
+
+  componentDidUpdate(previousProps: Props) {
+    if (previousProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, error: undefined, recoveringFromStaleChunk: false });
     }
   }
 
   handleReset = () => {
-    sessionStorage.removeItem("chunk-reload");
-    this.setState({ hasError: false, error: undefined, isChunkError: false });
+    this.setState({ hasError: false, error: undefined, recoveringFromStaleChunk: false });
+  };
+
+  handleReload = () => {
+    window.location.reload();
   };
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
 
-      if (this.state.isChunkError) {
+      if (this.state.recoveringFromStaleChunk) {
         return (
-          <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 p-8 text-center">
-            <div className="p-4 bg-muted rounded-full">
-              <RefreshCw className="h-10 w-10 text-muted-foreground animate-spin" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-xl font-semibold">Reloading…</h2>
-              <p className="text-sm text-muted-foreground max-w-md">
-                A new version of the app was deployed. Refreshing to get the latest files.
-              </p>
-            </div>
-            <Button variant="outline" onClick={() => window.location.reload()} className="gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Reload Now
-            </Button>
+          <div
+            className="flex min-h-[400px] flex-col items-center justify-center gap-3 p-8 text-center"
+            role="status"
+            aria-live="polite"
+          >
+            <RefreshCw className="h-7 w-7 animate-spin text-primary" aria-hidden="true" />
+            <p className="font-medium">Refreshing the application…</p>
+            <p className="text-sm text-muted-foreground">
+              A newer deployed version is being loaded.
+            </p>
           </div>
         );
       }
 
+      const staleChunk = isStaleChunkError(this.state.error);
+      const detail = errorMessage(this.state.error);
+
       return (
-        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 p-8 text-center">
-          <div className="p-4 bg-destructive/10 rounded-full">
-            <AlertTriangle className="h-10 w-10 text-destructive" />
+        <div
+          className="flex min-h-[400px] flex-col items-center justify-center gap-4 p-8 text-center"
+          role="alert"
+          aria-live="assertive"
+        >
+          <div className="rounded-full bg-destructive/10 p-4">
+            <AlertTriangle className="h-10 w-10 text-destructive" aria-hidden="true" />
           </div>
           <div className="space-y-1">
-            <h2 className="text-xl font-semibold">Something went wrong</h2>
-            <p className="text-sm text-muted-foreground max-w-md">
-              {this.state.error?.message || "An unexpected error occurred on this page."}
+            <h2 className="text-xl font-semibold">
+              {staleChunk ? "A newer application version is available" : "Something went wrong"}
+            </h2>
+            <p className="max-w-md text-sm text-muted-foreground">
+              {staleChunk
+                ? "Reload the application to use the latest deployed files."
+                : import.meta.env.DEV && detail
+                  ? detail
+                  : "This page could not finish loading. You can retry the page or reload the application."}
             </p>
           </div>
-          <Button onClick={this.handleReset} className="gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Try Again
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {!staleChunk && (
+              <Button type="button" onClick={this.handleReset} className="gap-2" autoFocus>
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                Try Again
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant={staleChunk ? "default" : "outline"}
+              onClick={this.handleReload}
+              className="gap-2"
+              autoFocus={staleChunk}
+            >
+              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              Reload Application
+            </Button>
+          </div>
         </div>
       );
     }
+
     return this.props.children;
   }
 }

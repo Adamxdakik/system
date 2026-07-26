@@ -20,7 +20,9 @@ import { LogOut, ShoppingCart, MapPin, BookOpen, Package } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { PageLoader } from "@/components/PageLoader";
 import { CommandPalette, useCommandPalette } from "@/components/CommandPalette";
+import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { useGlobalEscapeBack } from "@/hooks/use-escape-back";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -70,13 +72,8 @@ const EmployeeInventory = lazy(() => import("@/pages/EmployeeInventory"));
 const Service = lazy(() => import("@/pages/Service"));
 const Motorcycles = lazy(() => import("@/pages/Motorcycles"));
 
-function PageLoader() {
-  return (
-    <div className="flex items-center justify-center min-h-[300px]">
-      <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-}
+const skipLinkClassName =
+  "sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[110] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-foreground focus:shadow-lg";
 
 function Router({ user }: { user: any }) {
   const isPOS = user?.role?.startsWith("POS");
@@ -93,20 +90,8 @@ function Router({ user }: { user: any }) {
     }
   }, [isPOS, navigate]);
 
-  // Global heartbeat — keeps active-users list current for all authenticated users
-  useEffect(() => {
-    const send = () => {
-      fetch("/api/users/heartbeat", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPage: window.location.pathname }),
-      }).catch(() => {});
-    };
-    send();
-    const timer = setInterval(send, 30000);
-    return () => clearInterval(timer);
-  }, [_location]);
+  // Keep the active-user list current without polling hidden or offline tabs.
+  useHeartbeat(_location);
 
   if (isPOS) {
     return (
@@ -224,15 +209,11 @@ function AuthenticatedApp() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <PageLoader fullScreen label="Loading your workspace" />;
   }
 
   if (error || !user) {
-    return null;
+    return <PageLoader fullScreen label="Returning to sign in" />;
   }
 
   const isPOS = user.role.startsWith("POS");
@@ -245,65 +226,95 @@ function AuthenticatedApp() {
     const isOnPOS = currentLocation === "/";
     const isOnInventory = currentLocation === "/location-inventory";
     const isOnDaybook = currentLocation === "/pos-daybook";
+    const isOnTransfers = currentLocation.startsWith("/vouchers");
 
     return (
-      <div className="flex flex-col h-screen w-full">
+      <div className="flex h-screen w-full flex-col">
+        <a href="#main-content" className={skipLinkClassName}>
+          Skip to main content
+        </a>
         <OfflineBanner />
         <header className="flex flex-col border-b">
-          <div className="flex items-center justify-between p-4 h-16 gap-4">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold">POS Station {user.posStation || ""}</h1>
+          <div className="flex min-h-16 items-center justify-between gap-2 p-3 sm:gap-4 sm:p-4">
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-semibold">
+                POS Station {user.posStation || ""}
+              </h1>
             </div>
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-sm text-muted-foreground">{user.username}</span>
-              <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">
-                <LogOut className="h-4 w-4" />
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <span className="hidden text-sm text-muted-foreground sm:inline">
+                {user.username}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                aria-label="Log out"
+                title="Log out"
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
               </Button>
               <ThemeToggle />
             </div>
           </div>
-          <div className="flex items-center gap-2 px-4 pb-2">
+          <nav
+            aria-label="POS sections"
+            className="flex items-center gap-2 overflow-x-auto px-3 pb-2 sm:px-4"
+          >
             <Button
               variant={isOnPOS ? "default" : "ghost"}
               size="sm"
+              className="shrink-0"
               onClick={() => setLocation("/")}
+              aria-current={isOnPOS ? "page" : undefined}
               data-testid="button-pos-tab"
             >
-              <ShoppingCart className="h-4 w-4 mr-2" />
+              <ShoppingCart className="mr-2 h-4 w-4" aria-hidden="true" />
               Point of Sale
             </Button>
             <Button
               variant={isOnDaybook ? "default" : "ghost"}
               size="sm"
+              className="shrink-0"
               onClick={() => setLocation("/pos-daybook")}
+              aria-current={isOnDaybook ? "page" : undefined}
               data-testid="button-daybook-tab"
             >
-              <BookOpen className="h-4 w-4 mr-2" />
+              <BookOpen className="mr-2 h-4 w-4" aria-hidden="true" />
               Daybook
             </Button>
             <Button
               variant={isOnInventory ? "default" : "ghost"}
               size="sm"
+              className="shrink-0"
               onClick={() => setLocation("/location-inventory")}
+              aria-current={isOnInventory ? "page" : undefined}
               data-testid="button-inventory-tab"
             >
-              <MapPin className="h-4 w-4 mr-2" />
+              <MapPin className="mr-2 h-4 w-4" aria-hidden="true" />
               Location Inventory
             </Button>
             <Button
-              variant={currentLocation.startsWith("/vouchers") ? "default" : "ghost"}
+              variant={isOnTransfers ? "default" : "ghost"}
               size="sm"
+              className="shrink-0"
               onClick={() => setLocation("/vouchers?tab=transfer")}
+              aria-current={isOnTransfers ? "page" : undefined}
               data-testid="button-stock-transfer-tab"
             >
-              <Package className="h-4 w-4 mr-2" />
+              <Package className="mr-2 h-4 w-4" aria-hidden="true" />
               Stock Transfer
             </Button>
-          </div>
+          </nav>
         </header>
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-7xl mx-auto">
-            <ErrorBoundary>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto p-3 focus:outline-none sm:p-6"
+        >
+          <div className="mx-auto max-w-7xl">
+            <ErrorBoundary resetKey={currentLocation}>
               <Router user={user} />
             </ErrorBoundary>
           </div>
@@ -314,39 +325,57 @@ function AuthenticatedApp() {
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
+      <a href="#main-content" className={skipLinkClassName}>
+        Skip to main content
+      </a>
       <OfflineBanner />
       <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
       <div className="flex h-screen w-full">
         <AppSidebar user={user} />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between p-4 border-b h-16 gap-4">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-2 ml-auto">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <header className="flex h-16 items-center justify-between gap-2 border-b p-2 sm:gap-4 sm:p-4">
+            <SidebarTrigger aria-label="Toggle navigation" data-testid="button-sidebar-toggle" />
+            <div className="ml-auto flex min-w-0 items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 text-muted-foreground text-xs hidden md:flex"
+                className="hidden gap-1.5 text-xs text-muted-foreground md:flex"
                 onClick={() => setCmdOpen(true)}
+                aria-keyshortcuts="Meta+K Control+K"
               >
                 Search pages
-                <kbd className="ml-1 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
+                <kbd
+                  className="pointer-events-none ml-1 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100"
+                  aria-hidden="true"
+                >
                   <span className="text-xs">⌘</span>K
                 </kbd>
               </Button>
               <NotificationBell />
-              <span className="text-sm text-muted-foreground">
+              <span className="hidden truncate text-sm text-muted-foreground xl:inline">
                 {user.username} ({user.role})
               </span>
-              <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">
-                <LogOut className="h-4 w-4" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                aria-label="Log out"
+                title="Log out"
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
               </Button>
               <CompanySelector />
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-7xl mx-auto">
-              <ErrorBoundary>
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="flex-1 overflow-y-auto p-3 focus:outline-none sm:p-6"
+          >
+            <div className="mx-auto max-w-7xl">
+              <ErrorBoundary resetKey={currentLocation}>
                 <Router user={user} />
               </ErrorBoundary>
             </div>
