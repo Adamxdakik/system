@@ -18864,33 +18864,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const toDateStr   = req.query.toDate   as string | undefined;
 
       // ─── 1. Sales breakdown by stock group ─────────────────────────────
-      const salesItemsQ = db
-        .select({
-          stockGroupName: sql<string>`COALESCE(${stockGroups.name}, 'Uncategorised')`,
-          totalSales: sql<string>`COALESCE(SUM(${salesItems.totalSales}), 0)`,
-          totalCost:  sql<string>`COALESCE(SUM(${salesItems.totalCost}),  0)`,
-        })
-        .from(salesItems)
-        .leftJoin(saleRecords, eq(salesItems.saleId, saleRecords.id))
-        .leftJoin(stockItems,  eq(salesItems.stockItemId, stockItems.id))
-        .leftJoin(stockGroups, eq(stockItems.stockGroupId, stockGroups.id))
+      // Use vouchers (type=Sales) as the period-scoped parent, same pattern as dashboard-metrics
+      const salesVouchersInPeriod = await db
+        .select({ id: vouchers.id })
+        .from(vouchers)
         .where(and(
-          eq(saleRecords.companyId, companyId),
-          fromDateStr ? gte(saleRecords.saleDate, fromDateStr) : undefined,
-          toDateStr   ? lte(saleRecords.saleDate, toDateStr)   : undefined,
-        ))
-        .groupBy(sql`COALESCE(${stockGroups.name}, 'Uncategorised')`);
+          eq(vouchers.companyId, companyId),
+          eq(vouchers.voucherType, "Sales"),
+          eq(vouchers.optional, false),
+          fromDateStr ? gte(vouchers.voucherDate, fromDateStr) : undefined,
+          toDateStr   ? lte(vouchers.voucherDate, toDateStr)   : undefined,
+        )).execute();
 
-      const salesRows = await salesItemsQ.execute();
+      const salesVoucherIds = salesVouchersInPeriod.map(v => v.id);
+
       let totalSales = 0, totalCost = 0;
-      const salesBreakdown: { label: string; amount: number }[] = [];
-      for (const r of salesRows) {
-        const s = parseFloat(r.totalSales);
-        const c = parseFloat(r.totalCost);
-        totalSales += s;
-        totalCost  += c;
-        salesBreakdown.push({ label: r.stockGroupName, amount: s });
+      const salesByGroup: Record<string, number> = {};
+
+      if (salesVoucherIds.length > 0) {
+        const siRows = await db.select({
+          totalSales:     salesItems.totalSales,
+          totalCost:      salesItems.totalCost,
+          stockGroupName: stockGroups.name,
+        }).from(salesItems)
+          .leftJoin(stockItems,  eq(salesItems.stockItemId,  stockItems.id))
+          .leftJoin(stockGroups, eq(stockItems.stockGroupId, stockGroups.id))
+          .where(inArray(salesItems.voucherId, salesVoucherIds))
+          .execute();
+
+        for (const r of siRows) {
+          const s = parseFloat(r.totalSales || "0");
+          const c = parseFloat(r.totalCost  || "0");
+          totalSales += s;
+          totalCost  += c;
+          const label = r.stockGroupName || "Uncategorised";
+          salesByGroup[label] = (salesByGroup[label] || 0) + s;
+        }
       }
+
+      const salesBreakdown = Object.entries(salesByGroup)
+        .map(([label, amount]) => ({ label, amount }))
+        .sort((a, b) => b.amount - a.amount);
+
       const grossProfit = totalSales - totalCost;
 
       // ─── 2. Per-account operating expenses ─────────────────────────────
@@ -18941,26 +18956,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const operatingExpenses = opExBreakdown.reduce((s, x) => s + x.amount, 0);
       const netProfit = grossProfit - operatingExpenses;
 
-      // ─── 3. Assets ─────────────────────────────────────────────────────
-      // Cash (all-time)
-      const cashAccountIds = allAccounts.filter(a => a.accountType === "Cash").map(a => a.id);
+      // ─── 3. Assets & Liabilities — fetch all voucher entries once ────────
+      // Fetch all non-optional voucher IDs for this company (all-time, for balance sheet)
+      const allCompanyVoucherIds = (await db
+        .select({ id: vouchers.id, supplierId: voucherEntries.supplierId, ledgerAccountId: voucherEntries.ledgerAccountId, d: voucherEntries.debitAmount, c: voucherEntries.creditAmount })
+        .from(voucherEntries)
+        .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+        .where(and(eq(vouchers.companyId, companyId), eq(vouchers.optional, false)))
+        .execute());
+
+      // Cash
+      const cashAccountIds = new Set(allAccounts.filter(a => a.accountType === "Cash").map(a => a.id));
       let cashInHand = 0;
-      if (cashAccountIds.length > 0) {
-        const allVIds = (await db.select({ id: vouchers.id }).from(vouchers)
-          .where(and(eq(vouchers.companyId, companyId), eq(vouchers.optional, false))).execute())
-          .map(v => v.id);
-        if (allVIds.length > 0) {
-          const cashEntries = await db.select({ d: voucherEntries.debitAmount, c: voucherEntries.creditAmount })
-            .from(voucherEntries)
-            .where(and(inArray(voucherEntries.voucherId, allVIds), inArray(voucherEntries.ledgerAccountId, cashAccountIds)))
-            .execute();
-          for (const e of cashEntries) cashInHand += parseFloat(e.d || "0") - parseFloat(e.c || "0");
-        }
+      for (const e of allCompanyVoucherIds) {
+        if (e.ledgerAccountId && cashAccountIds.has(e.ledgerAccountId))
+          cashInHand += parseFloat(e.d || "0") - parseFloat(e.c || "0");
       }
 
       // Inventory
       const invRows = await db.select({
-        quantity: inventory.quantity,
         totalValue: inventory.totalValue,
         stockGroupName: sql<string>`COALESCE(${stockGroups.name}, 'Uncategorised')`,
       }).from(inventory)
@@ -18976,56 +18990,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (/moto|bike|motorcycle/i.test(r.stockGroupName)) motoInv += v; else partsInv += v;
       }
 
-      // Customer receivables (Asset type accounts)
-      const assetAccountIds = allAccounts.filter(a => a.accountType === "Asset").map(a => a.id);
+      // Customer receivables (Asset accounts — debit-normal)
+      const assetAccountIds = new Set(allAccounts.filter(a => a.accountType === "Asset").map(a => a.id));
       let customerReceivables = 0;
-      if (assetAccountIds.length > 0) {
-        const allVIds = (await db.select({ id: vouchers.id }).from(vouchers)
-          .where(and(eq(vouchers.companyId, companyId), eq(vouchers.optional, false))).execute())
-          .map(v => v.id);
-        if (allVIds.length > 0) {
-          const arEntries = await db.select({ d: voucherEntries.debitAmount, c: voucherEntries.creditAmount })
-            .from(voucherEntries)
-            .where(and(inArray(voucherEntries.voucherId, allVIds), inArray(voucherEntries.ledgerAccountId, assetAccountIds)))
-            .execute();
-          for (const e of arEntries) customerReceivables += parseFloat(e.d || "0") - parseFloat(e.c || "0");
-        }
+      for (const e of allCompanyVoucherIds) {
+        if (e.ledgerAccountId && assetAccountIds.has(e.ledgerAccountId))
+          customerReceivables += parseFloat(e.d || "0") - parseFloat(e.c || "0");
       }
 
       // ─── 4. Liabilities ────────────────────────────────────────────────
-      // Supplier balances
-      const allSuppliers = await storage.getAllSuppliers(companyId);
-      const suppliersWithBal: { name: string; balance: number }[] = [];
-      for (const sup of allSuppliers) {
-        const allVIds = (await db.select({ id: vouchers.id }).from(vouchers)
-          .where(and(eq(vouchers.companyId, companyId), eq(vouchers.optional, false))).execute())
-          .map(v => v.id);
-        if (allVIds.length === 0) continue;
-        const entries = await db.select({ d: voucherEntries.debitAmount, c: voucherEntries.creditAmount })
-          .from(voucherEntries)
-          .where(and(inArray(voucherEntries.voucherId, allVIds), eq(voucherEntries.supplierId, sup.id)))
-          .execute();
-        const bal = entries.reduce((s, e) => s + parseFloat(e.c || "0") - parseFloat(e.d || "0"), 0);
-        if (bal > 0) suppliersWithBal.push({ name: sup.legalName, balance: bal });
+      // Supplier balances — aggregate from all entries in one pass
+      const supplierBalMap: Record<number, number> = {};
+      for (const e of allCompanyVoucherIds) {
+        if (e.supplierId) {
+          supplierBalMap[e.supplierId] = (supplierBalMap[e.supplierId] || 0) +
+            parseFloat(e.c || "0") - parseFloat(e.d || "0");
+        }
       }
-      suppliersWithBal.sort((a, b) => b.balance - a.balance);
+      // Join with supplier names
+      const allSuppliers = (await storage.getAllSuppliers()).filter((s: any) => s.companyId === companyId);
+      const suppliersWithBal = allSuppliers
+        .map((s: any) => ({ name: s.legalName, balance: supplierBalMap[s.id] || 0 }))
+        .filter((s: any) => s.balance > 0.01)
+        .sort((a: any, b: any) => b.balance - a.balance);
 
       // Loan accounts
-      const loanAccounts = allAccounts.filter(a => a.accountType === "Loans");
-      const loansBreakdown: { name: string; balance: number }[] = [];
-      let totalLoans = 0;
-      for (const la of loanAccounts) {
-        const allVIds = (await db.select({ id: vouchers.id }).from(vouchers)
-          .where(and(eq(vouchers.companyId, companyId), eq(vouchers.optional, false))).execute())
-          .map(v => v.id);
-        if (allVIds.length === 0) continue;
-        const entries = await db.select({ d: voucherEntries.debitAmount, c: voucherEntries.creditAmount })
-          .from(voucherEntries)
-          .where(and(inArray(voucherEntries.voucherId, allVIds), eq(voucherEntries.ledgerAccountId, la.id)))
-          .execute();
-        const bal = entries.reduce((s, e) => s + parseFloat(e.c || "0") - parseFloat(e.d || "0"), 0);
-        if (Math.abs(bal) > 0.01) { loansBreakdown.push({ name: la.name, balance: bal }); totalLoans += bal; }
+      const loanAccountIds = new Set(allAccounts.filter(a => a.accountType === "Loans").map(a => a.id));
+      const loanBalMap: Record<number, number> = {};
+      for (const e of allCompanyVoucherIds) {
+        if (e.ledgerAccountId && loanAccountIds.has(e.ledgerAccountId)) {
+          loanBalMap[e.ledgerAccountId] = (loanBalMap[e.ledgerAccountId] || 0) +
+            parseFloat(e.c || "0") - parseFloat(e.d || "0");
+        }
       }
+      const loansBreakdown = allAccounts
+        .filter(a => a.accountType === "Loans" && Math.abs(loanBalMap[a.id] || 0) > 0.01)
+        .map(a => ({ name: a.name, balance: loanBalMap[a.id] || 0 }));
+      const totalLoans = loansBreakdown.reduce((s, l) => s + l.balance, 0);
 
       const totalSupplierPayables = suppliersWithBal.reduce((s, x) => s + x.balance, 0);
       const totalAssets = cashInHand + motoInv + partsInv + (customerReceivables > 0 ? customerReceivables : 0);
