@@ -279,6 +279,15 @@ async function syncEmployeeBalancesFromEntries(
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Guard all :id params — returns 400 immediately for non-numeric values
+  // instead of letting parseInt(NaN) silently propagate into DB queries.
+  app.param("id", (_req, res, next, val) => {
+    if (!/^\d+$/.test(val)) {
+      return res.status(400).json({ message: "Invalid ID: must be a positive integer" });
+    }
+    next();
+  });
+
   registerAtomicStockMovementRoutes(app);
   registerContainerOffloadReversalRoutes(app);
   registerFinancialCorrectionRoutes(app);

@@ -21,7 +21,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
 
-  const { data: notifications = [] } = useQuery<Notification[]>({
+  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ["/api/notifications"],
     refetchInterval: 60_000,
   });
@@ -76,7 +76,13 @@ export function NotificationBell() {
           )}
         </div>
         <div className="max-h-96 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {isLoading ? (
+            <div className="p-4 space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-12 rounded-md bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : notifications.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground text-center">
               No notifications yet
             </p>

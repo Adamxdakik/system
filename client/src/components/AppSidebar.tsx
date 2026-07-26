@@ -131,7 +131,7 @@ function NavGroup({
 export function AppSidebar({ user }: { user?: any }) {
   const [location] = useLocation();
 
-  const { data: myPermissions = [] } = useQuery<any[]>({
+  const { data: myPermissions = [], isLoading: permissionsLoading } = useQuery<any[]>({
     queryKey: ["/api/my-permissions"],
     enabled: !!user,
   });
@@ -195,7 +195,14 @@ export function AppSidebar({ user }: { user?: any }) {
 
       {/* ── Content ────────────────────────────────────────────────────────── */}
       <SidebarContent className="overflow-y-auto overscroll-contain px-2 py-2">
-        <SidebarGroup className="p-0">
+        {permissionsLoading && (
+          <div className="px-2 py-3 space-y-2">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-8 rounded-md bg-sidebar-accent/40 animate-pulse" />
+            ))}
+          </div>
+        )}
+        <SidebarGroup className={`p-0 ${permissionsLoading ? "opacity-0 pointer-events-none" : ""}`}>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
               {/* Dashboard */}
