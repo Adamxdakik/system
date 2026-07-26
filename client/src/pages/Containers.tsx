@@ -12,10 +12,12 @@ import {
   Search,
   X,
   Download,
+  Upload,
   HandCoins,
   Truck,
   CheckCircle2,
 } from "lucide-react";
+import { ImportPODialog } from "@/components/ImportPODialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -73,6 +75,7 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
   const [completedVisited, setCompletedVisited] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("ALL");
+  const [showImportPO, setShowImportPO] = useState(false);
   const [, navigate] = useLocation();
   const { selectedCompany } = useCompany();
 
@@ -332,6 +335,15 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
           >
             <Download className="h-4 w-4" />
             Export
+          </Button>
+          <Button
+            onClick={() => setShowImportPO(true)}
+            variant="outline"
+            className="gap-2"
+            data-testid="button-import-po"
+          >
+            <Upload className="h-4 w-4" />
+            Import PO
           </Button>
           <Button
             onClick={() => navigate("/containers/new")}
@@ -608,6 +620,8 @@ export default function Containers({ embedded = false }: ContainersProps = {}) {
           )}
         </TabsContent>
       </Tabs>
+
+      <ImportPODialog open={showImportPO} onOpenChange={setShowImportPO} />
     </div>
   );
 }
