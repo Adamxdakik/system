@@ -1,3 +1,4 @@
+# Triggered self-removing workflow for the final Program 3 main synchronization.
 name: Program 3 sync main once
 
 on:
