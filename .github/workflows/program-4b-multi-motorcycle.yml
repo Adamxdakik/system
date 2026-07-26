@@ -26,268 +26,166 @@ jobs:
 
       - run: npm ci --include=dev --silent
 
-      - name: Support multiple motorcycles on one invoice
+      - name: Apply multi-motorcycle invoice correction
         shell: bash
         run: |
-          python - <<'PY'
+          set +e
+          python - <<'PY' > /tmp/program4b-patch.log 2>&1
+          import re
           from pathlib import Path
 
-          route = Path("server/routes/motorcycleSaleRoutes.ts")
-          text = route.read_text()
+          failures = []
 
-          replacements = [
-              (
-                  '''        sql`v.reversal_of_voucher_id IS NULL`,
-        sql`NOT EXISTS (
-          SELECT 1
-          FROM bike_purchases linked
-          WHERE linked.company_id = v.company_id
-            AND linked.sale_voucher_id = v.id
-            AND linked.deleted_at IS NULL
-        )`,
-''',
-                  '''        sql`v.reversal_of_voucher_id IS NULL`,
-        sql`COALESCE(linked_sales."linkedMotorcycleTotal", 0) < v.total_amount`,
-''',
-              ),
-              (
-                  '''          v.description,
-          buyer."customerId",
-          buyer."customerName"
-''',
-                  '''          v.description,
-          buyer."customerId",
-          buyer."customerName",
-          COALESCE(linked_sales."linkedMotorcycleCount", 0)::integer AS "linkedMotorcycleCount",
-          COALESCE(linked_sales."linkedMotorcycleTotal", 0) AS "linkedMotorcycleTotal",
-          v.total_amount - COALESCE(linked_sales."linkedMotorcycleTotal", 0) AS "remainingAmount"
-''',
-              ),
-              (
-                  '''        ) buyer ON true
-        WHERE ${sql.join(conditions, sql` AND `)}
-''',
-                  '''        ) buyer ON true
-        LEFT JOIN LATERAL (
-          SELECT
-            COUNT(*) AS "linkedMotorcycleCount",
-            COALESCE(SUM(linked.selling_price), 0) AS "linkedMotorcycleTotal"
-          FROM bike_purchases linked
-          WHERE linked.company_id = v.company_id
-            AND linked.sale_voucher_id = v.id
-            AND linked.deleted_at IS NULL
-        ) linked_sales ON true
-        WHERE ${sql.join(conditions, sql` AND `)}
-''',
-              ),
-              (
-                  '''          if (Number(input.sellingPrice) > Number(voucher.totalAmount)) {
-            throw Object.assign(
-              new Error("Motorcycle selling price cannot exceed the finalized voucher total"),
-              { httpStatus: 400 },
-            );
-          }
-
-          const duplicateResult = await tx.execute(sql`
-            SELECT id
-            FROM bike_purchases
-            WHERE company_id = ${companyId}
-              AND sale_voucher_id = ${voucher.id}
-              AND id <> ${motorcycleId}
-              AND deleted_at IS NULL
-            FOR UPDATE
-          `);
-          if (duplicateResult.rows.length > 0) {
-            throw Object.assign(
-              new Error("This Sales voucher is already linked to another motorcycle"),
-              {
-                httpStatus: 409,
-              },
-            );
-          }
-''',
-                  '''          const linkedTotalResult = await tx.execute(sql`
-            SELECT COALESCE(SUM(selling_price), 0) AS "linkedTotal"
-            FROM bike_purchases
-            WHERE company_id = ${companyId}
-              AND sale_voucher_id = ${voucher.id}
-              AND id <> ${motorcycleId}
-              AND deleted_at IS NULL
-          `);
-          const linkedTotal = Number(linkedTotalResult.rows[0]?.linkedTotal ?? 0);
-          if (linkedTotal + Number(input.sellingPrice) > Number(voucher.totalAmount)) {
-            throw Object.assign(
-              new Error(
-                "The combined motorcycle prices cannot exceed the finalized voucher total",
-              ),
-              { httpStatus: 400 },
-            );
-          }
-''',
-              ),
-              (
-                  '''        if (error?.code === "23505") {
-          return res.status(409).json({
-            message: "This Sales voucher is already linked to another motorcycle",
-          });
-        }
-''',
-                  '''''',
-              ),
-          ]
-
-          for old, new in replacements:
+          def replace_once(text, old, new, label):
               if old not in text:
-                  raise SystemExit(f"Expected route block not found:\n{old}")
-              text = text.replace(old, new, 1)
-          route.write_text(text)
+                  failures.append(f"missing exact block: {label}")
+                  return text
+              return text.replace(old, new, 1)
 
-          component = Path("client/src/components/MotorcycleSaleLinkDialog.tsx")
-          component_text = component.read_text()
-          component_replacements = [
-              (
-                  '''  customerId: number | null;
-  customerName: string | null;
-}
-''',
-                  '''  customerId: number | null;
-  customerName: string | null;
-  linkedMotorcycleCount: number;
-  linkedMotorcycleTotal: string;
-  remainingAmount: string;
-}
-''',
-              ),
-              (
-                  '''    if (!sellingPrice) setSellingPrice(selectedVoucher.totalAmount);
-''',
-                  '''    if (!sellingPrice) setSellingPrice(selectedVoucher.remainingAmount);
-''',
-              ),
-              (
-                  '''                  {formatMoney(voucher.totalAmount, voucher.currency)}
-                  {voucher.customerName ? ` · ${voucher.customerName}` : ""}
-''',
-                  '''                  {formatMoney(voucher.remainingAmount, voucher.currency)} remaining
-                  {voucher.linkedMotorcycleCount > 0
-                    ? ` · ${voucher.linkedMotorcycleCount} motorcycle${voucher.linkedMotorcycleCount === 1 ? "" : "s"} already linked`
-                    : ""}
-                  {voucher.customerName ? ` · ${voucher.customerName}` : ""}
-''',
-              ),
-              (
-                  '''                No unused active Sales vouchers match this motorcycle location and search.
-''',
-                  '''                No active Sales vouchers with remaining unlinked value match this location and search.
-''',
-              ),
-              (
-                  '''            <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-3">
-''',
-                  '''            <div className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-4">
-''',
-              ),
-              (
-                  '''              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Voucher total
-                </p>
-                <p className="font-medium">
-                  {formatMoney(selectedVoucher.totalAmount, selectedVoucher.currency)}
-                </p>
-              </div>
-''',
-                  '''              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Voucher total
-                </p>
-                <p className="font-medium">
-                  {formatMoney(selectedVoucher.totalAmount, selectedVoucher.currency)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Remaining
-                </p>
-                <p className="font-medium">
-                  {formatMoney(selectedVoucher.remainingAmount, selectedVoucher.currency)}
-                </p>
-              </div>
-''',
-              ),
-          ]
-          for old, new in component_replacements:
-              if old not in component_text:
-                  raise SystemExit(f"Expected dialog block not found:\n{old}")
-              component_text = component_text.replace(old, new, 1)
-          component.write_text(component_text)
+          def regex_once(text, pattern, replacement, label):
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1:
+                  failures.append(f"regex count {count}: {label}")
+              return updated
 
-          policy = Path("server/services/motorcycles/finalizedSalePolicy.ts")
-          policy_text = policy.read_text()
-          marker = '''export function warrantyDatesAreValid(
-'''
-          helper = '''export function combinedMotorcyclePricesFitVoucher(
-  alreadyLinkedTotal: string | number,
-  newMotorcyclePrice: string | number,
-  voucherTotal: string | number,
-): boolean {
-  const linkedTotal = Number(alreadyLinkedTotal);
-  const newPrice = Number(newMotorcyclePrice);
-  const total = Number(voucherTotal);
-  return (
-    Number.isFinite(linkedTotal) &&
-    Number.isFinite(newPrice) &&
-    Number.isFinite(total) &&
-    linkedTotal >= 0 &&
-    newPrice > 0 &&
-    total > 0 &&
-    linkedTotal + newPrice <= total
-  );
-}
+          route_path = Path("server/routes/motorcycleSaleRoutes.ts")
+          route = route_path.read_text()
 
-'''
-          if marker not in policy_text:
-              raise SystemExit("Policy marker not found")
-          policy.write_text(policy_text.replace(marker, helper + marker, 1))
+          route = regex_once(
+              route,
+              r'''\n\s*sql`NOT EXISTS \(\n\s*SELECT 1\n\s*FROM bike_purchases linked\n\s*WHERE linked\.company_id = v\.company_id\n\s*AND linked\.sale_voucher_id = v\.id\n\s*AND linked\.deleted_at IS NULL\n\s*\)`,''',
+              '',
+              "remove one-voucher exclusion",
+          )
+          route = replace_once(
+              route,
+              '''        sql`v.reversal_of_voucher_id IS NULL`,\n''',
+              '''        sql`v.reversal_of_voucher_id IS NULL`,\n        sql`COALESCE(linked_sales."linkedMotorcycleTotal", 0) < v.total_amount`,\n''',
+              "remaining-value condition",
+          )
+          route = replace_once(
+              route,
+              '''          buyer."customerId",\n          buyer."customerName"\n''',
+              '''          buyer."customerId",\n          buyer."customerName",\n          COALESCE(linked_sales."linkedMotorcycleCount", 0)::integer AS "linkedMotorcycleCount",\n          COALESCE(linked_sales."linkedMotorcycleTotal", 0) AS "linkedMotorcycleTotal",\n          v.total_amount - COALESCE(linked_sales."linkedMotorcycleTotal", 0) AS "remainingAmount"\n''',
+              "voucher capacity fields",
+          )
+          route = replace_once(
+              route,
+              '''        ) buyer ON true\n        WHERE ${sql.join(conditions, sql` AND `)}\n''',
+              '''        ) buyer ON true\n        LEFT JOIN LATERAL (\n          SELECT\n            COUNT(*) AS "linkedMotorcycleCount",\n            COALESCE(SUM(linked.selling_price), 0) AS "linkedMotorcycleTotal"\n          FROM bike_purchases linked\n          WHERE linked.company_id = v.company_id\n            AND linked.sale_voucher_id = v.id\n            AND linked.deleted_at IS NULL\n        ) linked_sales ON true\n        WHERE ${sql.join(conditions, sql` AND `)}\n''',
+              "voucher capacity lateral join",
+          )
+          route = regex_once(
+              route,
+              r'''\n\s*if \(Number\(input\.sellingPrice\) > Number\(voucher\.totalAmount\)\) \{.*?\n\s*if \(duplicateResult\.rows\.length > 0\) \{.*?\n\s*\}\n''',
+              '''\n          const linkedTotalResult = await tx.execute(sql`\n            SELECT COALESCE(SUM(selling_price), 0) AS "linkedTotal"\n            FROM bike_purchases\n            WHERE company_id = ${companyId}\n              AND sale_voucher_id = ${voucher.id}\n              AND id <> ${motorcycleId}\n              AND deleted_at IS NULL\n          `);\n          const linkedTotal = Number(linkedTotalResult.rows[0]?.linkedTotal ?? 0);\n          if (linkedTotal + Number(input.sellingPrice) > Number(voucher.totalAmount)) {\n            throw Object.assign(\n              new Error(\n                "The combined motorcycle prices cannot exceed the finalized voucher total",\n              ),\n              { httpStatus: 400 },\n            );\n          }\n''',
+              "replace duplicate-voucher guard with total-cap guard",
+          )
+          route = regex_once(
+              route,
+              r'''\n\s*if \(error\?\.code === "23505"\) \{\n\s*return res\.status\(409\)\.json\(\{\n\s*message: "This Sales voucher is already linked to another motorcycle",\n\s*\}\);\n\s*\}\n''',
+              '\n',
+              "remove obsolete unique-voucher catch",
+          )
+          route_path.write_text(route)
 
-          test = Path("server/__tests__/motorcycleFinalizedSalePolicy.test.ts")
-          test_text = test.read_text()
-          import_marker = '''  isActiveFinalizedSalesVoucher,
-'''
-          if import_marker not in test_text:
-              raise SystemExit("Policy test import marker not found")
-          test_text = test_text.replace(
-              import_marker,
-              '''  combinedMotorcyclePricesFitVoucher,
-  isActiveFinalizedSalesVoucher,
-''',
+          component_path = Path("client/src/components/MotorcycleSaleLinkDialog.tsx")
+          component = component_path.read_text()
+          component = replace_once(
+              component,
+              '''  customerId: number | null;\n  customerName: string | null;\n}\n''',
+              '''  customerId: number | null;\n  customerName: string | null;\n  linkedMotorcycleCount: number;\n  linkedMotorcycleTotal: string;\n  remainingAmount: string;\n}\n''',
+              "dialog voucher capacity type",
+          )
+          component = replace_once(
+              component,
+              '''    if (!sellingPrice) setSellingPrice(selectedVoucher.totalAmount);\n''',
+              '''    if (!sellingPrice) setSellingPrice(selectedVoucher.remainingAmount);\n''',
+              "default to remaining amount",
+          )
+          component = replace_once(
+              component,
+              '''                  {formatMoney(voucher.totalAmount, voucher.currency)}\n                  {voucher.customerName ? ` · ${voucher.customerName}` : ""}\n''',
+              '''                  {formatMoney(voucher.remainingAmount, voucher.currency)} remaining\n                  {voucher.linkedMotorcycleCount > 0\n                    ? ` · ${voucher.linkedMotorcycleCount} motorcycle${voucher.linkedMotorcycleCount === 1 ? "" : "s"} already linked`\n                    : ""}\n                  {voucher.customerName ? ` · ${voucher.customerName}` : ""}\n''',
+              "voucher option remaining amount",
+          )
+          component = component.replace(
+              "No unused active Sales vouchers match this motorcycle location and search.",
+              "No active Sales vouchers with remaining unlinked value match this location and search.",
+          )
+          component = component.replace(
+              'className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-3"',
+              'className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-4"',
               1,
           )
-          test_marker = '''  it("validates warranty order and requires reversal before release", () => {
-'''
-          test_case = '''  it("allows several motorcycles on one voucher without exceeding its total", () => {
-    expect(combinedMotorcyclePricesFitVoucher("3000.00", "2000.00", "5000.00")).toBe(true);
-    expect(combinedMotorcyclePricesFitVoucher("3000.00", "2000.01", "5000.00")).toBe(false);
-    expect(combinedMotorcyclePricesFitVoucher("0", "5000.00", "5000.00")).toBe(true);
-  });
-
-'''
-          if test_marker not in test_text:
-              raise SystemExit("Policy test insertion marker not found")
-          test.write_text(test_text.replace(test_marker, test_case + test_marker, 1))
-
-          doc = Path("docs/program-4-motorcycle-records-plan.md")
-          doc_text = doc.read_text()
-          doc_text = doc_text.replace(
-              "- enforce one active motorcycle per finalized Sales voucher\n",
-              "- allow multiple motorcycles on one finalized invoice while capping their combined linked prices at the voucher total\n",
+          voucher_total_block = '''              <div>\n                <p className="text-xs uppercase tracking-wide text-muted-foreground">\n                  Voucher total\n                </p>\n                <p className="font-medium">\n                  {formatMoney(selectedVoucher.totalAmount, selectedVoucher.currency)}\n                </p>\n              </div>\n'''
+          remaining_block = voucher_total_block + '''              <div>\n                <p className="text-xs uppercase tracking-wide text-muted-foreground">\n                  Remaining\n                </p>\n                <p className="font-medium">\n                  {formatMoney(selectedVoucher.remainingAmount, selectedVoucher.currency)}\n                </p>\n              </div>\n'''
+          component = replace_once(
+              component,
+              voucher_total_block,
+              remaining_block,
+              "selected voucher remaining card",
           )
-          doc_text = doc_text.replace(
-              "- The same motorcycle or Sales voucher cannot be sold twice.\n",
-              "- The same motorcycle cannot be sold twice, and combined motorcycle prices cannot exceed the finalized voucher total.\n",
+          component_path.write_text(component)
+
+          policy_path = Path("server/services/motorcycles/finalizedSalePolicy.ts")
+          policy = policy_path.read_text()
+          helper = '''export function combinedMotorcyclePricesFitVoucher(\n  alreadyLinkedTotal: string | number,\n  newMotorcyclePrice: string | number,\n  voucherTotal: string | number,\n): boolean {\n  const linkedTotal = Number(alreadyLinkedTotal);\n  const newPrice = Number(newMotorcyclePrice);\n  const total = Number(voucherTotal);\n  return (\n    Number.isFinite(linkedTotal) &&\n    Number.isFinite(newPrice) &&\n    Number.isFinite(total) &&\n    linkedTotal >= 0 &&\n    newPrice > 0 &&\n    total > 0 &&\n    linkedTotal + newPrice <= total\n  );\n}\n\n'''
+          if "combinedMotorcyclePricesFitVoucher" not in policy:
+              policy = replace_once(
+                  policy,
+                  "export function warrantyDatesAreValid(\n",
+                  helper + "export function warrantyDatesAreValid(\n",
+                  "combined price helper",
+              )
+          policy_path.write_text(policy)
+
+          test_path = Path("server/__tests__/motorcycleFinalizedSalePolicy.test.ts")
+          test = test_path.read_text()
+          if "combinedMotorcyclePricesFitVoucher" not in test:
+              test = replace_once(
+                  test,
+                  "  isActiveFinalizedSalesVoucher,\n",
+                  "  combinedMotorcyclePricesFitVoucher,\n  isActiveFinalizedSalesVoucher,\n",
+                  "combined price test import",
+              )
+              test_case = '''  it("allows several motorcycles on one voucher without exceeding its total", () => {\n    expect(combinedMotorcyclePricesFitVoucher("3000.00", "2000.00", "5000.00")).toBe(true);\n    expect(combinedMotorcyclePricesFitVoucher("3000.00", "2000.01", "5000.00")).toBe(false);\n    expect(combinedMotorcyclePricesFitVoucher("0", "5000.00", "5000.00")).toBe(true);\n  });\n\n'''
+              test = replace_once(
+                  test,
+                  '  it("validates warranty order and requires reversal before release", () => {\n',
+                  test_case + '  it("validates warranty order and requires reversal before release", () => {\n',
+                  "combined price test case",
+              )
+          test_path.write_text(test)
+
+          doc_path = Path("docs/program-4-motorcycle-records-plan.md")
+          doc = doc_path.read_text()
+          doc = doc.replace(
+              "- enforce one active motorcycle per finalized Sales voucher",
+              "- allow multiple motorcycles on one finalized invoice while capping their combined linked prices at the voucher total",
           )
-          doc.write_text(doc_text)
+          doc = doc.replace(
+              "- The same motorcycle or Sales voucher cannot be sold twice.",
+              "- The same motorcycle cannot be sold twice, and combined motorcycle prices cannot exceed the finalized voucher total.",
+          )
+          doc_path.write_text(doc)
+
+          print("failures:", failures)
+          if failures:
+              Path("docs/program-4b-helper-error.txt").write_text("\n".join(failures) + "\n")
+              raise SystemExit(1)
           PY
+          patch_status=$?
+          cat /tmp/program4b-patch.log
+
+          if [[ $patch_status -ne 0 ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add docs/program-4b-helper-error.txt
+            git commit -m "Capture Program 4B helper failure"
+            git push origin HEAD:agent/program-4-motorcycle-records
+            exit 0
+          fi
 
           npx prettier --write \
             client/src/components/MotorcycleSaleLinkDialog.tsx \
@@ -297,11 +195,14 @@ jobs:
             server/routes/motorcycleSaleRoutes.ts \
             server/services/motorcycles/finalizedSalePolicy.ts
 
+          rm -f docs/program-4b-helper-error.txt
+
       - name: Commit multi-motorcycle invoice support
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add client/src/components/MotorcycleSaleLinkDialog.tsx docs/program-4-motorcycle-records-plan.md migrations/0031_allow_multi_motorcycle_sales_voucher.sql server/__tests__/motorcycleFinalizedSalePolicy.test.ts server/routes/motorcycleSaleRoutes.ts server/services/motorcycles/finalizedSalePolicy.ts
+          git add -u docs/program-4b-helper-error.txt || true
           git commit -m "Program 4B support multi-motorcycle invoices"
           git push origin HEAD:agent/program-4-motorcycle-records
