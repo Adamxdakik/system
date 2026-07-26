@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { invalidateSalesQueries } from "@/lib/invalidateSalesQueries";
+import { invalidateAccountingQueries, invalidateTransferQueries } from "@/lib/invalidateVoucherQueries";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -986,13 +987,7 @@ export default function VoucherEdit() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/vouchers/${id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/all"] });
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === "string" && key.startsWith("/api/accounts/");
-      }});
+      invalidateAccountingQueries(queryClient, id);
       toast({
         title: "Success",
         description: "Voucher updated successfully",
@@ -1014,9 +1009,7 @@ export default function VoucherEdit() {
       return await apiRequest("PATCH", `/api/vouchers/${id}/optional`, { optional });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/vouchers/${id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/all"] });
+      invalidateAccountingQueries(queryClient, id);
       toast({
         title: "Success",
         description: "Optional status updated successfully",
@@ -1080,9 +1073,7 @@ export default function VoucherEdit() {
       return await apiRequest("PATCH", `/api/vouchers/${id}/purchase`, purchaseData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/vouchers/${id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/all"] });
+      invalidateAccountingQueries(queryClient, id);
       toast({
         title: "Success",
         description: "Purchase voucher updated successfully",
@@ -1115,9 +1106,7 @@ export default function VoucherEdit() {
       return await apiRequest("PATCH", `/api/vouchers/${id}/adjustment`, adjustmentData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/vouchers/${id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/all"] });
+      invalidateTransferQueries(queryClient, id);
       toast({
         title: "Success",
         description: "Adjustment voucher updated successfully",
@@ -1151,9 +1140,7 @@ export default function VoucherEdit() {
       return await apiRequest("PATCH", `/api/vouchers/${id}/transfer`, transferData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/vouchers/${id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/all"] });
+      invalidateTransferQueries(queryClient, id);
       toast({
         title: "Success",
         description: "Stock transfer voucher updated successfully",

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { invalidateAccountingQueries } from "@/lib/invalidateVoucherQueries";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -136,8 +137,7 @@ export function QuickAdjustDialog({
         title: "Balance updated",
         description: "Account adjusted.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
+      invalidateAccountingQueries(queryClient);
       setAmount("");
       setNotes("");
       onOpenChange(false);

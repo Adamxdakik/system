@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateTransferQueries } from "@/lib/invalidateVoucherQueries";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,9 +120,7 @@ export default function StockTransferImport({ posUser }: StockTransferImportProp
         title: "Import successful",
         description: `${data.itemsCount} items transferred successfully.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory-by-location"] });
+      invalidateTransferQueries(queryClient);
       navigate("/stock-transfer");
     },
     onError: (error: any) => {

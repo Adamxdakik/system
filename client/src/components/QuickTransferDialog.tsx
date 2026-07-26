@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { invalidateAccountingQueries } from "@/lib/invalidateVoucherQueries";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -140,8 +141,7 @@ export function QuickTransferDialog({
         title: "Done",
         description: "Money moved between accounts.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/accounts/all"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
+      invalidateAccountingQueries(queryClient);
       setAmount("");
       setNotes("");
       onOpenChange(false);

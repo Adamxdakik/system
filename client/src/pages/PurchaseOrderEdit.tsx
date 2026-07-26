@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateAccountingQueries } from "@/lib/invalidateVoucherQueries";
 import { useRoute, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -221,9 +222,9 @@ export default function PurchaseOrderEdit() {
       return apiRequest("PATCH", `/api/purchase-orders/${poId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/purchase-orders/${poId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/containers"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/containers/${containerId ?? ""}`] });
+      invalidateAccountingQueries(queryClient, poId);
       toast({
         title: "Purchase Order Updated",
         description: "The purchase order has been updated successfully.",

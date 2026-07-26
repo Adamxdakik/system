@@ -1,5 +1,6 @@
 import { useState, useEffect, Fragment, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { invalidateTransferQueries } from "@/lib/invalidateVoucherQueries";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -741,10 +742,7 @@ export default function StockTransferOrder() {
           ? "Successfully updated stock transfer voucher"
           : "Successfully created stock transfer voucher",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/vouchers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stock-transfers", editVoucherId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory-by-location"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/location-summary"] });
+      invalidateTransferQueries(queryClient, editVoucherId ?? undefined);
       if (editVoucherId) {
         navigate("/daybook");
       }
