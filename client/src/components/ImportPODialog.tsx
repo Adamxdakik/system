@@ -306,13 +306,46 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
       // These are updated in-place as we create new items, so subsequent
       // lines always see items created earlier in the same import — no
       // duplicates, no extra API calls.
-      const byCode    = new Map<string, any>(); // lowercase code  → item
-      const byName    = new Map<string, any>(); // lowercase name  → item
+      const byCode    = new Map<string, any>(); // exact lowercase code → item
+      const byName    = new Map<string, any>(); // exact lowercase name → item
+      const byNorm    = new Map<string, any>(); // alphanumeric-only code → item (M-01 = M01)
       // variant cache key: `${parentId}:${variantLabel}` (e.g. "42:200cc")
       const byVariant = new Map<string, any>();
 
+      /** Strip dashes, spaces, dots → lowercase. "M-01" → "m01" */
+      const norm = (s: string) => s.replace(/[\s\-_.]/g, "").toLowerCase();
+
+      /** Find an existing top-level (non-variant) item by code or name */
+      const findParent = (code: string, name: string): any | undefined => {
+        const cl = code.toLowerCase();
+        const nl = name.toLowerCase();
+        // 1. exact code match
+        if (code) {
+          const hit = byCode.get(cl);
+          if (hit && !hit.parentStockItemId) return hit;
+        }
+        // 2. normalised code match  (M-01 == M01 == m-01)
+        if (code) {
+          const hit = byNorm.get(norm(code));
+          if (hit && !hit.parentStockItemId) return hit;
+        }
+        // 3. exact name match
+        const byNH = byName.get(nl);
+        if (byNH && !byNH.parentStockItemId) return byNH;
+        // 4. existing item whose name STARTS WITH the code (e.g. code "M-01", name "M-01 Cylinder Head")
+        if (code) {
+          for (const [k, v] of byName) {
+            if (!v.parentStockItemId && k.startsWith(cl)) return v;
+          }
+        }
+        return undefined;
+      };
+
       const addToCache = (si: any) => {
-        if (si.code) byCode.set(si.code.toLowerCase(), si);
+        if (si.code) {
+          byCode.set(si.code.toLowerCase(), si);
+          byNorm.set(norm(si.code), si);
+        }
         byName.set(si.name.toLowerCase(), si);
         if (si.parentStockItemId) {
           if (si.name.toLowerCase().includes("200cc"))
@@ -341,9 +374,7 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
 
         if (!line.variantLabel) {
           // ── Standalone item ──────────────────────────────────────────
-          const existing =
-            (line.parentCode && byCode.get(line.parentCode.toLowerCase())) ||
-            byName.get(line.parentName.toLowerCase());
+          const existing = findParent(line.parentCode, line.parentName);
 
           if (existing) {
             stockItemId = existing.id;
@@ -364,17 +395,12 @@ export function ImportPODialog({ open, onOpenChange }: ImportPODialogProps) {
           }
         } else {
           // ── Variant: find/create parent first ────────────────────────
-          const existingParent =
-            (line.parentCode && byCode.get(line.parentCode.toLowerCase())) ||
-            byName.get(line.parentName.toLowerCase());
+          const existingParent = findParent(line.parentCode, line.parentName);
 
           let parentId: number;
-          if (existingParent && !existingParent.parentStockItemId) {
-            // Existing top-level parent
+          if (existingParent) {
+            // Found existing parent (findParent already guarantees it's top-level)
             parentId = existingParent.id;
-          } else if (existingParent && existingParent.parentStockItemId) {
-            // Matched a variant by name — climb to its parent
-            parentId = existingParent.parentStockItemId;
           } else {
             // Create the parent
             const res     = await apiRequest("POST", "/api/stock-items", {
