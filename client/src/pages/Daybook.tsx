@@ -509,7 +509,7 @@ export default function Daybook({ user }: { user?: any } = {}) {
   const hiddenErpCosts = myErpPages?.hiddenErpCostFields ?? [];
   const hideAmounts = hiddenErpCosts.includes("daybook_amounts");
   const [periodFilter, setPeriodFilter] = useState<PeriodFilterValue>(
-    getDefaultPeriodValue("today"),
+    getDefaultPeriodValue("this_month"),
   );
   const [filters, setFilters] = useState({
     voucherType: "all",
@@ -749,11 +749,15 @@ export default function Daybook({ user }: { user?: any } = {}) {
     isError: offloadsError,
     refetch: offloadsRefetch,
   } = useQuery<OffloadListItem[]>({
-    queryKey: ["/api/offloads", selectedCompany?.id, periodFilter.fromDate, periodFilter.toDate],
+    // When the Offload type filter is active, bypass date filtering so ALL offloads
+    // (including old containers) are visible regardless of the period selection.
+    queryKey: ["/api/offloads", selectedCompany?.id, filters.voucherType === "Offload" ? "all" : periodFilter.fromDate, filters.voucherType === "Offload" ? "all" : periodFilter.toDate],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (periodFilter.fromDate) params.append("startDate", periodFilter.fromDate);
-      if (periodFilter.toDate) params.append("endDate", periodFilter.toDate);
+      if (filters.voucherType !== "Offload") {
+        if (periodFilter.fromDate) params.append("startDate", periodFilter.fromDate);
+        if (periodFilter.toDate) params.append("endDate", periodFilter.toDate);
+      }
       const url = `/api/offloads${params.toString() ? `?${params.toString()}` : ""}`;
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch offloads");
