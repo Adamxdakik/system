@@ -2347,8 +2347,8 @@ export default function Accounts() {
                                     <span
                                       className={
                                         account.balanceSide?.toLowerCase() === "dr"
-                                          ? "text-red-500 dark:text-red-400"
-                                          : "text-green-600 dark:text-green-400"
+                                          ? "text-green-600 dark:text-green-400"
+                                          : "text-red-500 dark:text-red-400"
                                       }
                                     >
                                       {account.balanceSide ?? ""}
@@ -2386,8 +2386,8 @@ export default function Accounts() {
                                           <span
                                             className={
                                               child.balanceSide?.toLowerCase() === "dr"
-                                                ? "text-red-500 dark:text-red-400"
-                                                : "text-green-600 dark:text-green-400"
+                                                ? "text-green-600 dark:text-green-400"
+                                                : "text-red-500 dark:text-red-400"
                                             }
                                           >
                                             {child.balanceSide ?? ""}

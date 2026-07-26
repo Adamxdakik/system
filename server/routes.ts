@@ -18631,8 +18631,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(inArray(voucherEntries.voucherId, periodVoucherIds))
           .execute();
 
+        // Build set of PURCHASES-code account IDs to exclude from OpEx
+        // (inventory purchases are COGS, not operating expenses)
+        const purchasesAccountIds = new Set<number>(
+          allAccounts
+            .filter((acc) => acc.code === "PURCHASES" || acc.code === "STOCK_PURCHASES")
+            .map((acc) => acc.id),
+        );
+
         for (const entry of expenseEntries) {
-          if (entry.ledgerAccountId && expenseAccountIds.has(entry.ledgerAccountId)) {
+          if (
+            entry.ledgerAccountId &&
+            expenseAccountIds.has(entry.ledgerAccountId) &&
+            !purchasesAccountIds.has(entry.ledgerAccountId)
+          ) {
             operatingExpenses +=
               parseFloat(entry.debitAmount || "0") - parseFloat(entry.creditAmount || "0");
           }
