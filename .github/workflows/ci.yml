@@ -7,7 +7,7 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -15,10 +15,9 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Check out Program 4 branch
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: agent/program-4-motorcycle-records
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -33,29 +32,18 @@ jobs:
       - name: Select changed-file comparison
         shell: bash
         run: |
-          echo "CHANGED_FILES_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
-          echo "CHANGED_FILES_HEAD=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "CHANGED_FILES_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+            echo "CHANGED_FILES_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
+          else
+            echo "CHANGED_FILES_RANGE=${{ github.event.before }}..${{ github.sha }}" >> "$GITHUB_ENV"
+          fi
 
       - name: Check formatting on changed lines
         run: npm run format:changed
 
-      - name: Lint changed source lines and capture failure
-        shell: bash
-        run: |
-          set +e
-          npm run lint:changed > /tmp/program-4c-lint.log 2>&1
-          status=$?
-          set -e
-          if [[ $status -ne 0 ]]; then
-            tail -120 /tmp/program-4c-lint.log > docs/program-4c-lint-error.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add docs/program-4c-lint-error.txt
-            git commit -m "Record Program 4C lint error"
-            git push origin HEAD:agent/program-4-motorcycle-records
-            cat docs/program-4c-lint-error.txt
-            exit $status
-          fi
+      - name: Lint changed source lines with zero warnings
+        run: npm run lint:changed
 
       - name: Check TypeScript packages
         run: npm run check
@@ -91,11 +79,8 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Check out Program 4 branch
+      - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: agent/program-4-motorcycle-records
-          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -106,23 +91,8 @@ jobs:
       - name: Install exact dependencies
         run: npm ci --include=dev
 
-      - name: Run full migration chain and capture failure
-        shell: bash
-        run: |
-          set +e
-          npm run db:migrate > /tmp/program-4c-migration.log 2>&1
-          status=$?
-          set -e
-          if [[ $status -ne 0 ]]; then
-            tail -120 /tmp/program-4c-migration.log > docs/program-4c-migration-error.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add docs/program-4c-migration-error.txt
-            git commit -m "Record Program 4C migration error"
-            git push origin HEAD:agent/program-4-motorcycle-records
-            cat docs/program-4c-migration-error.txt
-            exit $status
-          fi
+      - name: Run full migration chain
+        run: npm run db:migrate
 
       - name: Verify migration rerun is idempotent
         run: npm run db:migrate
