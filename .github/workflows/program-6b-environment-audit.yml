@@ -1,0 +1,52 @@
+name: Program 6B Environment Audit
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.event.pull_request.head.ref == 'agent/program-6-frontend-operations'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out Program 6 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-6-frontend-operations
+
+      - name: List referenced environment variables
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          roots = [Path("server"), Path("client"), Path("scripts"), Path("shared"), Path("lib")]
+          suffixes = {".ts", ".tsx", ".js", ".mjs", ".cjs"}
+          patterns = [
+              re.compile(r"process\.env\.([A-Z][A-Z0-9_]*)"),
+              re.compile(r"process\.env\[['\"]([A-Z][A-Z0-9_]*)['\"]\]"),
+              re.compile(r"import\.meta\.env\.([A-Z][A-Z0-9_]*)"),
+          ]
+          found = {}
+
+          for root in roots:
+              if not root.exists():
+                  continue
+              for path in root.rglob("*"):
+                  if not path.is_file() or path.suffix not in suffixes:
+                      continue
+                  text = path.read_text(encoding="utf-8", errors="ignore")
+                  for pattern in patterns:
+                      for match in pattern.finditer(text):
+                          found.setdefault(match.group(1), set()).add(str(path))
+
+          print("PROGRAM_6B_ENVIRONMENT_VARIABLES_BEGIN")
+          for name in sorted(found):
+              print(f"{name}\t{','.join(sorted(found[name]))}")
+          print("PROGRAM_6B_ENVIRONMENT_VARIABLES_END")
+          PY
