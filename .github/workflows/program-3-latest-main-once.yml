@@ -1,21 +1,20 @@
-# Triggered self-removing workflow for the latest Program 3 main synchronization.
 name: Program 3 latest main once
 
 on:
-  push:
-    branches:
-      - agent/program-3-simplified-interface-rebased
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   sync:
-    if: github.actor != 'github-actions[bot]'
+    if: github.head_ref == 'agent/program-3-simplified-interface-rebased' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: agent/program-3-simplified-interface-rebased
           fetch-depth: 0
 
       - name: Merge latest main and preserve the Program 3 container layout
