@@ -9248,7 +9248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (existing) {
             stockItemId = existing.id; itemName = existing.name;
           } else {
-            const vName = `${parentName || parentCode} ${variantLabel}`;
+            const vName = variantLabel; // e.g. "200cc" — parent name shown separately via parent relationship
             const vCode = parentCode
               ? `${parentCode}-${variantLabel.replace(/[^a-z0-9]/gi, "")}`
               : `AUTO-${Date.now()}`;
