@@ -642,12 +642,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               code: schema.companies.code,
               name: schema.companies.name,
               active: schema.companies.active,
-              currency: schema.companies.currency,
-              fiscalYearStart: schema.companies.fiscalYearStart,
-              address: schema.companies.address,
-              phone: schema.companies.phone,
-              email: schema.companies.email,
-              taxNumber: schema.companies.taxNumber,
+              currency: sql<string | null>`NULL`,
+              fiscalYearStart: sql<string | null>`NULL`,
+              address: sql<string | null>`NULL`,
+              phone: sql<string | null>`NULL`,
+              email: sql<string | null>`NULL`,
+              taxNumber: sql<string | null>`NULL`,
               createdAt: schema.companies.createdAt,
             })
             .from(schema.companies)
