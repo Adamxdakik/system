@@ -4,6 +4,7 @@ import connectPgSimple from "connect-pg-simple";
 import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
+import { registerAdminBandwidthRoutes } from "./routes/adminBandwidthRoutes";
 import { registerMotorcycleAssemblyLifecycleRoutes } from "./routes/motorcycleAssemblyLifecycleRoutes";
 import { registerMotorcycleLifecycleOverviewRoutes } from "./routes/motorcycleLifecycleOverviewRoutes";
 import { registerMotorcycleRecordRoutes } from "./routes/motorcycleRecordRoutes";
@@ -11,6 +12,9 @@ import { registerMotorcycleSaleCustomerRoutes } from "./routes/motorcycleSaleCus
 import { registerMotorcycleSaleRoutes } from "./routes/motorcycleSaleRoutes";
 import { registerMotorcycleTimelineRoutes } from "./routes/motorcycleTimelineRoutes";
 import { registerMotorcycleWorkshopRoutes } from "./routes/motorcycleWorkshopRoutes";
+import { registerOptimizedAccountsRoutes } from "./routes/optimizedAccountsRoutes";
+import { registerOptimizedStockHistoryRoutes } from "./routes/optimizedStockHistoryRoutes";
+import { recordBandwidthSample } from "./services/observability/bandwidthTelemetry";
 import { setupVite, log } from "./vite";
 import type { User } from "@shared/schema";
 import {
@@ -127,7 +131,7 @@ app.use((_req, res, next) => {
   next();
 });
 
-app.use(apiRequestLogger(log));
+app.use(apiRequestLogger(log, recordBandwidthSample));
 
 // CSRF protection: reject state-changing requests whose Origin doesn't match
 // the server's own host. SameSite:lax stops most cross-site POST cookies, but
@@ -151,6 +155,12 @@ app.use((req, res, next) => {
   app.get("/api/build-info", (_req, res) => {
     res.json({ version: BUILD_VERSION });
   });
+
+  registerAdminBandwidthRoutes(app);
+
+  // High-frequency read routes are registered before the legacy monolithic route file.
+  registerOptimizedAccountsRoutes(app);
+  registerOptimizedStockHistoryRoutes(app);
 
   // Lifecycle guards must run before generic assembly, service, and registry routes.
   registerMotorcycleWorkshopRoutes(app);

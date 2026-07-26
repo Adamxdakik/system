@@ -5,6 +5,14 @@ export const JSON_BODY_LIMIT = "2mb";
 export const URL_ENCODED_BODY_LIMIT = "2mb";
 export const MULTIPART_FILE_LIMIT_BYTES = 10 * 1024 * 1024;
 
+export interface ApiBandwidthSample {
+  method: string;
+  path: string;
+  statusCode: number;
+  durationMillis: number;
+  responseBytes: number | null;
+}
+
 export function databaseHealthPayload(dbStatus: "ok" | "down", requestId: string) {
   return dbStatus === "ok"
     ? { status: "ok" as const, db: "ok" as const }
@@ -61,19 +69,34 @@ export function requestBodyParsers(): RequestHandler[] {
   ];
 }
 
-export function apiRequestLogger(writeLog: (message: string) => void): RequestHandler {
+function responseBytesFrom(
+  contentLength: unknown,
+  method: string,
+  statusCode: number,
+): number | null {
+  if (method === "HEAD" || statusCode === 204 || statusCode === 304) return 0;
+  if (contentLength === undefined) return null;
+  const parsed = Number(contentLength);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
+}
+
+export function apiRequestLogger(
+  writeLog: (message: string) => void,
+  recordBandwidthSample?: (sample: ApiBandwidthSample) => void,
+): RequestHandler {
   return (req, res, next) => {
     const start = Date.now();
 
     res.on("finish", () => {
       if (req.path.startsWith("/api")) {
+        const durationMillis = Date.now() - start;
         const contentLength = res.getHeader("content-length");
         const entry: Record<string, string | number> = {
           requestId: req.requestId,
           method: req.method,
           path: req.path,
           statusCode: res.statusCode,
-          durationMillis: Date.now() - start,
+          durationMillis,
         };
 
         if (contentLength !== undefined) {
@@ -89,6 +112,16 @@ export function apiRequestLogger(writeLog: (message: string) => void): RequestHa
         }
 
         writeLog(JSON.stringify(entry));
+
+        if (recordBandwidthSample && req.path !== "/api/admin/bandwidth-report") {
+          recordBandwidthSample({
+            method: req.method,
+            path: req.path,
+            statusCode: res.statusCode,
+            durationMillis,
+            responseBytes: responseBytesFrom(contentLength, req.method, res.statusCode),
+          });
+        }
       }
     });
 

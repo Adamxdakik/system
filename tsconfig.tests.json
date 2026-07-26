@@ -38,6 +38,7 @@
     "server/securityHeaders.ts",
     "server/lib/asyncHandler.ts",
     "server/lib/excel.ts",
+    "server/lib/exportSafety.ts",
     "server/lib/validate.ts"
   ],
   "exclude": ["node_modules", "dist", ".cache", "_trash"],
