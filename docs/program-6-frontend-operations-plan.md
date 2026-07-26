@@ -13,6 +13,8 @@ Program 6 is stacked on the reviewed Program 5 head. It must not change accounti
 
 ## Phase 6A — Frontend quality and resilience
 
+**Status:** implementation in progress on the stacked Program 6 branch.
+
 ### Initial audit findings
 
 - route errors remain latched in the shared error boundary after navigation
