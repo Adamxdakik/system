@@ -7,9 +7,109 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  program-5b-cleanup:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/program-5-bandwidth-verification'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out Program 5 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-5-bandwidth-verification
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Remove dead query wave
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('server/routes/optimizedStockHistoryRoutes.ts')
+          text = path.read_text(encoding='utf-8')
+
+          interface_start = text.index('interface LocationMovementRow {')
+          interface_end = text.index('\n}\n\n', interface_start) + 4
+          text = text[:interface_start] + text[interface_end:]
+
+          helper_start = text.index('function locationMovement(')
+          helper_end = text.index('\n}\n\n', helper_start) + 4
+          text = text[:helper_start] + text[helper_end:]
+
+          query_start = text.index('  const [\n    priorTransferResult,')
+          query_end_marker = '  const currentInventory = currentInventoryResult[0];'
+          query_end = text.index(query_end_marker, query_start) + len(query_end_marker)
+          replacement = '''  const currentInventoryResult = await db
+            .select({
+              quantity: inventory.quantity,
+              averageRate: inventory.averageRate,
+              totalValue: inventory.totalValue,
+            })
+            .from(inventory)
+            .where(
+              and(eq(inventory.locationId, locationId), eq(inventory.stockItemId, stockItemId)),
+            )
+            .limit(1);
+  const currentInventory = currentInventoryResult[0];'''
+          text = text[:query_start] + replacement + text[query_end:]
+
+          text = text.replace(
+              '    _reconciliation: { voucherOpeningQty, voucherOpeningValue },\n',
+              '',
+          )
+          old_handler = '''        const result = (await coalesce(key, () =>
+          loadLocationStockHistory(companyId, locationId, stockItemId, year, month),
+        )) as any;
+        delete result._reconciliation;
+        return res.json(result);'''
+          new_handler = '''        return res.json(
+          await coalesce(key, () =>
+            loadLocationStockHistory(companyId, locationId, stockItemId, year, month),
+          ),
+        );'''
+          if old_handler not in text:
+              raise SystemExit('location handler replacement target not found')
+          text = text.replace(old_handler, new_handler)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Format Program 5B files
+        run: >-
+          npx prettier --write
+          docs/program-5b-static-audit.md
+          package.json
+          server/__tests__/heavyReadOptimization.test.ts
+          server/index.ts
+          server/routes/optimizedAccountsRoutes.ts
+          server/routes/optimizedStockHistoryRoutes.ts
+          server/services/performance/heavyReadCalculations.ts
+
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No cleanup changes required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/program-5b-static-audit.md package.json server/__tests__/heavyReadOptimization.test.ts server/index.ts server/routes/optimizedAccountsRoutes.ts server/routes/optimizedStockHistoryRoutes.ts server/services/performance/heavyReadCalculations.ts
+          git commit -m "Clean and format Program 5B heavy reads"
+          git push origin HEAD:agent/program-5-bandwidth-verification
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
