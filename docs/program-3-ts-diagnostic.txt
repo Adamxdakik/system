@@ -1,0 +1,10 @@
+
+> rest-express@1.0.0 check:all:baseline
+> node scripts/check-typescript-baseline.mjs
+
+TypeScript baseline regressed:
+client/src/pages/PurchaseOrderEdit.tsx::TS2304: 1 (baseline 0)
+client/src/pages/PurchaseOrderEdit.tsx::TS2307: 1 (baseline 0)
+server/index.ts::TS7030: 1 (baseline 0)
+server/routes.ts::TS2304: 18 (baseline 0)
+server/routes.ts::TS7030: 319 (baseline 315)
