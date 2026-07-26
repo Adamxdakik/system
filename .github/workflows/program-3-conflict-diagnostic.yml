@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Persist exact Program 3 conflict files
+      - name: Persist exact Program 3 conflict files and blocks
         shell: bash
         run: |
           set +e
@@ -37,8 +37,31 @@ jobs:
           cp client/src/components/StockItemEditDialog.tsx docs/diagnostics/conflicted/StockItemEditDialog.conflict.tsx
           cp client/src/pages/StockItems.tsx docs/diagnostics/conflicted/StockItems.conflict.tsx
 
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          root = Path('docs/diagnostics/conflicted')
+          report = {}
+          pattern = re.compile(r'<<<<<<< HEAD\n(.*?)=======\n(.*?)>>>>>>> origin/agent/program-3-simplified-interface', re.S)
+          for path in sorted(root.glob('*.tsx')):
+              text = path.read_text(encoding='utf-8')
+              blocks = []
+              for index, match in enumerate(pattern.finditer(text), start=1):
+                  blocks.append({
+                      'index': index,
+                      'ours': match.group(1).splitlines(),
+                      'theirs': match.group(2).splitlines(),
+                  })
+              report[path.name] = blocks
+          Path('docs/diagnostics/program3-conflict-blocks.json').write_text(
+              json.dumps(report, indent=2) + '\n', encoding='utf-8'
+          )
+          PY
+
           git merge --abort || true
           git add docs/diagnostics
-          git commit -m "Capture exact temporary Program 3 conflict files"
+          git commit -m "Summarize temporary Program 3 conflict blocks"
           git push origin HEAD:agent/program-3-current-main-integration
           exit $(( merge_status == 0 ? 1 : 0 ))
