@@ -48,6 +48,12 @@ interface CustomerOption {
   code?: string;
 }
 
+interface CustomerResolution {
+  customerId: number | null;
+  customerName: string | null;
+  source: "voucher" | "linked_motorcycle" | null;
+}
+
 interface MotorcycleSaleLinkDialogProps {
   motorcycle: MotorcycleForSaleLink | null;
   open: boolean;
@@ -89,7 +95,11 @@ export function MotorcycleSaleLinkDialog({
     return params.toString();
   }, [motorcycle?.locationId, searchQuery]);
 
-  const { data: vouchers = [], isLoading: vouchersLoading } = useQuery<FinalizedSaleVoucher[]>({
+  const {
+    data: vouchers = [],
+    isLoading: vouchersLoading,
+    isError: vouchersError,
+  } = useQuery<FinalizedSaleVoucher[]>({
     queryKey: ["/api/motorcycle-sales/vouchers", motorcycle?.id, voucherQuery],
     enabled: open && !!motorcycle,
     queryFn: async () => {
@@ -111,6 +121,25 @@ export function MotorcycleSaleLinkDialog({
 
   const selectedVoucher = vouchers.find((voucher) => String(voucher.id) === voucherId) ?? null;
 
+  const {
+    data: customerResolution,
+    isLoading: customerResolutionLoading,
+    isError: customerResolutionError,
+  } = useQuery<CustomerResolution>({
+    queryKey: ["/api/motorcycle-sales/vouchers/customer", voucherId],
+    enabled: open && !!voucherId,
+    queryFn: async () => {
+      const response = await fetch(`/api/motorcycle-sales/vouchers/${voucherId}/customer`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(body.message || "Failed to resolve the finalized invoice customer");
+      }
+      return response.json();
+    },
+  });
+
   useEffect(() => {
     if (!open || !motorcycle) return;
     setSearchQuery("");
@@ -122,16 +151,31 @@ export function MotorcycleSaleLinkDialog({
   }, [open, motorcycle]);
 
   useEffect(() => {
-    if (!selectedVoucher) return;
-    if (selectedVoucher.customerId) setCustomerId(String(selectedVoucher.customerId));
-    if (!sellingPrice) setSellingPrice(selectedVoucher.remainingAmount);
+    setCustomerId("");
+    if (!selectedVoucher) {
+      setSellingPrice(motorcycle?.sellingPrice ?? "");
+      setWarrantyStartDate("");
+      return;
+    }
+    setSellingPrice(selectedVoucher.remainingAmount);
     setWarrantyStartDate(selectedVoucher.voucherDate);
-  }, [selectedVoucher, sellingPrice]);
+  }, [motorcycle?.sellingPrice, selectedVoucher]);
+
+  useEffect(() => {
+    if (!voucherId || customerResolutionLoading || customerResolutionError) return;
+    setCustomerId(customerResolution?.customerId ? String(customerResolution.customerId) : "");
+  }, [customerResolution, customerResolutionError, customerResolutionLoading, voucherId]);
 
   const linkMutation = useMutation({
     mutationFn: async () => {
       if (!motorcycle) throw new Error("No motorcycle selected");
       if (!voucherId) throw new Error("Select a finalized Sales voucher");
+      if (customerResolutionLoading) {
+        throw new Error("The invoice customer is still being checked");
+      }
+      if (customerResolutionError) {
+        throw new Error("The finalized invoice customer could not be verified");
+      }
       if (!customerId) throw new Error("Select the customer who bought this motorcycle");
       if (!sellingPrice || Number(sellingPrice) <= 0) {
         throw new Error("Enter the motorcycle selling price");
@@ -149,10 +193,12 @@ export function MotorcycleSaleLinkDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/motorcycles"] });
       queryClient.invalidateQueries({ queryKey: ["/api/motorcycle-sales/vouchers"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/motorcycle-sales/vouchers/customer"],
+      });
       toast({
         title: "Finalized sale linked",
-        description:
-          "The motorcycle is now sold to the selected customer and locked to the voucher.",
+        description: "The motorcycle is sold to the invoice customer and locked to the voucher.",
       });
       onLinked();
       onOpenChange(false);
@@ -166,9 +212,20 @@ export function MotorcycleSaleLinkDialog({
     },
   });
 
+  const customerIsLocked = Boolean(customerResolution?.customerId);
+  const customerGuidance = customerResolutionLoading
+    ? "Checking the finalized invoice customer..."
+    : customerResolutionError
+      ? "The invoice customer could not be verified. Select another voucher or refresh."
+      : customerIsLocked
+        ? customerResolution?.source === "linked_motorcycle"
+          ? "Customer is locked to the buyer already used on this invoice."
+          : "Customer is locked to the finalized credit-sale invoice."
+        : "Select the customer for this cash sale.";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5" />
@@ -209,14 +266,16 @@ export function MotorcycleSaleLinkDialog({
               className={selectClassName}
               value={voucherId}
               onChange={(event) => setVoucherId(event.target.value)}
-              disabled={vouchersLoading}
+              disabled={vouchersLoading || vouchersError}
               aria-label="Finalized Sales voucher"
               data-testid="select-motorcycle-sale-voucher"
             >
               <option value="">
                 {vouchersLoading
                   ? "Loading finalized sales..."
-                  : "Select a finalized Sales voucher"}
+                  : vouchersError
+                    ? "Finalized sales could not be loaded"
+                    : "Select a finalized Sales voucher"}
               </option>
               {vouchers.map((voucher) => (
                 <option key={voucher.id} value={voucher.id}>
@@ -229,7 +288,7 @@ export function MotorcycleSaleLinkDialog({
                 </option>
               ))}
             </select>
-            {!vouchersLoading && vouchers.length === 0 && (
+            {!vouchersLoading && !vouchersError && vouchers.length === 0 && (
               <p className="text-xs text-muted-foreground">
                 No active Sales vouchers with remaining unlinked value match this location and
                 search.
@@ -272,6 +331,7 @@ export function MotorcycleSaleLinkDialog({
                 className={selectClassName}
                 value={customerId}
                 onChange={(event) => setCustomerId(event.target.value)}
+                disabled={!voucherId || customerResolutionLoading || customerIsLocked}
                 data-testid="select-motorcycle-sale-customer"
               >
                 <option value="">Select customer</option>
@@ -282,8 +342,10 @@ export function MotorcycleSaleLinkDialog({
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-muted-foreground">
-                Credit-sale customers are selected automatically when the voucher identifies them.
+              <p
+                className={`text-xs ${customerResolutionError ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {customerGuidance}
               </p>
             </div>
 
@@ -293,6 +355,7 @@ export function MotorcycleSaleLinkDialog({
                 id="motorcycle-sale-price"
                 type="number"
                 min="0.01"
+                max={selectedVoucher?.remainingAmount}
                 step="0.01"
                 value={sellingPrice}
                 onChange={(event) => setSellingPrice(event.target.value)}
@@ -337,7 +400,14 @@ export function MotorcycleSaleLinkDialog({
           </Button>
           <Button
             onClick={() => linkMutation.mutate()}
-            disabled={linkMutation.isPending || !voucherId || !customerId || !sellingPrice}
+            disabled={
+              linkMutation.isPending ||
+              customerResolutionLoading ||
+              customerResolutionError ||
+              !voucherId ||
+              !customerId ||
+              !sellingPrice
+            }
             data-testid="button-confirm-motorcycle-sale-link"
           >
             {linkMutation.isPending ? "Linking..." : "Link finalized sale"}
