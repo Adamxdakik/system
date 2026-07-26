@@ -653,7 +653,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                     <th className="px-3 text-left font-medium">Category</th>
                     <th className="px-3 text-right font-medium">Quantity</th>
                     <th className="px-3 text-right font-medium">Average Cost</th>
-                    <th className="px-3 text-right font-medium">Selling Price</th>
                     <th className="px-3 text-left font-medium">Status</th>
                     <th className="px-3 text-center font-medium">Actions</th>
                   </tr>
@@ -734,11 +733,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                         </td>
                         <td className="px-3 text-right font-mono">
                           {totals.averageCost > 0 ? formatMoney(totals.averageCost) : "—"}
-                        </td>
-                        <td className="px-3 text-right font-mono">
-                          {Number.isFinite(sellingPriceNumber)
-                            ? formatMoney(sellingPriceNumber)
-                            : "—"}
                         </td>
                         <td className="px-3">{statusBadge(itemStatus)}</td>
                         <td
@@ -823,11 +817,6 @@ export default function StockItems({ embedded = false }: StockItemsProps = {}) {
                           <td className="px-3 text-right font-mono">
                             {variantTotals.averageCost > 0
                               ? formatMoney(variantTotals.averageCost)
-                              : "—"}
-                          </td>
-                          <td className="px-3 text-right font-mono">
-                            {Number.isFinite(variantSellingPrice)
-                              ? formatMoney(variantSellingPrice)
                               : "—"}
                           </td>
                           <td className="px-3">{statusBadge(variantStatus)}</td>
