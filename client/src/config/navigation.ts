@@ -15,6 +15,7 @@ import {
   Cog,
   Settings,
   BookOpen,
+  Bike,
 } from "lucide-react";
 
 export interface NavigationItem {
@@ -50,6 +51,12 @@ export const primaryItems: NavigationItem[] = [
     url: "/stock-items",
     icon: Layers,
     activePrefixes: ["/stock-items", "/stock-query"],
+  },
+  {
+    title: "Motorcycles",
+    url: "/motorcycles",
+    icon: Bike,
+    activePrefixes: ["/motorcycles"],
   },
   {
     title: "Transaction History",
