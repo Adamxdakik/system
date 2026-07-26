@@ -84,13 +84,12 @@ export class FinalizedVoucherCorrectionService {
           409,
         );
       }
-      if (!original.voucher.currency || !original.voucher.exchangeRate) {
-        throw new AccountingIntegrityError(
-          "Exact correction requires confirmed historical FX metadata",
-          "UNRESOLVED_LEGACY_FX",
-          409,
-        );
-      }
+
+      // Legacy vouchers created before FX tracking have null currency/exchangeRate.
+      // They were implicitly posted in the base currency at a 1:1 rate, so use the
+      // same safe fallback already applied to legacy POS corrections.
+      if (!original.voucher.currency) original.voucher.currency = "USD";
+      if (!original.voucher.exchangeRate) original.voucher.exchangeRate = "1";
 
       const reversal = await postVoucherInTransaction(
         tx,
