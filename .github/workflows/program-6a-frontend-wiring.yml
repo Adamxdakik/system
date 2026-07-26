@@ -1,0 +1,168 @@
+name: Program 6A Frontend Wiring
+
+on:
+  push:
+    branches:
+      - agent/program-6-frontend-operations
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out Program 6 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/program-6-frontend-operations
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci --include=dev
+
+      - name: Wire frontend resilience into application shell
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          app_path = Path("client/src/App.tsx")
+          text = app_path.read_text(encoding="utf-8")
+
+          text = text.replace(
+              'import { OfflineBanner } from "@/components/OfflineBanner";\n',
+              'import { OfflineBanner } from "@/components/OfflineBanner";\n'
+              'import { PageLoader } from "@/components/PageLoader";\n'
+              'import { useHeartbeat } from "@/hooks/useHeartbeat";\n',
+          )
+
+          loader = '''function PageLoader() {
+            return (
+              <div className="flex items-center justify-center min-h-[300px]">
+                <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            );
+          }
+
+          '''
+          if loader not in text:
+              raise SystemExit("PageLoader block not found")
+          text = text.replace(loader, "")
+
+          heartbeat = '''  // Global heartbeat — keeps active-users list current for all authenticated users
+            useEffect(() => {
+              const send = () => {
+                fetch("/api/users/heartbeat", {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ currentPage: window.location.pathname }),
+                }).catch(() => {});
+              };
+              send();
+              const timer = setInterval(send, 30000);
+              return () => clearInterval(timer);
+            }, [_location]);
+          '''
+          if heartbeat not in text:
+              raise SystemExit("Heartbeat block not found")
+          text = text.replace(
+              heartbeat,
+              '  // Keep the active-user list current without polling hidden or offline tabs.\n'
+              '  useHeartbeat(_location);\n',
+          )
+
+          text = text.replace(
+              '<ErrorBoundary>\n              <Router user={user} />\n            </ErrorBoundary>',
+              '<ErrorBoundary resetKey={currentLocation}>\n              <Router user={user} />\n            </ErrorBoundary>',
+          )
+
+          loading = '''  if (isLoading) {
+            return (
+              <div className="flex items-center justify-center h-screen">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
+            );
+          }
+          '''
+          if loading not in text:
+              raise SystemExit("Authentication loading block not found")
+          text = text.replace(
+              loading,
+              '  if (isLoading) {\n'
+              '    return <PageLoader fullScreen label="Loading your workspace" />;\n'
+              '  }\n',
+          )
+
+          text = text.replace(
+              '  if (error || !user) {\n    return null;\n  }',
+              '  if (error || !user) {\n'
+              '    return <PageLoader fullScreen label="Returning to sign in" />;\n'
+              '  }',
+          )
+
+          text = text.replace(
+              '<Button variant="ghost" size="sm" onClick={handleLogout} data-testid="button-logout">',
+              '<Button\n'
+              '                variant="ghost"\n'
+              '                size="sm"\n'
+              '                onClick={handleLogout}\n'
+              '                aria-label="Sign out"\n'
+              '                title="Sign out"\n'
+              '                data-testid="button-logout"\n'
+              '              >',
+          )
+          text = text.replace(
+              '<LogOut className="h-4 w-4" />',
+              '<LogOut className="h-4 w-4" aria-hidden="true" />',
+          )
+          text = text.replace(
+              '<SidebarTrigger data-testid="button-sidebar-toggle" />',
+              '<SidebarTrigger aria-label="Toggle navigation" data-testid="button-sidebar-toggle" />',
+          )
+          text = text.replace(
+              '<main className="flex-1 overflow-y-auto p-6">',
+              '<main id="main-content" className="flex-1 overflow-y-auto p-6">',
+          )
+
+          app_path.write_text(text, encoding="utf-8")
+
+          package_path = Path("package.json")
+          package_text = package_path.read_text(encoding="utf-8")
+          target = 'server/__tests__/exportSafety.test.ts"'
+          replacement = 'server/__tests__/exportSafety.test.ts server/__tests__/frontendResilience.test.ts"'
+          if target not in package_text:
+              raise SystemExit("test:unit insertion target not found")
+          package_path.write_text(package_text.replace(target, replacement, 1), encoding="utf-8")
+          PY
+
+      - name: Format Program 6A files
+        run: >-
+          npx prettier --write
+          client/src/App.tsx
+          client/src/components/ErrorBoundary.tsx
+          client/src/components/PageLoader.tsx
+          client/src/hooks/useHeartbeat.ts
+          client/src/lib/frontendResilience.ts
+          docs/program-6-frontend-operations-plan.md
+          package.json
+          server/__tests__/frontendResilience.test.ts
+
+      - name: Commit wiring and remove temporary workflow
+        shell: bash
+        run: |
+          git rm .github/workflows/program-6a-frontend-wiring.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/src/App.tsx client/src/components/ErrorBoundary.tsx client/src/components/PageLoader.tsx client/src/hooks/useHeartbeat.ts client/src/lib/frontendResilience.ts docs/program-6-frontend-operations-plan.md package.json server/__tests__/frontendResilience.test.ts
+          git commit -m "Complete Program 6A frontend resilience wiring"
+          git push origin HEAD:agent/program-6-frontend-operations
