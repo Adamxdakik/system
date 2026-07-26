@@ -29,32 +29,34 @@ jobs:
       - name: Lock finalized invoice customer
         shell: bash
         run: |
-          python - <<'PY'
+          set +e
+          python - <<'PY' > /tmp/program4b-customer.log 2>&1
           from pathlib import Path
+
+          failures: list[str] = []
 
           def replace_once(text: str, old: str, new: str, label: str) -> str:
               if old not in text:
-                  raise SystemExit(f"Expected block not found: {label}\n{old}")
+                  failures.append(label)
+                  return text
               return text.replace(old, new, 1)
 
           route_path = Path("server/routes/motorcycleSaleRoutes.ts")
           route = route_path.read_text()
-
-          route = replace_once(
-              route,
-              'import { asyncHandler } from "../lib/asyncHandler";\n',
-              'import { asyncHandler } from "../lib/asyncHandler";\n'
-              'import { voucherCustomerMatchesSelection } from "../services/motorcycles/finalizedSalePolicy";\n',
-              "route policy import",
-          )
-
+          if "voucherCustomerMatchesSelection" not in route:
+              route = replace_once(
+                  route,
+                  'import { asyncHandler } from "../lib/asyncHandler";\n',
+                  'import { asyncHandler } from "../lib/asyncHandler";\n'
+                  'import { voucherCustomerMatchesSelection } from "../services/motorcycles/finalizedSalePolicy";\n',
+                  "route policy import",
+              )
           route = replace_once(
               route,
               '          OR buyer."customerName" ILIKE ${pattern}\n',
               '          OR COALESCE(buyer."customerName", linked_buyer."customerName") ILIKE ${pattern}\n',
               "voucher search customer",
           )
-
           route = replace_once(
               route,
               '''          buyer."customerId",
@@ -65,7 +67,6 @@ jobs:
 ''',
               "voucher customer selection",
           )
-
           route = replace_once(
               route,
               '''        ) buyer ON true
@@ -95,7 +96,6 @@ jobs:
 ''',
               "linked invoice customer lateral",
           )
-
           route = replace_once(
               route,
               '''          let customerId = input.customerId ?? null;
@@ -162,7 +162,6 @@ jobs:
 ''',
               "transaction customer inference",
           )
-
           route_path.write_text(route)
 
           component_path = Path("client/src/components/MotorcycleSaleLinkDialog.tsx")
@@ -216,11 +215,12 @@ jobs:
 
           policy_path = Path("server/services/motorcycles/finalizedSalePolicy.ts")
           policy = policy_path.read_text()
-          policy = replace_once(
-              policy,
-              '''export function warrantyDatesAreValid(
+          if "voucherCustomerMatchesSelection" not in policy:
+              policy = replace_once(
+                  policy,
+                  '''export function warrantyDatesAreValid(
 ''',
-              '''export function voucherCustomerMatchesSelection(
+                  '''export function voucherCustomerMatchesSelection(
   inferredCustomerId: number | null,
   selectedCustomerId: number | null | undefined,
 ): boolean {
@@ -233,28 +233,29 @@ jobs:
 
 export function warrantyDatesAreValid(
 ''',
-              "customer policy helper",
-          )
+                  "customer policy helper",
+              )
           policy_path.write_text(policy)
 
           test_path = Path("server/__tests__/motorcycleFinalizedSalePolicy.test.ts")
           test = test_path.read_text()
-          test = replace_once(
-              test,
-              '''  motorcyclePriceFitsVoucher,
+          if "voucherCustomerMatchesSelection" not in test:
+              test = replace_once(
+                  test,
+                  '''  motorcyclePriceFitsVoucher,
   warrantyDatesAreValid,
 ''',
-              '''  motorcyclePriceFitsVoucher,
+                  '''  motorcyclePriceFitsVoucher,
   voucherCustomerMatchesSelection,
   warrantyDatesAreValid,
 ''',
-              "customer policy test import",
-          )
-          test = replace_once(
-              test,
-              '''  it("validates warranty order and requires reversal before release", () => {
+                  "customer policy test import",
+              )
+              test = replace_once(
+                  test,
+                  '''  it("validates warranty order and requires reversal before release", () => {
 ''',
-              '''  it("locks an identified invoice customer while allowing cash-sale selection", () => {
+                  '''  it("locks an identified invoice customer while allowing cash-sale selection", () => {
     expect(voucherCustomerMatchesSelection(21, 21)).toBe(true);
     expect(voucherCustomerMatchesSelection(21, 22)).toBe(false);
     expect(voucherCustomerMatchesSelection(21, null)).toBe(true);
@@ -263,8 +264,8 @@ export function warrantyDatesAreValid(
 
   it("validates warranty order and requires reversal before release", () => {
 ''',
-              "customer policy test case",
-          )
+                  "customer policy test case",
+              )
           test_path.write_text(test)
 
           doc_path = Path("docs/program-4-motorcycle-records-plan.md")
@@ -287,7 +288,26 @@ export function warrantyDatesAreValid(
               "roadmap customer acceptance",
           )
           doc_path.write_text(doc)
+
+          print("failures:", failures)
+          if failures:
+              Path("docs/program-4b-customer-helper-error.txt").write_text(
+                  "\n".join(failures) + "\n",
+              )
+              raise SystemExit(1)
           PY
+          patch_status=$?
+          cat /tmp/program4b-customer.log
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [[ $patch_status -ne 0 ]]; then
+            git add docs/program-4b-customer-helper-error.txt
+            git commit -m "Capture Program 4B customer helper failure"
+            git push origin HEAD:agent/program-4-motorcycle-records
+            exit 0
+          fi
 
           npx prettier --write \
             client/src/components/MotorcycleSaleLinkDialog.tsx \
@@ -295,12 +315,9 @@ export function warrantyDatesAreValid(
             server/__tests__/motorcycleFinalizedSalePolicy.test.ts \
             server/routes/motorcycleSaleRoutes.ts \
             server/services/motorcycles/finalizedSalePolicy.ts
+          rm -f docs/program-4b-customer-helper-error.txt
 
-      - name: Commit customer integrity safeguard
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add client/src/components/MotorcycleSaleLinkDialog.tsx docs/program-4-motorcycle-records-plan.md server/__tests__/motorcycleFinalizedSalePolicy.test.ts server/routes/motorcycleSaleRoutes.ts server/services/motorcycles/finalizedSalePolicy.ts
+          git add -u docs/program-4b-customer-helper-error.txt || true
           git commit -m "Program 4B lock finalized invoice customer"
           git push origin HEAD:agent/program-4-motorcycle-records
