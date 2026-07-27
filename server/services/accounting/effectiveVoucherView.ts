@@ -1,4 +1,4 @@
-import { isNull } from "drizzle-orm";
+import { isNull, type SQL } from "drizzle-orm";
 
 import { vouchers } from "@shared/schema";
 
@@ -19,7 +19,7 @@ export function isEffectiveVoucherState(voucher: VoucherLifecycleState): boolean
 }
 
 /** Shared SQL lifecycle conditions for daybook and account-activity reads. */
-export function effectiveVoucherConditions() {
+export function effectiveVoucherConditions(): SQL[] {
   return [
     isNull(vouchers.deletedAt),
     isNull(vouchers.reversedAt),

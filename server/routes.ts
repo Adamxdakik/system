@@ -9324,14 +9324,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.json({
+      return res.json({
         success: true, containerId: container.id,
         containerNumber: container.containerNumber,
         lineItems: itemRows.length, autoCreated, grandTotal: grandTotal.toFixed(2),
       });
     } catch (err: any) {
       console.error("[import-po]", err);
-      res.status(500).json({ message: err.message });
+      return res.status(500).json({ message: err.message });
     }
   });
 
@@ -9371,7 +9371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      let container: Container;
+      let container: Awaited<ReturnType<typeof storage.createContainer>>;
       try {
         container = await storage.createContainer(data);
       } catch (dbErr: any) {
@@ -9519,9 +9519,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updates.supplierId) updates.supplierId = parseInt(updates.supplierId);
 
       const updated = await storage.updateContainer(containerId, updates);
-      res.json(updated);
+      return res.json(updated);
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      return res.status(500).json({ message: err.message });
     }
   });
 
@@ -19032,7 +19032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalAssets = cashInHand + motoInv + partsInv + (customerReceivables > 0 ? customerReceivables : 0);
       const totalLiabilities = totalSupplierPayables + totalLoans;
 
-      res.json({
+      return res.json({
         period: { fromDate: fromDateStr, toDate: toDateStr },
         revenue:  { total: totalSales, breakdown: salesBreakdown },
         cogs:     { total: totalCost },
@@ -19057,7 +19057,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (err: any) {
       console.error("[net-profit-detail] ERROR:", err?.message, err?.stack?.split("\n").slice(0,5).join(" | "));
-      res.status(500).json({ message: err?.message || "Internal server error" });
+      return res.status(500).json({ message: err?.message || "Internal server error" });
     }
   });
 

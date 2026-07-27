@@ -1,5 +1,5 @@
 import type { Express, RequestHandler } from "express";
-import { and, asc, desc, eq, gte, isNull, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lte, type SQL } from "drizzle-orm";
 
 import { db } from "../db";
 import {
@@ -98,20 +98,20 @@ async function accountExists(kind: AccountKind, accountId: number, companyId: nu
   }
 }
 
-function entryAccountColumn(kind: AccountKind) {
+function entryAccountCondition(kind: AccountKind, accountId: number): SQL {
   switch (kind) {
     case "ledger":
-      return voucherEntries.ledgerAccountId;
+      return eq(voucherEntries.ledgerAccountId, accountId);
     case "bank":
-      return voucherEntries.bankAccountId;
+      return eq(voucherEntries.bankAccountId, accountId);
     case "fixed-asset":
-      return voucherEntries.fixedAssetId;
+      return eq(voucherEntries.fixedAssetId, accountId);
     case "supplier":
-      return voucherEntries.supplierId;
+      return eq(voucherEntries.supplierId, accountId);
     case "employee":
-      return voucherEntries.employeeId;
+      return eq(voucherEntries.employeeId, accountId);
     case "customer":
-      return voucherEntries.customerId;
+      return eq(voucherEntries.customerId, accountId);
   }
 }
 
@@ -145,8 +145,8 @@ export function registerEffectiveFinancialReadRoutes(
         return res.status(404).json({ message: "Account not found" });
       }
 
-      const conditions = [
-        eq(entryAccountColumn(kind), accountId),
+      const conditions: SQL[] = [
+        entryAccountCondition(kind, accountId),
         eq(vouchers.companyId, companyId),
         eq(vouchers.optional, false),
         ...effectiveVoucherConditions(),
@@ -188,7 +188,10 @@ export function registerEffectiveFinancialReadRoutes(
     }
 
     try {
-      const conditions = [eq(vouchers.companyId, companyId), ...effectiveVoucherConditions()];
+      const conditions: SQL[] = [
+        eq(vouchers.companyId, companyId),
+        ...effectiveVoucherConditions(),
+      ];
       const startDate = typeof req.query.startDate === "string" ? req.query.startDate : undefined;
       const endDate = typeof req.query.endDate === "string" ? req.query.endDate : undefined;
       if (startDate) conditions.push(gte(vouchers.voucherDate, startDate));
