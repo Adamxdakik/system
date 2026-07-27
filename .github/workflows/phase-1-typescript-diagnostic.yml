@@ -20,5 +20,22 @@ jobs:
           cache: npm
       - name: Install dependencies quietly
         run: npm ci --include=dev >/dev/null
-      - name: Print TypeScript baseline regression
-        run: npm run check:all:baseline
+      - name: Capture TypeScript baseline regression
+        id: baseline
+        shell: bash
+        run: |
+          set +e
+          npm run check:all:baseline > phase-1-typescript.log 2>&1
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload diagnostic log
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-1-typescript-log
+          path: phase-1-typescript.log
+          if-no-files-found: error
+          retention-days: 1
+      - name: Preserve failing status
+        if: steps.baseline.outputs.status != '0'
+        run: exit 1
