@@ -11,6 +11,7 @@ import {
   vouchers,
 } from "@shared/schema";
 import { decideFinalizedVoucherMutation } from "../services/accounting/finalizedMutationPolicy";
+import { registerEffectiveFinancialReadRoutes } from "./effectiveFinancialReadRoutes";
 import { registerTransactionalPayrollRoutes } from "./transactionalPayrollRoutes";
 
 interface VoucherState {
@@ -167,6 +168,7 @@ export function registerFinalizedFinancialMutationGuards(
   requireAuth: RequestHandler,
 ): void {
   registerTransactionalPayrollRoutes(app);
+  registerEffectiveFinancialReadRoutes(app, requireAuth);
 
   app.use("/api/vouchers/:id(\\d+)", requireAuth, guardFinalizedMutation(voucherById));
   app.use("/api/voucher-entries/:id(\\d+)", requireAuth, guardFinalizedMutation(voucherByEntryId));
@@ -180,6 +182,14 @@ export function registerFinalizedFinancialMutationGuards(
     requireAuth,
     guardFinalizedMutation(voucherByAdjustmentItemId),
   );
-  app.use("/api/stock-transfers/:id(\\d+)", requireAuth, guardFinalizedMutation(voucherByTransferId));
-  app.use("/api/stock-adjustments/:id(\\d+)", requireAuth, guardFinalizedMutation(voucherByAdjustmentId));
+  app.use(
+    "/api/stock-transfers/:id(\\d+)",
+    requireAuth,
+    guardFinalizedMutation(voucherByTransferId),
+  );
+  app.use(
+    "/api/stock-adjustments/:id(\\d+)",
+    requireAuth,
+    guardFinalizedMutation(voucherByAdjustmentId),
+  );
 }
