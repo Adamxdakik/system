@@ -1,0 +1,24 @@
+name: Phase 1 TypeScript Diagnostic
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies quietly
+        run: npm ci --include=dev >/dev/null
+      - name: Print TypeScript baseline regression
+        run: npm run check:all:baseline
