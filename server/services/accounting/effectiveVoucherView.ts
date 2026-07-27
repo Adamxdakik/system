@@ -14,9 +14,7 @@ export interface VoucherLifecycleState {
  */
 export function isEffectiveVoucherState(voucher: VoucherLifecycleState): boolean {
   return (
-    voucher.deletedAt == null &&
-    voucher.reversedAt == null &&
-    voucher.reversalOfVoucherId == null
+    voucher.deletedAt == null && voucher.reversedAt == null && voucher.reversalOfVoucherId == null
   );
 }
 
