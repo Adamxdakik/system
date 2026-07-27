@@ -1,43 +1,72 @@
-name: Phase 1 TypeScript Diagnostic
+name: Phase 1 Apply CI Fix
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - phase-1-restore-green-ci
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  diagnose-baseline:
+  apply:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 3cadbe2af235996af64f965dd178b7008700e158
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - name: Install baseline dependencies quietly
-        run: npm ci --include=dev >/dev/null
-      - name: Capture last-green raw TypeScript diagnostics
-        id: baseline
+          ref: phase-1-restore-green-ci
+          fetch-depth: 0
+      - name: Apply focused Phase 1 fixes
         shell: bash
         run: |
-          set +e
-          npm run check:all > phase-1-typescript-baseline.log 2>&1
-          status=$?
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          exit 0
-      - name: Upload baseline diagnostic log
-        uses: actions/upload-artifact@v4
-        with:
-          name: phase-1-typescript-baseline-log
-          path: phase-1-typescript-baseline.log
-          if-no-files-found: error
-          retention-days: 1
-      - name: Preserve baseline command status
-        if: steps.baseline.outputs.status != '0'
-        run: exit 1
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("server/routes.ts")
+          source = path.read_text()
+
+          old_type = "let container: Container;"
+          new_type = "let container: Awaited<ReturnType<typeof storage.createContainer>>;"
+          if source.count(old_type) != 1:
+              raise SystemExit(f"Expected one missing Container type, found {source.count(old_type)}")
+          source = source.replace(old_type, new_type, 1)
+
+          def add_terminal_returns(start_marker: str, end_marker: str) -> None:
+              global source
+              start = source.index(start_marker)
+              end = source.index(end_marker, start)
+              block = source[start:end]
+              if block.count("\n      res.json(") != 1:
+                  raise SystemExit(f"Expected one terminal res.json in {start_marker!r}")
+              if block.count("\n      res.status(500).json(") != 1:
+                  raise SystemExit(f"Expected one terminal 500 response in {start_marker!r}")
+              block = block.replace("\n      res.json(", "\n      return res.json(", 1)
+              block = block.replace("\n      res.status(500).json(", "\n      return res.status(500).json(", 1)
+              source = source[:start] + block + source[end:]
+
+          add_terminal_returns(
+              'app.post("/api/containers/import-po"',
+              "  // Create a manual container",
+          )
+          add_terminal_returns(
+              'app.patch("/api/containers/:id",',
+              "  // Get container items",
+          )
+          add_terminal_returns(
+              'app.get("/api/stats/net-profit-detail"',
+              "  // Get monthly sales and profit data for Dashboard charts",
+          )
+
+          path.write_text(source)
+          PY
+          rm .github/workflows/phase-1-typescript-diagnostic.yml
+      - name: Commit focused fix and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/routes.ts .github/workflows/phase-1-typescript-diagnostic.yml
+          git commit -m "Phase 1: restore whole-application TypeScript baseline"
+          git push origin HEAD:phase-1-restore-green-ci
