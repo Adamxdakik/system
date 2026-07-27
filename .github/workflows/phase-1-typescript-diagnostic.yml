@@ -9,33 +9,35 @@ permissions:
   contents: read
 
 jobs:
-  diagnose:
+  diagnose-baseline:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: 3cadbe2af235996af64f965dd178b7008700e158
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - name: Install dependencies quietly
+      - name: Install baseline dependencies quietly
         run: npm ci --include=dev >/dev/null
-      - name: Capture raw TypeScript diagnostics
+      - name: Capture last-green raw TypeScript diagnostics
         id: baseline
         shell: bash
         run: |
           set +e
-          npm run check:all > phase-1-typescript.log 2>&1
+          npm run check:all > phase-1-typescript-baseline.log 2>&1
           status=$?
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
-      - name: Upload diagnostic log
+      - name: Upload baseline diagnostic log
         uses: actions/upload-artifact@v4
         with:
-          name: phase-1-typescript-log
-          path: phase-1-typescript.log
+          name: phase-1-typescript-baseline-log
+          path: phase-1-typescript-baseline.log
           if-no-files-found: error
           retention-days: 1
-      - name: Preserve failing status
+      - name: Preserve baseline command status
         if: steps.baseline.outputs.status != '0'
         run: exit 1
