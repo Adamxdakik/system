@@ -126,9 +126,7 @@ export function registerEffectiveFinancialReadRoutes(
 ): void {
   app.get("/api/accounts/:kind/:id/transactions", requireAuth, async (req, res, next) => {
     const kind = req.params.kind as AccountKind;
-    if (
-      !["ledger", "bank", "fixed-asset", "supplier", "employee", "customer"].includes(kind)
-    ) {
+    if (!["ledger", "bank", "fixed-asset", "supplier", "employee", "customer"].includes(kind)) {
       return next();
     }
 
