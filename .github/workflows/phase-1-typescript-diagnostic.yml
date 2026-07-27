@@ -20,12 +20,12 @@ jobs:
           cache: npm
       - name: Install dependencies quietly
         run: npm ci --include=dev >/dev/null
-      - name: Capture TypeScript baseline regression
+      - name: Capture raw TypeScript diagnostics
         id: baseline
         shell: bash
         run: |
           set +e
-          npm run check:all:baseline > phase-1-typescript.log 2>&1
+          npm run check:all > phase-1-typescript.log 2>&1
           status=$?
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit 0
