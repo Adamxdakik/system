@@ -182,6 +182,14 @@ export function registerFinalizedFinancialMutationGuards(
     requireAuth,
     guardFinalizedMutation(voucherByAdjustmentItemId),
   );
-  app.use("/api/stock-transfers/:id(\\d+)", requireAuth, guardFinalizedMutation(voucherByTransferId));
-  app.use("/api/stock-adjustments/:id(\\d+)", requireAuth, guardFinalizedMutation(voucherByAdjustmentId));
+  app.use(
+    "/api/stock-transfers/:id(\\d+)",
+    requireAuth,
+    guardFinalizedMutation(voucherByTransferId),
+  );
+  app.use(
+    "/api/stock-adjustments/:id(\\d+)",
+    requireAuth,
+    guardFinalizedMutation(voucherByAdjustmentId),
+  );
 }
